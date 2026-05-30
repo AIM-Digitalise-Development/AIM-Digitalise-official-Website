@@ -1,0 +1,2 @@
+const CancelOrderModal = () => <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"><div className="bg-white p-6 rounded"><h3>Cancel Order</h3><p>Are you sure you want to cancel this order?</p><button className="btn-danger">Yes, Cancel</button></div></div>
+export default CancelOrderModal

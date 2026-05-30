@@ -1,0 +1,2 @@
+const PartnerStats = () => <div className="grid md:grid-cols-2 gap-6"><div className="bg-white p-6 rounded-lg shadow"><h3>Orders</h3><p className="text-2xl font-bold">156</p></div></div>
+export default PartnerStats

@@ -1,0 +1,2 @@
+const MetricsGrid = () => <div className="grid md:grid-cols-3 gap-6 mb-6"><div className="bg-white p-6 rounded-lg shadow"><h3>Total Visits</h3><p className="text-2xl font-bold">10,234</p></div></div>
+export default MetricsGrid

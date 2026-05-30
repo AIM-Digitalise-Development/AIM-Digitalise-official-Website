@@ -1,0 +1,2 @@
+const RevenueChart = () => <div className="bg-white p-6 rounded-lg shadow"><h3 className="font-semibold mb-4">Revenue Chart</h3><div className="h-64 bg-gray-100 rounded flex items-center justify-center"><p>Chart will be displayed here</p></div></div>
+export default RevenueChart

@@ -1,0 +1,2 @@
+const OfficeInfo = () => <div className="mb-6"><h2 className="text-2xl font-bold mb-4">Office Info</h2><p className="text-gray-600">123 Business Street<br/>City, State 12345<br/>Email: contact@example.com<br/>Phone: (555) 123-4567</p></div>
+export default OfficeInfo

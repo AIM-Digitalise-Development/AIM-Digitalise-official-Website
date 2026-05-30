@@ -1,0 +1,2 @@
+const ReportsExport = () => <div className="bg-white p-6 rounded-lg shadow"><button className="btn-secondary">Export as CSV</button><button className="btn-secondary ml-2">Export as PDF</button></div>
+export default ReportsExport

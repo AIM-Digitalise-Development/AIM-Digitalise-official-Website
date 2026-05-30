@@ -1,0 +1,2 @@
+const ProductCard = ({ product }) => <div className="bg-white p-4 rounded-lg shadow"><h3 className="font-semibold">{product?.name || 'Product Name'}</h3><p className="text-gray-600">${product?.price || '99.99'}</p><button className="btn-primary mt-2 w-full">Add to Cart</button></div>
+export default ProductCard

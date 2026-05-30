@@ -1,0 +1,2 @@
+const RecommendedProducts = () => <div className="bg-white p-6 rounded-lg shadow"><h3>Recommended For You</h3><div className="grid grid-cols-2 gap-2"><div>Product A</div><div>Product B</div></div></div>
+export default RecommendedProducts

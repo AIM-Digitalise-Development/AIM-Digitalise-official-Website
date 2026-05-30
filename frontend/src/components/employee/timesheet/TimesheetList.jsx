@@ -1,0 +1,2 @@
+const TimesheetList = () => <div className="bg-white rounded-lg shadow overflow-hidden"><table className="min-w-full"><thead className="bg-gray-50"><tr><th className="px-6 py-3">Date</th><th className="px-6 py-3">Hours</th><th className="px-6 py-3">Project</th></tr></thead><tbody><tr><td className="px-6 py-4">2024-01-01</td><td className="px-6 py-4">8</td><td className="px-6 py-4">Project A</td></tr></tbody></table></div>
+export default TimesheetList

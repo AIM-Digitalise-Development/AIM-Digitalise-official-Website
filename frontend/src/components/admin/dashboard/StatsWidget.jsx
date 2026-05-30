@@ -1,0 +1,2 @@
+const StatsWidget = () => <div className="grid md:grid-cols-4 gap-6"><div className="bg-white p-6 rounded-lg shadow"><h3 className="text-gray-500">Total Users</h3><p className="text-3xl font-bold">1,234</p></div><div className="bg-white p-6 rounded-lg shadow"><h3 className="text-gray-500">Revenue</h3><p className="text-3xl font-bold">$12,345</p></div></div>
+export default StatsWidget

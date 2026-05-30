@@ -1,0 +1,2 @@
+const SecuritySettings = () => <div className="bg-white p-6 rounded-lg shadow"><h3 className="font-semibold mb-4">Security Settings</h3><div className="space-y-4"><label className="flex items-center"><input type="checkbox" className="mr-2"/>Enable 2FA</label><button className="btn-primary">Update Security</button></div></div>
+export default SecuritySettings

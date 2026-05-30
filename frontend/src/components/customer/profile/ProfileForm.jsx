@@ -1,0 +1,2 @@
+const ProfileForm = () => <div className="bg-white p-6 rounded-lg shadow"><h3>Profile Information</h3><form className="space-y-4"><input type="text" placeholder="Full Name" className="w-full p-2 border rounded"/><input type="email" placeholder="Email" className="w-full p-2 border rounded"/><button className="btn-primary">Update Profile</button></form></div>
+export default ProfileForm

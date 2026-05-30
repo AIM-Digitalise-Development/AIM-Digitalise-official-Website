@@ -1,0 +1,2 @@
+const RecentActivity = () => <div className="bg-white p-6 rounded-lg shadow"><h3 className="font-semibold mb-4">Recent Activity</h3><ul className="space-y-2"><li className="text-sm">User John Doe logged in</li><li className="text-sm">New order placed</li></ul></div>
+export default RecentActivity

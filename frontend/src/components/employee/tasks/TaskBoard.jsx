@@ -1,0 +1,2 @@
+const TaskBoard = () => <div className="grid md:grid-cols-3 gap-6"><div className="bg-gray-100 p-4 rounded"><h3 className="font-semibold mb-2">To Do</h3><div className="bg-white p-2 rounded mb-2">Task 1</div></div></div>
+export default TaskBoard

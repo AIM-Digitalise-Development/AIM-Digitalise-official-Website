@@ -1,0 +1,2 @@
+const ChangePassword = () => <div className="bg-white p-6 rounded-lg shadow"><h3>Change Password</h3><form className="space-y-4"><input type="password" placeholder="Current Password" className="w-full p-2 border rounded"/><input type="password" placeholder="New Password" className="w-full p-2 border rounded"/><button className="btn-primary">Update Password</button></form></div>
+export default ChangePassword

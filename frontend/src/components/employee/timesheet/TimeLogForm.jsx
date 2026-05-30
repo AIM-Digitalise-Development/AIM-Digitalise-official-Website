@@ -1,0 +1,2 @@
+const TimeLogForm = () => <form className="space-y-4"><input type="date" className="p-2 border rounded"/><input type="number" placeholder="Hours" className="p-2 border rounded"/><button className="btn-primary">Log Time</button></form>
+export default TimeLogForm

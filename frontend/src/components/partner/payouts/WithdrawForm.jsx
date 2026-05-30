@@ -1,0 +1,2 @@
+const WithdrawForm = () => <form className="space-y-4"><input type="number" placeholder="Amount" className="p-2 border rounded"/><button className="btn-primary">Request Withdrawal</button></form>
+export default WithdrawForm

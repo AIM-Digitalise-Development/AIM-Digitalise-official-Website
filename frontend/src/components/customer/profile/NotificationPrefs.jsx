@@ -1,0 +1,2 @@
+const NotificationPrefs = () => <div className="bg-white p-6 rounded-lg shadow"><h3>Notification Preferences</h3><label className="flex items-center mt-2"><input type="checkbox" className="mr-2"/> Email me about orders</label><label className="flex items-center mt-2"><input type="checkbox" className="mr-2"/> SMS notifications</label><button className="btn-primary mt-4">Save Preferences</button></div>
+export default NotificationPrefs

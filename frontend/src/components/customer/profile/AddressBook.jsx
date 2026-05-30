@@ -1,0 +1,2 @@
+const AddressBook = () => <div className="bg-white p-6 rounded-lg shadow"><h3>Saved Addresses</h3><div className="border p-2 rounded">123 Main St, City, State 12345</div><button className="btn-secondary mt-2">Add New Address</button></div>
+export default AddressBook

@@ -1,0 +1,2 @@
+const PayoutHistory = () => <div className="bg-white rounded-lg shadow overflow-hidden"><table className="min-w-full"><thead className="bg-gray-50"><tr><th>Date</th><th>Amount</th><th>Status</th></tr></thead><tbody><tr><td>Jan 1, 2024</td><td>$1,234</td><td>Paid</td></tr></tbody></table></div>
+export default PayoutHistory

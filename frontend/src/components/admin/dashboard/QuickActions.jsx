@@ -1,0 +1,2 @@
+const QuickActions = () => <div className="bg-white p-6 rounded-lg shadow"><h3 className="font-semibold mb-4">Quick Actions</h3><div className="space-y-2"><button className="btn-primary w-full">Add User</button><button className="btn-secondary w-full">Export Data</button></div></div>
+export default QuickActions

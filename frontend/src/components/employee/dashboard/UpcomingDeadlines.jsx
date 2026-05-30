@@ -1,0 +1,2 @@
+const UpcomingDeadlines = () => <div className="bg-white p-6 rounded-lg shadow"><h3 className="font-semibold mb-4">Upcoming Deadlines</h3><ul><li>Project A - Due Tomorrow</li><li>Task B - Due in 3 days</li></ul></div>
+export default UpcomingDeadlines

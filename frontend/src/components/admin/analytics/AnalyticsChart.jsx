@@ -1,0 +1,2 @@
+const AnalyticsChart = () => <div className="bg-white p-6 rounded-lg shadow"><h3 className="font-semibold mb-4">Analytics Chart</h3><div className="h-96 bg-gray-100 rounded flex items-center justify-center"><p>Analytics chart will be displayed here</p></div></div>
+export default AnalyticsChart

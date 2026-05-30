@@ -1,0 +1,2 @@
+const UserRoleBadge = ({ role }) => <span className={`px-2 py-1 rounded text-xs font-semibold ${role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}`}>{role}</span>
+export default UserRoleBadge

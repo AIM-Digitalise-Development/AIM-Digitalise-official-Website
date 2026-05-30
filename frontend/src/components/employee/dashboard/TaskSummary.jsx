@@ -1,0 +1,2 @@
+const TaskSummary = () => <div className="bg-white p-6 rounded-lg shadow"><h3 className="font-semibold mb-4">Task Summary</h3><div className="space-y-2"><div className="flex justify-between"><span>Completed</span><span className="font-bold">12</span></div><div className="flex justify-between"><span>In Progress</span><span className="font-bold">5</span></div></div></div>
+export default TaskSummary

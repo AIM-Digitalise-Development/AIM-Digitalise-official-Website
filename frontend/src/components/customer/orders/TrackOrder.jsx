@@ -1,0 +1,2 @@
+const TrackOrder = () => <div className="bg-white p-6 rounded-lg shadow"><h3>Track Your Order</h3><div className="h-32 bg-gray-100 rounded flex items-center justify-center">Tracking Map Placeholder</div></div>
+export default TrackOrder

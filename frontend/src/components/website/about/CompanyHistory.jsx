@@ -1,0 +1,2 @@
+const CompanyHistory = () => <div className="mb-8"><h2 className="text-2xl font-bold mb-4">Our History</h2><p className="text-gray-600">Company history content...</p></div>
+export default CompanyHistory

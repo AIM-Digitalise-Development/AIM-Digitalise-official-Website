@@ -1,0 +1,2 @@
+const APISettings = () => <div className="bg-white p-6 rounded-lg shadow"><h3 className="font-semibold mb-4">API Settings</h3><div className="bg-gray-100 p-2 rounded"><code>API Key: xxxxxxxxxxxx</code></div></div>
+export default APISettings

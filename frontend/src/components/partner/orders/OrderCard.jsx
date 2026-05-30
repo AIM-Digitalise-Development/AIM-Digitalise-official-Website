@@ -1,0 +1,2 @@
+const OrderCard = () => <div className="bg-white p-4 rounded-lg shadow border"><div className="flex justify-between"><div><h4>Order #12345</h4><p>Status: Processing</p></div><div className="text-right"><p className="font-bold">$99.99</p></div></div></div>
+export default OrderCard

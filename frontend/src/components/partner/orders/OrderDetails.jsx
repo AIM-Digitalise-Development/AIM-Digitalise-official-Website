@@ -1,0 +1,2 @@
+const OrderDetails = () => <div className="bg-white p-6 rounded-lg shadow"><h3>Order Details</h3><p>Product: Example Product</p><p>Quantity: 2</p><p>Total: $199.98</p></div>
+export default OrderDetails

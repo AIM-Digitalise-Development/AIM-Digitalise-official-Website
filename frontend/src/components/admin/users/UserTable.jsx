@@ -1,0 +1,2 @@
+const UserTable = () => <div className="bg-white rounded-lg shadow overflow-hidden"><table className="min-w-full"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left">Name</th><th className="px-6 py-3 text-left">Email</th><th className="px-6 py-3 text-left">Role</th></tr></thead><tbody><tr><td className="px-6 py-4">John Doe</td><td className="px-6 py-4">john@example.com</td><td className="px-6 py-4">Admin</td></tr></tbody></table></div>
+export default UserTable

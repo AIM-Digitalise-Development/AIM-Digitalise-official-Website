@@ -1,0 +1,2 @@
+const NotificationSettings = () => <div className="bg-white p-6 rounded-lg shadow"><h3 className="font-semibold mb-4">Notification Settings</h3><div className="space-y-2"><label><input type="checkbox"/> Email notifications</label></div></div>
+export default NotificationSettings

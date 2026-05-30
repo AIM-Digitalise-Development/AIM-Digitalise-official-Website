@@ -1,0 +1,2 @@
+const WelcomeBanner = () => <div className="bg-blue-500 text-white p-6 rounded-lg"><h2 className="text-2xl font-bold">Welcome back, Employee!</h2><p>Here's your task summary for today.</p></div>
+export default WelcomeBanner

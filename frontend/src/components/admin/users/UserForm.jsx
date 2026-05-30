@@ -1,0 +1,2 @@
+const UserForm = () => <form className="space-y-4"><input type="text" placeholder="Name" className="w-full p-2 border rounded"/><input type="email" placeholder="Email" className="w-full p-2 border rounded"/><select className="w-full p-2 border rounded"><option>Admin</option><option>User</option></select><button className="btn-primary">Save</button></form>
+export default UserForm

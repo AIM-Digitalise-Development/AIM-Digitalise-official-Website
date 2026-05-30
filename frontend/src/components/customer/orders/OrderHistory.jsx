@@ -1,0 +1,2 @@
+const OrderHistory = () => <div className="bg-white rounded-lg shadow overflow-hidden"><table className="min-w-full"><thead className="bg-gray-50"><tr><th>Order #</th><th>Date</th><th>Total</th><th>Status</th></tr></thead><tbody><tr><td>#12345</td><td>Jan 1, 2024</td><td>$99.99</td><td>Delivered</td></tr></tbody></table></div>
+export default OrderHistory

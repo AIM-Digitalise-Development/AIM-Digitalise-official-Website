@@ -1,0 +1,2 @@
+const TaskCard = ({ task }) => <div className="bg-white p-4 rounded shadow"><h4 className="font-semibold">{task?.title || 'Task Title'}</h4><p className="text-sm text-gray-600">{task?.description}</p></div>
+export default TaskCard

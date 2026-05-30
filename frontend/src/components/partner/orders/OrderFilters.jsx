@@ -1,0 +1,2 @@
+const OrderFilters = () => <div className="flex space-x-2 mb-4"><select className="p-2 border rounded"><option>All Orders</option><option>Processing</option><option>Completed</option></select></div>
+export default OrderFilters

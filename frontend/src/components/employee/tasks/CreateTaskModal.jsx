@@ -1,0 +1,2 @@
+const CreateTaskModal = () => <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"><div className="bg-white p-6 rounded"><h3>Create Task</h3><form><input type="text" placeholder="Title" className="w-full p-2 border rounded mb-2"/><button className="btn-primary">Create</button></form></div></div>
+export default CreateTaskModal

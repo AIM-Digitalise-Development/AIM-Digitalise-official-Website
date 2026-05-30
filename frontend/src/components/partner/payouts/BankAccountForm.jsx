@@ -1,0 +1,2 @@
+const BankAccountForm = () => <form className="space-y-4"><input type="text" placeholder="Account Number" className="p-2 border rounded"/><button className="btn-primary">Save Bank Account</button></form>
+export default BankAccountForm

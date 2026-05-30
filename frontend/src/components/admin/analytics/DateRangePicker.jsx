@@ -1,0 +1,2 @@
+const DateRangePicker = () => <div className="flex space-x-2 mb-4"><input type="date" className="p-2 border rounded"/><input type="date" className="p-2 border rounded"/><button className="btn-primary">Apply</button></div>
+export default DateRangePicker

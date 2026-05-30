@@ -1,0 +1,2 @@
+const LoyaltyCard = () => <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 p-6 rounded-lg text-white"><h3>Loyalty Points</h3><p className="text-3xl font-bold">1,234</p></div>
+export default LoyaltyCard

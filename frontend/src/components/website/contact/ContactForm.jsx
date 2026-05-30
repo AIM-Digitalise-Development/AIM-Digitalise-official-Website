@@ -1,0 +1,2 @@
+const ContactForm = () => <div><h2 className="text-2xl font-bold mb-4">Send us a message</h2><form className="space-y-4"><input type="text" placeholder="Name" className="w-full p-2 border rounded"/><input type="email" placeholder="Email" className="w-full p-2 border rounded"/><textarea placeholder="Message" className="w-full p-2 border rounded" rows="4"></textarea><button className="btn-primary">Send</button></form></div>
+export default ContactForm

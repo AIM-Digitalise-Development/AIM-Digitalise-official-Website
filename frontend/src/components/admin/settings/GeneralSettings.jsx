@@ -1,0 +1,2 @@
+const GeneralSettings = () => <div className="bg-white p-6 rounded-lg shadow"><h3 className="font-semibold mb-4">General Settings</h3><form className="space-y-4"><input type="text" placeholder="Site Name" className="w-full p-2 border rounded"/><button className="btn-primary">Save Changes</button></form></div>
+export default GeneralSettings

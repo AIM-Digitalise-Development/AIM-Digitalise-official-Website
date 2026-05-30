@@ -1,0 +1,2 @@
+const TaskFilters = () => <div className="flex space-x-2 mb-4"><select className="p-2 border rounded"><option>All</option><option>Completed</option><option>Pending</option></select></div>
+export default TaskFilters
