@@ -6,18 +6,42 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Split vendor chunks for better caching
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          ui: ['react-helmet-async'],
+        // Change manualChunks from OBJECT to FUNCTION
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            // Split vendor chunks for better caching
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+              return 'vendor'
+            }
+            if (id.includes('react-helmet-async')) {
+              return 'ui'
+            }
+            // Optional: Add more chunk splitting if needed
+            if (id.includes('framer-motion')) {
+              return 'framer'
+            }
+            if (id.includes('i18next') || id.includes('react-i18next')) {
+              return 'i18n'
+            }
+            if (id.includes('@tanstack/react-query')) {
+              return 'query'
+            }
+            if (id.includes('axios')) {
+              return 'axios'
+            }
+            if (id.includes('zustand')) {
+              return 'state'
+            }
+          }
         }
       }
     },
     chunkSizeWarningLimit: 1000,
   },
-  esbuild: {
-    drop: ['console', 'debugger'],
-  },
+  // Remove esbuild options entirely (or comment them out for Vercel)
+  // esbuild: {
+  //   drop: ['console', 'debugger'],
+  // },
   server: {
     port: 3000,
     open: true,
