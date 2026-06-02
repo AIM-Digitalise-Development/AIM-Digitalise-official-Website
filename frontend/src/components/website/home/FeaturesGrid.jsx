@@ -5,65 +5,65 @@ import { motion, AnimatePresence } from 'framer-motion'
 const icons = {
   seo: (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill="none">
-      <circle cx="28" cy="28" r="16" stroke="#6366f1" strokeWidth="4"/>
-      <line x1="39" y1="39" x2="54" y2="54" stroke="#6366f1" strokeWidth="4" strokeLinecap="round"/>
-      <path d="M24 28h8M28 24v8" stroke="#a5b4fc" strokeWidth="3" strokeLinecap="round"/>
+      <circle cx="28" cy="28" r="16" stroke="#2563eb" strokeWidth="4"/>
+      <line x1="39" y1="39" x2="54" y2="54" stroke="#2563eb" strokeWidth="4" strokeLinecap="round"/>
+      <path d="M24 28h8M28 24v8" stroke="#93c5fd" strokeWidth="3" strokeLinecap="round"/>
     </svg>
   ),
   static: (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill="none">
-      <rect x="8" y="14" width="48" height="36" rx="4" stroke="#6366f1" strokeWidth="4"/>
-      <line x1="8" y1="24" x2="56" y2="24" stroke="#a5b4fc" strokeWidth="3"/>
-      <rect x="16" y="30" width="14" height="10" rx="2" fill="#6366f1" fillOpacity=".3" stroke="#6366f1" strokeWidth="2"/>
-      <line x1="34" y1="32" x2="48" y2="32" stroke="#a5b4fc" strokeWidth="2" strokeLinecap="round"/>
-      <line x1="34" y1="36" x2="44" y2="36" stroke="#a5b4fc" strokeWidth="2" strokeLinecap="round"/>
+      <rect x="8" y="14" width="48" height="36" rx="4" stroke="#2563eb" strokeWidth="4"/>
+      <line x1="8" y1="24" x2="56" y2="24" stroke="#93c5fd" strokeWidth="3"/>
+      <rect x="16" y="30" width="14" height="10" rx="2" fill="#2563eb" fillOpacity=".3" stroke="#2563eb" strokeWidth="2"/>
+      <line x1="34" y1="32" x2="48" y2="32" stroke="#93c5fd" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="34" y1="36" x2="44" y2="36" stroke="#93c5fd" strokeWidth="2" strokeLinecap="round"/>
     </svg>
   ),
   dynamic: (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill="none">
-      <rect x="6" y="10" width="52" height="36" rx="5" stroke="#6366f1" strokeWidth="4"/>
-      <path d="M6 20h52" stroke="#a5b4fc" strokeWidth="2.5"/>
-      <path d="M20 34l6-6 6 6 6-10" stroke="#6366f1" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-      <rect x="18" y="48" width="28" height="4" rx="2" fill="#6366f1" fillOpacity=".5"/>
+      <rect x="6" y="10" width="52" height="36" rx="5" stroke="#2563eb" strokeWidth="4"/>
+      <path d="M6 20h52" stroke="#93c5fd" strokeWidth="2.5"/>
+      <path d="M20 34l6-6 6 6 6-10" stroke="#2563eb" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+      <rect x="18" y="48" width="28" height="4" rx="2" fill="#2563eb" fillOpacity=".5"/>
     </svg>
   ),
   ecommerce: (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill="none">
-      <circle cx="32" cy="32" r="24" stroke="#6366f1" strokeWidth="4"/>
-      <path d="M20 26h4l3 12h10l3-8H24" stroke="#a5b4fc" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-      <circle cx="30" cy="41" r="2" fill="#6366f1"/>
-      <circle cx="38" cy="41" r="2" fill="#6366f1"/>
+      <circle cx="32" cy="32" r="24" stroke="#2563eb" strokeWidth="4"/>
+      <path d="M20 26h4l3 12h10l3-8H24" stroke="#93c5fd" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx="30" cy="41" r="2" fill="#2563eb"/>
+      <circle cx="38" cy="41" r="2" fill="#2563eb"/>
     </svg>
   ),
   webapp: (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill="none">
-      <rect x="8" y="12" width="48" height="32" rx="4" stroke="#6366f1" strokeWidth="4"/>
-      <path d="M8 22h48" stroke="#a5b4fc" strokeWidth="2.5"/>
-      <path d="M20 32l4-4 4 4 4-8" stroke="#6366f1" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-      <rect x="24" y="44" width="16" height="4" rx="2" fill="#6366f1" fillOpacity=".5"/>
+      <rect x="8" y="12" width="48" height="32" rx="4" stroke="#2563eb" strokeWidth="4"/>
+      <path d="M8 22h48" stroke="#93c5fd" strokeWidth="2.5"/>
+      <path d="M20 32l4-4 4 4 4-8" stroke="#2563eb" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+      <rect x="24" y="44" width="16" height="4" rx="2" fill="#2563eb" fillOpacity=".5"/>
     </svg>
   ),
   hybrid: (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill="none">
-      <rect x="14" y="8" width="24" height="40" rx="4" stroke="#6366f1" strokeWidth="3.5"/>
-      <rect x="32" y="16" width="22" height="34" rx="4" stroke="#a5b4fc" strokeWidth="3" strokeDasharray="4 2"/>
-      <circle cx="26" cy="44" r="2.5" fill="#6366f1"/>
+      <rect x="14" y="8" width="24" height="40" rx="4" stroke="#2563eb" strokeWidth="3.5"/>
+      <rect x="32" y="16" width="22" height="34" rx="4" stroke="#93c5fd" strokeWidth="3" strokeDasharray="4 2"/>
+      <circle cx="26" cy="44" r="2.5" fill="#2563eb"/>
     </svg>
   ),
 
   seosem: (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill="none">
-      <circle cx="28" cy="28" r="14" stroke="#6366f1" strokeWidth="4"/>
-      <path d="M38 38l10 10" stroke="#a5b4fc" strokeWidth="4" strokeLinecap="round"/>
-      <text x="18" y="32" fontSize="10" fill="#6366f1" fontWeight="bold">SEM</text>
+      <circle cx="28" cy="28" r="14" stroke="#2563eb" strokeWidth="4"/>
+      <path d="M38 38l10 10" stroke="#93c5fd" strokeWidth="4" strokeLinecap="round"/>
+      <text x="18" y="32" fontSize="10" fill="#2563eb" fontWeight="bold">SEM</text>
     </svg>
   ),
   content: (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill="none">
-      <circle cx="32" cy="32" r="22" fill="#f59e0b" fillOpacity=".15" stroke="#f59e0b" strokeWidth="3"/>
-      <path d="M22 28h20M22 32h14M22 36h16" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"/>
-      <circle cx="44" cy="22" r="6" fill="#f59e0b" fillOpacity=".3" stroke="#f59e0b" strokeWidth="2"/>
-      <text x="41" y="25" fontSize="7" fill="#f59e0b" fontWeight="bold">C</text>
+      <circle cx="32" cy="32" r="22" fill="#dc2626" fillOpacity=".15" stroke="#dc2626" strokeWidth="3"/>
+      <path d="M22 28h20M22 32h14M22 36h16" stroke="#dc2626" strokeWidth="2.5" strokeLinecap="round"/>
+      <circle cx="44" cy="22" r="6" fill="#dc2626" fillOpacity=".3" stroke="#dc2626" strokeWidth="2"/>
+      <text x="41" y="25" fontSize="7" fill="#dc2626" fontWeight="bold">C</text>
     </svg>
   ),
   social: (
@@ -78,33 +78,33 @@ const icons = {
   ),
   mailing: (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill="none">
-      <circle cx="32" cy="32" r="22" fill="#6366f1" fillOpacity=".1" stroke="#6366f1" strokeWidth="3"/>
-      <rect x="18" y="22" width="28" height="20" rx="3" stroke="#6366f1" strokeWidth="2.5"/>
-      <path d="M18 26l14 9 14-9" stroke="#a5b4fc" strokeWidth="2.5" strokeLinecap="round"/>
-      <path d="M34 36l6 6M30 36l-6 6" stroke="#6366f1" strokeWidth="2" strokeLinecap="round"/>
+      <circle cx="32" cy="32" r="22" fill="#2563eb" fillOpacity=".1" stroke="#2563eb" strokeWidth="3"/>
+      <rect x="18" y="22" width="28" height="20" rx="3" stroke="#2563eb" strokeWidth="2.5"/>
+      <path d="M18 26l14 9 14-9" stroke="#93c5fd" strokeWidth="2.5" strokeLinecap="round"/>
+      <path d="M34 36l6 6M30 36l-6 6" stroke="#2563eb" strokeWidth="2" strokeLinecap="round"/>
     </svg>
   ),
   graphics: (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill="none">
-      <circle cx="32" cy="32" r="22" fill="#ec4899" fillOpacity=".12" stroke="#ec4899" strokeWidth="3"/>
-      <rect x="20" y="22" width="10" height="14" rx="2" fill="#ec4899" fillOpacity=".3" stroke="#ec4899" strokeWidth="2"/>
-      <rect x="34" y="26" width="10" height="10" rx="2" fill="#f472b6" fillOpacity=".3" stroke="#f472b6" strokeWidth="2"/>
-      <path d="M20 40h24" stroke="#ec4899" strokeWidth="2" strokeLinecap="round"/>
+      <circle cx="32" cy="32" r="22" fill="#dc2626" fillOpacity=".12" stroke="#dc2626" strokeWidth="3"/>
+      <rect x="20" y="22" width="10" height="14" rx="2" fill="#dc2626" fillOpacity=".3" stroke="#dc2626" strokeWidth="2"/>
+      <rect x="34" y="26" width="10" height="10" rx="2" fill="#fca5a5" fillOpacity=".3" stroke="#fca5a5" strokeWidth="2"/>
+      <path d="M20 40h24" stroke="#dc2626" strokeWidth="2" strokeLinecap="round"/>
     </svg>
   ),
   whatsapp: (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill="none">
-      <circle cx="32" cy="32" r="22" fill="#22c55e" fillOpacity=".15" stroke="#22c55e" strokeWidth="3"/>
-      <path d="M22 32c0-5.523 4.477-10 10-10s10 4.477 10 10c0 2.21-.72 4.254-1.93 5.908L42 44l-6.5-1.5A9.96 9.96 0 0132 42c-5.523 0-10-4.477-10-10z" stroke="#22c55e" strokeWidth="2.5"/>
-      <path d="M27 31l2 2 4-4" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx="32" cy="32" r="22" fill="#2563eb" fillOpacity=".15" stroke="#2563eb" strokeWidth="3"/>
+      <path d="M22 32c0-5.523 4.477-10 10-10s10 4.477 10 10c0 2.21-.72 4.254-1.93 5.908L42 44l-6.5-1.5A9.96 9.96 0 0132 42c-5.523 0-10-4.477-10-10z" stroke="#2563eb" strokeWidth="2.5"/>
+      <path d="M27 31l2 2 4-4" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   ),
 
   emudhra: (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill="none">
-      <circle cx="32" cy="32" r="22" fill="#6366f1" fillOpacity=".1" stroke="#6366f1" strokeWidth="3"/>
-      <text x="20" y="37" fontSize="14" fill="#6366f1" fontWeight="bold">e</text>
-      <path d="M30 28h14M30 32h10M30 36h12" stroke="#a5b4fc" strokeWidth="2" strokeLinecap="round"/>
+      <circle cx="32" cy="32" r="22" fill="#2563eb" fillOpacity=".1" stroke="#2563eb" strokeWidth="3"/>
+      <text x="20" y="37" fontSize="14" fill="#2563eb" fontWeight="bold">e</text>
+      <path d="M30 28h14M30 32h10M30 36h12" stroke="#93c5fd" strokeWidth="2" strokeLinecap="round"/>
     </svg>
   ),
   capricorn: (
@@ -116,8 +116,8 @@ const icons = {
   ),
   pantasign: (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill="none">
-      <circle cx="32" cy="32" r="22" fill="#f59e0b" fillOpacity=".12" stroke="#f59e0b" strokeWidth="3"/>
-      <path d="M22 32h8l4-8 4 16 4-8h4" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx="32" cy="32" r="22" fill="#dc2626" fillOpacity=".12" stroke="#dc2626" strokeWidth="3"/>
+      <path d="M22 32h8l4-8 4 16 4-8h4" stroke="#dc2626" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   ),
   vsign: (
@@ -128,43 +128,43 @@ const icons = {
   ),
   idsign: (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill="none">
-      <circle cx="32" cy="32" r="22" fill="#22c55e" fillOpacity=".12" stroke="#22c55e" strokeWidth="3"/>
-      <path d="M26 38c0-8 4-12 8-12" stroke="#22c55e" strokeWidth="3" strokeLinecap="round"/>
-      <circle cx="32" cy="26" r="4" stroke="#22c55e" strokeWidth="2.5"/>
-      <path d="M20 40a10 10 0 0124 0" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round"/>
+      <circle cx="32" cy="32" r="22" fill="#2563eb" fillOpacity=".12" stroke="#2563eb" strokeWidth="3"/>
+      <path d="M26 38c0-8 4-12 8-12" stroke="#2563eb" strokeWidth="3" strokeLinecap="round"/>
+      <circle cx="32" cy="26" r="4" stroke="#2563eb" strokeWidth="2.5"/>
+      <path d="M20 40a10 10 0 0124 0" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round"/>
     </svg>
   ),
   sify: (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill="none">
-      <circle cx="32" cy="32" r="22" fill="#06b6d4" fillOpacity=".12" stroke="#06b6d4" strokeWidth="3"/>
-      <path d="M24 36c2-4 6-6 10-4" stroke="#06b6d4" strokeWidth="3" strokeLinecap="round"/>
-      <path d="M30 28c2-2 6-2 8 0" stroke="#a5f3fc" strokeWidth="2.5" strokeLinecap="round"/>
-      <path d="M26 40c2-6 8-10 14-6" stroke="#06b6d4" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"/>
+      <circle cx="32" cy="32" r="22" fill="#2563eb" fillOpacity=".12" stroke="#2563eb" strokeWidth="3"/>
+      <path d="M24 36c2-4 6-6 10-4" stroke="#2563eb" strokeWidth="3" strokeLinecap="round"/>
+      <path d="M30 28c2-2 6-2 8 0" stroke="#93c5fd" strokeWidth="2.5" strokeLinecap="round"/>
+      <path d="M26 40c2-6 8-10 14-6" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"/>
     </svg>
   ),
 
   taxation: (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill="none">
-      <rect x="14" y="10" width="36" height="44" rx="4" stroke="#6366f1" strokeWidth="3.5"/>
-      <path d="M22 22h20M22 28h14M22 34h10" stroke="#a5b4fc" strokeWidth="2.5" strokeLinecap="round"/>
-      <path d="M34 42l4-4-4-4" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <rect x="14" y="10" width="36" height="44" rx="4" stroke="#2563eb" strokeWidth="3.5"/>
+      <path d="M22 22h20M22 28h14M22 34h10" stroke="#93c5fd" strokeWidth="2.5" strokeLinecap="round"/>
+      <path d="M34 42l4-4-4-4" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   ),
   accounting: (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill="none">
-      <circle cx="32" cy="32" r="22" fill="#06b6d4" fillOpacity=".12" stroke="#06b6d4" strokeWidth="3"/>
-      <path d="M24 38V26h16v12" stroke="#06b6d4" strokeWidth="2.5" strokeLinecap="round"/>
-      <path d="M20 38h24" stroke="#a5f3fc" strokeWidth="2.5" strokeLinecap="round"/>
-      <path d="M28 26v-4h8v4" stroke="#06b6d4" strokeWidth="2"/>
+      <circle cx="32" cy="32" r="22" fill="#2563eb" fillOpacity=".12" stroke="#2563eb" strokeWidth="3"/>
+      <path d="M24 38V26h16v12" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round"/>
+      <path d="M20 38h24" stroke="#93c5fd" strokeWidth="2.5" strokeLinecap="round"/>
+      <path d="M28 26v-4h8v4" stroke="#2563eb" strokeWidth="2"/>
     </svg>
   ),
   payroll: (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill="none">
-      <rect x="10" y="18" width="44" height="30" rx="5" stroke="#f59e0b" strokeWidth="3.5"/>
-      <circle cx="32" cy="33" r="7" stroke="#f59e0b" strokeWidth="2.5"/>
-      <path d="M32 29v4l3 2" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"/>
-      <circle cx="18" cy="33" r="3" fill="#fbbf24" fillOpacity=".3" stroke="#f59e0b" strokeWidth="2"/>
-      <circle cx="46" cy="33" r="3" fill="#fbbf24" fillOpacity=".3" stroke="#f59e0b" strokeWidth="2"/>
+      <rect x="10" y="18" width="44" height="30" rx="5" stroke="#dc2626" strokeWidth="3.5"/>
+      <circle cx="32" cy="33" r="7" stroke="#dc2626" strokeWidth="2.5"/>
+      <path d="M32 29v4l3 2" stroke="#dc2626" strokeWidth="2" strokeLinecap="round"/>
+      <circle cx="18" cy="33" r="3" fill="#fca5a5" fillOpacity=".3" stroke="#dc2626" strokeWidth="2"/>
+      <circle cx="46" cy="33" r="3" fill="#fca5a5" fillOpacity=".3" stroke="#dc2626" strokeWidth="2"/>
     </svg>
   ),
   hospital: (
@@ -176,17 +176,17 @@ const icons = {
   ),
   school: (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill="none">
-      <path d="M8 28l24-14 24 14" stroke="#8b5cf6" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
-      <rect x="16" y="28" width="32" height="22" rx="2" stroke="#8b5cf6" strokeWidth="3"/>
-      <rect x="26" y="36" width="12" height="14" rx="2" fill="#8b5cf6" fillOpacity=".2" stroke="#8b5cf6" strokeWidth="2"/>
+      <path d="M8 28l24-14 24 14" stroke="#1d4ed8" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <rect x="16" y="28" width="32" height="22" rx="2" stroke="#1d4ed8" strokeWidth="3"/>
+      <rect x="26" y="36" width="12" height="14" rx="2" fill="#1d4ed8" fillOpacity=".2" stroke="#1d4ed8" strokeWidth="2"/>
     </svg>
   ),
   crm: (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill="none">
-      <rect x="10" y="14" width="44" height="36" rx="5" stroke="#0ea5e9" strokeWidth="3.5"/>
-      <circle cx="24" cy="30" r="6" stroke="#0ea5e9" strokeWidth="2.5"/>
-      <path d="M14 44c0-6 4-10 10-10" stroke="#0ea5e9" strokeWidth="2.5" strokeLinecap="round"/>
-      <path d="M36 24h10M36 30h8M36 36h10" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round"/>
+      <rect x="10" y="14" width="44" height="36" rx="5" stroke="#2563eb" strokeWidth="3.5"/>
+      <circle cx="24" cy="30" r="6" stroke="#2563eb" strokeWidth="2.5"/>
+      <path d="M14 44c0-6 4-10 10-10" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round"/>
+      <path d="M36 24h10M36 30h8M36 36h10" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round"/>
     </svg>
   ),
 }
@@ -272,22 +272,22 @@ const FeaturesGrid = () => {
   const [imgSrc, setImgSrc] = useState('https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=700&q=80')
 
   return (
-    <section className="py-24 bg-slate-950 relative overflow-hidden border-t border-slate-900">
-      {/* Ambient glows */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-80 h-80 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
+    <section className="py-24 section-white relative">
+      <div className="ambient-glows" aria-hidden />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
 
         {/* Section header */}
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold uppercase tracking-wider">
+          <div className="badge-pill">
+            <span className="badge-pill-dot" />
             Capabilities
           </div>
-          <h2 className="text-3xl md:text-5xl font-black text-white leading-tight">
+          <h2 className="heading-display">
             Core Services &amp; Solutions
           </h2>
-          <p className="text-lg text-slate-400">
+          <div className="divider-brand" />
+          <p className="text-lg copy-on-dark-muted">
             We deliver elite-level engineering services designed to scale your operations, secure your data, and elevate your technology stack.
           </p>
         </div>
@@ -298,11 +298,11 @@ const FeaturesGrid = () => {
           {/* ── Left Column: Photo behind + Tab Pills overlapping right edge ── */}
           <div className="lg:col-span-5 relative" style={{ minHeight: '420px' }}>
             {/* Glow backing */}
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/15 to-purple-600/10 rounded-[40px] blur-3xl opacity-60 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-br from-aim-gold/12 to-aim-purple/10 rounded-[40px] blur-3xl opacity-70 pointer-events-none" />
 
             {/* Developer image — takes up left 70% of the panel */}
             <div
-              className="absolute left-0 top-0 bottom-0 rounded-tr-[64px] rounded-bl-[64px] rounded-tl-2xl rounded-br-2xl overflow-hidden border border-slate-800/80 shadow-2xl"
+              className="absolute left-0 top-0 bottom-0 rounded-tr-[64px] rounded-bl-[64px] rounded-tl-2xl rounded-br-2xl overflow-hidden border border-white/15 shadow-2xl"
               style={{ width: '68%' }}
             >
               <img
@@ -313,7 +313,7 @@ const FeaturesGrid = () => {
                 loading="lazy"
               />
               {/* Right-to-left fade so tabs read clearly */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-950/20 to-slate-950/70" />
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-aim-navy/30 to-aim-navy/85" />
             </div>
 
             {/* Tab pills — anchored to right, vertically centred, overlapping image */}
@@ -324,11 +324,11 @@ const FeaturesGrid = () => {
                   onClick={() => setActiveTab(i)}
                   className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-[11px] font-bold uppercase tracking-wider text-left transition-all duration-200 cursor-pointer border backdrop-blur-md ${
                     activeTab === i
-                      ? 'bg-indigo-700/95 border-indigo-500 text-white shadow-xl shadow-indigo-500/30'
-                      : 'bg-slate-900/90 border-slate-700/70 text-slate-300 hover:border-indigo-500/50 hover:text-white hover:bg-slate-800/95'
+                      ? 'bg-aim-gold border-aim-gold text-aim-navy shadow-xl shadow-aim-gold/25'
+                      : 'card-elevated border-white/10 text-aim-copy hover:border-aim-gold/50 hover:text-aim-highlight hover:bg-aim-gold/5'
                   }`}
                 >
-                  <span className={`shrink-0 ${activeTab === i ? 'text-white' : 'text-indigo-400'}`}>
+                  <span className={`shrink-0 ${activeTab === i ? 'text-aim-navy' : 'text-on-navy-muted'}`}>
                     {tab.icon}
                   </span>
                   <span className="leading-snug">{tab.label}</span>
@@ -351,18 +351,18 @@ const FeaturesGrid = () => {
                 {current.cards.map((card) => (
                   <div
                     key={card.key}
-                    className={`group flex flex-col items-center gap-4 p-5 rounded-2xl border bg-slate-900/30 backdrop-blur-sm cursor-pointer transition-all duration-300
-                      hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-500/10
+                    className={`group flex flex-col items-center gap-4 p-5 rounded-2xl border card-elevated cursor-pointer transition-all duration-300
+                      hover:-translate-y-1 hover:shadow-xl hover:shadow-aim-gold/10
                       ${card.highlight
-                        ? 'border-indigo-500/60 shadow-md shadow-indigo-500/10'
-                        : 'border-slate-700/60 hover:border-indigo-500/40'
+                        ? 'border-aim-gold/50 shadow-md shadow-aim-gold/10'
+                        : 'border-white/10 hover:border-aim-gold/35 hover:shadow-lg'
                       }`}
                   >
                     {/* Icon circle */}
                     <div className={`w-16 h-16 rounded-full flex items-center justify-center p-2 transition-transform duration-300 group-hover:scale-110
                       ${card.highlight
-                        ? 'bg-indigo-500/10 border border-indigo-500/30'
-                        : 'bg-slate-800/60 border border-slate-700/50 group-hover:bg-indigo-500/10 group-hover:border-indigo-500/30'
+                        ? 'bg-aim-gold/15 border border-aim-gold/40'
+                        : 'bg-aim-navy-light border border-white/10 group-hover:bg-aim-gold/10 group-hover:border-aim-gold/30'
                       }`}
                     >
                       {icons[card.key]}
@@ -370,7 +370,7 @@ const FeaturesGrid = () => {
 
                     {/* Label */}
                     <p className={`text-center text-[11px] font-bold uppercase tracking-wider leading-snug whitespace-pre-line transition-colors duration-200
-                      ${card.highlight ? 'text-indigo-400' : 'text-slate-300 group-hover:text-indigo-300'}`}
+                      ${card.highlight ? 'text-aim-highlight' : 'text-aim-copy group-hover:text-aim-highlight'}`}
                     >
                       {card.label}
                     </p>

@@ -199,6 +199,7 @@ const AdminUsers = () => {
 |--------|------|---------|---------|
 | `common/` | Cross-app components (ErrorBoundary, Skeleton) | None | Any page/component |
 | `ui/` | Design primitives (Button, Card, Modal) | None | Any component |
+| `auth/` | Authentication UI (Employee/Admin login modal) | `useAuth` + `api/auth` | `RootLayout.jsx` (footer dropdown)
 | `website/` | Marketing site components | `ui/` components | Website pages |
 | `admin/` | Admin dashboard components | `ui/` + `common/` | Admin pages |
 | `employee/` | Employee portal components | `ui/` + `common/` | Employee pages |
@@ -329,3 +330,22 @@ src/components/admin/users/UserTable.jsx
 | `i18n/locales/*.json` | All translated text |
 
 This architecture ensures **separation of concerns** - each file has ONE job, and they work together through clear, predictable relationships! 🚀
+
+## Admin Dashboard Implementation Notes (Latest)
+
+- `src/App.jsx` now mounts an isolated `/admin` route group (separate from website header/footer), with nested pages:
+  - `/admin` → `src/pages/admin/Dashboard.jsx`
+  - `/admin/users` → `src/pages/admin/Users.jsx`
+  - `/admin/settings` → `src/pages/admin/Settings.jsx`
+  - `/admin/analytics` → `src/pages/admin/Analytics.jsx`
+- `src/layouts/AdminLayout.jsx` provides the dedicated admin shell that visually mirrors the provided screenshot style:
+  - Left rounded navigation column
+  - Main light-gray dashboard workspace
+  - Route-aware active state for core links
+- `src/pages/admin/Dashboard.jsx` is now the primary image-inspired dashboard page and includes:
+  - Top identity/title area
+  - Four gradient KPI cards
+  - Payment collection block
+  - Sales analytics visual block
+  - To-do list strip
+- `src/components/auth/AdminEmployeeLoginModal.jsx` now redirects admin users to `/admin` after successful login so the footer login dropdown flows directly into the dashboard.

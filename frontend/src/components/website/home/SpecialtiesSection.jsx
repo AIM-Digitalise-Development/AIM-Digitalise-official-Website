@@ -1,197 +1,277 @@
-import { motion } from 'framer-motion'
+import { Link } from 'react-router-dom'
+import { motion, useReducedMotion } from 'framer-motion'
+import { ROUTES } from '../../../constants/routes'
+
+const stats = [
+  { value: '500+', label: 'Clients served', accent: 'gold' },
+  { value: '9+', label: 'Core strengths', accent: 'purple' },
+  { value: '98%', label: 'Client satisfaction', accent: 'gold' },
+]
 
 const specialties = [
   {
+    num: '01',
     title: 'Cutting-edge Technology',
-    desc: 'We use the latest cutting-edge technology for web design to favor the speed and compatibility to all the device.',
-    color: 'from-blue-500/10 to-indigo-500/10',
-    borderColor: 'group-hover:border-blue-500/50',
-    iconColor: 'text-blue-400',
+    desc: 'Latest stack for speed, security, and compatibility across every device.',
     icon: (
-      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-      </svg>
-    )
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+    ),
+    featured: true,
   },
   {
-    title: 'Quality',
-    desc: 'We ensure the quality standards of our service.',
-    color: 'from-emerald-500/10 to-teal-500/10',
-    borderColor: 'group-hover:border-emerald-500/50',
-    iconColor: 'text-emerald-400',
+    num: '02',
+    title: 'Premium Quality',
+    desc: 'Rigorous standards on every deliverable — no compromises.',
     icon: (
-      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-      </svg>
-    )
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+    ),
   },
   {
+    num: '03',
     title: 'Custom Web Development',
-    desc: 'Our team help the client develop a custom web develop solution aimed at enhancing consumer advocacy.',
-    color: 'from-purple-500/10 to-pink-500/10',
-    borderColor: 'group-hover:border-purple-500/50',
-    iconColor: 'text-purple-400',
+    desc: 'Tailored solutions that turn visitors into loyal customers.',
     icon: (
-      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-      </svg>
-    )
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+    ),
   },
   {
+    num: '04',
     title: 'Transparency',
-    desc: 'Transparent, Affordable, Flexible and Proactive are the keywords of our success.',
-    color: 'from-amber-500/10 to-orange-500/10',
-    borderColor: 'group-hover:border-amber-500/50',
-    iconColor: 'text-amber-400',
+    desc: 'Clear pricing, honest timelines, and proactive communication.',
     icon: (
-      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-      </svg>
-    )
+      <>
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+      </>
+    ),
   },
   {
+    num: '05',
     title: 'Creative Experts',
-    desc: 'Our team of creative experts is always at the fore front of the ever-changing web.',
-    color: 'from-pink-500/10 to-rose-500/10',
-    borderColor: 'group-hover:border-pink-500/50',
-    iconColor: 'text-pink-400',
+    desc: 'Design and content teams ahead of every digital trend.',
     icon: (
-      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-      </svg>
-    )
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+    ),
   },
   {
+    num: '06',
     title: 'Grow Your Business',
-    desc: 'We are passionate about seeing business grow by applying the latest and most effective web design and digital strategies.',
-    color: 'from-cyan-500/10 to-blue-500/10',
-    borderColor: 'group-hover:border-cyan-500/50',
-    iconColor: 'text-cyan-400',
+    desc: 'SEO, ads, and funnels engineered for scalable revenue.',
     icon: (
-      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-      </svg>
-    )
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+    ),
   },
   {
+    num: '07',
     title: 'Prime Focus',
-    desc: 'Considering clients as the prime focus, we feel them from their perspective to make sure our efforts engage them.',
-    color: 'from-rose-500/10 to-red-500/10',
-    borderColor: 'group-hover:border-rose-500/50',
-    iconColor: 'text-rose-400',
+    desc: 'Your goals drive every sprint — we plan from your customers’ view.',
     icon: (
-      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2a10 10 0 100 20 10 10 0 000-20z" />
-      </svg>
-    )
+      <>
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M12 2a10 10 0 100 20 10 10 0 000-20z" />
+      </>
+    ),
   },
   {
+    num: '08',
     title: 'End-to-end Solution',
-    desc: 'The end-to-end solution we engineer accelerates efficiency and fuel growth for our clients.',
-    color: 'from-violet-500/10 to-fuchsia-500/10',
-    borderColor: 'group-hover:border-violet-500/50',
-    iconColor: 'text-violet-400',
+    desc: 'Strategy through launch and support — one accountable partner.',
     icon: (
-      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-      </svg>
-    )
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+    ),
   },
   {
-    title: 'Carefully Inferences',
-    desc: 'We don’t assume. We arrive at solutions through careful inferences.',
-    color: 'from-emerald-500/10 to-teal-500/10',
-    borderColor: 'group-hover:border-emerald-500/50',
-    iconColor: 'text-emerald-400',
+    num: '09',
+    title: 'Careful Inferences',
+    desc: 'Data-backed decisions — we test assumptions before we build.',
     icon: (
-      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-      </svg>
-    )
-  }
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+    ),
+  },
 ]
 
-const containerVariants = {
-  hidden: {},
-  visible: {
-    transition: {
-      staggerChildren: 0.05
-    }
-  }
-}
+const BouncingIcon = ({ children, delay, reduceMotion, isPurple }) => (
+  <motion.div
+    className={`relative flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border shadow-lg bg-aim-navy-light/80 ${
+      isPurple
+        ? 'border-aim-purple/50 text-white shadow-aim-purple/15'
+        : 'border-aim-gold/50 text-aim-text-accent shadow-aim-gold/15'
+    }`}
+    {...(reduceMotion
+      ? {}
+      : {
+          animate: { y: [0, -14, 0] },
+          transition: {
+            duration: 2.2,
+            repeat: Infinity,
+            ease: [0.34, 1.56, 0.64, 1],
+            delay,
+          },
+        })}
+    whileHover={{ scale: 1.08, rotate: 3 }}
+  >
+    <svg className="w-7 h-7 sm:w-8 sm:h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      {children}
+    </svg>
+  </motion.div>
+)
 
-const cardVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: 'spring',
-      stiffness: 100,
-      damping: 15
-    }
-  }
-}
+const SpecialtyCard = ({ item, index, reduceMotion }) => {
+  const isPurple = index % 2 === 1
+  const isFeatured = item.featured
 
-const SpecialtiesSection = () => {
   return (
-    <section className="py-24 bg-slate-950 relative overflow-hidden border-t border-slate-900">
-      {/* Background Radial Glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 28 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ delay: index * 0.06, type: 'spring', stiffness: 90 }}
+      className={`group relative overflow-hidden rounded-3xl border card-elevated transition-shadow duration-300 ${
+        isFeatured
+          ? 'md:col-span-2 md:row-span-2 p-8 sm:p-10 border-aim-gold/30 shadow-xl shadow-aim-gold/10'
+          : 'p-6 border-white/10 hover:shadow-xl hover:shadow-aim-gold/10'
+      } ${isPurple && !isFeatured ? 'hover:border-aim-purple/40' : 'hover:border-aim-gold/40'}`}
+    >
+      <div
+        className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${
+          isPurple ? 'from-aim-purple via-aim-purple-light to-transparent' : 'from-aim-gold via-aim-gold-light to-transparent'
+        } opacity-80`}
+      />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div
+        className={`absolute -right-8 -top-8 w-32 h-32 rounded-full blur-3xl pointer-events-none ${
+          isPurple ? 'bg-aim-purple/15' : 'bg-aim-gold/15'
+        }`}
+      />
 
-        {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold uppercase tracking-wider">
-            Specialties &amp; Expertise
-          </div>
-          <h2 className="text-3xl md:text-5xl font-black text-white leading-tight">
-            Why Partner With AIM Digitalise?
-          </h2>
-          <p className="text-lg text-slate-400">
-            We offer robust digital standards, strategic insights, and customized development to accelerate your company's growth.
+      <div className={`relative flex flex-col h-full ${isFeatured ? 'gap-6' : 'gap-4'}`}>
+        <div className="flex items-start justify-between gap-3">
+          <span className="text-xs font-black tracking-widest text-on-navy-muted">
+            {item.num}
+          </span>
+          <BouncingIcon delay={index * 0.15} reduceMotion={reduceMotion} isPurple={isPurple}>
+            {item.icon}
+          </BouncingIcon>
+        </div>
+
+        <div className="flex-grow">
+          <h3
+            className={`font-bold text-white mb-2 group-hover:text-aim-highlight transition-colors ${isFeatured ? 'text-2xl sm:text-3xl' : 'text-lg sm:text-xl'}`}
+          >
+            {item.title}
+          </h3>
+          <p className={`text-on-navy-muted leading-relaxed ${isFeatured ? 'text-base max-w-lg' : 'text-sm'}`}>
+            {item.desc}
           </p>
         </div>
 
-        {/* Cards Grid */}
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-100px' }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
-          {specialties.map((item, idx) => (
-            <motion.div
-              key={idx}
-              variants={cardVariants}
-              whileHover={{ y: -6, transition: { duration: 0.2 } }}
-              className={`group relative p-6 rounded-2xl border border-slate-800/80 bg-slate-900/30 backdrop-blur-sm transition-all duration-300 hover:bg-slate-900/50 hover:shadow-2xl hover:shadow-indigo-500/5 ${item.borderColor}`}
-            >
-              {/* Top ambient glow on hover */}
-              <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${item.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none`} />
+        {isFeatured && (
+          <div className="flex flex-wrap gap-2 pt-2">
+            {['React & Cloud', 'SEO & SEM', 'DSC & Compliance'].map((tag) => (
+              <span
+                key={tag}
+                className="px-3 py-1 text-xs font-semibold rounded-full bg-white/5 text-on-navy border border-white/15"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </motion.div>
+  )
+}
 
-              <div className="relative z-10 flex flex-col h-full space-y-4">
-                {/* Icon wrapper */}
-                <div className={`w-14 h-14 rounded-xl flex items-center justify-center bg-slate-800/50 border border-slate-700/50 group-hover:border-indigo-500/30 group-hover:bg-indigo-500/10 transition-colors duration-300 ${item.iconColor}`}>
-                  {item.icon}
-                </div>
+const SpecialtiesSection = () => {
+  const reduceMotion = useReducedMotion()
 
-                {/* Title */}
-                <h3 className="text-xl font-bold text-white group-hover:text-indigo-300 transition-colors duration-300">
-                  {item.title}
-                </h3>
+  return (
+    <section className="relative py-20 md:py-28 overflow-hidden section-muted border-t border-white/10">
+      <div className="absolute inset-0 pointer-events-none" aria-hidden>
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-aim-gold/40 to-transparent" />
+        <div className="absolute -top-40 right-0 w-[500px] h-[500px] bg-aim-gold/8 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-aim-purple/10 rounded-full blur-3xl" />
+      </div>
 
-                {/* Description */}
-                <p className="text-sm text-slate-400 leading-relaxed flex-grow">
-                  {item.desc}
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
+        <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-start mb-14 md:mb-20">
+          <motion.div
+            className="lg:col-span-5 space-y-6"
+            initial={{ opacity: 0, x: -24 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+          >
+            <div className="badge-pill w-fit">
+              <span className="badge-pill-dot" />
+              Specialties &amp; Expertise
+            </div>
+            <h2 className="heading-display text-left text-3xl sm:text-4xl lg:text-5xl leading-tight">
+              Why Partner With{' '}
+              <span className="text-gradient">AIM Digitalise?</span>
+            </h2>
+            <div className="divider-brand !mx-0 !max-w-[12rem]" />
+            <p className="copy-on-dark-muted text-base">
+              We combine enterprise discipline with agency agility — robust digital standards, sharp strategy, and
+              hands-on development that accelerates your growth.
+            </p>
+          </motion.div>
+
+          <motion.div
+            className="lg:col-span-7 grid grid-cols-3 gap-4"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.15 }}
+          >
+            {stats.map((stat, i) => (
+              <motion.div
+                key={stat.label}
+                className={`relative text-center p-5 sm:p-6 rounded-2xl border-2 card-elevated overflow-hidden ${
+                  stat.accent === 'purple'
+                    ? 'border-aim-purple/30 shadow-lg shadow-aim-purple/15'
+                    : 'border-aim-gold/30 shadow-lg shadow-aim-gold/15'
+                } ${!reduceMotion ? (i === 1 ? 'animate-bounce-gentle-delayed' : 'animate-bounce-gentle') : ''}`}
+                style={{ animationDelay: `${i * 0.2}s` }}
+              >
+                <p className="text-2xl sm:text-3xl font-black text-white">
+                  {stat.value}
                 </p>
-              </div>
-            </motion.div>
+                <p className="text-[11px] sm:text-xs font-semibold text-aim-copy-muted uppercase tracking-wider mt-1">
+                  {stat.label}
+                </p>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 auto-rows-fr">
+          {specialties.map((item, index) => (
+            <SpecialtyCard key={item.num} item={item} index={index} reduceMotion={reduceMotion} />
           ))}
+        </div>
+
+        <motion.div
+          className="mt-14 md:mt-16 cta-panel p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 text-left"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+        >
+          <div className="relative z-10 space-y-2 max-w-xl">
+            <p className="text-sm font-bold uppercase tracking-wider text-aim-highlight">Ready to scale?</p>
+            <h3 className="text-2xl md:text-3xl font-bold text-white">
+              Let&apos;s build your next chapter together.
+            </h3>
+            <p className="copy-on-dark-muted text-sm">
+              Talk to our team about web, marketing, ERP, or digital signature solutions tailored to your industry.
+            </p>
+          </div>
+          <Link
+            to={ROUTES.CONTACT}
+            className="relative z-10 shrink-0 btn-primary px-8 py-3.5 text-center font-semibold"
+          >
+            Start a Conversation
+          </Link>
         </motion.div>
       </div>
     </section>

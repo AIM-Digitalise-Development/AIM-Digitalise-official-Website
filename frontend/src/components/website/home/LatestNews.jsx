@@ -58,15 +58,15 @@ const LatestNews = () => {
 
   if (loading) {
     return (
-      <section className="py-24 bg-slate-900/30 border-t border-slate-900">
+      <section className="py-24 section-muted">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-3 gap-8">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 animate-pulse">
-                <div className="h-4 bg-slate-850 rounded w-1/4 mb-4"></div>
-                <div className="h-6 bg-slate-850 rounded w-3/4 mb-4"></div>
-                <div className="h-16 bg-slate-850 rounded mb-4"></div>
-                <div className="h-10 bg-slate-850 rounded"></div>
+              <div key={i} className="bg-white border border-slate-200 rounded-2xl p-6 animate-pulse">
+                <div className="h-4 bg-slate-100 rounded w-1/4 mb-4"></div>
+                <div className="h-6 bg-slate-100 rounded w-3/4 mb-4"></div>
+                <div className="h-16 bg-slate-100 rounded mb-4"></div>
+                <div className="h-10 bg-slate-100 rounded"></div>
               </div>
             ))}
           </div>
@@ -76,20 +76,20 @@ const LatestNews = () => {
   }
 
   return (
-    <section className="py-24 bg-slate-900/30 border-t border-slate-900 relative overflow-hidden">
-      {/* Background glow bottom left */}
-      <div className="absolute bottom-0 left-0 w-80 h-80 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
+    <section className="py-24 section-muted relative overflow-hidden">
+      <div className="ambient-glows" aria-hidden />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold uppercase tracking-wider">
+          <div className="badge-pill mx-auto w-fit">
+            <span className="badge-pill-dot" />
             Publications
           </div>
-          <h2 className="text-3xl md:text-5xl font-black text-white leading-tight">
+          <h2 className="heading-display">
             Tech Insights & Publications
           </h2>
-          <p className="text-lg text-slate-400">
+          <div className="divider-brand" />
+          <p className="text-lg copy-on-dark-muted">
             Read about deep technical deep dives, cloud architectural guides, and software engineering best practices.
           </p>
         </div>
@@ -104,33 +104,33 @@ const LatestNews = () => {
         >
           {posts.map((post) => (
             <motion.div key={post.id} variants={itemVariants} className="flex">
-              <Card hover padding="lg" className="flex flex-col justify-between w-full bg-slate-900/20 border-slate-800/80">
+              <Card hover padding="lg" className="flex flex-col justify-between w-full bg-white border-slate-200">
                 <div className="space-y-4 text-left">
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-indigo-400 font-bold uppercase tracking-wider">
+                    <span className="text-xs text-blue-600 font-bold uppercase tracking-wider">
                       {post.category}
                     </span>
-                    <span className="text-xs text-slate-500 font-mono">
+                    <span className="text-xs text-slate-400 font-mono">
                       {post.readTime}
                     </span>
                   </div>
-                  <h3 className="text-xl font-bold text-white group-hover:text-indigo-400 transition-colors leading-snug">
+                  <h3 className="text-xl font-bold text-white group-hover:text-aim-highlight transition-colors leading-snug">
                     {post.title}
                   </h3>
-                  <p className="text-slate-400 text-sm leading-relaxed">
+                  <p className="text-aim-copy-muted text-sm leading-relaxed">
                     {post.excerpt}
                   </p>
                 </div>
 
-                <div className="flex items-center justify-between pt-6 mt-6 border-t border-slate-800/60">
-                  <span className="text-xs text-slate-500 font-medium">
+                <div className="flex items-center justify-between pt-6 mt-6 border-t border-slate-100">
+                  <span className="text-xs text-slate-400 font-medium">
                     {new Date(post.date).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'short',
                       day: 'numeric'
                     })}
                   </span>
-                  <Button variant="ghost" size="sm" className="text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1 cursor-pointer">
+                  <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1 cursor-pointer">
                     <span>Read Article</span>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

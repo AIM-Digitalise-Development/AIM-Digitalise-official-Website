@@ -8,10 +8,10 @@ const management = [
     designation: 'Managing Director & CEO',
     avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80',
     badge: 'Founder',
-    badgeColor: 'bg-indigo-500/20 border-indigo-500/40 text-indigo-300',
-    accentFrom: 'from-indigo-500',
-    accentTo: 'to-purple-500',
-    borderHover: 'hover:border-indigo-500/50',
+    badgeColor: 'bg-blue-50 border-blue-200 text-blue-600',
+    accentFrom: 'from-blue-600',
+    accentTo: 'to-blue-500',
+    borderHover: 'hover:border-blue-500/50',
     shortBio:
       'Visionary entrepreneur with 10+ years in digital marketing and technology. Leads AIM Digitalise with a passion for innovation and client success.',
     message:
@@ -24,10 +24,10 @@ const management = [
     designation: 'Director – Operations & Strategy',
     avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80',
     badge: 'Co-Founder',
-    badgeColor: 'bg-purple-500/20 border-purple-500/40 text-purple-300',
-    accentFrom: 'from-purple-500',
-    accentTo: 'to-pink-500',
-    borderHover: 'hover:border-purple-500/50',
+    badgeColor: 'bg-red-50 border-red-200 text-red-600',
+    accentFrom: 'from-red-500',
+    accentTo: 'to-red-500',
+    borderHover: 'hover:border-red-500/50',
     shortBio:
       `Operations strategist and co-founder driving AIM Digitalise's growth with data-driven decision making and team excellence.`,
     message:
@@ -40,10 +40,10 @@ const management = [
     designation: 'Chief Technology Officer',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
     badge: 'CTO',
-    badgeColor: 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300',
-    accentFrom: 'from-cyan-500',
+    badgeColor: 'bg-blue-50 border-blue-200 text-blue-600',
+    accentFrom: 'from-blue-600',
     accentTo: 'to-blue-500',
-    borderHover: 'hover:border-cyan-500/50',
+    borderHover: 'hover:border-blue-500/50',
     shortBio:
       `Technology leader with expertise in web, mobile, and cloud solutions. Architects AIM's technical vision and drives digital transformation.`,
     message:
@@ -57,11 +57,12 @@ const ManagementDesk = () => {
   const active = management.find((m) => m.id === activeId)
 
   return (
-    <section className="relative py-24 overflow-hidden bg-slate-950 bg-grid-pattern border-t border-slate-900">
+    <section className="relative py-24 overflow-hidden section-muted bg-grid-pattern">
+      <div className="ambient-glows" aria-hidden />
       {/* Ambient glows */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-1/4 left-0 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 left-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-red-500/5 rounded-full blur-3xl" />
       </div>
 
       <div className="relative container-custom z-10">
@@ -73,16 +74,16 @@ const ManagementDesk = () => {
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold uppercase tracking-widest mb-4">
+          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-600 text-xs font-semibold uppercase tracking-widest mb-4">
             👔 Leadership
           </span>
-          <h2 className="text-4xl sm:text-5xl font-black text-white leading-tight">
+          <h2 className="text-4xl sm:text-5xl font-black text-slate-900 leading-tight">
             Management{' '}
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-red-500 to-blue-600">
               Desk
             </span>
           </h2>
-          <p className="mt-4 text-slate-400 max-w-xl mx-auto text-sm leading-relaxed">
+          <p className="mt-4 text-slate-600 max-w-xl mx-auto text-sm leading-relaxed">
             Meet the visionary leaders driving AIM Digitalise forward — passionate about innovation, integrity, and your success.
           </p>
         </motion.div>
@@ -97,8 +98,8 @@ const ManagementDesk = () => {
                 onClick={() => setActiveId(person.id)}
                 className={`w-full text-left group relative flex items-center gap-4 p-4 rounded-2xl border transition-all duration-300 overflow-hidden
                   ${activeId === person.id
-                    ? 'bg-slate-800/80 border-slate-600/80 shadow-lg'
-                    : `bg-slate-900/40 border-slate-800/60 ${person.borderHover} hover:bg-slate-800/40`
+                    ? 'bg-white border-slate-300 shadow-md'
+                    : `bg-white/85 border-slate-200 ${person.borderHover} hover:bg-white`
                   }`}
                 initial={{ opacity: 0, x: -20 }}
                 whileInView={{ opacity: 1, x: 0 }}
@@ -122,24 +123,24 @@ const ManagementDesk = () => {
                   <img
                     src={person.avatar}
                     alt={person.name}
-                    className="relative w-14 h-14 rounded-xl object-cover border border-slate-700/80"
+                    className="relative w-14 h-14 rounded-xl object-cover border border-slate-200"
                   />
                 </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-white text-sm truncate">{person.name}</span>
+                    <span className="font-bold text-slate-900 text-sm truncate">{person.name}</span>
                     <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${person.badgeColor}`}>
                       {person.badge}
                     </span>
                   </div>
-                  <p className="text-slate-400 text-xs mt-0.5 truncate">{person.designation}</p>
+                  <p className="text-slate-550 text-xs mt-0.5 truncate">{person.designation}</p>
                 </div>
 
                 {/* Chevron */}
                 <svg
-                  className={`w-4 h-4 shrink-0 transition-all duration-300 ${activeId === person.id ? 'text-indigo-400 rotate-90' : 'text-slate-600 group-hover:text-slate-400'}`}
+                  className={`w-4 h-4 shrink-0 transition-all duration-300 ${activeId === person.id ? 'text-blue-600 rotate-90' : 'text-slate-400 group-hover:text-slate-600'}`}
                   fill="none" stroke="currentColor" viewBox="0 0 24 24"
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -158,7 +159,7 @@ const ManagementDesk = () => {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -16 }}
                   transition={{ duration: 0.35, ease: 'easeOut' }}
-                  className={`relative rounded-3xl border border-slate-800/80 bg-slate-900/50 backdrop-blur-xl overflow-hidden shadow-2xl`}
+                  className={`relative rounded-3xl border border-slate-200 bg-white overflow-hidden shadow-2xl`}
                 >
                   {/* Top accent bar */}
                   <div className={`h-1 w-full bg-gradient-to-r ${active.accentFrom} ${active.accentTo}`} />
@@ -174,15 +175,15 @@ const ManagementDesk = () => {
                         <img
                           src={active.avatar}
                           alt={active.name}
-                          className="relative w-20 h-20 rounded-2xl object-cover border-2 border-slate-700 shadow-xl"
+                          className="relative w-20 h-20 rounded-2xl object-cover border border-slate-200 shadow-xl"
                         />
                       </div>
                       <div>
-                        <h3 className="text-xl font-black text-white">{active.name}</h3>
+                        <h3 className="text-xl font-black text-slate-900">{active.name}</h3>
                         <p className={`text-sm font-semibold bg-clip-text text-transparent bg-gradient-to-r ${active.accentFrom} ${active.accentTo}`}>
                           {active.designation}
                         </p>
-                        <p className="text-slate-400 text-xs mt-1.5 leading-relaxed max-w-md">{active.shortBio}</p>
+                        <p className="text-slate-500 text-xs mt-1.5 leading-relaxed max-w-md">{active.shortBio}</p>
                       </div>
                     </div>
 
@@ -190,25 +191,25 @@ const ManagementDesk = () => {
                     <div className="relative">
                       <svg
                         className={`absolute -top-3 -left-1 w-10 h-10 opacity-20 bg-clip-text`}
-                        style={{ color: 'rgb(99,102,241)' }}
+                        style={{ color: 'rgb(37,99,235)' }}
                         fill="currentColor" viewBox="0 0 24 24"
                       >
                         <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
                       </svg>
 
                       <div className="pl-8">
-                        <p className="text-slate-300 text-sm leading-[1.9] italic">
+                        <p className="text-slate-600 text-sm leading-[1.9] italic">
                           {active.message}
                         </p>
                       </div>
                     </div>
 
                     {/* Social links */}
-                    <div className="flex items-center gap-3 mt-7 pt-6 border-t border-slate-800/60">
-                      <span className="text-slate-500 text-xs font-medium uppercase tracking-wider">Connect</span>
+                    <div className="flex items-center gap-3 mt-7 pt-6 border-t border-slate-200">
+                      <span className="text-slate-400 text-xs font-medium uppercase tracking-wider">Connect</span>
                       <a
                         href={active.social.linkedin}
-                        className="p-2 rounded-lg bg-slate-800 hover:bg-blue-600/20 border border-slate-700 hover:border-blue-500/40 text-slate-400 hover:text-blue-400 transition-all duration-200"
+                        className="p-2 rounded-lg bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-500 hover:text-blue-600 transition-all duration-200"
                         aria-label="LinkedIn"
                       >
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -217,7 +218,7 @@ const ManagementDesk = () => {
                       </a>
                       <a
                         href={active.social.twitter}
-                        className="p-2 rounded-lg bg-slate-800 hover:bg-sky-600/20 border border-slate-700 hover:border-sky-500/40 text-slate-400 hover:text-sky-400 transition-all duration-200"
+                        className="p-2 rounded-lg bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-500 hover:text-blue-600 transition-all duration-200"
                         aria-label="Twitter"
                       >
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">

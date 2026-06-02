@@ -1,105 +1,154 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { ROUTES } from '../../../constants/routes'
 import Button from '../../ui/Button'
 
-const AboutCompanySection = () => {
-  // Primary: online fallback — replace with '/src/assets/images/team_group_photo.png' once copied locally
-  const [imageSrc, setImageSrc] = useState('https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80')
+/** Working team/office photos — picsum seed as last-resort fallback */
+const teamPhoto = (unsplashPath, seed) => ({
+  primary: `https://images.unsplash.com/${unsplashPath}?auto=format&fit=crop&w=700&h=700&q=80`,
+  backup: `https://picsum.photos/seed/aim-${seed}/700/700`,
+})
 
-  const handleImageError = () => {
-    setImageSrc('https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80')
-  }
+const PHOTOS = {
+  collab: teamPhoto('photo-1522071820081-009f0129c71c', 'collab'),
+  meeting: teamPhoto('photo-1517245386807-bb43a82c5c73', 'meeting'),
+  planning: teamPhoto('photo-1552664730-d307ca884978', 'planning'),
+  standup: teamPhoto('photo-1553877522-43269d4ea984', 'standup'),
+  dev: teamPhoto('photo-1551434678-e076c223a692', 'dev'),
+  workshop: teamPhoto('photo-1556761175-5973dc0f32e7', 'workshop'),
+  office: teamPhoto('photo-1521737716868-97479f5de454', 'office'),
+  huddle: teamPhoto('photo-1551837224-22afb7bbfcfe', 'huddle'),
+}
+
+const floatingImages = [
+  { ...PHOTOS.collab, alt: 'Team collaboration', position: 'top-[2%] left-[0%] lg:left-[2%]', size: 'w-36 h-36 sm:w-44 sm:h-44 md:w-52 md:h-52 lg:w-60 lg:h-60', delay: 0, bounceClass: 'animate-bounce-gentle' },
+  { ...PHOTOS.meeting, alt: 'Team meeting', position: 'top-[4%] right-[0%] lg:right-[2%]', size: 'w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56 lg:w-64 lg:h-64', delay: 0.25, bounceClass: 'animate-bounce-gentle-delayed' },
+  { ...PHOTOS.standup, alt: 'Team standup', position: 'top-[36%] left-[0%]', size: 'w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 lg:w-56 lg:h-56', delay: 0.5, bounceClass: 'animate-bounce-gentle' },
+  { ...PHOTOS.dev, alt: 'Development team', position: 'top-[32%] right-[0%]', size: 'w-36 h-36 sm:w-44 sm:h-44 md:w-52 md:h-52 lg:w-60 lg:h-60', delay: 0.75, bounceClass: 'animate-bounce-gentle-delayed' },
+  { ...PHOTOS.huddle, alt: 'Professional team meeting', position: 'bottom-[12%] left-[2%] lg:left-[5%]', size: 'w-36 h-36 sm:w-44 sm:h-44 md:w-52 md:h-52 lg:w-60 lg:h-60', delay: 0.1, bounceClass: 'animate-bounce-gentle-delayed' },
+  { ...PHOTOS.workshop, alt: 'Team workshop', position: 'bottom-[8%] right-[2%] lg:right-[5%]', size: 'w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56 lg:w-64 lg:h-64', delay: 0.4, bounceClass: 'animate-bounce-gentle' },
+  { ...PHOTOS.planning, alt: 'Strategy session', position: 'bottom-[1%] left-[16%] xl:left-[14%]', size: 'hidden md:block w-40 h-40 lg:w-48 lg:h-48 xl:w-52 xl:h-52', delay: 0.9, bounceClass: 'animate-bounce-gentle' },
+  { ...PHOTOS.office, alt: 'Business team collaboration', position: 'bottom-[2%] right-[14%] xl:right-[12%]', size: 'hidden md:block w-40 h-40 lg:w-48 lg:h-48 xl:w-52 xl:h-52', delay: 0.65, bounceClass: 'animate-bounce-gentle-delayed' },
+]
+
+const BouncePhoto = ({ sources, alt, className }) => {
+  const list = useMemo(() => sources.filter(Boolean), [sources])
+  const [idx, setIdx] = useState(0)
 
   return (
-    <section className="relative py-24 overflow-hidden bg-slate-950 bg-grid-pattern border-t border-slate-900">
-      {/* Ambient glows */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/2 -right-40 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl animate-pulse-slow"></div>
-        <div className="absolute top-1/4 -left-40 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl animate-pulse-slow delay-1000"></div>
+    <img
+      src={list[idx]}
+      alt={alt}
+      className={className}
+      loading="eager"
+      decoding="async"
+      onError={() => setIdx((i) => (i < list.length - 1 ? i + 1 : i))}
+    />
+  )
+}
+
+const bounceMotion = (delay, reduceMotion) =>
+  reduceMotion
+    ? {}
+    : {
+        animate: { y: [0, -32, 0] },
+        transition: {
+          duration: 2.4,
+          repeat: Infinity,
+          ease: [0.34, 1.45, 0.64, 1],
+          delay,
+        },
+      }
+
+const FloatingPhoto = ({ image, reduceMotion }) => (
+  <motion.div
+    className={`absolute ${image.position} ${image.size} z-10`}
+    initial={{ opacity: 0, scale: 0.8 }}
+    whileInView={{ opacity: 1, scale: 1 }}
+    viewport={{ once: true }}
+    transition={{ type: 'spring', stiffness: 120, damping: 14, delay: image.delay * 0.15 }}
+  >
+    <motion.div className="relative w-full h-full" {...bounceMotion(image.delay, reduceMotion)}>
+      <div className="absolute -inset-3 rounded-3xl bg-gradient-to-br from-aim-gold/30 to-aim-purple/25 blur-2xl opacity-70 -z-10" aria-hidden />
+      <div className="relative w-full h-full rounded-2xl md:rounded-3xl p-2 bg-aim-navy-light border-2 border-white/15 shadow-2xl shadow-aim-gold/20 ring-2 ring-aim-gold/15 overflow-hidden">
+        <BouncePhoto
+          sources={[image.primary, image.backup, PHOTOS.meeting.primary]}
+          alt={image.alt}
+          className="w-full h-full object-cover rounded-xl md:rounded-2xl min-h-[80px] bg-slate-100"
+        />
       </div>
+    </motion.div>
+  </motion.div>
+)
 
-      <div className="relative container-custom max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
-        <div className="grid lg:grid-cols-12 gap-12 items-center">
-          
-          {/* Left Column: Team Group Photo */}
-          <motion.div 
-            className="lg:col-span-5 relative"
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            {/* Glow backing */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 rounded-3xl blur-2xl opacity-40 transform rotate-2"></div>
-            
-            {/* Image Glass Frame */}
-            <div className="relative bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-3 shadow-2xl overflow-hidden group">
-              <img
-                src={imageSrc}
-                onError={handleImageError}
-                alt="AIM Digitalise Team"
-                className="rounded-2xl w-full h-[550px] lg:h-[650px] object-cover shadow-inner transition-transform duration-750 group-hover:scale-[1.03]"
-                loading="lazy"
-                width="600"
-                height="400"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-6 justify-center">
-                <span className="text-xs font-semibold text-slate-300 tracking-wider">AIM Digitalise Pvt. Ltd. Team</span>
-              </div>
+const AboutCompanySection = () => {
+  const reduceMotion = useReducedMotion()
+
+  return (
+    <section className="relative py-16 md:py-28 overflow-hidden section-tinted bg-grid-pattern">
+      <div className="ambient-glows" aria-hidden />
+      <div className="absolute inset-0 bg-gradient-to-b from-aim-gold/10 via-transparent to-aim-purple/10 pointer-events-none" aria-hidden />
+
+      <div className="relative container-custom max-w-[90rem] z-10">
+        <div className="flex lg:hidden gap-4 mb-10 overflow-x-auto pb-2 px-1 snap-x">
+          {floatingImages.slice(0, 5).map((item, i) => (
+            <motion.div
+              key={item.alt}
+              className={`snap-center shrink-0 w-32 h-32 rounded-2xl overflow-hidden border-2 border-white shadow-xl ${!reduceMotion ? (i % 2 ? 'animate-bounce-gentle-delayed' : 'animate-bounce-gentle') : ''}`}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+            >
+              <BouncePhoto sources={[item.primary, item.backup]} alt={item.alt} className="w-full h-full object-cover bg-slate-100" />
+            </motion.div>
+          ))}
+        </div>
+
+        <div className="relative min-h-[680px] md:min-h-[900px] lg:min-h-[960px] flex items-center justify-center px-2">
+          {floatingImages.map((item) => (
+            <div key={item.alt} className="hidden lg:contents">
+              <FloatingPhoto image={item} reduceMotion={reduceMotion} />
             </div>
-          </motion.div>
+          ))}
+          <div className="hidden md:block lg:hidden absolute inset-0 pointer-events-none">
+            {floatingImages.slice(0, 6).map((item) => (
+              <FloatingPhoto key={`md-${item.alt}`} image={item} reduceMotion={reduceMotion} />
+            ))}
+          </div>
 
-          {/* Right Column: Copy Details */}
-          <motion.div 
-            className="lg:col-span-7 space-y-6 text-left"
-            initial={{ opacity: 0, y: 20 }}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(94%,38rem)] aspect-square max-h-[85%] rounded-full bg-aim-gold/5 blur-2xl shadow-[0_0_80px_rgba(245,166,35,0.12)] pointer-events-none z-0" aria-hidden />
+
+          <motion.article
+            className="relative z-20 w-full max-w-2xl mx-auto text-center px-4 sm:px-8 py-8 rounded-3xl bg-aim-navy-light/80 backdrop-blur-sm border border-white/15 shadow-lg"
+            initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.1 }}
           >
-            <div className="space-y-4">
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold uppercase tracking-wider">
+            <div className="space-y-5 md:space-y-6">
+              <div className="badge-pill mx-auto w-fit">
+                <span className="badge-pill-dot-red" />
                 About Our Company
-              </span>
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white leading-tight tracking-tight">
+              </div>
+              <h2 className="heading-display text-3xl sm:text-4xl md:text-[2.75rem]">
                 Where Expertise Meets <span className="text-gradient">Innovation</span>
               </h2>
-            </div>
-
-            {/* Paragraphs */}
-            <div className="space-y-4 text-slate-400 text-sm leading-relaxed max-w-3xl">
-              <p>
-                At AIM Digitalise Pvt. Ltd., we take immense pride in being one of India’s most trusted performance digital marketing agencies, where expertise meets innovation. Our team of highly skilled professionals is ready to curve your business ideas into a reality that will drive growth and success. As a leading digital marketing agency, we are committed to staying ahead of the market trends, bringing the latest and greatest marketing technologies to our clients, and changing.
-              </p>
-              <p>
-                In the dynamic and vast world of digital marketing, having an exceptional product or service is the most important step towards achieving something. A product with the right traffic, consistently flowing in, can elevate a business to new heights of success. At AIM Digitalise Pvt. Ltd., we specialize in connecting businesses with their potential clients, ensuring they are getting the right audiences.
-              </p>
-              <p>
-                Our mission goes beyond individual success stories. We aim to create a complete and inclusive digital ecosystem for India, offering a variety of digital solutions tailored to meet the unique needs of businesses across various industries. Whether it’s digital marketing, social media marketing, search engine optimization, Website Development, or innovative content creation, our team is equipped to handle it all.
-              </p>
-              <p>
-                As a digital marketing company that leads with passion and purpose, we don’t just help businesses grow—we empower them to compete in the market. By leveraging data-driven strategies, advanced analytics, and a deep understanding of market trends.
-              </p>
-              <p>
-                Choose AIM Digitalise Pvt. Ltd. as your trusted partner and embark on a journey to redefine your digital presence. Together, we will shape a future where businesses thrive with unmatched success, audiences connect with brands on a deeper level, and India unleashes its boundless digital potential, setting new benchmarks in the global digital landscape.
-              </p>
-            </div>
-
-            {/* CTA Button */}
-            <div className="pt-4">
+              <div className="divider-brand" />
+              <div className="space-y-4 copy-on-dark text-sm sm:text-base text-left sm:text-center max-h-[42vh] lg:max-h-none overflow-y-auto lg:overflow-visible">
+                <p>At AIM Digitalise Pvt. Ltd., we take immense pride in being one of India&apos;s most trusted performance digital marketing agencies, where expertise meets innovation.</p>
+                <p>We specialize in connecting businesses with their potential clients through digital marketing, SEO, web development, and content creation.</p>
+                <p>Our mission is to build an inclusive digital ecosystem for India — empowering brands with data-driven strategies and measurable growth.</p>
+              </div>
               <Link to={ROUTES.ABOUT}>
-                <Button size="lg" className="btn-primary cursor-pointer font-bold">
-                  <span>Learn More About Us</span>
-                  <svg className="w-5 h-5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <Button size="lg" className="btn-primary font-bold">
+                  Learn More About Us
+                  <svg className="w-5 h-5 ml-1 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
                 </Button>
               </Link>
             </div>
-          </motion.div>
-
+          </motion.article>
         </div>
       </div>
     </section>

@@ -126,41 +126,42 @@ const PricingCard = () => {
   const currentModels = engagementModels[tier]
 
   return (
-    <section className="py-24 bg-slate-950 relative overflow-hidden">
-      {/* Background glow top left */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl pointer-events-none"></div>
+    <section className="py-24 section-white relative">
+      <div className="ambient-glows" aria-hidden />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold uppercase tracking-wider">
+          <div className="badge-pill mx-auto w-fit">
+            <span className="badge-pill-dot" />
             Partnership Models
           </div>
-          <h2 className="text-3xl md:text-5xl font-black text-white leading-tight">
+          <h2 className="heading-display">
             Flexible Engagement Models
           </h2>
-          <p className="text-lg text-slate-400">
+          <div className="divider-brand" />
+          <p className="text-lg copy-on-dark-muted">
             Choose the alignment model that fits your company size, timeline, and engineering requirements.
           </p>
 
           {/* Tier Switcher */}
           <div className="flex justify-center mt-10">
-            <div className="bg-slate-900/80 border border-slate-800 p-1 rounded-xl flex gap-1">
+            <div className="bg-aim-navy-light/60 border border-white/10 p-1 rounded-xl flex gap-1">
               <button
                 onClick={() => setTier('growth')}
                 className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
                   tier === 'growth'
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-aim-gold text-aim-navy shadow-md'
+                    : 'text-aim-copy-muted hover:text-white'
                 }`}
               >
-                Growth Stage & Startups
+                Growth Stage &amp; Startups
               </button>
               <button
                 onClick={() => setTier('enterprise')}
                 className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
                   tier === 'enterprise'
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-aim-gold text-aim-navy shadow-md'
+                    : 'text-aim-copy-muted hover:text-white'
                 }`}
               >
                 Enterprise Systems
@@ -182,13 +183,13 @@ const PricingCard = () => {
             <motion.div key={model.name} variants={itemVariants} className="flex">
               <Card
                 padding="lg"
-                className={`flex flex-col justify-between w-full relative bg-slate-900/20 border-slate-800/80 ${
-                  model.recommended ? 'border-2 border-indigo-500/50 shadow-2xl shadow-indigo-500/5' : ''
+                className={`flex flex-col justify-between w-full relative ${
+                  model.recommended ? 'border-2 border-aim-gold/60 shadow-2xl shadow-aim-gold/15' : ''
                 }`}
               >
                 {model.recommended && (
                   <div className="absolute -top-3.5 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-indigo-600 text-white text-xs font-bold uppercase tracking-widest px-3.5 py-1 rounded-full shadow-lg">
+                    <span className="bg-aim-gold text-aim-navy text-xs font-bold uppercase tracking-widest px-3.5 py-1 rounded-full shadow-lg">
                       {model.badge}
                     </span>
                   </div>
@@ -197,33 +198,33 @@ const PricingCard = () => {
                 <div className="space-y-6 text-left">
                   <div>
                     {!model.recommended && (
-                      <span className="inline-block text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-1">
+                      <span className="inline-block text-[10px] uppercase font-bold text-aim-copy-muted tracking-widest mb-1">
                         {model.badge}
                       </span>
                     )}
                     <h3 className="text-2xl font-bold text-white">{model.name}</h3>
-                    <p className="text-slate-400 text-xs mt-2 leading-relaxed min-h-[40px]">
+                    <p className="text-aim-copy-muted text-xs mt-2 leading-relaxed min-h-[40px]">
                       {model.description}
                     </p>
                     <div className="mt-4 flex items-baseline text-white">
                       <span className="text-4xl font-extrabold tracking-tight">{model.price}</span>
-                      <span className="ml-1 text-sm font-semibold text-slate-500">{model.priceSuffix}</span>
+                      <span className="ml-1 text-sm font-semibold text-aim-copy-muted">{model.priceSuffix}</span>
                     </div>
                   </div>
 
-                  <ul className="space-y-3.5 border-t border-slate-800/60 pt-6">
+                  <ul className="space-y-3.5 border-t border-white/10 pt-6">
                     {model.features.map((feature) => (
                       <li key={feature} className="flex items-start gap-3">
-                        <svg className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5 text-aim-highlight shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                         </svg>
-                        <span className="text-slate-300 text-sm">{feature}</span>
+                        <span className="text-aim-copy text-sm">{feature}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
 
-                <div className="mt-8 pt-6 border-t border-slate-800/60">
+                <div className="mt-8 pt-6 border-t border-white/10">
                   <Button
                     variant={model.recommended ? 'primary' : 'outline'}
                     size="lg"

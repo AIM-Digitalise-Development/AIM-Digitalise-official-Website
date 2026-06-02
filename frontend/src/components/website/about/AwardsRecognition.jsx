@@ -7,9 +7,9 @@ const awards = [
     body: 'Recognized as one of the top performance digital marketing agencies in India for delivering exceptional results.',
     year: '2023',
     org: 'India Digital Awards',
-    color: 'from-yellow-500/20 to-amber-500/10',
-    border: 'border-yellow-500/30',
-    badge: 'text-yellow-400',
+    color: 'from-blue-50 via-blue-50/10 to-transparent',
+    border: 'border-blue-200',
+    badge: 'text-blue-600',
   },
   {
     icon: '🥇',
@@ -17,9 +17,9 @@ const awards = [
     body: 'Awarded for outstanding website design and development services that transformed client digital presence.',
     year: '2022',
     org: 'Tech India Summit',
-    color: 'from-indigo-500/20 to-blue-500/10',
-    border: 'border-indigo-500/30',
-    badge: 'text-indigo-400',
+    color: 'from-red-50 via-red-50/10 to-transparent',
+    border: 'border-red-200',
+    badge: 'text-red-600',
   },
   {
     icon: '🌟',
@@ -27,9 +27,9 @@ const awards = [
     body: 'Honored as one of the fastest-growing digital agencies in India, setting benchmarks in the industry.',
     year: '2022',
     org: 'Startup India Recognition',
-    color: 'from-purple-500/20 to-pink-500/10',
-    border: 'border-purple-500/30',
-    badge: 'text-purple-400',
+    color: 'from-red-50 via-red-50/10 to-transparent',
+    border: 'border-red-200',
+    badge: 'text-red-600',
   },
   {
     icon: '🎖️',
@@ -37,9 +37,9 @@ const awards = [
     body: 'Recognized as the leading direct controller for eMudra, Capricorn, and other top DSC authorities.',
     year: '2023',
     org: 'Controller of Certifying Authorities',
-    color: 'from-emerald-500/20 to-teal-500/10',
-    border: 'border-emerald-500/30',
-    badge: 'text-emerald-400',
+    color: 'from-blue-50 via-blue-50/10 to-transparent',
+    border: 'border-blue-200',
+    badge: 'text-blue-600',
   },
   {
     icon: '🚀',
@@ -47,9 +47,9 @@ const awards = [
     body: 'Awarded for pioneering data-driven SEO strategies that delivered measurable business impact for clients.',
     year: '2023',
     org: 'Digital Marketing Excellence',
-    color: 'from-pink-500/20 to-rose-500/10',
-    border: 'border-pink-500/30',
-    badge: 'text-pink-400',
+    color: 'from-red-50 via-red-50/10 to-transparent',
+    border: 'border-red-200',
+    badge: 'text-red-600',
   },
   {
     icon: '💡',
@@ -57,9 +57,9 @@ const awards = [
     body: 'Achieved a 98%+ client satisfaction rate, recognized by industry bodies for transparent and honest business practices.',
     year: '2024',
     org: 'Business Excellence Council',
-    color: 'from-cyan-500/20 to-sky-500/10',
-    border: 'border-cyan-500/30',
-    badge: 'text-cyan-400',
+    color: 'from-blue-50 via-blue-50/10 to-transparent',
+    border: 'border-blue-200',
+    badge: 'text-blue-600',
   },
 ]
 
@@ -75,31 +75,25 @@ const cardVariants = {
 
 const AwardsRecognition = () => {
   return (
-    <section className="relative py-24 overflow-hidden bg-slate-950 border-t border-slate-900">
-      {/* Ambient glows */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-yellow-500/5 rounded-full blur-3xl" />
-      </div>
-
+    <section className="relative py-24 overflow-hidden section-white">
+      <div className="ambient-glows" aria-hidden />
       <div className="relative container-custom z-10">
-        {/* Header */}
         <motion.div
-          className="text-center mb-14"
+          className="text-center mb-14 space-y-4"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-semibold uppercase tracking-widest mb-4">
-            🏆 Awards & Recognition
-          </span>
-          <h2 className="text-4xl sm:text-5xl font-black text-white leading-tight">
-            Our{' '}
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-400">
-              Achievements
-            </span>
+          <div className="badge-pill mx-auto w-fit">
+            <span className="badge-pill-dot-red" />
+            Awards & Recognition
+          </div>
+          <h2 className="heading-display">
+            Our <span className="text-gradient">Achievements</span>
           </h2>
-          <p className="mt-4 text-slate-400 max-w-xl mx-auto text-sm leading-relaxed">
+          <div className="divider-brand" />
+          <p className="mt-4 text-slate-600 max-w-xl mx-auto text-sm leading-relaxed">
             Proudly recognised by leading industry bodies for innovation, excellence and our unwavering commitment to client success.
           </p>
         </motion.div>
@@ -117,7 +111,7 @@ const AwardsRecognition = () => {
               key={award.title}
               variants={cardVariants}
               whileHover={{ y: -4, transition: { duration: 0.2 } }}
-              className={`relative group bg-gradient-to-br ${award.color} border ${award.border} rounded-2xl p-6 backdrop-blur-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 overflow-hidden`}
+              className={`relative group bg-gradient-to-br ${award.color} border ${award.border} rounded-2xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden`}
             >
               {/* Decorative glow on hover */}
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/[0.02] rounded-2xl" />
@@ -125,17 +119,17 @@ const AwardsRecognition = () => {
               <div className="flex items-start gap-4">
                 <div className="text-4xl shrink-0">{award.icon}</div>
                 <div className="space-y-1">
-                  <h3 className="font-bold text-white text-base leading-snug">{award.title}</h3>
-                  <p className={`text-xs font-semibold uppercase tracking-widest ${award.badge}`}>
+                  <h3 className="font-bold text-slate-900 text-base leading-snug">{award.title}</h3>
+                  <p className={`text-xs font-bold uppercase tracking-widest ${award.badge}`}>
                     {award.org} · {award.year}
                   </p>
                 </div>
               </div>
 
-              <p className="mt-4 text-slate-400 text-sm leading-relaxed">{award.body}</p>
+              <p className="mt-4 text-slate-600 text-sm leading-relaxed">{award.body}</p>
 
               {/* Bottom ribbon */}
-              <div className={`absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r ${award.color} opacity-60`} />
+              <div className={`absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 to-red-500 opacity-60`} />
             </motion.div>
           ))}
         </motion.div>

@@ -21,12 +21,8 @@ const HeroSection = () => {
   }
 
   return (
-    <section className="relative overflow-hidden pt-24 pb-20 md:pt-32 md:pb-28 bg-grid-pattern bg-slate-950">
-      {/* Ambient glowing blobs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl animate-pulse-slow"></div>
-        <div className="absolute top-1/2 -left-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse-slow delay-2000"></div>
-      </div>
+    <section className="relative overflow-hidden pt-24 pb-20 md:pt-32 md:pb-28 bg-mesh-brand bg-grid-pattern section-white border-b border-white/10">
+      <div className="ambient-glows" aria-hidden />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-12 gap-12 items-center">
@@ -38,8 +34,11 @@ const HeroSection = () => {
             transition={{ duration: 0.6 }}
           >
             <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold uppercase tracking-wider">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping"></span>
+              <div className="badge-pill">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-aim-gold opacity-60" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-gradient-to-r from-aim-gold to-aim-purple" />
+                </span>
                 Enterprise Tech Consulting
               </div>
               <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white leading-tight tracking-tight">
@@ -48,7 +47,7 @@ const HeroSection = () => {
                   Digital Innovation
                 </span>
               </h1>
-              <p className="text-lg text-slate-400 leading-relaxed max-w-2xl">
+              <p className="text-lg copy-on-dark-muted max-w-2xl">
                 We design, engineer, and scale custom software systems, resilient cloud infrastructures, 
                 and intelligent AI-driven applications for market leaders.
               </p>
@@ -66,9 +65,9 @@ const HeroSection = () => {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         error={error}
-                        className="bg-slate-900/60 border-slate-800 text-white placeholder-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 h-12"
+                        className="bg-aim-navy-light/80 border-white/15 text-white placeholder-slate-400 focus:border-aim-gold focus:ring-1 focus:ring-aim-gold h-12"
                         icon={
-                          <svg className="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                           </svg>
                         }
@@ -81,7 +80,7 @@ const HeroSection = () => {
                       </svg>
                     </Button>
                   </div>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-aim-copy-muted">
                     Get an engineering-led architecture audit. No pushy sales calls.
                   </p>
                 </form>
@@ -89,16 +88,16 @@ const HeroSection = () => {
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300"
+                  className="p-4 rounded-xl bg-aim-gold/10 border border-aim-gold/30 text-aim-gold"
                 >
                   <p className="font-semibold mb-1">🎉 Thank you for reaching out!</p>
-                  <p className="text-sm text-slate-400">Our chief solutions architect will email you within 24 hours to schedule your strategy call.</p>
+                  <p className="text-sm text-on-navy-muted">Our chief solutions architect will email you within 24 hours to schedule your strategy call.</p>
                 </motion.div>
               )}
             </div>
 
             {/* Trust Badges */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-6 pt-4 border-t border-slate-900">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-6 pt-4 border-t border-white/10">
               <div className="flex items-center gap-3">
                 <div className="flex -space-x-3">
                   {[
@@ -111,19 +110,19 @@ const HeroSection = () => {
                       key={i} 
                       src={url} 
                       alt="Consultant Avatar"
-                      className="w-9 h-9 rounded-full border-2 border-slate-950 object-cover shadow-md"
+                      className="w-9 h-9 rounded-full border-2 border-white object-cover shadow-md"
                     />
                   ))}
                 </div>
                 <div className="text-sm">
                   <p className="font-bold text-white">Trust Score 4.9/5</p>
-                  <p className="text-slate-500 text-xs">Based on 150+ Enterprise projects</p>
+                  <p className="text-on-navy-muted text-xs">Based on 150+ Enterprise projects</p>
                 </div>
               </div>
               
-              <div className="h-px sm:h-8 w-full sm:w-px bg-slate-800"></div>
+              <div className="h-px sm:h-8 w-full sm:w-px bg-white/10"></div>
               
-              <div className="flex flex-wrap gap-4 text-xs font-semibold text-slate-500 uppercase tracking-widest">
+              <div className="flex flex-wrap gap-4 text-xs font-semibold text-on-navy-muted uppercase tracking-widest">
                 <span>ISO 27001 Certified</span>
                 <span>•</span>
                 <span>SOC2 Compliant</span>
@@ -138,27 +137,27 @@ const HeroSection = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 rounded-3xl blur-2xl opacity-50 transform rotate-3"></div>
+            <div className="absolute inset-0 bg-gradient-to-tr from-aim-gold/15 to-aim-purple/15 rounded-3xl blur-2xl opacity-50 transform rotate-3"></div>
             
             {/* Main Interactive Interface Preview */}
             <motion.div 
-              className="relative bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-4 shadow-2xl"
+              className="relative card-elevated border border-white/10 rounded-3xl p-4 shadow-2xl ring-1 ring-aim-gold/20"
               animate={{ y: [0, -10, 0] }}
               transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
             >
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-4 px-2">
+              <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4 px-2">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-rose-500/80"></span>
-                  <span className="w-3 h-3 rounded-full bg-amber-500/80"></span>
-                  <span className="w-3 h-3 rounded-full bg-green-500/80"></span>
+                  <span className="w-3 h-3 rounded-full bg-aim-gold/90"></span>
+                  <span className="w-3 h-3 rounded-full bg-white/30 border border-white/20"></span>
+                  <span className="w-3 h-3 rounded-full bg-aim-purple/90"></span>
                 </div>
-                <span className="text-[10px] text-slate-500 font-mono tracking-widest">aim-architecture-audit</span>
-                <span className="w-4 h-4 text-slate-600">
+                <span className="text-[10px] text-on-navy-muted font-mono tracking-widest">aim-architecture-audit</span>
+                <span className="w-4 h-4 text-slate-400">
                   <svg fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z"></path></svg>
                 </span>
               </div>
               
-              <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 p-2">
+              <div className="overflow-hidden rounded-2xl border border-white/10 bg-aim-navy-light/50 p-2">
                 <img
                   src={heroImage}
                   alt="AIM System Architecture Dashboard Preview"
@@ -170,14 +169,14 @@ const HeroSection = () => {
               </div>
               
               {/* Overlay Glass Badge */}
-              <div className="absolute -bottom-6 -left-6 bg-slate-900/90 backdrop-blur border border-indigo-500/30 rounded-2xl p-4 shadow-xl flex items-center gap-3 max-w-[200px]">
-                <div className="p-2.5 rounded-lg bg-indigo-500/10 text-indigo-400">
+              <div className="absolute -bottom-6 -left-6 bg-aim-navy-light/95 backdrop-blur border border-aim-gold/30 rounded-2xl p-4 shadow-xl flex items-center gap-3 max-w-[200px]">
+                <div className="p-2.5 rounded-lg bg-aim-gold/15 text-aim-gold">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                   </svg>
                 </div>
                 <div className="text-left">
-                  <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Infrastructure</p>
+                  <p className="text-[11px] text-on-navy-muted font-bold uppercase tracking-wider">Infrastructure</p>
                   <p className="text-xs font-black text-white">99.99% Uptime Verified</p>
                 </div>
               </div>

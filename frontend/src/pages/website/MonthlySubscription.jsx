@@ -307,38 +307,38 @@ const MonthlySubscription = () => {
   // Active styles helpers for category tabs
   const getCategoryTabStyles = (catId) => {
     if (activeCategory !== catId) {
-      return 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700 hover:bg-slate-900/70'
+      return 'bg-white border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-500 hover:bg-slate-50'
     }
     switch (catId) {
-      case 'static': return 'border-sky-500/50 bg-sky-500/10 text-sky-400 shadow-[0_0_20px_rgba(56,189,248,0.15)] font-bold'
-      case 'dynamic': return 'border-teal-500/50 bg-teal-500/10 text-teal-400 shadow-[0_0_20px_rgba(45,212,191,0.15)] font-bold'
-      case 'ecommerce': return 'border-orange-500/50 bg-orange-500/10 text-orange-400 shadow-[0_0_20px_rgba(251,146,60,0.15)] font-bold'
-      case 'mobile': return 'border-indigo-500/50 bg-indigo-500/10 text-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.15)] font-bold'
-      case 'nexgn': return 'border-green-500/50 bg-green-500/10 text-green-400 shadow-[0_0_20px_rgba(74,222,128,0.15)] font-bold'
-      default: return 'border-indigo-500/50 bg-indigo-500/10 text-indigo-400'
+      case 'static': return 'border-sky-300 bg-sky-50 text-sky-700 shadow-sm font-black'
+      case 'dynamic': return 'border-teal-300 bg-teal-50 text-teal-700 shadow-sm font-black'
+      case 'ecommerce': return 'border-orange-300 bg-orange-50 text-orange-700 shadow-sm font-black'
+      case 'mobile': return 'border-blue-300 bg-blue-50 text-blue-600 shadow-sm font-black'
+      case 'nexgn': return 'border-emerald-300 bg-emerald-50 text-emerald-700 shadow-sm font-black'
+      default: return 'border-blue-300 bg-blue-50 text-blue-600'
     }
   }
 
   const getCategoryButtonActiveStyles = (catId) => {
     switch (catId) {
-      case 'static': return 'bg-sky-500/10 border-sky-500/40 text-white shadow-lg shadow-sky-500/5'
-      case 'dynamic': return 'bg-teal-500/10 border-teal-500/40 text-white shadow-lg shadow-teal-500/5'
-      case 'ecommerce': return 'bg-orange-500/10 border-orange-500/40 text-white shadow-lg shadow-orange-500/5'
-      case 'mobile': return 'bg-indigo-500/10 border-indigo-500/40 text-white shadow-lg shadow-indigo-500/5'
-      case 'nexgn': return 'bg-green-500/10 border-green-500/40 text-white shadow-lg shadow-green-500/5'
-      default: return 'bg-indigo-500/10 border-indigo-500/40 text-white'
+      case 'static': return 'bg-sky-50 border-sky-200 text-sky-700 shadow-md'
+      case 'dynamic': return 'bg-teal-50 border-teal-200 text-teal-700 shadow-md'
+      case 'ecommerce': return 'bg-orange-50 border-orange-200 text-orange-700 shadow-md'
+      case 'mobile': return 'bg-blue-50 border-blue-200 text-blue-700 shadow-md'
+      case 'nexgn': return 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-md'
+      default: return 'bg-blue-50 border-blue-200 text-blue-700'
     }
   }
 
   const getCategoryNumberStyles = (catId, isActive) => {
-    if (!isActive) return 'bg-slate-850 text-slate-400'
+    if (!isActive) return 'bg-slate-100 text-slate-500'
     switch (catId) {
-      case 'static': return 'bg-sky-500 text-slate-950 font-black'
-      case 'dynamic': return 'bg-teal-500 text-slate-950 font-black'
-      case 'ecommerce': return 'bg-orange-500 text-slate-950 font-black'
-      case 'mobile': return 'bg-indigo-500 text-slate-950 font-black'
-      case 'nexgn': return 'bg-green-500 text-slate-950 font-black'
-      default: return 'bg-indigo-500 text-slate-950'
+      case 'static': return 'bg-sky-500 text-white font-bold'
+      case 'dynamic': return 'bg-teal-500 text-white font-bold'
+      case 'ecommerce': return 'bg-orange-500 text-white font-bold'
+      case 'mobile': return 'bg-blue-600 text-white font-bold'
+      case 'nexgn': return 'bg-emerald-500 text-white font-bold'
+      default: return 'bg-blue-600 text-white'
     }
   }
 
@@ -351,11 +351,11 @@ const MonthlySubscription = () => {
         <link rel="canonical" href="https://aimdigitalise.com/subscription" />
       </Helmet>
 
-      <div className="relative min-h-screen bg-slate-950 text-slate-100 py-12 px-4 sm:px-6 lg:px-8 bg-grid-pattern">
+      <div className="relative min-h-screen bg-slate-50 text-slate-800 py-12 px-4 sm:px-6 lg:px-8 bg-grid-pattern">
         
         {/* Ambient Halos */}
-        <div className="absolute top-10 left-1/4 w-[400px] h-[400px] bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-20 right-1/4 w-[400px] h-[400px] bg-purple-500/5 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute top-10 left-1/4 w-[400px] h-[400px] bg-blue-500/5 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute bottom-20 right-1/4 w-[400px] h-[400px] bg-red-500/5 rounded-full blur-3xl pointer-events-none"></div>
 
         <div className="max-w-6xl mx-auto space-y-10 relative z-10">
           
@@ -363,20 +363,20 @@ const MonthlySubscription = () => {
           <div className="text-center space-y-6">
             <div className="space-y-2">
               <nav className="flex justify-center items-center gap-2 text-xs font-semibold text-slate-500 tracking-wider uppercase">
-                <a href="/" className="hover:text-indigo-400 transition">Home</a>
+                <a href="/" className="hover:text-blue-600 transition">Home</a>
                 <span className="text-slate-700">/</span>
                 <span className="text-slate-400">Monthly Subscriptions</span>
               </nav>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white uppercase">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-slate-900 uppercase">
                 Website & Software <span className="text-gradient">On Monthly Subscriptions</span>
               </h1>
             </div>
 
             {/* Slogan Banner */}
-            <div className="w-full bg-slate-900/60 border border-slate-800/80 p-4 rounded-xl shadow-xl backdrop-blur-md max-w-4xl mx-auto">
-              <h2 className="text-xs sm:text-sm md:text-base font-bold text-slate-200 tracking-wide uppercase">
+            <div className="w-full bg-white border border-slate-200 p-4 rounded-xl shadow-sm max-w-4xl mx-auto">
+              <h2 className="text-xs sm:text-sm md:text-base font-bold text-slate-800 tracking-wide uppercase">
                 INDIA'S 1st MONTHLY SUBSCRIPTION BASED WEBSITE WITH{' '}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-indigo-400 to-purple-400 font-extrabold">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-red-500 to-blue-600 font-extrabold">
                   100% DATA SECURITY & OWNERSHIP
                 </span>
               </h2>
@@ -387,7 +387,7 @@ const MonthlySubscription = () => {
           <div className="space-y-6">
             
             {/* 1. Horizontal Category Nav Tabs */}
-            <div className="flex flex-wrap justify-center gap-2 max-w-4xl mx-auto p-1.5 rounded-2xl bg-slate-900/20 border border-slate-900/80 backdrop-blur-sm">
+            <div className="flex flex-wrap justify-center gap-2 max-w-4xl mx-auto p-1.5 rounded-2xl bg-white border border-slate-200 shadow-sm">
               {categories.map((cat) => (
                 <button
                   key={cat.id}
@@ -406,12 +406,12 @@ const MonthlySubscription = () => {
               <div className="lg:col-span-5 flex flex-col gap-5 justify-start">
                 
                 {/* Selector Card */}
-                <div className="bg-slate-900/30 border border-slate-800/80 rounded-2xl p-4 sm:p-5 space-y-4">
-                  <div className="flex justify-between items-center pb-3 border-b border-slate-900">
-                    <h3 className="text-xs font-black tracking-widest text-slate-400 uppercase">
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm">
+                  <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+                    <h3 className="text-xs font-black tracking-widest text-slate-500 uppercase">
                       Select Package
                     </h3>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 uppercase">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-600 uppercase">
                       {activeCategory} List
                     </span>
                   </div>
@@ -421,12 +421,12 @@ const MonthlySubscription = () => {
                     <motion.div 
                       initial={{ opacity: 0, y: -5 }} 
                       animate={{ opacity: 1, y: 0 }}
-                      className="flex flex-col items-center py-2.5 px-3 bg-slate-950/80 rounded-xl border border-green-500/15 text-center select-none"
+                      className="flex flex-col items-center py-2.5 px-3 bg-slate-50 rounded-xl border border-blue-200/50 text-center select-none"
                     >
-                      <span className="text-lg font-black tracking-tight text-white">
-                        NEX<span className="text-green-500">G</span>N
+                      <span className="text-lg font-black tracking-tight text-slate-800">
+                        NEX<span className="text-blue-600">G</span>N
                       </span>
-                      <p className="text-[8px] font-bold text-green-400 uppercase tracking-widest mt-0.5">
+                      <p className="text-[8px] font-bold text-blue-600 uppercase tracking-widest mt-0.5">
                         Solutions Changing to Next Generation
                       </p>
                     </motion.div>
@@ -440,7 +440,7 @@ const MonthlySubscription = () => {
                         className={`w-full flex items-center gap-3.5 p-3.5 text-left rounded-xl border text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer ${
                           activePlanId === plan.id
                             ? getCategoryButtonActiveStyles(activeCategory)
-                            : 'bg-slate-900/10 border-slate-900/60 text-slate-400 hover:text-slate-200 hover:bg-slate-900/30 hover:border-slate-850'
+                            : 'bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:bg-slate-50'
                         }`}
                       >
                         <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 transition-colors ${
@@ -455,9 +455,9 @@ const MonthlySubscription = () => {
                 </div>
 
                 {/* TRUST & GUARANTEE CALLOUT WIDGET (Fills the blank space dynamically) */}
-                <div className="bg-gradient-to-br from-slate-900/40 to-slate-900/10 border border-slate-850 rounded-2xl p-5 space-y-4 shadow-xl">
-                  <div className="pb-3 border-b border-slate-900">
-                    <h4 className="text-xs font-black tracking-widest text-indigo-400 uppercase">
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm">
+                  <div className="pb-3 border-b border-slate-100">
+                    <h4 className="text-xs font-black tracking-widest text-blue-600 uppercase">
                       AIM Subscription Guarantees
                     </h4>
                   </div>
@@ -465,51 +465,51 @@ const MonthlySubscription = () => {
                   <div className="space-y-4">
                     {/* Ownership */}
                     <div className="flex gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
-                        <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0">
+                        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                         </svg>
                       </div>
                       <div>
-                        <h5 className="text-xs font-bold text-slate-200">100% Code & IP Ownership</h5>
-                        <p className="text-[11px] text-slate-400 leading-normal mt-0.5">Your source code, layout designs, and user databases belong completely to you upon contract terms completion.</p>
+                        <h5 className="text-xs font-bold text-slate-800">100% Code & IP Ownership</h5>
+                        <p className="text-[11px] text-slate-600 leading-normal mt-0.5">Your source code, layout designs, and user databases belong completely to you upon contract terms completion.</p>
                       </div>
                     </div>
 
                     {/* Lock-ins */}
                     <div className="flex gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                        <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
+                        <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                       </div>
                       <div>
-                        <h5 className="text-xs font-bold text-slate-200">Zero Locked Contracts</h5>
-                        <p className="text-[11px] text-slate-400 leading-normal mt-0.5">Scale packages up or down, pause ongoing development modules, or cancel subscriptions on a simple monthly cycle.</p>
+                        <h5 className="text-xs font-bold text-slate-800">Zero Locked Contracts</h5>
+                        <p className="text-[11px] text-slate-600 leading-normal mt-0.5">Scale packages up or down, pause ongoing development modules, or cancel subscriptions on a simple monthly cycle.</p>
                       </div>
                     </div>
 
                     {/* Support */}
                     <div className="flex gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center shrink-0">
-                        <svg className="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0">
+                        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                         </svg>
                       </div>
                       <div>
-                        <h5 className="text-xs font-bold text-slate-200">24/7 Priority Consultant Support</h5>
-                        <p className="text-[11px] text-slate-400 leading-normal mt-0.5">Get direct assistance via phone or whatsapp. Speak to our relationship advisors about customized software requirements.</p>
+                        <h5 className="text-xs font-bold text-slate-800">24/7 Priority Consultant Support</h5>
+                        <p className="text-[11px] text-slate-600 leading-normal mt-0.5">Get direct assistance via phone or whatsapp. Speak to our relationship advisors about customized software requirements.</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-slate-900 flex justify-between items-center text-[11px] text-slate-400 font-semibold">
+                  <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-[11px] text-slate-500 font-semibold">
                     <span>Need Custom Portals?</span>
                     <a 
                       href="https://wa.me/916290902922" 
                       target="_blank" 
                       rel="noopener noreferrer" 
-                      className="text-emerald-400 hover:text-emerald-300 transition flex items-center gap-1"
+                      className="text-emerald-600 hover:text-emerald-700 transition flex items-center gap-1"
                     >
                       <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
                         <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.504-5.727-1.465L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.023-5.101-2.885-6.967C16.589 1.972 14.118.948 11.49.947 6.054.947 1.632 5.318 1.63 10.749c-.002 1.683.456 3.32 1.32 4.756L1.93 20.916l5.717-1.499c.001 0 .001 0 0 0z" />
@@ -523,30 +523,30 @@ const MonthlySubscription = () => {
 
               {/* RIGHT COLUMN: DETAIL VIEWER PANEL (7 columns) */}
               <div className="lg:col-span-7">
-                <Card padding="none" className="glass-card overflow-hidden border-slate-800/80 shadow-2xl h-full flex flex-col justify-between">
+                <Card padding="none" className="bg-white overflow-hidden border-slate-200 shadow-2xl h-full flex flex-col justify-between rounded-3xl">
                   
                   {/* Content area */}
                   <div className="p-6 sm:p-8 space-y-6 flex-grow">
-                    <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-slate-900">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-slate-150">
                       <div>
-                        <span className="inline-block text-[9px] uppercase font-black text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-md border border-indigo-500/20 mb-1.5">
+                        <span className="inline-block text-[9px] uppercase font-black text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-200 mb-1.5">
                           {activePlan.categoryLabel} Package
                         </span>
-                        <h2 className="text-xl sm:text-2xl font-black text-white leading-tight tracking-tight">
+                        <h2 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight tracking-tight">
                           {activePlan.name}
                         </h2>
                       </div>
                     </div>
 
                     {/* Pricing grid */}
-                    <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-slate-950/60 border border-slate-900">
+                    <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
                       <div>
                         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Security Deposit</span>
-                        <span className="text-lg sm:text-xl font-black text-slate-200 tracking-tight">{activePlan.securityDeposit}</span>
+                        <span className="text-lg sm:text-xl font-black text-slate-800 tracking-tight">{activePlan.securityDeposit}</span>
                       </div>
-                      <div className="border-l border-slate-850 pl-4">
+                      <div className="border-l border-slate-200 pl-4">
                         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Monthly Subscription</span>
-                        <span className="text-lg sm:text-xl font-black text-indigo-400 tracking-tight">{activePlan.monthlySubscription}</span>
+                        <span className="text-lg sm:text-xl font-black text-blue-600 tracking-tight">{activePlan.monthlySubscription}</span>
                       </div>
                     </div>
 
@@ -555,45 +555,45 @@ const MonthlySubscription = () => {
                       
                       {/* Description */}
                       <div className="space-y-1">
-                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                          <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <h4 className="text-xs font-black text-blue-600 uppercase tracking-widest flex items-center gap-1.5">
+                          <svg className="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>
                           Plan Description
                         </h4>
-                        <p className="text-slate-300 font-medium text-justify">{activePlan.description}</p>
+                        <p className="text-slate-600 font-medium text-justify">{activePlan.description}</p>
                       </div>
 
                       {/* Customization Details */}
                       <div className="space-y-1">
-                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                          <svg className="w-3.5 h-3.5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <h4 className="text-xs font-black text-blue-600 uppercase tracking-widest flex items-center gap-1.5">
+                          <svg className="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                           </svg>
                           Customization Details
                         </h4>
-                        <p className="text-slate-300 font-medium text-justify">{activePlan.customization}</p>
+                        <p className="text-slate-600 font-medium text-justify">{activePlan.customization}</p>
                       </div>
 
                       {/* Complimentary Benefits */}
-                      <div className="space-y-1 p-3.5 rounded-xl bg-indigo-950/20 border border-indigo-500/10">
-                        <h4 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-1.5">
-                          <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="space-y-1 p-3.5 rounded-xl bg-blue-50/50 border border-blue-200/60">
+                        <h4 className="text-xs font-black text-blue-600 uppercase tracking-widest flex items-center gap-1.5">
+                          <svg className="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
                           </svg>
                           Complimentary Software
                         </h4>
-                        <p className="text-slate-300 font-medium text-justify mt-1">{activePlan.complimentary}</p>
+                        <p className="text-slate-600 font-medium text-justify mt-1">{activePlan.complimentary}</p>
                       </div>
 
                     </div>
                   </div>
 
                   {/* Bottom details block sticky footer */}
-                  <div className="p-6 sm:p-8 bg-slate-950/40 border-t border-slate-900 space-y-4">
-                    <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
-                      <svg className="w-4 h-4 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="p-6 sm:p-8 bg-slate-50 border-t border-slate-200 space-y-4">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+                      <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                       </svg>
                       <span>Support Desk: {activePlan.support}</span>
@@ -615,7 +615,7 @@ const MonthlySubscription = () => {
                             e.preventDefault()
                             alert(`Initiating agreement guidelines download for Plan ${activePlan.id}: ${activePlan.name}`)
                           }}
-                          className="text-xs font-bold text-slate-400 hover:text-white flex items-center gap-1.5 transition"
+                          className="text-xs font-bold text-slate-600 hover:text-blue-600 flex items-center gap-1.5 transition"
                         >
                           <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -623,7 +623,7 @@ const MonthlySubscription = () => {
                           Download Agreement
                         </a>
 
-                        <a href="/login" className="text-xs font-semibold text-slate-400 hover:text-indigo-400 transition">
+                        <a href="/login" className="text-xs font-semibold text-slate-500 hover:text-blue-600 transition">
                           Login
                         </a>
                       </div>
@@ -637,20 +637,20 @@ const MonthlySubscription = () => {
           </div>
 
           {/* GET IN TOUCH WITH US LEAD CAPTURE FORM */}
-          <div ref={formSectionRef} className="pt-16 border-t border-slate-900/80 scroll-mt-24">
+          <div ref={formSectionRef} className="pt-16 border-t border-slate-200 scroll-mt-24">
             <div className="max-w-3xl mx-auto">
-              <Card padding="lg" className="glass-card border-slate-800 shadow-2xl relative overflow-hidden">
-                <div className="absolute -bottom-20 -right-20 w-48 h-48 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none"></div>
+              <Card padding="lg" className="bg-white border border-slate-200 shadow-2xl relative overflow-hidden rounded-3xl">
+                <div className="absolute -bottom-20 -right-20 w-48 h-48 bg-blue-500/5 rounded-full blur-2xl pointer-events-none"></div>
 
                 <div className="space-y-6 relative z-10">
                   <div className="text-center space-y-2">
-                    <span className="text-[10px] font-black tracking-widest text-indigo-400 uppercase bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/25">
+                    <span className="text-[10px] font-black tracking-widest text-blue-600 uppercase bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
                       GET IN TOUCH
                     </span>
-                    <h3 className="text-2xl font-black text-white tracking-tight mt-2">
+                    <h3 className="text-2xl font-black text-slate-900 tracking-tight mt-2">
                       Get In Touch <span className="text-gradient">With Us</span>
                     </h3>
-                    <p className="text-sm text-slate-400 max-w-lg mx-auto">
+                    <p className="text-sm text-slate-600 max-w-lg mx-auto">
                       Fill out this subscription request, and our technical onboarding specialists will be in contact with your team within 24 hours.
                     </p>
                   </div>
@@ -659,8 +659,8 @@ const MonthlySubscription = () => {
                     <div className="grid sm:grid-cols-2 gap-4">
                       {/* Name input */}
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
-                          Full Name <span className="text-indigo-400 font-black">*</span>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">
+                          Full Name <span className="text-blue-600 font-black">*</span>
                         </label>
                         <input
                           ref={nameInputRef}
@@ -670,14 +670,14 @@ const MonthlySubscription = () => {
                           onChange={handleFormChange}
                           placeholder="Your Name"
                           required
-                          className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 placeholder:text-slate-600 text-sm transition rounded-xl"
+                          className="w-full px-4 py-3 bg-white border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-900 placeholder:text-slate-400 text-sm transition rounded-xl"
                         />
                       </div>
 
                       {/* Email input */}
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
-                          Email Address <span className="text-indigo-400 font-black">*</span>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">
+                          Email Address <span className="text-blue-600 font-black">*</span>
                         </label>
                         <input
                           type="email"
@@ -686,7 +686,7 @@ const MonthlySubscription = () => {
                           onChange={handleFormChange}
                           placeholder="name@company.com"
                           required
-                          className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 placeholder:text-slate-600 text-sm transition rounded-xl"
+                          className="w-full px-4 py-3 bg-white border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-900 placeholder:text-slate-400 text-sm transition rounded-xl"
                         />
                       </div>
                     </div>
@@ -694,8 +694,8 @@ const MonthlySubscription = () => {
                     <div className="grid sm:grid-cols-2 gap-4">
                       {/* Phone input */}
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
-                          Phone Number <span className="text-indigo-400 font-black">*</span>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">
+                          Phone Number <span className="text-blue-600 font-black">*</span>
                         </label>
                         <input
                           type="tel"
@@ -704,13 +704,13 @@ const MonthlySubscription = () => {
                           onChange={handleFormChange}
                           placeholder="+91 XXXXX XXXXX"
                           required
-                          className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 placeholder:text-slate-600 text-sm transition rounded-xl"
+                          className="w-full px-4 py-3 bg-white border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-900 placeholder:text-slate-400 text-sm transition rounded-xl"
                         />
                       </div>
 
                       {/* Company Name */}
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">
                           Company / Business Name
                         </label>
                         <input
@@ -719,14 +719,14 @@ const MonthlySubscription = () => {
                           value={formData.company}
                           onChange={handleFormChange}
                           placeholder="Your Organization"
-                          className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 placeholder:text-slate-600 text-sm transition rounded-xl"
+                          className="w-full px-4 py-3 bg-white border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-900 placeholder:text-slate-400 text-sm transition rounded-xl"
                         />
                       </div>
                     </div>
 
                     {/* Selected Plan Dropdown */}
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">
                         Selected Plan
                       </label>
                       <div className="relative">
@@ -734,10 +734,10 @@ const MonthlySubscription = () => {
                           name="planId"
                           value={formData.planId}
                           onChange={handleFormChange}
-                          className="w-full px-4 py-3 bg-slate-950/80 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 text-sm transition appearance-none cursor-pointer rounded-xl"
+                          className="w-full px-4 py-3 bg-white border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-900 text-sm transition appearance-none cursor-pointer rounded-xl"
                         >
                           {subscriptionPlans.map((plan) => (
-                            <option key={plan.id} value={plan.id.toString()} className="bg-slate-950 text-slate-100">
+                            <option key={plan.id} value={plan.id.toString()} className="bg-white text-slate-800">
                               {plan.id}. {plan.name} ({plan.monthlySubscription}/mo)
                             </option>
                           ))}
@@ -752,7 +752,7 @@ const MonthlySubscription = () => {
 
                     {/* Message Textarea */}
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">
                         Additional Requirements
                       </label>
                       <textarea
@@ -761,7 +761,7 @@ const MonthlySubscription = () => {
                         onChange={handleFormChange}
                         rows="4"
                         placeholder="Detail any custom features, domain configurations, preferred timelines, or integration needs..."
-                        className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 placeholder:text-slate-600 text-sm transition resize-none rounded-xl"
+                        className="w-full px-4 py-3 bg-white border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-900 placeholder:text-slate-400 text-sm transition resize-none rounded-xl"
                       />
                     </div>
 
@@ -774,17 +774,17 @@ const MonthlySubscription = () => {
                           exit={{ opacity: 0, y: -8 }}
                           className={`p-4 rounded-xl border text-sm ${
                             formStatus.type === 'success'
-                              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                              : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                              ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                              : 'bg-red-50 border-red-200 text-red-700'
                           }`}
                         >
                           <div className="flex items-start gap-2.5">
                             {formStatus.type === 'success' ? (
-                              <svg className="w-5 h-5 shrink-0 mt-0.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-5 h-5 shrink-0 mt-0.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                               </svg>
                             ) : (
-                              <svg className="w-5 h-5 shrink-0 mt-0.5 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-5 h-5 shrink-0 mt-0.5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                               </svg>
                             )}

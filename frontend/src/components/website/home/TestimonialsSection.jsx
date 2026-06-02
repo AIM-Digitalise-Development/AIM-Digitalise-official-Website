@@ -44,19 +44,20 @@ const itemVariants = {
 
 const TestimonialsSection = () => {
   return (
-    <section className="py-24 bg-slate-900/30 border-t border-b border-slate-900 relative overflow-hidden">
-      {/* Ambient background glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
+    <section className="py-24 section-white border-b border-slate-200/80 relative">
+      <div className="ambient-glows" aria-hidden />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold uppercase tracking-wider">
+          <div className="badge-pill">
+            <span className="badge-pill-dot-red" />
             Testimonials
           </div>
-          <h2 className="text-3xl md:text-5xl font-black text-white leading-tight">
+          <h2 className="heading-display">
             Trusted by Engineering Leaders
           </h2>
-          <p className="text-lg text-slate-400">
+          <div className="divider-brand" />
+          <p className="text-lg copy-on-dark-muted">
             Hear from the technology directors, founders, and product executives who partner with AIM.
           </p>
         </div>
@@ -70,10 +71,10 @@ const TestimonialsSection = () => {
         >
           {testimonials.map((testimonial, index) => (
             <motion.div key={index} variants={itemVariants} className="h-full">
-              <Card padding="lg" className="h-full relative bg-slate-900/20 border-slate-800/80 flex flex-col justify-between">
+              <Card padding="lg" className="h-full relative bg-white border-slate-200 flex flex-col justify-between">
                 <div className="space-y-6">
                   {/* Rating Stars */}
-                  <div className="flex gap-1 text-amber-500">
+                  <div className="flex gap-1 text-amber-400">
                     {[...Array(testimonial.rating)].map((_, i) => (
                       <svg key={i} className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                         <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
@@ -82,21 +83,21 @@ const TestimonialsSection = () => {
                   </div>
 
                   {/* Feedback text */}
-                  <p className="text-slate-300 text-sm leading-relaxed italic">
+                  <p className="text-aim-copy text-sm leading-relaxed italic">
                     "{testimonial.content}"
                   </p>
                 </div>
 
                 {/* Profile info */}
-                <div className="flex items-center gap-4 mt-8 pt-6 border-t border-slate-800/60">
+                <div className="flex items-center gap-4 mt-8 pt-6 border-t border-slate-100">
                   <img 
                     src={testimonial.avatar} 
                     alt={testimonial.name}
-                    className="w-12 h-12 rounded-full object-cover border border-slate-700 shadow-md"
+                    className="w-12 h-12 rounded-full object-cover border border-slate-200 shadow-md"
                   />
                   <div className="text-left">
                     <p className="font-bold text-white text-sm">{testimonial.name}</p>
-                    <p className="text-xs text-slate-500">{testimonial.role}</p>
+                    <p className="text-xs text-slate-400">{testimonial.role}</p>
                   </div>
                 </div>
               </Card>

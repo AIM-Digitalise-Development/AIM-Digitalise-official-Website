@@ -11,14 +11,14 @@ const Button = forwardRef(({
   className = '',
   ...props
 }, ref) => {
-  const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed'
+  const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-aim-navy disabled:opacity-50 disabled:cursor-not-allowed'
 
   const variants = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 shadow-sm',
-    secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500',
-    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
-    outline: 'border-2 border-blue-600 text-blue-600 hover:bg-blue-50 focus:ring-blue-500',
-    ghost: 'text-gray-700 hover:bg-gray-100 focus:ring-gray-500'
+    primary: 'bg-aim-gold text-aim-navy hover:bg-aim-gold-light focus:ring-aim-gold/50 shadow-brand-gold',
+    secondary: 'bg-transparent text-slate-200 border border-white/15 hover:border-aim-gold/40 hover:bg-aim-gold/10 hover:text-white focus:ring-aim-gold/30',
+    danger: 'bg-aim-purple text-white hover:bg-aim-purple-light focus:ring-aim-purple/50 shadow-brand-purple',
+    outline: 'border-2 border-aim-gold/70 text-aim-gold hover:bg-aim-gold/10 focus:ring-aim-gold/40 bg-transparent',
+    ghost: 'text-slate-300 hover:bg-white/5 hover:text-aim-gold focus:ring-aim-gold/30',
   }
 
   const sizes = {

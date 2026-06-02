@@ -52,7 +52,7 @@ frontend/                              # React application root directory
 │   ├── layouts/                       # 🏗️ PAGE LAYOUT WRAPPERS
 │   │   ├── RootLayout.jsx             # Base layout with Header + Footer
 │   │   ├── WebsiteLayout.jsx          # Marketing pages layout
-│   │   ├── AdminLayout.jsx            # Admin dashboard + sidebar
+│   │   ├── AdminLayout.jsx            # Screenshot-style admin shell (left nav + content area)
 │   │   ├── EmployeeLayout.jsx         # Employee portal layout
 │   │   ├── PartnerLayout.jsx          # Partner dashboard layout
 │   │   └── CustomerLayout.jsx         # Customer account layout
@@ -70,7 +70,7 @@ frontend/                              # React application root directory
 │   │   │   ├── MonthlySubscription.jsx # Subscription billing models
 │   │   │   └── Users.jsx              # Public user profiles
 │   │   ├── admin/                     # Admin-only pages (requires RBAC)
-│   │   │   ├── Dashboard.jsx          # Admin analytics overview
+│   │   │   ├── Dashboard.jsx          # Pixel-inspired dashboard UI based on provided reference image
 │   │   │   ├── Users.jsx              # User management CRUD
 │   │   │   ├── Settings.jsx           # System configuration
 │   │   │   └── Analytics.jsx          # Advanced business metrics
@@ -101,6 +101,8 @@ frontend/                              # React application root directory
 │   │   │   ├── Input.jsx              # Form input with validation
 │   │   │   ├── Select.jsx             # Dropdown selector
 │   │   │   └── Toast.jsx              # Notification popup
+│   │   ├── auth/                      # Authentication UI (login modals/forms)
+│   │   │   └── AdminEmployeeLoginModal.jsx # Footer dropdown: Employee + Admin login
 │   │   ├── website/                   # Marketing site components
 │   │   │   ├── home/                  # Homepage sections
 │   │   │   │   ├── HeroSection.jsx    # Main banner + CTA
@@ -131,10 +133,10 @@ frontend/                              # React application root directory
 │   │   │       └── ProductSearch.jsx  # Search bar with autocomplete
 │   │   ├── admin/                     # Admin dashboard components
 │   │   │   ├── dashboard/
-│   │   │   │   ├── StatsWidget.jsx    # KPI cards
-│   │   │   │   ├── RevenueChart.jsx   # Line/bar chart
-│   │   │   │   ├── RecentActivity.jsx # Activity feed
-│   │   │   │   └── QuickActions.jsx   # Shortcut buttons
+│   │   │   │   ├── StatsWidget.jsx    # Legacy simple KPI card widget (kept for reuse)
+│   │   │   │   ├── RevenueChart.jsx   # Legacy chart placeholder (kept for reuse)
+│   │   │   │   ├── RecentActivity.jsx # Legacy activity feed placeholder
+│   │   │   │   └── QuickActions.jsx   # Legacy shortcut actions
 │   │   │   ├── users/
 │   │   │   │   ├── UserTable.jsx      # User list with actions
 │   │   │   │   ├── UserForm.jsx       # Create/edit user

@@ -12,6 +12,11 @@ import Portfolio from './pages/website/Portfolio'
 import Career from './pages/website/Career'
 import MonthlySubscription from './pages/website/MonthlySubscription'
 import Users from './pages/website/Users'
+import AdminLayout from './layouts/AdminLayout'
+import AdminDashboard from './pages/admin/Dashboard'
+import AdminUsers from './pages/admin/Users'
+import AdminSettings from './pages/admin/Settings'
+import AdminAnalytics from './pages/admin/Analytics'
 import { ROUTES } from './constants/routes'
 
 function App() {
@@ -32,6 +37,12 @@ function App() {
               <Route path={ROUTES.PRODUCTS} element={<Products />} />
               <Route path={ROUTES.USERS} element={<Users />} />
             </Route>
+          </Route>
+          <Route path={ROUTES.ADMIN.DASHBOARD} element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="settings" element={<AdminSettings />} />
+            <Route path="analytics" element={<AdminAnalytics />} />
           </Route>
         </Routes>
       </BrowserRouter>
