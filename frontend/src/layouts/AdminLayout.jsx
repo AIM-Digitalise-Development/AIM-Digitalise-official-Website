@@ -12,8 +12,6 @@ const AdminLayout = () => {
   // Wait for Zustand persist rehydration
   const [ready, setReady] = useState(false)
   useEffect(() => {
-    // Zustand's persist middleware hydrates asynchronously.
-    // We can assume after first render the store is ready.
     setReady(true)
   }, [])
 
@@ -29,68 +27,68 @@ const AdminLayout = () => {
       await adminLogout()       // destroy server session
     } catch (error) {
       console.error('Logout API call failed', error)
-      // Proceed with client-side logout anyway
     } finally {
       logout()                  // clear Zustand store + localStorage
       navigate(ROUTES.HOME)     // redirect to public home
     }
   }
 
-  // Don't render the admin shell until we're sure user is allowed
   if (!ready || !isAuthenticated || role !== 'admin') {
-    return null // or a loading spinner
+    return null
   }
 
+  // Exact menu items from the screenshot
   const menuItems = [
-    { route: ROUTES.ADMIN.DASHBOARD, label: 'Dashboard', icon: 'dashboard', color: '#4CAF50' },
-    { route: ROUTES.ADMIN.USERS, label: 'Clients', icon: 'clients', color: '#FF9800' },
-    { route: ROUTES.ADMIN.SETTINGS, label: 'Subscription', icon: 'subscription', color: '#ff6666' },
-    { route: ROUTES.ADMIN.ANALYTICS, label: 'Accounts', icon: 'accounts', color: '#E91E63' },
-    { route: null, label: 'Employee', icon: 'employee', color: '#2196F3' },
-    { route: null, label: 'Projects', icon: 'projects', color: '#E91E63' },
-    { route: null, label: 'Compliance', icon: 'compliance', color: '#9C27B0' },
-    { route: null, label: 'Partner', icon: 'partner', color: '#FF5722' },
-    { route: null, label: 'Reports', icon: 'reports', color: '#ebba19' },
-    { route: null, label: 'Support', icon: 'support', color: '#3150db' },
-    { route: null, label: 'Settings', icon: 'settings', color: '#607D8B' },
+    { route: ROUTES.ADMIN.DASHBOARD, label: 'Dashboard', icon: 'dashboard', color: '#10b981' },
+    { route: ROUTES.ADMIN.USERS, label: 'Clients', icon: 'clients', color: '#f59e0b' },
+    { route: ROUTES.ADMIN.SETTINGS, label: 'Subscription', icon: 'subscription', color: '#ef4444' },
+    { route: ROUTES.ADMIN.ANALYTICS, label: 'Accounts', icon: 'accounts', color: '#ec4899' },
+    { route: null, label: 'Employee', icon: 'employee', color: '#3b82f6' },
+    { route: null, label: 'Projects', icon: 'projects', color: '#f43f5e' },
+    { route: null, label: 'Compliance', icon: 'compliance', color: '#8b5cf6' },
   ]
 
-  const renderIcon = (type) => {
-    const iconClass = 'w-[15px] h-[15px]'
-    if (type === 'dashboard') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="8" height="8" rx="1.5" /><rect x="13" y="3" width="8" height="5" rx="1.5" /><rect x="13" y="10" width="8" height="11" rx="1.5" /><rect x="3" y="13" width="8" height="8" rx="1.5" /></svg>
-    if (type === 'clients') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="8" r="3" /><path d="M4 18c0-2.8 2.2-5 5-5s5 2.2 5 5" /><path d="M17 8h3M18.5 6.5v3" /></svg>
-    if (type === 'subscription') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="3" y="6" width="18" height="12" rx="2" /><path d="M3 10h18" /></svg>
-    if (type === 'accounts') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M4 7h16v10H4z" /><path d="M7 11h5" /></svg>
-    if (type === 'employee') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="7.5" r="3" /><path d="M5 19c0-3.2 3-5.5 7-5.5s7 2.3 7 5.5" /></svg>
-    if (type === 'projects') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M3 8h7l2 2h9v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
-    if (type === 'compliance') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z" /></svg>
-    if (type === 'partner') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M9 12l-3 3a2.5 2.5 0 0 0 0 3.5 2.5 2.5 0 0 0 3.5 0l3.5-3.5" /><path d="M15 12l3-3a2.5 2.5 0 0 0 0-3.5 2.5 2.5 0 0 0-3.5 0L11 9" /></svg>
-    if (type === 'reports') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M6 3h9l3 3v15H6z" /><path d="M9 12h6M9 16h6" /></svg>
-    if (type === 'support') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9" /><path d="M9.1 9a3 3 0 1 1 4.8 2.4c-.9.7-1.4 1.3-1.4 2.6" /><circle cx="12" cy="17" r=".8" fill="currentColor" stroke="none" /></svg>
-    return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a1.8 1.8 0 0 1-2.5 2.5l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a1.8 1.8 0 1 1-3.6 0v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a1.8 1.8 0 1 1-2.5-2.5l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a1.8 1.8 0 1 1 0-3.6h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a1.8 1.8 0 1 1 2.5-2.5l.1.1a1 1 0 0 0 1.1.2h.1a1 1 0 0 0 .6-.9V4a1.8 1.8 0 1 1 3.6 0v.2a1 1 0 0 0 .6.9h.1a1 1 0 0 0 1.1-.2l.1-.1a1.8 1.8 0 1 1 2.5 2.5l-.1.1a1 1 0 0 0-.2 1.1v.1a1 1 0 0 0 .9.6H20a1.8 1.8 0 1 1 0 3.6h-.2a1 1 0 0 0-.9.6z" /></svg>
+  const renderIcon = (type, isActive) => {
+    const iconClass = `w-4 h-4 ${isActive ? 'text-[#38b34a]' : ''}`
+    if (type === 'dashboard') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /></svg>
+    if (type === 'clients') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><circle cx="9" cy="8" r="3.5" /><path d="M4 18c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5" /><path d="M16 11h5m-2.5-2.5v5" /></svg>
+    if (type === 'subscription') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="6" width="18" height="12" rx="2" /><path d="M3 11h18" /></svg>
+    if (type === 'accounts') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M4 7h16v10H4z" /><path d="M7 11h4" /></svg>
+    if (type === 'employee') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="8" r="3.5" /><path d="M5 19c0-3 3-5 7-5s7 2 7 5" /></svg>
+    if (type === 'projects') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M3 7h7l2 2h9v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
+    if (type === 'compliance') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M12 3l7 3v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z" /></svg>
+    return null
   }
 
   return (
-    <div className="min-h-screen bg-[#eaecf4] p-2 lg:p-4">
-      <div className="mx-auto flex max-w-[1600px] gap-0">
-        {/* Sidebar */}
-        <aside className="w-72 shrink-0 rounded-l-[16px] rounded-r-none bg-[#aeb0b8] border border-slate-300/70 p-4 shadow-lg shadow-slate-400/30 flex flex-col relative z-10">
-          <div className="rounded-xl bg-transparent py-2">
-            <img
-              src="https://picsum.photos/seed/nexgn-logo/220/80"
-              alt="NEXGN logo placeholder"
-              className="w-[160px] h-20 mx-auto object-cover rounded-[4px] shadow-sm"
-            />
+    <div className="h-screen w-screen bg-[#eaecf4] flex flex-col lg:flex-row select-none overflow-hidden">
+      
+      {/* Sidebar Container with Isolated Scroll */}
+      <aside className="w-full lg:w-72 shrink-0 bg-[#b0b2ba] border-r border-slate-300/60 p-5 flex flex-col justify-between shadow-lg relative z-25 overflow-y-auto h-auto lg:h-full">
+        <div>
+          {/* Custom Vector NEXGN Logo */}
+          <div className="bg-white rounded-xl py-3 px-4 shadow-md border border-slate-200/50 flex flex-col items-center justify-center">
+            <div className="flex items-center">
+              <span className="text-3xl font-black tracking-tight text-slate-800">NEX</span>
+              <span className="text-3xl font-black tracking-tight text-red-600">GN</span>
+              <span className="text-[10px] font-bold text-slate-400 align-super ml-0.5 mt-[-10px]">&reg;</span>
+            </div>
+            <span className="text-[7.5px] font-bold text-slate-400 uppercase tracking-widest mt-1 text-center font-sans">
+              Solution Changing To Next Generation
+            </span>
           </div>
-          <div className="mt-2 mx-auto w-[145px] rounded-lg bg-white text-[#ff6600] text-center py-2 text-sm font-black tracking-[0.5em] shadow-md">
+
+          {/* ADMIN capsule */}
+          <div className="mt-4 mx-auto w-[135px] rounded-lg bg-white text-[#ff6600] text-center py-1.5 text-xs font-black tracking-[0.5em] shadow-md border border-slate-200/30">
             ADMIN
           </div>
 
-          <nav className="mt-4 space-y-2 pr-0">
+          {/* Sidebar Menu Items */}
+          <nav className="mt-6 space-y-3.5">
             {menuItems.map((item) => {
               const isActive = item.route ? location.pathname === item.route : false
               const commonClasses =
-                'w-full flex items-center gap-3 rounded-full px-4 py-3 text-sm border transition cursor-pointer relative'
+                'w-full flex items-center gap-3.5 rounded-full px-5 py-3.5 text-sm transition-all cursor-pointer relative shadow-sm border select-none'
 
               return (
                 <button
@@ -99,57 +97,110 @@ const AdminLayout = () => {
                   onClick={() => item.route && navigate(item.route)}
                   className={`${commonClasses} ${
                     isActive
-                      ? 'bg-[#f8f9fc] border-[#e4e7ec] text-[#1f2937] shadow-sm'
-                      : 'bg-[#f2f4f7] border-transparent text-[#2b2f38] hover:border-[#d6d9df]'
+                      ? 'bg-white border-slate-200 text-[#38b34a] shadow-slate-400/20 font-bold'
+                      : 'bg-[#f3f4f6]/95 border-slate-200/30 text-slate-700 hover:border-slate-300 hover:bg-white transition-all font-semibold'
                   }`}
                 >
+                  {/* High fidelity SVG curved arc active indicator */}
                   {isActive ? (
-                    <span className="absolute -right-5 top-0 h-full w-8 bg-[#f3f5fa]" aria-hidden />
+                    <svg 
+                      className="absolute -left-[14px] top-1/2 -translate-y-1/2 w-[52px] h-[52px] text-[#38b34a] pointer-events-none z-10" 
+                      viewBox="0 0 48 48" 
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path 
+                        d="M 28 4 A 20 20 0 0 0 28 44" 
+                        stroke="currentColor" 
+                        strokeWidth="4" 
+                        strokeLinecap="round" 
+                      />
+                    </svg>
                   ) : null}
-                  {isActive ? (
-                    <span className="absolute -left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full border-[3px] border-[#38b34a] border-r-transparent border-b-transparent" />
-                  ) : null}
+
+                  {/* Icon Box */}
                   <span
-                    className="w-7 h-7 rounded-md bg-white border border-slate-200 flex items-center justify-center"
-                    style={{ color: item.color }}
+                    className="w-7 h-7 rounded-md bg-white border border-slate-100 flex items-center justify-center shadow-sm shrink-0"
+                    style={{ color: isActive ? '#38b34a' : item.color }}
                   >
-                    {renderIcon(item.icon)}
+                    {renderIcon(item.icon, isActive)}
                   </span>
-                  <span
-                    className={`text-base ${
-                      isActive ? 'text-[#2ca746] font-bold' : 'text-[#222733] font-medium'
-                    }`}
-                  >
+                  
+                  {/* Label */}
+                  <span className="text-sm tracking-wide">
                     {item.label}
                   </span>
                 </button>
               )
             })}
           </nav>
+        </div>
 
-          {/* Logout button */}
-          <div className="mt-4">
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 rounded-lg border border-[#efc9c9] bg-[#fdf3f3] py-2.5 text-[#d74d4d] text-base font-medium cursor-pointer"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H9m4 4v1a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h5a2 2 0 012 2v1" />
+        {/* Logout Button */}
+        <div className="mt-8">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 hover:border-red-300 py-3 text-red-600 text-sm font-bold cursor-pointer shadow-sm transition-colors active:scale-[0.98]"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H9m4 4v1a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h5a2 2 0 012 2v1" />
+            </svg>
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area with Isolated Scroll */}
+      <div className="flex-grow flex flex-col min-w-0 bg-[#f3f5fa] h-full overflow-hidden">
+        
+        {/* Sticky Top Header Bar */}
+        <header className="bg-white border-b border-slate-200/80 px-6 py-4 flex items-center justify-between shadow-sm sticky top-0 z-10 shrink-0">
+          <div className="flex items-center gap-3.5">
+            {/* Hamburger button */}
+            <button className="p-2 hover:bg-slate-50 rounded-lg text-slate-500 cursor-pointer transition-colors active:scale-95">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
-              <span>Logout</span>
             </button>
+            <span className="text-sm font-semibold text-slate-500">
+              Welcome back! Here's your business overview for June 2026.
+            </span>
           </div>
-        </aside>
 
-        {/* Main content */}
-        <main className="flex-1 min-w-0 rounded-r-[16px] rounded-l-none border border-l-0 border-slate-200/80 bg-[#f3f5fa] p-4 lg:p-5 shadow-inner shadow-white/70">
-          <div className="rounded-xl bg-white/85 border border-slate-200/70 px-4 py-3 mb-4 text-sm text-slate-500 shadow-sm">
-            Welcome back! Here&apos;s your business overview.
+          <div className="flex items-center gap-4">
+            {/* Dynamic Date display with calendar icon */}
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 bg-slate-50/70 border border-slate-200/40 rounded-lg px-3 py-2">
+              <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span>Wed, 03 Jun 2026</span>
+            </div>
+
+            {/* Notification Bell Icon */}
+            <button className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors cursor-pointer relative active:scale-95">
+              <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              {/* Dot */}
+              <span className="absolute top-2 right-2.5 w-2 h-2 rounded-full bg-red-500 border border-white" />
+            </button>
+
+            {/* Profile Avatar Image */}
+            <div className="w-10 h-10 rounded-full border border-slate-200 shadow-sm overflow-hidden flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white cursor-pointer hover:scale-105 active:scale-95 transition-all">
+              <svg className="w-7 h-7 mt-1.5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+              </svg>
+            </div>
           </div>
+        </header>
+
+        {/* Content Workspace - Independent Scroll Container */}
+        <main className="flex-grow p-6 overflow-y-auto bg-[#f3f5fa]">
           <Outlet />
         </main>
       </div>
+
     </div>
   )
 }
