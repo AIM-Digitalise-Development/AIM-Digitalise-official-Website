@@ -14,6 +14,7 @@ export const ROUTES = {
     USERS: '/admin/users',
     SETTINGS: '/admin/settings',
     ANALYTICS: '/admin/analytics',
+    PARTNERS: '/admin/partners',
   },
   EMPLOYEE: {
     DASHBOARD: '/employee',
@@ -24,6 +25,8 @@ export const ROUTES = {
     DASHBOARD: '/partner',
     ORDERS: '/partner/orders',
     PAYOUTS: '/partner/payouts',
+    LOGIN: '/partner/login',
+    REGISTER: '/partner/register',
   },
   CUSTOMER: {
     DASHBOARD: '/customer',

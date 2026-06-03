@@ -8,7 +8,7 @@ const Card = ({ children, className = '', hover = false, padding = 'md' }) => {
 
   return (
     <div
-      className={`card-elevated ${hover ? 'card-elevated-hover cursor-pointer' : ''} ${paddings[padding]} ${className}`}
+      className={`card-elevated ${hover ? 'card-elevated-hover cursor-pointer ' : ''} ${paddings[padding]} ${className}`}
     >
       {children}
     </div>

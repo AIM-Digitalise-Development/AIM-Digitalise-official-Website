@@ -41,6 +41,7 @@ const AdminLayout = () => {
   const menuItems = [
     { route: ROUTES.ADMIN.DASHBOARD, label: 'Dashboard', icon: 'dashboard', color: '#10b981' },
     { route: ROUTES.ADMIN.USERS, label: 'Clients', icon: 'clients', color: '#f59e0b' },
+    { route: ROUTES.ADMIN.PARTNERS, label: 'Partners', icon: 'partners', color: '#8b5cf6' },
     { route: ROUTES.ADMIN.SETTINGS, label: 'Subscription', icon: 'subscription', color: '#ef4444' },
     { route: ROUTES.ADMIN.ANALYTICS, label: 'Accounts', icon: 'accounts', color: '#ec4899' },
     { route: null, label: 'Employee', icon: 'employee', color: '#3b82f6' },
@@ -52,6 +53,7 @@ const AdminLayout = () => {
     const iconClass = `w-4 h-4 ${isActive ? 'text-[#38b34a]' : ''}`
     if (type === 'dashboard') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /></svg>
     if (type === 'clients') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><circle cx="9" cy="8" r="3.5" /><path d="M4 18c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5" /><path d="M16 11h5m-2.5-2.5v5" /></svg>
+    if (type === 'partners') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
     if (type === 'subscription') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="6" width="18" height="12" rx="2" /><path d="M3 11h18" /></svg>
     if (type === 'accounts') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M4 7h16v10H4z" /><path d="M7 11h4" /></svg>
     if (type === 'employee') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="8" r="3.5" /><path d="M5 19c0-3 3-5 7-5s7 2 7 5" /></svg>

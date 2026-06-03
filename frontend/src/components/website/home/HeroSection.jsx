@@ -39,12 +39,12 @@ const HeroSection = () => {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-aim-gold opacity-60" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-gradient-to-r from-aim-gold to-aim-purple" />
                 </span>
-                Enterprise Tech Consulting
+                AIM Digitalise
               </div>
               <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white leading-tight tracking-tight">
-                Architecting the Future of{' '}
+              Digital Nation तो{' '}
                 <span className="text-gradient">
-                  Digital Innovation
+                  Developed Nation
                 </span>
               </h1>
               <p className="text-lg copy-on-dark-muted max-w-2xl">

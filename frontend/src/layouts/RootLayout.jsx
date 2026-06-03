@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { ROUTES } from '../constants/routes'
 import AdminEmployeeLoginModal from '../components/auth/AdminEmployeeLoginModal'
+import logo from '../assets/images/logo.png';
 
 const RootLayout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -46,11 +47,10 @@ const RootLayout = () => {
           <div className="flex justify-between items-center">
             {/* Logo */}
             <Link to="/" className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
-              <span className="bg-gradient-to-br from-aim-gold via-aim-gold-light to-aim-purple w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold text-aim-navy shadow-md shadow-aim-gold/30 ring-1 ring-white/10">
-                A
-              </span>
-              <span>AIM<span className="text-transparent bg-clip-text bg-gradient-to-r from-aim-gold to-aim-purple">.</span></span>
-            </Link>
+  <img src={logo} alt="AIM Logo" className="w-16 h-auto object-contain" />
+  {/* Optional: keep the AIM text if you want, otherwise remove */}
+  
+</Link>
             
             {/* Desktop Navigation Links */}
             <div className="hidden lg:flex space-x-4 xl:space-x-6">
@@ -71,11 +71,20 @@ const RootLayout = () => {
 
             {/* Actions */}
             <div className="hidden lg:flex items-center space-x-4">
-              <Link to="/login" className="px-4 py-2 text-sm font-medium text-aim-copy hover:text-aim-highlight transition">
-                Login
+              <Link
+                to="/partner/register"
+                className="px-4 py-2 text-xs font-semibold text-aim-copy-muted hover:text-aim-highlight transition"
+              >
+                Become a Partner
               </Link>
-              <Link to="/register" className="btn-primary py-2 px-4 text-sm">
-                Sign Up
+              <Link
+                to="/partner/login"
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg border border-aim-gold/40 text-aim-gold hover:bg-aim-gold/10 hover:border-aim-gold transition-all duration-200"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Partner Login
               </Link>
             </div>
 
@@ -115,19 +124,22 @@ const RootLayout = () => {
                 </Link>
               ))}
               <div className="pt-4 border-t border-white/10 flex flex-col gap-2">
-                <Link 
-                  to="/login" 
+                <Link
+                  to="/partner/register"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="text-center py-2 text-sm font-medium text-aim-copy hover:text-aim-highlight rounded-lg hover:bg-white/5"
+                  className="text-center py-2 text-xs font-semibold text-aim-copy-muted hover:text-aim-highlight rounded-lg hover:bg-white/5"
                 >
-                  Login
+                  Become a Partner
                 </Link>
-                <Link 
-                  to="/register" 
+                <Link
+                  to="/partner/login"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="btn-primary text-center py-2 text-sm"
+                  className="flex items-center justify-center gap-2 py-2.5 rounded-lg border border-aim-gold/40 text-aim-gold text-sm font-bold hover:bg-aim-gold/10 transition-all"
                 >
-                  Sign Up
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Partner Login
                 </Link>
               </div>
             </div>

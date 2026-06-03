@@ -104,7 +104,7 @@ const LatestNews = () => {
         >
           {posts.map((post) => (
             <motion.div key={post.id} variants={itemVariants} className="flex">
-              <Card hover padding="lg" className="flex flex-col justify-between w-full bg-white border-slate-200">
+              <Card hover padding="lg" className="flex flex-col justify-between w-full bg-aim-navy-light border-slate-200">
                 <div className="space-y-4 text-left">
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-blue-600 font-bold uppercase tracking-wider">

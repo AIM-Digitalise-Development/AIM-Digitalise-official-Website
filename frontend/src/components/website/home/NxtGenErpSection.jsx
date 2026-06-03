@@ -155,7 +155,7 @@ const NxtGenErpSection = () => {
             {/* Glowing blur behind screen */}
             <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/10 to-red-500/10 rounded-3xl blur-2xl opacity-60"></div>
 
-            <div className="relative bg-white border border-slate-200 rounded-3xl p-4 shadow-2xl overflow-hidden">
+            <div className="relative bg-aim-navy-light border border-slate-200 rounded-3xl p-4 shadow-2xl overflow-hidden">
               
               {/* Fake Window Header bar */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-4 px-2">

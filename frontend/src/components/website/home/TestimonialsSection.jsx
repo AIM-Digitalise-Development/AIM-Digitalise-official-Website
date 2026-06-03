@@ -6,7 +6,7 @@ const testimonials = [
     name: 'Sarah Johnson',
     role: 'CTO, TechStart Solutions',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&h=120&q=80',
-    content: 'AIM Innovations overhauled our monolithic database and transitioned us to a serverless microservices setup. Our system latency dropped by 65% and deployment frequency went from bi-weekly to multiple times a day.',
+    content: 'AIM Digitalise has been instrumental in helping us streamline our business operations and improve our bottom line. Their team of experts is always available to help us with any questions or concerns we may have.',
     rating: 5,
     logo: 'TechStart'
   },
@@ -63,7 +63,7 @@ const TestimonialsSection = () => {
         </div>
 
         <motion.div 
-          className="grid md:grid-cols-3 gap-8"
+          className="grid md:grid-cols-3 gap-8 "
           variants={containerVariants}
           initial="hidden"
           whileInView="show"
@@ -71,7 +71,7 @@ const TestimonialsSection = () => {
         >
           {testimonials.map((testimonial, index) => (
             <motion.div key={index} variants={itemVariants} className="h-full">
-              <Card padding="lg" className="h-full relative bg-white border-slate-200 flex flex-col justify-between">
+              <Card padding="lg" className="h-full relative bg-aim-navy-light border-slate-200 flex flex-col justify-between">
                 <div className="space-y-6">
                   {/* Rating Stars */}
                   <div className="flex gap-1 text-amber-400">
