@@ -8,16 +8,33 @@ const partnerFetch = async (method, path, body = null, isFormData = false) => {
   const token = localStorage.getItem('partner_token')
   const headers = {}
   if (token) headers['Authorization'] = `Bearer ${token}`
-  if (!isFormData) headers['Content-Type'] = 'application/json'
+  if (body && !isFormData) headers['Content-Type'] = 'application/json'
   headers['Accept'] = 'application/json'
 
   const options = { method, headers }
   if (body) options.body = isFormData ? body : JSON.stringify(body)
 
   const response = await fetch(`${PARTNER_API}${path}`, options)
-  const data = await response.json()
+  
+  let data = null
+  const contentType = response.headers.get('content-type')
+  if (contentType && contentType.includes('application/json')) {
+    data = await response.json()
+  } else {
+    const text = await response.text()
+    data = { message: text || `HTTP Error ${response.status}` }
+  }
+
   if (!response.ok) {
-    const error = new Error(data?.message || 'Request failed')
+    console.error('Partner API request failed:', {
+      status: response.status,
+      path,
+      responseBody: data?.message
+    })
+    const errorMsg = data?.message && data.message.length < 150 
+      ? data.message 
+      : `Server returned error ${response.status}`
+    const error = new Error(errorMsg)
     error.response = { data, status: response.status }
     throw error
   }
