@@ -14,27 +14,35 @@ const OrderCard = ({ order, onClick }) => {
       <div className="space-y-1">
         <div className="flex items-center gap-3 flex-wrap">
           <h4 className="text-white font-bold text-base group-hover:text-aim-gold transition-colors">
-            {order.client}
+            {order.client_name}
           </h4>
-          <OrderStatusBadge status={order.status} />
+          <OrderStatusBadge status={order.payment_status} />
         </div>
         <div className="flex items-center gap-4 text-[11px] text-aim-copy-muted font-medium">
-          <span className="font-mono">{order.id}</span>
+          <span className="font-mono">ID: {order.client_id}</span>
           <span>•</span>
-          <span>{order.date}</span>
-          <span>•</span>
-          <span>{order.category || 'NEXGN Software'}</span>
+          <span>{order.product_name}</span>
+          {order.created_at && (
+            <>
+              <span>•</span>
+              <span>{new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+            </>
+          )}
         </div>
       </div>
 
       <div className="flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-start gap-2 shrink-0">
         <div>
-          <span className="text-[10px] text-aim-copy-muted block sm:text-right uppercase tracking-wider">Total Value</span>
-          <p className="text-white font-black text-base">{order.amount}</p>
+          <span className="text-[10px] text-aim-copy-muted block sm:text-right uppercase tracking-wider">Processing Fee</span>
+          <p className="text-white font-black text-sm sm:text-right">
+            ₹{Number(order.processing_fee || 0).toLocaleString('en-IN')}
+          </p>
         </div>
         <div className="text-right">
-          <span className="text-[10px] text-aim-gold/80 block sm:text-right uppercase tracking-wider font-semibold">Comm. (15%)</span>
-          <p className="text-aim-gold font-black text-sm">{order.commission}</p>
+          <span className="text-[10px] text-aim-gold/80 block sm:text-right uppercase tracking-wider font-semibold">Monthly Subscription</span>
+          <p className="text-aim-gold font-black text-sm">
+            ₹{Number(order.monthly_subscription || 0).toLocaleString('en-IN')}
+          </p>
         </div>
       </div>
     </div>

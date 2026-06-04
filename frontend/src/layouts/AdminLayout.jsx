@@ -9,10 +9,11 @@ const AdminLayout = () => {
   const navigate = useNavigate()
   const { isAuthenticated, role, logout } = useAuth()
 
-  // Wait for Zustand persist rehydration
+  // Wait for Zustand persist rehydration and force dark mode
   const [ready, setReady] = useState(false)
   useEffect(() => {
     setReady(true)
+    document.documentElement.classList.add('dark')
   }, [])
 
   // Protect the route: if not authenticated as admin, redirect home

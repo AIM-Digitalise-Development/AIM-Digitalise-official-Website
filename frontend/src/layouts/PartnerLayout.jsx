@@ -39,6 +39,11 @@ const PartnerLayout = () => {
   const navigate = useNavigate()
   const location = useLocation()
 
+  // Always force dark mode on Partner portal mount
+  useEffect(() => {
+    document.documentElement.classList.add('dark')
+  }, [])
+
   // Route guard
   useEffect(() => {
     if (!isPartnerAuthenticated) {

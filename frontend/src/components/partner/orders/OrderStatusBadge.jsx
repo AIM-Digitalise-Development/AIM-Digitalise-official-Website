@@ -4,7 +4,7 @@ const OrderStatusBadge = ({ status }) => {
   let styles = 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
   let dotColor = 'bg-yellow-400'
 
-  if (normalized === 'active') {
+  if (normalized === 'active' || normalized === 'paid') {
     styles = 'bg-green-500/10 border-green-500/20 text-green-400'
     dotColor = 'bg-green-400'
   } else if (normalized === 'completed') {

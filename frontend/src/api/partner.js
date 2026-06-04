@@ -63,6 +63,14 @@ export const getPartnerProfile = () =>
 export const partnerLogout = () =>
   partnerFetch('POST', '/partner/logout')
 
+// ─── Get Partner's Sold Orders (My Orders) ───────────────────────────────────
+export const getPartnerOrders = () =>
+  partnerFetch('GET', '/partner/my-orders')
+
+// ─── Get Single Order Details ────────────────────────────────────────────────
+export const getPartnerOrderDetail = (orderId) =>
+  partnerFetch('GET', `/partner/order/${orderId}`)
+
 // Legacy exports (kept for existing partner portal pages)
 export const getEarnings = () => client.get('/partner/earnings')
 export const getPayouts = () => client.get('/partner/payouts')

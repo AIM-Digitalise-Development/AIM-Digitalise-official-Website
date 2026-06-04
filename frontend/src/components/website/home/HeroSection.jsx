@@ -141,7 +141,7 @@ const HeroSection = () => {
             
             {/* Main Interactive Interface Preview */}
             <motion.div 
-              className="relative card-elevated border border-white/10 rounded-3xl p-4 shadow-2xl ring-1 ring-aim-gold/20"
+              className="relative card-elevated border border-white/10 rounded-3xl p-4 shadow-2xl ring-1 ring-aim-black/20"
               animate={{ y: [0, -10, 0] }}
               transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
             >

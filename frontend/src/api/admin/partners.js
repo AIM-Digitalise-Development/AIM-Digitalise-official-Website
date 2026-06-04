@@ -34,3 +34,11 @@ export const getAdminPartnerById = (id) =>
 // status: 'active', 'suspended', 'pending'
 export const updatePartnerRegistrationStatus = (id, status) =>
   adminPartnerFetch('POST', `/admin/partners/${id}/status`, { status })
+
+// ─── Get all clients ─────────────────────────────────────────────────────────
+export const getAdminClients = () =>
+  adminPartnerFetch('GET', '/admin/clients')
+
+// ─── Get admin dashboard stats ───────────────────────────────────────────────
+export const getAdminDashboard = () =>
+  adminPartnerFetch('GET', '/admin/dashboard')

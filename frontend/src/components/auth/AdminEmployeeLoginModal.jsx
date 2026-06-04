@@ -144,21 +144,23 @@ export default function AdminEmployeeLoginModal({ isOpen, onClose, initialRole =
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Glassmorphic Backdrop overlay with backdrop blur */}
       <div 
-        className="fixed inset-0 bg-aim-navy/85 backdrop-blur-md transition-opacity duration-300 animate-fade-in"
+        className="fixed inset-0 bg-slate-950/40 dark:bg-aim-navy/85 backdrop-blur-md transition-opacity duration-300 animate-fade-in"
         onClick={onClose}
       />
 
       {/* Modal Box */}
-      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-aim-navy-card p-8 shadow-2xl shadow-black/80 animate-slide-up z-10">
-        {/* Radial Ambient Glows for premium modern aesthetic */}
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-aim-gold/10 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-48 h-48 bg-aim-purple/10 rounded-full blur-2xl pointer-events-none" />
+      <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-aim-navy-card p-8 shadow-2xl shadow-slate-950/10 dark:shadow-black/80 animate-slide-up z-10">
+        {/* Top gradient accent bar */}
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-purple-500 to-amber-400 rounded-t-3xl" />
+        {/* Radial Ambient Glows */}
+        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-amber-400/8 dark:bg-aim-gold/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-48 h-48 bg-purple-500/8 dark:bg-aim-purple/10 rounded-full blur-2xl pointer-events-none" />
 
         {/* Close Button */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-lg text-aim-copy-muted hover:text-white hover:bg-white/5 transition-colors cursor-pointer z-20"
+          className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:text-aim-copy-muted dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer z-20"
           aria-label="Close modal"
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -167,7 +169,7 @@ export default function AdminEmployeeLoginModal({ isOpen, onClose, initialRole =
         </button>
 
         {/* Role Toggle Tabs */}
-        <div className="flex rounded-xl bg-aim-navy-light p-1 mb-6 border border-white/5 relative z-10">
+        <div className="flex rounded-xl bg-slate-100 dark:bg-aim-navy-light p-1 mb-6 border border-slate-200/60 dark:border-white/5 relative z-10">
           <button
             type="button"
             onClick={() => {
@@ -176,8 +178,8 @@ export default function AdminEmployeeLoginModal({ isOpen, onClose, initialRole =
             }}
             className={`flex-1 text-center py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 cursor-pointer ${
               activeRole === 'employee'
-                ? 'bg-aim-gold text-aim-navy font-bold shadow-md shadow-aim-gold/20'
-                : 'text-aim-copy-muted hover:text-white'
+                ? 'bg-amber-500 text-white font-bold shadow-md shadow-amber-500/20'
+                : 'text-slate-500 hover:text-slate-800 dark:text-aim-copy-muted dark:hover:text-white'
             }`}
           >
             Employee
@@ -191,7 +193,7 @@ export default function AdminEmployeeLoginModal({ isOpen, onClose, initialRole =
             className={`flex-1 text-center py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 cursor-pointer ${
               activeRole === 'admin'
                 ? 'bg-aim-purple text-white font-bold shadow-md shadow-aim-purple/20'
-                : 'text-aim-copy-muted hover:text-white'
+                : 'text-slate-500 hover:text-slate-800 dark:text-aim-copy-muted dark:hover:text-white'
             }`}
           >
             Admin
@@ -200,10 +202,10 @@ export default function AdminEmployeeLoginModal({ isOpen, onClose, initialRole =
 
         {/* Header Title & Description */}
         <div className="text-center mb-6 relative z-10">
-          <h3 className="text-2xl font-black tracking-tight text-white mb-2">
+          <h3 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white mb-2">
             {header.label}
           </h3>
-          <p className="text-xs text-aim-copy-muted leading-relaxed max-w-[280px] mx-auto">
+          <p className="text-xs text-slate-500 dark:text-aim-copy-muted leading-relaxed max-w-[280px] mx-auto">
             {header.description}
           </p>
         </div>

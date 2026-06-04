@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-aim-navy: #0b1b3a;
   --color-aim-navy-light: #122654;
@@ -316,7 +318,7 @@
   }
 
   .text-on-navy-muted {
-    color: var(--aim-text-muted);
+    color: #ffffff;
   }
 
   /* Readable copy block on navy sections */
@@ -403,3 +405,199 @@
     box-shadow: var(--aim-shadow-purple);
   }
 }
+
+/* ── Theme custom styles & light-mode overrides ── */
+
+.website-root:not(.dark) {
+  --color-aim-navy: #ffffff;
+  --color-aim-navy-light: #f8fafc;
+  --color-aim-navy-muted: #f1f5f9;
+  --color-aim-navy-card: #ffffff;
+  --color-aim-copy: #1e293b;
+  --color-aim-copy-muted: #64748b;
+  --color-aim-highlight: #2563eb;
+  
+  --aim-navy: #ffffff;
+  --aim-navy-light: #f8fafc;
+  --aim-navy-muted: #f1f5f9;
+  --aim-navy-card: #ffffff;
+  --aim-gold: #2563eb;
+  --aim-purple: #4f46e5;
+  --aim-text: #1e293b;
+  --aim-text-muted: #64748b;
+  --aim-heading: #0f172a;
+  --aim-text-accent: #2563eb;
+  --aim-border: rgba(15, 34, 72, 0.08);
+  --aim-mesh-image: radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.04), transparent 50%), radial-gradient(circle at 20% 80%, rgba(79, 70, 229, 0.05), transparent 50%);
+  --aim-shadow-card: 0 20px 40px -12px rgba(15, 34, 72, 0.08), 0 0 0 1px rgba(15, 34, 72, 0.04);
+
+  background-color: #f8fafc !important;
+  background-image: radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.04), transparent 50%), radial-gradient(circle at 20% 80%, rgba(79, 70, 229, 0.05), transparent 50%) !important;
+
+  .text-white:not(.keep-white) {
+    color: #0f172a !important;
+  }
+  .text-aim-copy:not(.keep-white) {
+    color: #1e293b !important;
+  }
+  .text-aim-copy-muted:not(.keep-white) {
+    color: #000000 !important;
+  }
+  .copy-on-dark-muted:not(.keep-white) {
+    color: #475569 !important;
+  }
+  .heading-display:not(.keep-white) {
+    color: #0f172a !important;
+  }
+  .text-gradient {
+    color: #2563eb !important;
+    background: none;
+    -webkit-text-fill-color: currentColor;
+  }
+  .text-gradient-subtle {
+    color: #4f46e5 !important;
+    background: none;
+    -webkit-text-fill-color: currentColor;
+  }
+
+  .section-white {
+    background: #ffffff !important;
+    color: #1e293b !important;
+    border-color: rgba(15, 34, 72, 0.06) !important;
+  }
+  .section-muted {
+    background: #f8fafc !important;
+    color: #1e293b !important;
+    border-color: rgba(15, 34, 72, 0.06) !important;
+  }
+  .section-tinted {
+    background: #f1f5f9 !important;
+    color: #1e293b !important;
+    border-color: rgba(15, 34, 72, 0.06) !important;
+  }
+  .glass-card {
+    background: rgba(255, 255, 255, 0.75) !important;
+    backdrop-filter: blur(20px) !important;
+    border-color: rgba(15, 34, 72, 0.08) !important;
+    box-shadow: 0 20px 40px -12px rgba(15, 34, 72, 0.08), 0 0 0 1px rgba(15, 34, 72, 0.04) !important;
+  }
+  .card-elevated {
+    background: #ffffff !important;
+    border-color: rgba(15, 34, 72, 0.06) !important;
+    box-shadow: 0 20px 40px -12px rgba(15, 34, 72, 0.08), 0 0 0 1px rgba(15, 34, 72, 0.04) !important;
+    color: #1e293b !important;
+  }
+  .badge-pill {
+    background: rgba(37, 99, 235, 0.05) !important;
+    border-color: rgba(37, 99, 235, 0.25) !important;
+    color: #2563eb !important;
+  }
+  .input-brand {
+    background: #ffffff !important;
+    border-color: rgba(0, 0, 0, 0.15) !important;
+    color: #0f172a !important;
+  }
+  .input-brand::placeholder {
+    color: #94a3b8 !important;
+  }
+  .input-brand:focus {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
+  }
+  .divider-brand {
+    background: linear-gradient(90deg, transparent, #2563eb 25%, #4f46e5 75%, transparent) !important;
+  }
+
+  .ambient-glows::before {
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.05) 0%, transparent 70%) !important;
+  }
+  .ambient-glows::after {
+    background: radial-gradient(circle, rgba(79, 70, 229, 0.06) 0%, transparent 70%) !important;
+  }
+
+  .btn-danger {
+    color: #ffffff !important;
+    background: #4f46e5 !important;
+  }
+  .btn-primary {
+    color: #ffffff !important;
+    background: #2563eb !important;
+  }
+  .btn-outline-brand {
+    color: #2563eb !important;
+    border-color: rgba(37, 99, 235, 0.6) !important;
+  }
+  .btn-outline-brand:hover {
+    background: rgba(37, 99, 235, 0.05) !important;
+  }
+
+  /* Vibrant light-mode component enhancements to prevent blandness */
+  .glass-card::before, .card-elevated::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #f5a623 0%, #5c2d91 100%);
+    border-top-left-radius: inherit;
+    border-top-right-radius: inherit;
+    opacity: 0.95;
+    z-index: 10;
+  }
+  
+.glass-card, .card-elevated {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #62b8e9 0%, #419fda 25%, #257eb9 50%, #2282b9 100%) !important;
+  background-size: 200% 200% !important;
+  box-shadow: 0 20px 40px -12px rgba(49, 45, 200, 0.411),
+              0 0 0 1px rgba(255, 255, 255, 0.1),
+              inset 0 1px 0 rgba(255, 255, 255, 0.2),
+              0 8px 20px -8px rgba(98, 184, 233, 0.3) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  animation: gradientShift 8s ease infinite;
+}
+
+/* Animated gradient movement */
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Hover effect for glass-card */
+.glass-card:hover, .card-elevated:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: 0 24px 48px -16px rgba(0, 0, 0, 0.2),
+              0 0 0 1px rgba(255, 255, 255, 0.15),
+              inset 0 1px 0 rgba(255, 255, 255, 0.25),
+              0 12px 28px -12px rgba(98, 184, 233, 0.4) !important;
+}
+
+/* Optional: Add a subtle glow effect */
+.glass-card::before, .card-elevated::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+  pointer-events: none;
+}
+
+.glass-card:hover::before, .card-elevated:hover::before {
+  left: 100%;
+}
+}
+
+/* Custom Header and Footer rules removed to enable responsive themes */
+

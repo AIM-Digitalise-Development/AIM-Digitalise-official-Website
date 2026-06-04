@@ -53,15 +53,16 @@ const AdminPartners = () => {
     try {
       const res = await getAdminPartners()
       if (res.data) {
-        const list = res.data.data || res.data.partners || (Array.isArray(res.data) ? res.data : [])
-        setPartners(list)
+        // Extract partners array supporting all possible response shapes
+        const list = res.data.data?.all_partners || res.data.data || res.data.partners || (Array.isArray(res.data) ? res.data : [])
+        setPartners(Array.isArray(list) ? list : [])
       } else {
         setError('No data received from the backend API.')
       }
     } catch (err) {
       console.error(err)
       const msg = err?.response?.data?.message || err.message
-      setError(`Failed to connect to backend: ${msg}. Make sure your Laravel server is running at http://127.0.0.1:8000.`)
+      setError(`Failed to connect to backend: ${msg}.`)
     } finally {
       setLoading(false)
     }

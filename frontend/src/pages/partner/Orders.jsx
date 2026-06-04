@@ -1,122 +1,132 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 import OrderFilters from '../../components/partner/orders/OrderFilters'
 import OrderCard from '../../components/partner/orders/OrderCard'
 import OrderDetails from '../../components/partner/orders/OrderDetails'
-
-const MOCK_ORDERS = [
-  { 
-    id: 'ORD-4821', 
-    client: 'TechCorp India', 
-    amount: '₹12,500', 
-    commission: '₹1,875', 
-    status: 'Active', 
-    date: '15 May 2026', 
-    category: 'NEXGN SaaS',
-    clientContact: 'billing@techcorpindia.com',
-    details: 'Enterprise deployment of NEXGN Institute SaaS for 200 users. Includes premium HR and attendance modules, automatic tax configurations, and monthly updates.'
-  },
-  { 
-    id: 'ORD-4820', 
-    client: 'Spark Solutions', 
-    amount: '₹8,200', 
-    commission: '₹1,230', 
-    status: 'Pending', 
-    date: '12 May 2026', 
-    category: 'SaaS Suite',
-    clientContact: 'hr@sparksolutions.in',
-    details: 'Employee management suite setup. Subscription pending initial payment confirmation from bank gate.'
-  },
-  { 
-    id: 'ORD-4819', 
-    client: 'NexaRetail Ltd', 
-    amount: '₹21,000', 
-    commission: '₹3,150', 
-    status: 'Completed', 
-    date: '28 Apr 2026', 
-    category: 'Custom Software',
-    clientContact: 'operations@nexaretail.com',
-    details: 'Custom inventory control application and point-of-sale software integration with barcode scanners.'
-  },
-  { 
-    id: 'ORD-4818', 
-    client: 'BlueSky Academics', 
-    amount: '₹15,000', 
-    commission: '₹2,250', 
-    status: 'Active', 
-    date: '20 Apr 2026', 
-    category: 'NEXGN School Pro',
-    clientContact: 'admin@bluesky.edu.in',
-    details: 'NEXGN Institute School Management system for academic tracker, online examination portals, and fees collector.'
-  },
-  { 
-    id: 'ORD-4817', 
-    client: 'Zenith Logistics', 
-    amount: '₹5,500', 
-    commission: '₹825', 
-    status: 'Cancelled', 
-    date: '10 Apr 2026', 
-    category: 'Tracking API',
-    clientContact: 'support@zenithlogistics.com',
-    details: 'Vehicle tracking API integration. Order cancelled by user due to shifting priorities.'
-  }
-]
+import { getPartnerOrders, getPartnerOrderDetail } from '../../api/partner'
 
 const PartnerOrders = () => {
+  const [orders, setOrders] = useState([])
+  const [summary, setSummary] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
   const [filters, setFilters] = useState({ search: '', status: 'All' })
-  const [selectedOrder, setSelectedOrder] = useState(null)
+  const [selectedOrderDetail, setSelectedOrderDetail] = useState(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+
+  const fetchOrders = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await getPartnerOrders()
+      if (res.data?.success) {
+        setOrders(res.data.data.orders || [])
+        setSummary(res.data.data.summary || null)
+      } else {
+        setError(res.data?.message || 'Failed to fetch orders')
+      }
+    } catch (err) {
+      setError(err.message || 'An error occurred while fetching orders')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchOrders()
+  }, [])
 
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters)
   }
 
-  const filteredOrders = MOCK_ORDERS.filter((order) => {
+  const handleViewOrder = async (orderId) => {
+    setDetailLoading(true)
+    try {
+      const res = await getPartnerOrderDetail(orderId)
+      if (res.data?.success) {
+        setSelectedOrderDetail(res.data.data)
+      } else {
+        alert(res.data?.message || 'Failed to fetch order details')
+      }
+    } catch (err) {
+      alert('Error fetching details: ' + (err.message || 'Unknown error'))
+    } finally {
+      setDetailLoading(false)
+    }
+  }
+
+  const filteredOrders = orders.filter((order) => {
     const matchesSearch = 
-      order.client.toLowerCase().includes(filters.search.toLowerCase()) || 
-      order.id.toLowerCase().includes(filters.search.toLowerCase())
+      order.client_name?.toLowerCase().includes(filters.search.toLowerCase()) || 
+      order.client_id?.toString().toLowerCase().includes(filters.search.toLowerCase()) ||
+      order.product_name?.toLowerCase().includes(filters.search.toLowerCase())
     
     const matchesStatus = 
       filters.status === 'All' || 
-      order.status.toLowerCase() === filters.status.toLowerCase()
+      order.payment_status?.toLowerCase() === filters.status.toLowerCase()
 
     return matchesSearch && matchesStatus
   })
 
-  // Calculate statistics
-  const totalOrders = filteredOrders.length
-  const activeOrders = filteredOrders.filter(o => o.status === 'Active').length
-  const totalCommission = filteredOrders
-    .filter(o => o.status !== 'Cancelled')
-    .reduce((acc, curr) => acc + parseInt(curr.commission.replace(/[^\d]/g, '')), 0)
-
   return (
     <>
       <Helmet>
-        <title>Client Orders | AIM Partner</title>
+        <title>Sold Products | AIM Partner</title>
       </Helmet>
 
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-black text-white">Client Orders</h1>
-          <p className="text-aim-copy-muted text-xs mt-1">
-            Track client subscriptions, software orders, and commissions attributed to you.
-          </p>
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-2xl font-black text-white">Sold Products</h1>
+            <p className="text-aim-copy-muted text-xs mt-1">
+              Track subscriptions, client details, and activation statuses for products you sold.
+            </p>
+          </div>
+          <button
+            onClick={fetchOrders}
+            disabled={loading}
+            className="px-4 py-2 bg-aim-gold/10 hover:bg-aim-gold/20 text-aim-gold border border-aim-gold/20 rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
+          >
+            {loading ? 'Refreshing...' : 'Refresh Data'}
+          </button>
         </div>
 
+        {/* API Error alert */}
+        {error && (
+          <div className="p-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 text-sm flex items-center justify-between">
+            <span>{error}</span>
+            <button onClick={fetchOrders} className="text-xs font-bold underline hover:no-underline">Try Again</button>
+          </div>
+        )}
+
         {/* Mini stats cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="rounded-xl border border-white/10 bg-aim-navy-light/40 p-4">
-            <span className="text-[10px] text-aim-copy-muted uppercase tracking-wider block">Filtered Orders</span>
-            <p className="text-2xl font-black text-white mt-1">{totalOrders}</p>
+            <span className="text-[10px] text-aim-copy-muted uppercase tracking-wider block">Total Sales</span>
+            <p className="text-2xl font-black text-white mt-1">
+              {loading ? '...' : (summary?.total_sales ?? 0)}
+            </p>
           </div>
           <div className="rounded-xl border border-white/10 bg-aim-navy-light/40 p-4">
-            <span className="text-[10px] text-aim-copy-muted uppercase tracking-wider block">Active Subscriptions</span>
-            <p className="text-2xl font-black text-green-400 mt-1">{activeOrders}</p>
+            <span className="text-[10px] text-aim-copy-muted uppercase tracking-wider block">Total Revenue</span>
+            <p className="text-2xl font-black text-aim-gold mt-1">
+              {loading ? '...' : `₹${(summary?.total_revenue ?? 0).toLocaleString('en-IN')}`}
+            </p>
           </div>
           <div className="rounded-xl border border-white/10 bg-aim-navy-light/40 p-4">
-            <span className="text-[10px] text-aim-copy-muted uppercase tracking-wider block">Attributed Commissions</span>
-            <p className="text-2xl font-black text-aim-gold mt-1">₹{totalCommission.toLocaleString()}</p>
+            <span className="text-[10px] text-aim-copy-muted uppercase tracking-wider block">Active Clients</span>
+            <p className="text-2xl font-black text-green-400 mt-1">
+              {loading ? '...' : (summary?.active_clients ?? 0)}
+            </p>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-aim-navy-light/40 p-4">
+            <span className="text-[10px] text-aim-copy-muted uppercase tracking-wider block">Pending Activations</span>
+            <p className="text-2xl font-black text-yellow-400 mt-1">
+              {loading ? '...' : (summary?.pending_activations ?? 0)}
+            </p>
           </div>
         </div>
 
@@ -125,29 +135,50 @@ const PartnerOrders = () => {
 
         {/* Orders List */}
         <div className="space-y-4">
-          {filteredOrders.length > 0 ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <svg className="w-8 h-8 text-aim-gold animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <span className="text-aim-copy-muted text-xs">Fetching sold products...</span>
+            </div>
+          ) : filteredOrders.length > 0 ? (
             filteredOrders.map((order) => (
               <OrderCard 
                 key={order.id} 
                 order={order} 
-                onClick={() => setSelectedOrder(order)} 
+                onClick={() => handleViewOrder(order.id)} 
               />
             ))
           ) : (
             <div className="text-center py-12 rounded-2xl border border-white/5 bg-aim-navy-light/20">
               <span className="text-4xl">🔍</span>
-              <h3 className="text-white font-bold mt-3">No orders found</h3>
-              <p className="text-aim-copy-muted text-xs mt-1">Try modifying your search or status filter options.</p>
+              <h3 className="text-white font-bold mt-3">No products found</h3>
+              <p className="text-aim-copy-muted text-xs mt-1">Try modifying your search query or status filter.</p>
             </div>
           )}
         </div>
 
         {/* Details Modal */}
         <OrderDetails 
-          order={selectedOrder} 
-          isOpen={!!selectedOrder} 
-          onClose={() => setSelectedOrder(null)} 
+          order={selectedOrderDetail} 
+          isOpen={!!selectedOrderDetail} 
+          onClose={() => setSelectedOrderDetail(null)} 
         />
+
+        {/* Detail view loading indicator overlay */}
+        {detailLoading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-3 bg-aim-navy border border-white/10 p-6 rounded-2xl shadow-xl shadow-black/50">
+              <svg className="w-8 h-8 text-aim-gold animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <span className="text-white text-xs font-semibold">Loading product details...</span>
+            </div>
+          </div>
+        )}
       </div>
     </>
   )
