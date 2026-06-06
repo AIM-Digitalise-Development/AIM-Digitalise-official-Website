@@ -85,7 +85,7 @@ const AdminUsers = () => {
         <div className="bg-white rounded-3xl border border-slate-200/80 shadow-md p-6">
           
           {/* Tab Selection Row */}
-          <div className="flex items-center gap-1 border-b border-slate-200/60 pb-3 mb-6">
+          <div className="flex flex-wrap items-center gap-1 border-b border-slate-200/60 pb-3 mb-6">
             <button
               onClick={() => setActivePageTab('add_clients')}
               className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${
@@ -115,6 +115,46 @@ const AdminUsers = () => {
               }`}
             >
               Follow Up
+            </button>
+            <button
+              onClick={() => setActivePageTab('customization')}
+              className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${
+                activePageTab === 'customization'
+                  ? 'bg-white border-[#38b34a] text-[#38b34a] -mb-[13px] z-10'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
+              }`}
+            >
+              Customization
+            </button>
+            <button
+              onClick={() => setActivePageTab('renewal')}
+              className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${
+                activePageTab === 'renewal'
+                  ? 'bg-white border-[#38b34a] text-[#38b34a] -mb-[13px] z-10'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
+              }`}
+            >
+              Renewal / Add Product
+            </button>
+            <button
+              onClick={() => setActivePageTab('due_payment')}
+              className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${
+                activePageTab === 'due_payment'
+                  ? 'bg-white border-[#38b34a] text-[#38b34a] -mb-[13px] z-10'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
+              }`}
+            >
+              Due Payment
+            </button>
+            <button
+              onClick={() => setActivePageTab('payment_report')}
+              className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${
+                activePageTab === 'payment_report'
+                  ? 'bg-white border-[#38b34a] text-[#38b34a] -mb-[13px] z-10'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
+              }`}
+            >
+              Payment Report
             </button>
           </div>
 
@@ -317,6 +357,256 @@ const AdminUsers = () => {
               <p className="text-xs text-slate-400 font-medium max-w-sm leading-relaxed font-sans">
                 Active follow-up schedules, client feedback timelines, and partner support logs will be displayed here.
               </p>
+            </div>
+          )}
+
+          {/* Tab Content 4: Customization */}
+          {activePageTab === 'customization' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                  <span className="text-purple-500 text-lg">⚙️</span>
+                  <span>Client Customization Requests</span>
+                </h3>
+              </div>
+              
+              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50 text-slate-400 font-bold uppercase tracking-wider">
+                        <th className="px-6 py-4">Request ID</th>
+                        <th className="px-6 py-4">Client Name</th>
+                        <th className="px-6 py-4">Requested Module</th>
+                        <th className="px-6 py-4">Submission Date</th>
+                        <th className="px-6 py-4">Est. Delivery</th>
+                        <th className="px-6 py-4 text-center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                      <tr className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 font-mono font-bold text-slate-500">REQ-2026-004</td>
+                        <td className="px-6 py-4 font-bold text-slate-800 text-sm">Sunrise Academy</td>
+                        <td className="px-6 py-4">Custom Certificate Template Generation</td>
+                        <td className="px-6 py-4 text-slate-400">12 May 2026</td>
+                        <td className="px-6 py-4 text-slate-400">20 June 2026</td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase border tracking-wider bg-purple-100 text-purple-800 border-purple-200">
+                            In Progress
+                          </span>
+                        </td>
+                      </tr>
+                      <tr className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 font-mono font-bold text-slate-500">REQ-2026-003</td>
+                        <td className="px-6 py-4 font-bold text-slate-800 text-sm">Greenfield School</td>
+                        <td className="px-6 py-4">Automated WhatsApp Alert Gateway</td>
+                        <td className="px-6 py-4 text-slate-400">08 May 2026</td>
+                        <td className="px-6 py-4 text-slate-400">10 June 2026</td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase border tracking-wider bg-amber-100 text-amber-800 border-amber-200">
+                            Pending
+                          </span>
+                        </td>
+                      </tr>
+                      <tr className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 font-mono font-bold text-slate-500">REQ-2026-001</td>
+                        <td className="px-6 py-4 font-bold text-slate-800 text-sm">Blue Hill Institute</td>
+                        <td className="px-6 py-4">Biometric Attendance Machine SDK Sync</td>
+                        <td className="px-6 py-4 text-slate-400">22 Apr 2026</td>
+                        <td className="px-6 py-4 text-slate-400">15 May 2026</td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase border tracking-wider bg-emerald-100 text-emerald-800 border-emerald-200">
+                            Approved
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tab Content 5: Renewal / Add Product */}
+          {activePageTab === 'renewal' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                  <span className="text-emerald-500 text-lg">🔄</span>
+                  <span>Renewals & Products Management</span>
+                </h3>
+              </div>
+              
+              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50 text-slate-400 font-bold uppercase tracking-wider">
+                        <th className="px-6 py-4">Client Name</th>
+                        <th className="px-6 py-4">Current Active Product</th>
+                        <th className="px-6 py-4">Expiration Date</th>
+                        <th className="px-6 py-4 text-right">Renewal Cost</th>
+                        <th className="px-6 py-4 text-center">Days Remaining</th>
+                        <th className="px-6 py-4 text-center">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                      <tr className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 font-bold text-slate-800 text-sm">Greenfield School</td>
+                        <td className="px-6 py-4">School MS (Silver Plan)</td>
+                        <td className="px-6 py-4 text-slate-400">11 Jun 2026</td>
+                        <td className="px-6 py-4 text-right font-black text-slate-800">₹30,000.00</td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-200">
+                            5 Days Left
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex gap-2 justify-center">
+                            <button className="px-2.5 py-1 bg-emerald-600 text-white rounded font-bold hover:bg-emerald-700 transition-colors">Renew</button>
+                            <button className="px-2.5 py-1 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 transition-colors">+ Add Product</button>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 font-bold text-slate-800 text-sm">Nova Tech Solutions</td>
+                        <td className="px-6 py-4">CRM Enterprise (Gold Plan)</td>
+                        <td className="px-6 py-4 text-slate-400">04 Feb 2027</td>
+                        <td className="px-6 py-4 text-right font-black text-slate-800">₹85,000.00</td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
+                            243 Days Left
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex gap-2 justify-center">
+                            <button className="px-2.5 py-1 bg-emerald-600 text-white rounded font-bold hover:bg-emerald-700 transition-colors">Renew</button>
+                            <button className="px-2.5 py-1 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 transition-colors">+ Add Product</button>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tab Content 6: Due Payment */}
+          {activePageTab === 'due_payment' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                  <span className="text-red-500 text-lg">⚠️</span>
+                  <span>Outstanding Client Payments</span>
+                </h3>
+              </div>
+              
+              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50 text-slate-400 font-bold uppercase tracking-wider">
+                        <th className="px-6 py-4">Invoice ID</th>
+                        <th className="px-6 py-4">Client Name</th>
+                        <th className="px-6 py-4 text-right">Outstanding Amount</th>
+                        <th className="px-6 py-4">Due Date</th>
+                        <th className="px-6 py-4 text-center">Status</th>
+                        <th className="px-6 py-4 text-center">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                      <tr className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 font-mono font-bold text-slate-500">INV-2026-089</td>
+                        <td className="px-6 py-4 font-bold text-slate-800 text-sm">Blue Hill Institute</td>
+                        <td className="px-6 py-4 text-right font-black text-rose-600">₹15,000.00</td>
+                        <td className="px-6 py-4 text-slate-400">28 May 2026</td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-100 text-red-800 border border-red-200 animate-pulse">
+                            Overdue
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <button className="px-3 py-1.5 bg-[#ff6600] text-white rounded font-bold hover:bg-[#e05500] transition-colors text-xs">
+                            Send Reminder
+                          </button>
+                        </td>
+                      </tr>
+                      <tr className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 font-mono font-bold text-slate-500">INV-2026-095</td>
+                        <td className="px-6 py-4 font-bold text-slate-800 text-sm">Apex Retailers</td>
+                        <td className="px-6 py-4 text-right font-black text-slate-700">₹3,500.00</td>
+                        <td className="px-6 py-4 text-slate-400">10 Jun 2026</td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200">
+                            Grace Period
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <button className="px-3 py-1.5 bg-[#ff6600] text-white rounded font-bold hover:bg-[#e05500] transition-colors text-xs">
+                            Send Reminder
+                          </button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tab Content 7: Payment Report */}
+          {activePageTab === 'payment_report' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                  <span className="text-blue-500 text-lg">📄</span>
+                  <span>Payment History & Invoice Reports</span>
+                </h3>
+              </div>
+              
+              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50 text-slate-400 font-bold uppercase tracking-wider">
+                        <th className="px-6 py-4">Transaction ID</th>
+                        <th className="px-6 py-4">Client Name</th>
+                        <th className="px-6 py-4 text-right">Amount Received</th>
+                        <th className="px-6 py-4">Receipt Date</th>
+                        <th className="px-6 py-4">Payment Method</th>
+                        <th className="px-6 py-4 text-center">Invoice</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                      <tr className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 font-mono font-bold text-slate-500">TXN-98014529</td>
+                        <td className="px-6 py-4 font-bold text-slate-800 text-sm">Sunrise Academy</td>
+                        <td className="px-6 py-4 text-right font-black text-emerald-600">₹45,000.00</td>
+                        <td className="px-6 py-4 text-slate-400">10 Apr 2026</td>
+                        <td className="px-6 py-4 text-slate-600 font-semibold">UPI / Razorpay</td>
+                        <td className="px-6 py-4 text-center">
+                          <button className="text-blue-600 hover:text-blue-800 font-bold flex items-center justify-center gap-1 mx-auto">
+                            📥 Download
+                          </button>
+                        </td>
+                      </tr>
+                      <tr className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 font-mono font-bold text-slate-500">TXN-97554109</td>
+                        <td className="px-6 py-4 font-bold text-slate-800 text-sm">Apex Retailers</td>
+                        <td className="px-6 py-4 text-right font-black text-emerald-600">₹12,500.00</td>
+                        <td className="px-6 py-4 text-slate-400">20 Jan 2026</td>
+                        <td className="px-6 py-4 text-slate-600 font-semibold">NetBanking</td>
+                        <td className="px-6 py-4 text-center">
+                          <button className="text-blue-600 hover:text-blue-800 font-bold flex items-center justify-center gap-1 mx-auto">
+                            📥 Download
+                          </button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           )}
         </div>

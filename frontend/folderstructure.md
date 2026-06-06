@@ -73,7 +73,8 @@ frontend/                              # React application root directory
 │   │   │   ├── Dashboard.jsx          # Pixel-inspired dashboard UI based on provided reference image
 │   │   │   ├── Users.jsx              # User management CRUD
 │   │   │   ├── Settings.jsx           # System configuration
-│   │   │   └── Analytics.jsx          # Advanced business metrics
+│   │   │   ├── Analytics.jsx          # Advanced business metrics
+│   │   │   └── Partners.jsx           # Partner approvals & agent rank hierarchy tree
 │   │   ├── employee/                  # Employee-only pages
 │   │   │   ├── Dashboard.jsx          # Employee tasks overview
 │   │   │   ├── Tasks.jsx              # Task management board

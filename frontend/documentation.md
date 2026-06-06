@@ -348,4 +348,9 @@ This architecture ensures **separation of concerns** - each file has ONE job, an
   - Payment collection block
   - Sales analytics visual block
   - To-do list strip
+- `src/pages/admin/Partners.jsx` manages partner accounts and the multi-level agent hierarchy system:
+  - **Show Partner**: Displays stats, status filters, documents review, approval/rejection drawer.
+  - **Partner Hierarchy**: Interactive tree view displaying the hierarchical relationship between Premium (L3), Master (L2), and Associate (L1) agents.
+  - **Ranks Modal**: Assigns or modifies partner rank levels.
+  - **Subordinate Modal**: Links junior level agents under eligible senior parent accounts.
 - `src/components/auth/AdminEmployeeLoginModal.jsx` now redirects admin users to `/admin` after successful login so the footer login dropdown flows directly into the dashboard.

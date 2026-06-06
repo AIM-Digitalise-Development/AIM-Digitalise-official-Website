@@ -19,6 +19,7 @@ import AdminUsers from './pages/admin/Users'
 import AdminSettings from './pages/admin/Settings'
 import AdminAnalytics from './pages/admin/Analytics'
 import AdminPartners from './pages/admin/Partners'
+import AdminSupport from './pages/admin/Support'
 import PartnerLogin from './pages/partner/Login'
 import PartnerRegister from './pages/partner/Register'
 import PartnerDashboard from './pages/partner/Dashboard'
@@ -54,6 +55,7 @@ function App() {
             <Route path="settings" element={<AdminSettings />} />
             <Route path="analytics" element={<AdminAnalytics />} />
             <Route path="partners" element={<AdminPartners />} />
+            <Route path="support" element={<AdminSupport />} />
           </Route>
 
           {/* ── Partner auth pages (standalone, no header/footer) ── */}

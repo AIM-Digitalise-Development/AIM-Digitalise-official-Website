@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
-import { getAdminPartners, approvePartner, rejectPartner, getAdminPartnerDocuments } from '../../api/admin/partners'
+import {
+  getAdminPartners,
+  approvePartner,
+  rejectPartner,
+  getAdminPartnerDocuments,
+  getPartnersHierarchy,
+  setPartnerRank,
+  setPartnerSubordinate
+} from '../../api/admin/partners'
 
 const AdminPartners = () => {
   const [partners, setPartners] = useState([])
@@ -9,9 +17,23 @@ const AdminPartners = () => {
 
   // Selection and Modal State
   const [selectedPartner, setSelectedPartner] = useState(null)
-  const [activeTab, setActiveTab] = useState('show_partner') // 'show_partner' | 'partner_sales' | 'partner_commission' | 'partner_reports'
+  const [activeTab, setActiveTab] = useState('show_partner') // 'show_partner' | 'partner_sales' | 'partner_commission' | 'partner_reports' | 'hierarchy'
   const [activeSubTab, setActiveSubTab] = useState('info') // 'info' | 'docs'
   const [documentViewer, setDocumentViewer] = useState(null) // { name, filename, label }
+
+  // Hierarchy states
+  const [hierarchyData, setHierarchyData] = useState([])
+  const [expandedNodes, setExpandedNodes] = useState({})
+  const [partnersWithoutRank, setPartnersWithoutRank] = useState([])
+  const [partnersByRank, setPartnersByRank] = useState({ associate: [], master: [], premium: [] })
+  const [selectedRank, setSelectedRank] = useState('')
+  const [selectedSubordinate, setSelectedSubordinate] = useState('')
+  const [selectedParent, setSelectedParent] = useState('')
+  const [showRankModal, setShowRankModal] = useState(false)
+  const [showSubordinateModal, setShowSubordinateModal] = useState(false)
+  const [rankLevels, setRankLevels] = useState({})
+  const [hierarchyRules, setHierarchyRules] = useState({})
+  const [selectedPartnerForRank, setSelectedPartnerForRank] = useState(null)
 
   // Filters
   const [search, setSearch] = useState('')
@@ -69,8 +91,118 @@ const AdminPartners = () => {
     }
   }
 
+  const fetchHierarchy = async () => {
+    try {
+      const res = await getPartnersHierarchy()
+      if (res.data?.success) {
+        setHierarchyData(res.data.data.hierarchy_tree || [])
+        setPartnersWithoutRank(res.data.data.partners_without_rank || [])
+        setPartnersByRank(res.data.data.partners_by_rank || { associate: [], master: [], premium: [] })
+        setRankLevels(res.data.data.rank_levels || {})
+        setHierarchyRules(res.data.data.rules || {})
+
+        // Auto-expand premium partners (level 0) by default
+        const initialExpanded = {}
+        if (res.data.data.hierarchy_tree) {
+          res.data.data.hierarchy_tree.forEach(node => {
+            initialExpanded[node.id] = true
+          })
+        }
+        setExpandedNodes(initialExpanded)
+      }
+    } catch (err) {
+      console.error('Hierarchy fetch error:', err)
+    }
+  }
+
+  const handleSetRank = async () => {
+    if (!selectedPartnerForRank || !selectedRank) {
+      alert('Please select a partner and a rank')
+      return
+    }
+    try {
+      const res = await setPartnerRank(selectedPartnerForRank.id, selectedRank)
+      if (res.data?.success) {
+        alert(`Rank successfully set to ${selectedRank} for ${selectedPartnerForRank.partner_name || selectedPartnerForRank.name}`)
+        fetchHierarchy()
+        fetchPartners()
+        setShowRankModal(false)
+        setSelectedRank('')
+        setSelectedPartnerForRank(null)
+      } else {
+        alert(res.data?.message || 'Failed to set rank.')
+      }
+    } catch (err) {
+      alert('Failed to set rank: ' + err.message)
+    }
+  }
+
+  const handleSetSubordinate = async () => {
+    if (!selectedSubordinate || !selectedParent) {
+      alert('Please select both subordinate and parent partners')
+      return
+    }
+    try {
+      const res = await setPartnerSubordinate(selectedSubordinate, selectedParent)
+      if (res.data?.success) {
+        alert(res.data?.message || 'Hierarchy link established')
+        fetchHierarchy()
+        fetchPartners()
+        setShowSubordinateModal(false)
+        setSelectedSubordinate('')
+        setSelectedParent('')
+      } else {
+        alert(res.data?.message || 'Failed to link subordinate.')
+      }
+    } catch (err) {
+      alert('Failed to set relationship: ' + err.message)
+    }
+  }
+
+  const handleRemoveSubordinate = async (subordinateId, subordinateName) => {
+    if (!window.confirm(`Remove ${subordinateName} from hierarchy?`)) return
+    try {
+      const res = await setPartnerSubordinate(subordinateId, null)
+      if (res.data?.success) {
+        alert(res.data?.message || 'Removed from hierarchy successfully')
+        fetchHierarchy()
+        fetchPartners()
+      } else {
+        alert(res.data?.message || 'Failed to remove from hierarchy.')
+      }
+    } catch (err) {
+      alert('Failed to remove: ' + err.message)
+    }
+  }
+
+  const toggleExpand = (nodeId) => {
+    setExpandedNodes(prev => ({
+      ...prev,
+      [nodeId]: !prev[nodeId]
+    }))
+  }
+
+  const expandAll = () => {
+    const allExpanded = {}
+    const traverse = (nodes) => {
+      nodes.forEach(node => {
+        allExpanded[node.id] = true
+        if (node.children && node.children.length) {
+          traverse(node.children)
+        }
+      })
+    }
+    if (hierarchyData) traverse(hierarchyData)
+    setExpandedNodes(allExpanded)
+  }
+
+  const collapseAll = () => {
+    setExpandedNodes({})
+  }
+
   useEffect(() => {
     fetchPartners()
+    fetchHierarchy()
   }, [])
 
   // Approve partner — POST /api/admin/partners/{id}/approve
@@ -148,6 +280,92 @@ const AdminPartners = () => {
     return 'bg-rose-100 text-rose-800 border-rose-200'
   }
 
+  const renderTreeNode = (node, level = 0) => {
+    const isExpanded = expandedNodes[node.id]
+    const hasChildren = node.children && node.children.length > 0
+
+    const rankColors = {
+      premium: { bg: 'bg-amber-50 text-amber-800 border-amber-500', label: 'PREMIUM' },
+      master: { bg: 'bg-blue-50 text-blue-800 border-blue-500', label: 'MASTER' },
+      associate: { bg: 'bg-emerald-50 text-emerald-800 border-emerald-500', label: 'ASSOCIATE' }
+    }
+    const rankStyle = node.rank ? rankColors[node.rank] : { bg: 'bg-slate-50 text-slate-500 border-slate-300', label: 'NO RANK' }
+
+    return (
+      <div key={node.id} className="mb-2" style={{ paddingLeft: level > 0 ? '2.5rem' : '0' }}>
+        <div className={`flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-100 shadow-sm transition hover:shadow-md ${isExpanded && hasChildren ? 'mb-2' : ''}`}>
+          
+          {hasChildren ? (
+            <button
+              onClick={() => toggleExpand(node.id)}
+              className="w-6 h-6 rounded border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center font-bold text-xs cursor-pointer text-slate-600 transition-colors"
+            >
+              {isExpanded ? '−' : '+'}
+            </button>
+          ) : (
+            <div className="w-6 h-6" />
+          )}
+
+          <span className={`inline-flex items-center justify-center min-w-[80px] px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${rankStyle.bg}`}>
+            {rankStyle.label}
+          </span>
+
+          <div className="flex-1 min-w-0">
+            <h4 className="text-xs font-bold text-slate-800 truncate">{node.partner_name}</h4>
+            <p className="text-[10px] text-slate-400 font-mono mt-0.5 truncate">
+              ID: {node.partner_id} • {node.organization_name}
+            </p>
+          </div>
+
+          {hasChildren && (
+            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
+              {node.children.length} subordinate{node.children.length !== 1 ? 's' : ''}
+            </span>
+          )}
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => {
+                setSelectedPartnerForRank(node)
+                setSelectedRank(node.rank || '')
+                setShowRankModal(true)
+              }}
+              className="px-2 py-1 bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 hover:border-blue-200 rounded font-black text-[10px] transition cursor-pointer"
+            >
+              Set Rank
+            </button>
+            {node.rank !== 'associate' && (
+              <button
+                onClick={() => {
+                  setSelectedSubordinate('')
+                  setSelectedParent(node.id)
+                  setShowSubordinateModal(true)
+                }}
+                className="px-2 py-1 bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 hover:border-indigo-200 rounded font-black text-[10px] transition cursor-pointer"
+              >
+                Add Child
+              </button>
+            )}
+            {node.parent_partner_id && (
+              <button
+                onClick={() => handleRemoveSubordinate(node.id, node.partner_name)}
+                className="px-2 py-1 bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100 hover:border-rose-200 rounded font-black text-[10px] transition cursor-pointer"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        </div>
+
+        {hasChildren && isExpanded && (
+          <div className="border-l-2 border-dashed border-slate-200 ml-3 pl-1">
+            {node.children.map(child => renderTreeNode(child, level + 1))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <>
       <Helmet>
@@ -173,7 +391,7 @@ const AdminPartners = () => {
         <div className="bg-white rounded-3xl border border-slate-200/80 shadow-md p-6">
           
           {/* Main Navigation Tabs */}
-          <div className="flex items-center gap-1 border-b border-slate-200/60 pb-3 mb-6">
+          <div className="flex flex-wrap items-center gap-1 border-b border-slate-200/60 pb-3 mb-6">
             <button
               onClick={() => setActiveTab('show_partner')}
               className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${
@@ -213,6 +431,16 @@ const AdminPartners = () => {
               }`}
             >
               Partner Reports
+            </button>
+            <button
+              onClick={() => setActiveTab('hierarchy')}
+              className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${
+                activeTab === 'hierarchy'
+                  ? 'bg-white border-[#ef4444] text-[#ef4444] -mb-[13px] z-10'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
+              }`}
+            >
+              Partner Hierarchy
             </button>
           </div>
 
@@ -379,13 +607,152 @@ const AdminPartners = () => {
           )}
 
           {/* Inactive Tab Placeholders */}
-          {activeTab !== 'show_partner' && (
+          {activeTab !== 'show_partner' && activeTab !== 'hierarchy' && (
             <div className="flex flex-col items-center justify-center py-16 text-center space-y-3.5">
               <span className="text-4xl">🤝</span>
               <h4 className="text-base font-bold text-slate-800 capitalize">{activeTab.replace('partner_', 'Partner ')} Records</h4>
               <p className="text-xs text-slate-400 font-medium max-w-sm leading-relaxed font-sans">
                 Partner sales statistics, commission ratios, reports logs, and payout balances will be displayed here.
               </p>
+            </div>
+          )}
+
+          {/* Tab 5 Content: Partner Hierarchy Tree */}
+          {activeTab === 'hierarchy' && (
+            <div className="space-y-6">
+              {/* Header section with Expand/Collapse buttons */}
+              <div className="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-slate-100">
+                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                  <span>🌳 Partner Hierarchy Tree</span>
+                  <span className="text-[10px] font-normal text-slate-400">
+                    (Click + to expand, − to collapse)
+                  </span>
+                </h3>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={expandAll}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+                  >
+                    Expand All
+                  </button>
+                  <button
+                    onClick={collapseAll}
+                    className="px-3 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+                  >
+                    Collapse All
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedSubordinate('')
+                      setSelectedParent('')
+                      setShowSubordinateModal(true)
+                    }}
+                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+                  >
+                    + Create Linkage
+                  </button>
+                </div>
+              </div>
+
+              {/* Hierarchy Tree */}
+              <div className="bg-slate-50/50 rounded-2xl border border-slate-200/60 p-6 min-h-[300px]">
+                {hierarchyData && hierarchyData.length > 0 ? (
+                  <div className="space-y-6">
+                    {hierarchyData.map(rootNode => (
+                      <div key={rootNode.id} className="max-w-3xl">
+                        {renderTreeNode(rootNode, 0)}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-16 text-center space-y-4">
+                    <span className="text-5xl">🌲</span>
+                    <h4 className="text-sm font-bold text-slate-700">No Hierarchy Established Yet</h4>
+                    <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+                      Assign ranks to partners first, and then map their child subordinates.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setSelectedSubordinate('')
+                        setSelectedParent('')
+                        setShowSubordinateModal(true)
+                      }}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-md cursor-pointer"
+                    >
+                      Establish Linkage
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Partners Without Rank Panel */}
+              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md p-5 space-y-4">
+                <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <span>📋 Unassigned Rank Queue ({partnersWithoutRank.length})</span>
+                </h4>
+                {partnersWithoutRank.length > 0 ? (
+                  <div className="flex flex-wrap gap-2.5">
+                    {partnersWithoutRank.map(p => (
+                      <div key={p.id} className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-xl px-3.5 py-2.5">
+                        <div>
+                          <span className="text-xs font-bold text-slate-800 block">{p.partner_name || p.name}</span>
+                          <span className="text-[10px] text-slate-400 font-mono font-medium block">ID: {p.partner_id || p.id}</span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setSelectedPartnerForRank(p)
+                            setSelectedRank('')
+                            setShowRankModal(true)
+                          }}
+                          className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-bold transition cursor-pointer"
+                        >
+                          Assign Rank
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic">All registered partners have been assigned ranks.</p>
+                )}
+              </div>
+
+              {/* Hierarchy Rules Info Box */}
+              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md p-5 space-y-4 text-xs">
+                <h4 className="text-sm font-bold text-slate-800">📜 Rank Hierarchy Rules</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-100 space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded bg-amber-500"></span>
+                      <strong className="text-amber-800 font-bold">Premium (L3)</strong>
+                    </div>
+                    <p className="text-slate-500 leading-relaxed font-sans text-[11px]">
+                      Root level agents. Can possess both Master and Associate subordinates. Cannot be subordinate to another partner.
+                    </p>
+                  </div>
+                  <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100 space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded bg-blue-500"></span>
+                      <strong className="text-blue-800 font-bold">Master (L2)</strong>
+                    </div>
+                    <p className="text-slate-500 leading-relaxed font-sans text-[11px]">
+                      Mid level agents. Can possess Associate subordinates. Can only be placed under a Premium level parent.
+                    </p>
+                  </div>
+                  <div className="p-3 bg-emerald-50/50 rounded-xl border border-emerald-100 space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded bg-emerald-500"></span>
+                      <strong className="text-emerald-800 font-bold">Associate (L1)</strong>
+                    </div>
+                    <p className="text-slate-500 leading-relaxed font-sans text-[11px]">
+                      Junior level agents. Cannot have subordinates. Can be placed under either a Premium or Master level parent.
+                    </p>
+                  </div>
+                </div>
+                <div className="p-3 rounded-xl border border-amber-200 bg-amber-50/30 text-[11px] text-amber-800 leading-relaxed">
+                  ⚠️ <strong>Validation Rule:</strong> Higher ranks cannot reside under lower ranks. Identical ranks cannot be linked.
+                </div>
+              </div>
             </div>
           )}
 
@@ -593,6 +960,150 @@ const AdminPartners = () => {
                   className="px-4 py-2 rounded-xl border border-slate-200 text-slate-500 text-xs font-bold hover:bg-slate-50 transition cursor-pointer"
                 >
                   Close Drawer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Set Rank Modal */}
+        {showRankModal && selectedPartnerForRank && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowRankModal(false)} />
+            <div className="relative w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl z-10 space-y-4 animate-fade-in">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h4 className="text-sm font-black text-slate-800">Set Rank</h4>
+                <button onClick={() => setShowRankModal(false)} className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">
+                  ✕
+                </button>
+              </div>
+              <div className="text-xs space-y-1">
+                <p className="text-slate-500 font-medium">Set partner rank level for:</p>
+                <p className="text-sm font-bold text-slate-800">{selectedPartnerForRank.partner_name || selectedPartnerForRank.name}</p>
+                <p className="text-[10px] text-slate-400 font-mono">ID: {selectedPartnerForRank.partner_id || selectedPartnerForRank.id}</p>
+              </div>
+              <div className="space-y-1">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">Select Rank</label>
+                <select
+                  value={selectedRank}
+                  onChange={(e) => setSelectedRank(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-[#38b34a] focus:ring-1 focus:ring-[#38b34a]/10"
+                >
+                  <option value="">-- Choose Rank --</option>
+                  <option value="premium">PREMIUM (Level 3)</option>
+                  <option value="master">MASTER (Level 2)</option>
+                  <option value="associate">ASSOCIATE (Level 1)</option>
+                </select>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={handleSetRank}
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
+                >
+                  Save Rank
+                </button>
+                <button
+                  onClick={() => setShowRankModal(false)}
+                  className="px-4 py-2 border border-slate-200 text-slate-500 rounded-xl text-xs font-bold hover:bg-slate-50 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Link Subordinate Modal */}
+        {showSubordinateModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowSubordinateModal(false)} />
+            <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl z-10 space-y-4 animate-fade-in">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h4 className="text-sm font-black text-slate-800">Establish Subordinate Linkage</h4>
+                <button onClick={() => setShowSubordinateModal(false)} className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {/* Parent Partner selection */}
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Parent Partner (Higher Rank)</label>
+                  {selectedParent ? (
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/60 flex justify-between items-center text-xs">
+                      <div>
+                        <span className="font-bold text-slate-800">
+                          {partners.find(p => p.id === selectedParent)?.partner_name || 'Select Parent'}
+                        </span>
+                        <span className="text-[10px] text-slate-400 block font-mono">
+                          Rank: {partners.find(p => p.id === selectedParent)?.rank?.toUpperCase() || 'NO RANK'}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setSelectedParent('')}
+                        className="text-xs text-rose-500 hover:underline font-bold"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={selectedParent}
+                      onChange={(e) => setSelectedParent(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-[#38b34a]"
+                    >
+                      <option value="">-- Select Parent Partner --</option>
+                      {partners
+                        .filter(p => p.rank && p.rank !== 'associate' && p.is_active)
+                        .map(p => (
+                          <option key={p.id} value={p.id}>
+                            {p.partner_name} ({p.rank?.toUpperCase()})
+                          </option>
+                        ))}
+                    </select>
+                  )}
+                </div>
+
+                {/* Subordinate Partner selection */}
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Subordinate Partner (Lower Rank)</label>
+                  <select
+                    value={selectedSubordinate}
+                    onChange={(e) => setSelectedSubordinate(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-[#38b34a]"
+                  >
+                    <option value="">-- Select Subordinate Partner --</option>
+                    {partners
+                      .filter(p => {
+                        if (!p.rank || !p.is_active || p.id === selectedParent) return false
+                        if (!selectedParent) return true
+
+                        const parentRank = partners.find(parent => parent.id === selectedParent)?.rank
+                        if (parentRank === 'premium') return p.rank === 'master' || p.rank === 'associate'
+                        if (parentRank === 'master') return p.rank === 'associate'
+                        return false
+                      })
+                      .map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.partner_name} ({p.rank?.toUpperCase()})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={handleSetSubordinate}
+                  className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
+                >
+                  Establish Linkage
+                </button>
+                <button
+                  onClick={() => setShowSubordinateModal(false)}
+                  className="px-4 py-2 border border-slate-200 text-slate-500 rounded-xl text-xs font-bold hover:bg-slate-50 transition cursor-pointer"
+                >
+                  Cancel
                 </button>
               </div>
             </div>

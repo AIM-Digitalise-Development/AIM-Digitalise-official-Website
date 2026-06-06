@@ -58,3 +58,16 @@ export const getAdminClients = () =>
 // GET /api/admin/clients/{id}
 export const getAdminClientById = (id) =>
   adminFetch('GET', `/admin/clients/${id}`)
+
+// ─── Hierarchy & Ranks ────────────────────────────────────────────────────────
+// GET /api/admin/partners-hierarchy
+export const getPartnersHierarchy = () =>
+  adminFetch('GET', '/admin/partners-hierarchy')
+
+// POST /api/admin/partners/{id}/set-rank
+export const setPartnerRank = (id, rank) =>
+  adminFetch('POST', `/admin/partners/${id}/set-rank`, { rank })
+
+// POST /api/admin/partners/subordinate/set
+export const setPartnerSubordinate = (subordinate_id, parent_id) =>
+  adminFetch('POST', '/admin/partners/subordinate/set', { subordinate_id, parent_id })
