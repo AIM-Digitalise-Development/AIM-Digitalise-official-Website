@@ -1,19 +1,17 @@
-import client from '../client'
+// Admin dashboard API
+// All dashboard data comes from a single endpoint: GET /api/admin/dashboard
+// Response shape:
+// {
+//   success: true,
+//   data: {
+//     clients: { total, active, new_this_month, pending_payments },
+//     revenue: { total, this_month },
+//     partners: { total, active, pending, new_this_month },
+//     top_products: [{ product_id, product_name, product_category, total_sold, total_revenue }],
+//     monthly_revenue: [{ month, orders, revenue }],
+//     recent_activities: [{ type, client_name|partner_name, product_name, amount|organization, partner_name, status, created_at }]
+//   }
+// }
 
-// Admin dashboard endpoints
-export const getDashboardStats = () => client.get('/admin/dashboard/stats')
-
-export const getRevenueChart = (params) => 
-  client.get('/admin/dashboard/revenue', { params })
-
-export const getOrdersChart = (params) => 
-  client.get('/admin/dashboard/orders', { params })
-
-export const getRecentActivities = () => 
-  client.get('/admin/dashboard/recent-activities')
-
-export const getTopProducts = () => 
-  client.get('/admin/dashboard/top-products')
-
-export const getSystemHealth = () => 
-  client.get('/admin/dashboard/system-health')
+// Re-export from the unified admin partners module
+export { getAdminDashboard } from './partners'

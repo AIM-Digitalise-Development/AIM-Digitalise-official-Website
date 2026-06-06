@@ -15,6 +15,7 @@ export const ROUTES = {
     SETTINGS: '/admin/settings',
     ANALYTICS: '/admin/analytics',
     PARTNERS: '/admin/partners',
+    SUPPORT: '/admin/support',
   },
   EMPLOYEE: {
     DASHBOARD: '/employee',

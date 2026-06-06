@@ -19,7 +19,7 @@ const RegistrationSuccess = ({ partnerData, verifyData }) => {
       <div>
         <h2 className="text-2xl font-black text-white mb-2">Registration Complete! 🎉</h2>
         <p className="text-aim-copy-muted text-sm leading-relaxed max-w-sm mx-auto">
-          Your partner account has been successfully created and activated. Welcome to the AIM Partner Network!
+          Your registration and payment are complete. Your account is now <span className="text-aim-gold font-semibold">pending admin approval</span>. You'll be able to log in once an admin activates your account.
         </p>
       </div>
 
@@ -28,10 +28,11 @@ const RegistrationSuccess = ({ partnerData, verifyData }) => {
         <p className="text-[10px] font-black uppercase tracking-widest text-aim-copy-muted">Account Details</p>
         <div className="space-y-2 text-sm">
           {[
-            { label: 'Partner ID', value: `#${partnerData?.partner_id || partner?.id || '—'}` },
-            { label: 'Name', value: partner?.name || '—' },
+            { label: 'Partner ID', value: partnerData?.partner_id || partner?.partner_id || '—' },
+            { label: 'Name', value: partner?.name || partnerData?.partner_name || '—' },
             { label: 'Email', value: partner?.email || partnerData?.email || '—' },
-            { label: 'Organization', value: partner?.organization || '—' },
+            { label: 'Organization', value: partner?.organization || partnerData?.organization_name || '—' },
+            { label: 'Account Status', value: 'Pending Admin Activation' },
           ].map(({ label, value }) => (
             <div key={label} className="flex items-center justify-between">
               <span className="text-aim-copy-muted text-xs">{label}</span>

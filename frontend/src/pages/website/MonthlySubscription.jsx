@@ -262,7 +262,8 @@ const MonthlySubscription = () => {
       .then(result => {
         if (result.success && result.data?.length) {
           setPartners(result.data)
-          setCheckoutData(prev => ({ ...prev, partner_id: result.data[0].id }))
+          // Use partner_id string (e.g. 'AIM1234567') — backend validates against partners.partner_id column
+          setCheckoutData(prev => ({ ...prev, partner_id: result.data[0].partner_id }))
         }
       })
       .catch(err => console.error('Could not load partners:', err))
@@ -307,12 +308,17 @@ const MonthlySubscription = () => {
 
     // Build API payload
     const processingFeeNum = parseInt(activePlan.securityDeposit.replace(/[^\d]/g, ''), 10) || 0
-    const monthlySubscriptionNum = parseInt(activePlan.monthlySubscription.replace(/[^\d]/g, ''), 10) || 0
+    // For Institute Pro the monthly fee is per-student (calculated server-side); send 0 as placeholder
+    const monthlySubscriptionNum = isInstitutePro
+      ? 0
+      : parseInt(activePlan.monthlySubscription.replace(/[^\d]/g, ''), 10) || 0
+
     const payload = {
       client_name: checkoutData.client_name,
       contact_number: checkoutData.contact_number,
       email: checkoutData.email,
-      partner_id: parseInt(checkoutData.partner_id, 10),
+      // Backend validates: exists:partners,partner_id — must be the partner_id string, NOT the numeric id
+      partner_id: checkoutData.partner_id,
       district: checkoutData.district,
       state: checkoutData.state,
       pin_code: checkoutData.pin_code,
@@ -325,15 +331,28 @@ const MonthlySubscription = () => {
     }
 
     if (isInstitutePro) {
+      // Product ID 15: school fields are required; GSTIN optional
       payload.school_name = checkoutData.school_name
       payload.school_short_name = checkoutData.school_short_name
       payload.school_session = checkoutData.school_session
       payload.total_students = parseInt(checkoutData.total_students, 10)
       if (checkoutData.gstin) payload.gstin = checkoutData.gstin
     } else {
-      payload.company_name = checkoutData.company_name
+      // All other products: company_name + optional GSTIN
+      payload.company_name = checkoutData.company_name || null
       if (checkoutData.gstin) payload.gstin = checkoutData.gstin
     }
+
+    // Guard: partner_id must be set (an active partner must be loaded)
+    if (!checkoutData.partner_id) {
+      setApiError('Please select a Relationship Manager / Partner. If the list is empty, no active partners are available yet.')
+      setPaymentStep('form')
+      setIsSubmitting(false)
+      return
+    }
+
+    // Debug: log exact payload being sent
+    console.log('[create-order payload]', JSON.stringify(payload, null, 2))
 
     try {
       const orderResult = await purchaseApi.createOrder(payload)
@@ -356,8 +375,9 @@ const MonthlySubscription = () => {
         order_id: orderResult.order_id,
         handler: async (response) => {
           try {
+            // order_id here is the Razorpay order_id string stored in client_orders.order_id
             const verifyResult = await purchaseApi.verifyPayment({
-              order_id: orderResult.order_data.order_id,
+              order_id: orderResult.order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_order_id: response.razorpay_order_id,
               razorpay_signature: response.razorpay_signature,
@@ -365,7 +385,7 @@ const MonthlySubscription = () => {
             if (verifyResult.success) {
               setSuccessData(verifyResult)
               setPaymentStep('success')
-              setCheckoutData(emptyCheckout(partners[0]?.id || ''))
+              setCheckoutData(emptyCheckout(partners[0]?.partner_id || ''))
             } else {
               setApiError(verifyResult.message || 'Payment verification failed.')
               setPaymentStep('form')
@@ -400,11 +420,17 @@ const MonthlySubscription = () => {
       rzp.open()
     } catch (err) {
       console.error('Order creation error response:', err.response?.data)
-      const serverMsg = err.response?.data?.errors || err.response?.data?.message
-      const errorDetail = typeof serverMsg === 'object'
-        ? Object.values(serverMsg).flat().join(' ')
-        : (serverMsg || err.message || 'Something went wrong')
-      setApiError('Failed to initiate payment: ' + errorDetail)
+      const errData = err.response?.data
+      let errorDetail
+      if (errData?.errors && typeof errData.errors === 'object') {
+        // Flatten all Laravel validation field errors into one readable string
+        errorDetail = Object.entries(errData.errors)
+          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+          .join(' | ')
+      } else {
+        errorDetail = errData?.message || err.message || 'Something went wrong'
+      }
+      setApiError('Server error: ' + errorDetail)
       setPaymentStep('form')
       setIsSubmitting(false)
     }
@@ -1035,8 +1061,9 @@ const MonthlySubscription = () => {
                             >
                               <option value="">Select your RM / Partner</option>
                               {partners.map(p => (
-                                <option key={p.id} value={p.id}>
-                                  {p.partner_name} — {p.organization_name}
+                                // value must be partner_id string — backend uses exists:partners,partner_id
+                                <option key={p.id} value={p.partner_id}>
+                                  {p.partner_name} — {p.partner_id}
                                 </option>
                               ))}
                             </select>

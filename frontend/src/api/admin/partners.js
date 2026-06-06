@@ -1,44 +1,60 @@
-const PARTNER_API = import.meta.env.VITE_PARTNER_API_URL || 'https://api.nexgn.in/api'
+const ADMIN_API = import.meta.env.VITE_API_BASE_URL || 'https://api.nexgn.in/api'
 
-// Helper: build an admin-to-partner API fetch wrapper
-const adminPartnerFetch = async (method, path, body = null) => {
-  const token = localStorage.getItem('access_token') // admin auth token
+// Helper: admin fetch with Bearer token from localStorage
+const adminFetch = async (method, path, body = null) => {
+  const token = localStorage.getItem('access_token')
   const headers = {
     'Content-Type': 'application/json',
-    'Accept': 'application/json'
+    'Accept': 'application/json',
   }
   if (token) headers['Authorization'] = `Bearer ${token}`
 
   const options = { method, headers }
   if (body) options.body = JSON.stringify(body)
 
-  const response = await fetch(`${PARTNER_API}${path}`, options)
-  const data = await response.json()
+  const response = await fetch(`${ADMIN_API}${path}`, options)
+  const data = await response.json().catch(() => ({ message: `HTTP ${response.status}` }))
+
   if (!response.ok) {
-    const error = new Error(data?.message || 'Admin Partner Request failed')
+    const error = new Error(data?.message || `Request failed with status ${response.status}`)
     error.response = { data, status: response.status }
     throw error
   }
   return { data }
 }
 
-// ─── Get all partners ────────────────────────────────────────────────────────
-export const getAdminPartners = () =>
-  adminPartnerFetch('GET', '/admin/partners')
-
-// ─── Get partner details ─────────────────────────────────────────────────────
-export const getAdminPartnerById = (id) =>
-  adminPartnerFetch('GET', `/admin/partners/${id}`)
-
-// ─── Update partner registration status ──────────────────────────────────────
-// status: 'active', 'suspended', 'pending'
-export const updatePartnerRegistrationStatus = (id, status) =>
-  adminPartnerFetch('POST', `/admin/partners/${id}/status`, { status })
-
-// ─── Get all clients ─────────────────────────────────────────────────────────
-export const getAdminClients = () =>
-  adminPartnerFetch('GET', '/admin/clients')
-
-// ─── Get admin dashboard stats ───────────────────────────────────────────────
+// ─── Single dashboard endpoint ────────────────────────────────────────────────
+// GET /api/admin/dashboard
+// Returns: { success, data: { clients, revenue, partners, top_products, monthly_revenue, recent_activities } }
 export const getAdminDashboard = () =>
-  adminPartnerFetch('GET', '/admin/dashboard')
+  adminFetch('GET', '/admin/dashboard')
+
+// ─── Partners ─────────────────────────────────────────────────────────────────
+// GET /api/admin/partners
+export const getAdminPartners = () =>
+  adminFetch('GET', '/admin/partners')
+
+// GET /api/admin/partners/{id}
+export const getAdminPartnerById = (id) =>
+  adminFetch('GET', `/admin/partners/${id}`)
+
+// GET /api/admin/partners/{id}/documents
+export const getAdminPartnerDocuments = (id) =>
+  adminFetch('GET', `/admin/partners/${id}/documents`)
+
+// POST /api/admin/partners/{id}/approve
+export const approvePartner = (id) =>
+  adminFetch('POST', `/admin/partners/${id}/approve`)
+
+// POST /api/admin/partners/{id}/reject   — body: { reason }
+export const rejectPartner = (id, reason) =>
+  adminFetch('POST', `/admin/partners/${id}/reject`, { reason })
+
+// ─── Clients ──────────────────────────────────────────────────────────────────
+// GET /api/admin/clients
+export const getAdminClients = () =>
+  adminFetch('GET', '/admin/clients')
+
+// GET /api/admin/clients/{id}
+export const getAdminClientById = (id) =>
+  adminFetch('GET', `/admin/clients/${id}`)

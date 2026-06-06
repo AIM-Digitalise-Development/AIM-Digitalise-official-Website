@@ -10,7 +10,7 @@ const inputCls =
 const PartnerLoginForm = () => {
   const navigate = useNavigate()
   const { partnerLogin: storeLogin } = usePartnerAuthStore()
-  const [email, setEmail] = useState('')
+  const [login, setLogin] = useState('')   // accepts Partner ID (PIDIN...) or email
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
@@ -18,13 +18,13 @@ const PartnerLoginForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!email || !email.includes('@')) { setError('Enter a valid email address.'); return }
+    if (!login) { setError('Enter your Partner ID (PIDIN...) or email address.'); return }
     if (!password) { setError('Enter your password.'); return }
 
     setLoading(true)
     setError('')
     try {
-      const res = await partnerLogin(email, password)
+      const res = await partnerLogin(login, password)
       const d = res.data
 
       if (!d?.success) { setError(d?.message || 'Login failed'); return }
@@ -52,22 +52,22 @@ const PartnerLoginForm = () => {
         </div>
       )}
 
-      {/* Email */}
+      {/* Partner ID or Email */}
       <div>
         <label className="block text-xs font-semibold text-aim-copy-muted uppercase tracking-wider mb-1.5">
-          Email Address
+          Partner ID 
         </label>
         <div className="relative">
           <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-aim-copy-muted">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
           </span>
           <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="partner@example.com"
+            type="text"
+            value={login}
+            onChange={(e) => setLogin(e.target.value)}
+            placeholder="PIDIN1234 "
             className={`${inputCls} pl-10`}
             autoFocus
             required

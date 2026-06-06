@@ -38,7 +38,7 @@ const Step1RegistrationForm = ({ onSuccess }) => {
 
   const handleSimulateSuccess = () => {
     onSuccess({
-      partner_id: `SIM-${Math.floor(1000 + Math.random() * 9000)}`,
+      partner_id: `PIDIN${Math.floor(10000 + Math.random() * 89999)}`,
       email: form.email || 'partner@example.com',
       partner_name: form.partner_name || 'Simulated Partner',
       organization_name: form.organization_name || 'Simulated Organization',

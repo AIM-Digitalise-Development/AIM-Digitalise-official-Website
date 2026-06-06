@@ -65,8 +65,9 @@ export const verifyPayment = (data) =>
   partnerFetch('POST', '/partner/verify-payment', data)
 
 // ─── Login ──────────────────────────────────────────────────────────────────
-export const partnerLogin = (email, password) =>
-  partnerFetch('POST', '/partner/login', { email, password })
+// Backend accepts Partner ID (e.g. PIDIN1234) OR Email in the `login` field
+export const partnerLogin = (login, password) =>
+  partnerFetch('POST', '/partner/login', { login, password })
 
 // ─── Auth check ─────────────────────────────────────────────────────────────
 export const checkPartnerAuth = () =>
@@ -88,9 +89,10 @@ export const getPartnerOrders = () =>
 export const getPartnerOrderDetail = (orderId) =>
   partnerFetch('GET', `/partner/order/${orderId}`)
 
-// Legacy exports (kept for existing partner portal pages)
-export const getEarnings = () => client.get('/partner/earnings')
-export const getPayouts = () => client.get('/partner/payouts')
-export const requestPayout = (data) => client.post('/partner/payouts', data)
-export const getPartnerStats = () => client.get('/partner/stats')
-export const updatePartnerProfile = (data) => client.put('/partner/profile', data)
+// ─── Dashboard Statistics ────────────────────────────────────────────────────
+export const getDashboardStats = () =>
+  partnerFetch('GET', '/partner/dashboard-stats')
+
+// ─── Commission Report ───────────────────────────────────────────────────────
+export const getCommissionReport = () =>
+  partnerFetch('GET', '/partner/commission-report')
