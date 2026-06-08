@@ -6,72 +6,56 @@ const certifications = [
     logo: '🔐',
     category: 'Digital Signature Certificate',
     description: 'Direct controller & authorized reseller for eMudra DSC across India.',
-    color: 'from-blue-50 via-blue-50/10 to-transparent',
-    border: 'border-blue-200',
-    accent: 'text-blue-600',
+    accent: 'text-aim-gold',
   },
   {
     name: 'Capricorn CA Partner',
     logo: '♑',
     category: 'Digital Signature Certificate',
     description: 'Certified direct partner for Capricorn Certifying Authority DSC solutions.',
-    color: 'from-blue-50 via-blue-50/10 to-transparent',
-    border: 'border-blue-200',
-    accent: 'text-blue-600',
+    accent: 'text-aim-gold',
   },
   {
     name: 'Sify Technologies Partner',
     logo: '🌐',
     category: 'Digital Signature Certificate',
     description: 'Authorized reseller and controller for Sify DSC & digital authentication.',
-    color: 'from-red-50 via-red-50/10 to-transparent',
-    border: 'border-red-200',
-    accent: 'text-red-600',
+    accent: 'text-aim-purple',
   },
   {
     name: 'V-Sign Certified',
     logo: '✅',
     category: 'Digital Signature Certificate',
     description: 'Certified direct controller for V-Sign digital signature certificates.',
-    color: 'from-blue-50 via-blue-50/10 to-transparent',
-    border: 'border-blue-200',
-    accent: 'text-blue-600',
+    accent: 'text-aim-gold',
   },
   {
     name: 'PantaSign Authorized',
     logo: '🖊️',
     category: 'Digital Signature Certificate',
     description: 'Authorized partner offering PantaSign DSC services with full support.',
-    color: 'from-red-50 via-red-50/10 to-transparent',
-    border: 'border-red-200',
-    accent: 'text-red-600',
+    accent: 'text-aim-purple',
   },
   {
     name: 'ID Sign Partner',
     logo: '🪪',
     category: 'Digital Signature Certificate',
     description: 'Official ID Sign direct controller for digital identity verification.',
-    color: 'from-red-50 via-red-50/10 to-transparent',
-    border: 'border-red-200',
-    accent: 'text-red-600',
+    accent: 'text-aim-purple',
   },
   {
     name: 'Google Partner',
     logo: '🔍',
     category: 'Digital Marketing',
     description: 'Certified Google Ads partner for SEM, PPC and paid advertising campaigns.',
-    color: 'from-red-50 via-red-50/10 to-transparent',
-    border: 'border-red-200',
-    accent: 'text-red-600',
+    accent: 'text-aim-purple',
   },
   {
     name: 'Meta Business Partner',
     logo: '📘',
     category: 'Social Media Marketing',
     description: 'Certified Meta Business partner for Facebook & Instagram ad campaigns.',
-    color: 'from-blue-50 via-blue-50/10 to-transparent',
-    border: 'border-blue-200',
-    accent: 'text-blue-600',
+    accent: 'text-aim-gold',
   },
 ]
 
@@ -112,7 +96,7 @@ const OurCertifications = () => {
             Our <span className="text-gradient">Certifications</span>
           </h2>
           <div className="divider-brand" />
-          <p className="mt-4 text-slate-600 max-w-xl mx-auto text-sm leading-relaxed">
+          <p className="mt-4 text-aim-copy-muted max-w-xl mx-auto text-sm leading-relaxed">
             We are officially certified and authorized by leading national and global bodies, ensuring the highest standards of service.
           </p>
         </motion.div>
@@ -130,20 +114,20 @@ const OurCertifications = () => {
               key={cert.name}
               variants={cardVariants}
               whileHover={{ y: -5, transition: { duration: 0.2 } }}
-              className={`group relative bg-gradient-to-br ${cert.color} border ${cert.border} rounded-2xl p-5 shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden`}
+              className="group relative card-elevated rounded-2xl p-5 overflow-hidden"
             >
               {/* Shine on hover */}
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-white/[0.04] to-transparent rounded-2xl pointer-events-none" />
 
               <div className="text-4xl mb-3">{cert.logo}</div>
-              <h3 className="font-bold text-slate-900 text-sm leading-tight mb-1">{cert.name}</h3>
+              <h3 className="font-bold text-white text-sm leading-tight mb-1">{cert.name}</h3>
               <span className={`text-xs font-semibold uppercase tracking-wider ${cert.accent} block mb-2`}>
                 {cert.category}
               </span>
-              <p className="text-slate-600 text-xs leading-relaxed">{cert.description}</p>
+              <p className="text-aim-copy-muted text-xs leading-relaxed">{cert.description}</p>
 
               {/* Certified badge */}
-              <div className={`mt-4 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border ${cert.border} text-xs font-semibold ${cert.accent}`}>
+              <div className={`mt-4 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-aim-border text-xs font-semibold ${cert.accent}`}>
                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>

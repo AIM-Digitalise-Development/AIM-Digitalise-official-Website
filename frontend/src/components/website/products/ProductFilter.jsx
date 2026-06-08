@@ -1,2 +1,10 @@
-const ProductFilter = ({ onFilter }) => <div className="bg-white p-4 rounded-lg shadow"><h3 className="font-semibold mb-2">Filters</h3><select className="w-full p-2 border rounded"><option>Category 1</option><option>Category 2</option></select></div>
+const ProductFilter = ({ onFilter }) => (
+  <div className="card-elevated p-5 shadow-lg">
+    <h3 className="font-semibold mb-3 text-aim-copy text-lg">Filters</h3>
+    <select className="input-brand py-2.5 px-3">
+      <option className="bg-aim-navy text-aim-copy">Category 1</option>
+      <option className="bg-aim-navy text-aim-copy">Category 2</option>
+    </select>
+  </div>
+)
 export default ProductFilter

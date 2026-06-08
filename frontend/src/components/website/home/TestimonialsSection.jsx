@@ -44,7 +44,7 @@ const itemVariants = {
 
 const TestimonialsSection = () => {
   return (
-    <section className="py-24 section-white border-b border-slate-200/80 relative">
+    <section className="py-24 section-white border-b border-aim-border relative">
       <div className="ambient-glows" aria-hidden />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -71,7 +71,7 @@ const TestimonialsSection = () => {
         >
           {testimonials.map((testimonial, index) => (
             <motion.div key={index} variants={itemVariants} className="h-full">
-              <Card padding="lg" className="h-full relative bg-aim-navy-light border-slate-200 flex flex-col justify-between">
+              <Card padding="lg" className="h-full relative flex flex-col justify-between">
                 <div className="space-y-6">
                   {/* Rating Stars */}
                   <div className="flex gap-1 text-amber-400">
@@ -83,21 +83,21 @@ const TestimonialsSection = () => {
                   </div>
 
                   {/* Feedback text */}
-                  <p className="text-aim-copy text-sm leading-relaxed italic">
+                  <p className="text-aim-copy text-sm leading-relaxed italic text-left">
                     "{testimonial.content}"
                   </p>
                 </div>
 
                 {/* Profile info */}
-                <div className="flex items-center gap-4 mt-8 pt-6 border-t border-slate-100">
+                <div className="flex items-center gap-4 mt-8 pt-6 border-t border-aim-border">
                   <img 
                     src={testimonial.avatar} 
                     alt={testimonial.name}
-                    className="w-12 h-12 rounded-full object-cover border border-slate-200 shadow-md"
+                    className="w-12 h-12 rounded-full object-cover border border-aim-border shadow-md"
                   />
                   <div className="text-left">
-                    <p className="font-bold text-white text-sm">{testimonial.name}</p>
-                    <p className="text-xs text-slate-400">{testimonial.role}</p>
+                    <p className="font-bold text-aim-copy text-sm">{testimonial.name}</p>
+                    <p className="text-xs text-aim-copy-muted">{testimonial.role}</p>
                   </div>
                 </div>
               </Card>

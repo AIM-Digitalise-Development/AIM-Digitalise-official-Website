@@ -73,38 +73,38 @@ const CodingClasses = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: i * 0.1 }}
               >
-                <Card hover padding="lg" className="h-full flex flex-col justify-between bg-white border-slate-200 shadow-sm">
+                <Card hover padding="lg" className="h-full flex flex-col justify-between">
                   <div className="space-y-6 text-left">
                     <div className="flex justify-between items-start gap-4">
                       <div>
-                        <span className="text-blue-600 text-xs font-black uppercase tracking-wider block mb-1">
+                        <span className="text-aim-gold text-xs font-black uppercase tracking-wider block mb-1">
                           {cls.category}
                         </span>
-                        <h3 className="text-2xl font-bold text-slate-900 leading-tight">
+                        <h3 className="text-2xl font-bold text-white leading-tight">
                           {cls.title}
                         </h3>
                       </div>
-                      <span className="px-2.5 py-1 rounded-md bg-blue-50 border border-blue-200 text-blue-600 text-xs font-semibold">
+                      <span className="px-2.5 py-1 rounded-md bg-aim-gold/10 border border-aim-gold/25 text-aim-gold text-xs font-semibold">
                         {cls.level}
                       </span>
                     </div>
 
-                    <div className="flex gap-6 text-xs text-slate-500 border-b border-slate-200 pb-4">
+                    <div className="flex gap-6 text-xs text-aim-copy-muted border-b border-aim-border pb-4">
                       <div className="flex items-center gap-1.5">
-                        <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 text-aim-copy-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <span>{cls.duration}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 text-aim-copy-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                         <span>Starts {cls.starts}</span>
                       </div>
                     </div>
 
-                    <p className="text-slate-600 text-sm leading-relaxed">
+                    <p className="text-aim-copy-muted text-sm leading-relaxed">
                       {cls.description}
                     </p>
 
@@ -112,7 +112,7 @@ const CodingClasses = () => {
                       {cls.skills.map((skill) => (
                         <span
                           key={skill}
-                          className="px-2.5 py-0.5 rounded bg-slate-50 border border-slate-200 text-slate-600 text-xs font-medium"
+                          className="px-2.5 py-0.5 rounded bg-white/5 border border-aim-border text-aim-copy-muted text-xs font-medium"
                         >
                           {skill}
                         </span>
@@ -120,10 +120,10 @@ const CodingClasses = () => {
                     </div>
                   </div>
 
-                  <div className="mt-8 pt-6 border-t border-slate-200 flex items-center justify-between gap-4">
+                  <div className="mt-8 pt-6 border-t border-aim-border flex items-center justify-between gap-4">
                     <div>
-                      <span className="text-xs text-slate-400 block uppercase font-semibold">TUTION</span>
-                      <span className="text-2xl font-black text-slate-900">{cls.price}</span>
+                      <span className="text-xs text-aim-copy-muted block uppercase font-semibold">TUTION</span>
+                      <span className="text-2xl font-black text-white">{cls.price}</span>
                     </div>
                     <Button variant="primary" className="cursor-pointer">
                       Enroll / Apply
@@ -136,8 +136,8 @@ const CodingClasses = () => {
 
           <div className="cta-panel max-w-5xl mx-auto p-10 md:p-12 mt-8">
             <div className="relative z-10 space-y-6 pt-2">
-              <h2 className="text-3xl font-bold text-slate-900">Corporate Upskilling & Training</h2>
-              <p className="text-slate-600 max-w-2xl mx-auto text-sm leading-relaxed">
+              <h2 className="text-3xl font-bold text-white">Corporate Upskilling & Training</h2>
+              <p className="text-aim-copy-muted max-w-2xl mx-auto text-sm leading-relaxed">
                 Need to train your existing software team on React 19, AWS deployments, or AI APIs? We offer customized corporate training structures designed to align your engineering speeds.
               </p>
               <div className="flex justify-center">

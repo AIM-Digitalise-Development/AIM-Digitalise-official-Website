@@ -9,7 +9,7 @@ const Products = () => {
 
   return (
     <div className="container-custom py-12 animate-fade-in">
-      <h1 className="text-4xl font-bold text-gray-900 mb-8">Our Products</h1>
+      <h1 className="text-4xl font-black text-aim-copy mb-8">Our Products</h1>
       <div className="grid lg:grid-cols-4 gap-8">
         <div className="lg:col-span-1">
           <ProductSearch onSearch={setSearchQuery} />

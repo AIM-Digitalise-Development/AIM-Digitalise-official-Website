@@ -81,7 +81,7 @@ const ValuesSection = () => {
           {values.map((v, i) => (
             <motion.div
               key={v.title}
-              className={`group relative bg-gradient-to-br ${v.color} border ${v.border} rounded-2xl p-6 shadow-md hover:shadow-xl transition-all duration-300`}
+              className="group relative card-elevated rounded-2xl p-6 transition-all duration-300"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -89,8 +89,8 @@ const ValuesSection = () => {
               whileHover={{ y: -4 }}
             >
               <div className="text-3xl mb-3">{v.icon}</div>
-              <h3 className={`font-bold text-slate-900 text-base mb-2`}>{v.title}</h3>
-              <p className="text-slate-600 text-sm leading-relaxed">{v.desc}</p>
+              <h3 className="font-bold text-white text-base mb-2">{v.title}</h3>
+              <p className="text-aim-copy-muted text-sm leading-relaxed">{v.desc}</p>
             </motion.div>
           ))}
         </div>

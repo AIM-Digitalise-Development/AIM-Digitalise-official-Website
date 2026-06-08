@@ -61,7 +61,7 @@ const clientList = [
 const getClientAccent = (id) =>
   id % 2 === 1
     ? 'bg-aim-gold/15 text-aim-gold border-aim-gold/30'
-    : 'bg-aim-purple/15 text-aim-purple-light border-aim-purple/30'
+    : 'bg-aim-purple/15 text-aim-purple border-aim-purple/30'
 
 const OurClientsSection = () => {
   const [clients] = useState(clientList)
@@ -76,7 +76,7 @@ const OurClientsSection = () => {
             <span className="badge-pill-dot" />
             Trusted Partners
           </div>
-          <h2 className="text-3xl md:text-4xl font-black tracking-wider text-white uppercase">
+          <h2 className="text-3xl md:text-4xl font-black tracking-wider text-aim-copy uppercase">
             OUR <span className="text-gradient">CLIENTS</span>
           </h2>
           <div className="flex h-1.5 w-32 rounded-full overflow-hidden shadow-sm">
@@ -92,7 +92,7 @@ const OurClientsSection = () => {
               key={client.id}
               whileHover={{ scale: 1.05, y: -4 }}
               transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-              className="w-full h-32 flex flex-col items-center justify-center p-4 rounded-2xl card-elevated border border-white/10 shadow-sm hover:shadow-aim-gold/15 hover:border-aim-gold/40 hover:bg-aim-gold/5 transition-all duration-300 cursor-pointer group relative"
+              className="w-full h-32 flex flex-col items-center justify-center p-4 rounded-2xl card-elevated shadow-sm hover:shadow-aim-gold/15 hover:border-aim-gold/40 hover:bg-aim-gold/5 transition-all duration-300 cursor-pointer group relative"
             >
               {/* Image element (attempts to load real logo; applies grayscale & opacity transitions in dark mode) */}
               <img

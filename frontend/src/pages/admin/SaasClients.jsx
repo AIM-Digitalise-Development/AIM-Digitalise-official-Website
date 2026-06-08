@@ -1,32 +1,36 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
+import { getAdminClients } from '../../api/admin/partners'
 
-// Static dummy data for General Clients (no API, fully independent)
-const DUMMY_CLIENTS = [
-  { id: 1, client_id: 'GC-0001', client_name: 'Ravi Sharma Enterprises', email: 'ravi.sharma@gmail.com', product_name: 'Basic CRM Suite', partner_name: 'Direct', is_active: true, processing_fee: 8500 },
-  { id: 2, client_id: 'GC-0002', client_name: 'Meena Cloth House', email: 'meena.cloth@yahoo.com', product_name: 'Inventory Manager Lite', partner_name: 'Walk-in', is_active: true, processing_fee: 4200 },
-  { id: 3, client_id: 'GC-0003', client_name: 'Patel General Store', email: 'patelstore@gmail.com', product_name: 'Billing & GST Pro', partner_name: 'Direct', is_active: false, processing_fee: 3600 },
-  { id: 4, client_id: 'GC-0004', client_name: 'Sunrise Pharmacy', email: 'sunrise.pharma@hotmail.com', product_name: 'Retail POS System', partner_name: 'Walk-in', is_active: true, processing_fee: 11000 },
-  { id: 5, client_id: 'GC-0005', client_name: 'Deepak Auto Parts', email: 'deepakauto@gmail.com', product_name: 'Inventory Manager Lite', partner_name: 'Direct', is_active: true, processing_fee: 4200 },
-  { id: 6, client_id: 'GC-0006', client_name: 'Laxmi Sweet Shop', email: 'laxmisweets@gmail.com', product_name: 'Billing & GST Pro', partner_name: 'Walk-in', is_active: false, processing_fee: 3600 },
-  { id: 7, client_id: 'GC-0007', client_name: 'Gupta Jewellers', email: 'guptajewels@gmail.com', product_name: 'Basic CRM Suite', partner_name: 'Direct', is_active: true, processing_fee: 8500 },
-  { id: 8, client_id: 'GC-0008', client_name: 'City Cyber Cafe', email: 'citycyber@gmail.com', product_name: 'Retail POS System', partner_name: 'Walk-in', is_active: true, processing_fee: 11000 },
-]
-
-const DUMMY_SUMMARY = {
-  total_clients: 8,
-  active_clients: 6,
-  total_revenue: 54600,
-}
-
-const AdminUsers = () => {
+const AdminSaasClients = () => {
+  const [clients, setClients] = useState([])
+  const [summary, setSummary] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
-  const [activePageTab, setActivePageTab] = useState('add_clients')
+  const [activePageTab, setActivePageTab] = useState('show_clients')
 
-  const clients = DUMMY_CLIENTS
-  const summary = DUMMY_SUMMARY
-  const loading = false
-  const error = null
+  const fetchClients = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await getAdminClients()
+      if (res.data?.success) {
+        setClients(res.data.data.all_clients || [])
+        setSummary(res.data.data.summary || null)
+      } else {
+        setError(res.data?.message || 'Failed to fetch clients list')
+      }
+    } catch (err) {
+      setError(err.message || 'An error occurred while fetching clients')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchClients()
+  }, [])
 
   // Filter clients locally
   const filteredClients = clients.filter((client) => {
@@ -48,14 +52,14 @@ const AdminUsers = () => {
   return (
     <>
       <Helmet>
-        <title>General Clients | Admin Panel</title>
+        <title>SaaS Based Clients | Admin Panel</title>
       </Helmet>
 
       <div className="space-y-6 select-none text-slate-700 animate-fade-in">
         {/* Header containing page title, centered company header and right action */}
         <div className="relative flex flex-col md:flex-row md:items-center justify-between pb-3 gap-3 min-h-[48px]">
           {/* Left Side: Page Title */}
-          <h1 className="text-3xl font-black text-[#1e3e6b] tracking-tight">General Clients</h1>
+          <h1 className="text-3xl font-black text-[#1e3e6b] tracking-tight">SaaS Based Clients</h1>
 
           {/* Center: Company Banner */}
           <div className="text-center md:absolute md:left-1/2 md:-translate-x-1/2 mt-1 md:mt-0">
@@ -63,14 +67,15 @@ const AdminUsers = () => {
             <p className="text-xs font-bold text-slate-500">Financial Year: 2026-2027</p>
           </div>
 
-          {/* Right Side: Refresh button (aligned to right, visible on show clients tab) */}
+          {/* Right Side: Refresh button */}
           <div className="w-48 flex justify-end">
             {activePageTab === 'show_clients' && (
               <button
-                disabled
-                className="px-4 py-2 border border-slate-200 bg-white rounded-xl text-xs font-bold opacity-50 cursor-not-allowed text-slate-600 shadow-sm"
+                onClick={fetchClients}
+                disabled={loading}
+                className="px-4 py-2 border border-slate-200 hover:border-[#38b34a] hover:bg-[#38b34a]/5 hover:text-[#38b34a] bg-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer text-slate-600 shadow-sm"
               >
-                Dummy Data
+                {loading ? 'Refreshing...' : 'Refresh Clients'}
               </button>
             )}
           </div>
@@ -78,19 +83,9 @@ const AdminUsers = () => {
 
         {/* White container card for tab control and content */}
         <div className="bg-white rounded-3xl border border-slate-200/80 shadow-md p-6">
-          
-          {/* Tab Selection Row */}
+
+          {/* Tab Selection Row — No Add Clients tab for SaaS clients */}
           <div className="flex flex-wrap items-center gap-1 border-b border-slate-200/60 pb-3 mb-6">
-            <button
-              onClick={() => setActivePageTab('add_clients')}
-              className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${
-                activePageTab === 'add_clients'
-                  ? 'bg-white border-[#38b34a] text-[#38b34a] -mb-[13px] z-10'
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
-              }`}
-            >
-              Add Clients
-            </button>
             <button
               onClick={() => setActivePageTab('show_clients')}
               className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${
@@ -153,65 +148,7 @@ const AdminUsers = () => {
             </button>
           </div>
 
-          {/* Tab Content 1: Add Clients */}
-          {activePageTab === 'add_clients' && (
-            <div className="space-y-6">
-              {/* Card Title Row with Icons */}
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                  {/* Person plus symbol */}
-                  <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                  </svg>
-                  <span>Clients</span>
-                </h3>
-                {/* Blue filter funnel */}
-                <button className="text-blue-500 hover:text-blue-600 p-1 cursor-pointer">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Cards Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-3">
-                {/* Bulk Upload Gradient Card */}
-                <div className="bg-gradient-to-br from-[#10b981] to-[#059669] rounded-2xl p-6 text-white shadow-lg flex flex-col items-center justify-center min-h-[190px] hover:scale-[1.02] transition-transform cursor-pointer relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full translate-x-8 -translate-y-8 group-hover:scale-110 transition-transform"></div>
-                  <div className="w-14 h-14 rounded-2xl bg-blue-100/90 flex items-center justify-center shadow-md mb-4 shrink-0">
-                    <svg className="w-7 h-7 text-[#2563eb]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                    </svg>
-                  </div>
-                  <span className="text-lg font-bold tracking-tight">Bulk Upload</span>
-                </div>
-
-                {/* Single Entry Gradient Card */}
-                <div className="bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] rounded-2xl p-6 text-white shadow-lg flex flex-col items-center justify-center min-h-[190px] hover:scale-[1.02] transition-transform cursor-pointer relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full translate-x-8 -translate-y-8 group-hover:scale-110 transition-transform"></div>
-                  <div className="w-14 h-14 rounded-2xl bg-teal-100/90 flex items-center justify-center shadow-md mb-4 shrink-0">
-                    <svg className="w-7 h-7 text-[#0d9488]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                    </svg>
-                  </div>
-                  <span className="text-lg font-bold tracking-tight">Single Entry</span>
-                </div>
-
-                {/* Remove Client Gradient Card */}
-                <div className="bg-gradient-to-br from-[#f59e0b] to-[#ea580c] rounded-2xl p-6 text-white shadow-lg flex flex-col items-center justify-center min-h-[190px] hover:scale-[1.02] transition-transform cursor-pointer relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full translate-x-8 -translate-y-8 group-hover:scale-110 transition-transform"></div>
-                  <div className="w-14 h-14 rounded-2xl bg-pink-100/90 flex items-center justify-center shadow-md mb-4 shrink-0">
-                    <svg className="w-7 h-7 text-[#db2777]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                    </svg>
-                  </div>
-                  <span className="text-lg font-bold tracking-tight">Remove Client</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Tab Content 2: Show Clients List */}
+          {/* Tab Content: Show Clients List */}
           {activePageTab === 'show_clients' && (
             <div className="space-y-6">
               {/* Error alert */}
@@ -226,7 +163,7 @@ const AdminUsers = () => {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-md flex items-center justify-between">
                   <div>
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total General Clients</span>
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total SaaS Clients</span>
                     <span className="text-3xl font-black text-slate-800 mt-1.5 block">
                       {loading ? '...' : (summary?.total_clients ?? 0)}
                     </span>
@@ -344,7 +281,7 @@ const AdminUsers = () => {
             </div>
           )}
 
-          {/* Tab Content 3: Follow Up */}
+          {/* Tab Content: Follow Up */}
           {activePageTab === 'follow_up' && (
             <div className="flex flex-col items-center justify-center py-16 text-center space-y-3.5">
               <span className="text-4xl">📞</span>
@@ -355,7 +292,7 @@ const AdminUsers = () => {
             </div>
           )}
 
-          {/* Tab Content 4: Customization */}
+          {/* Tab Content: Customization */}
           {activePageTab === 'customization' && (
             <div className="space-y-6">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -364,7 +301,6 @@ const AdminUsers = () => {
                   <span>Client Customization Requests</span>
                 </h3>
               </div>
-              
               <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs">
@@ -386,9 +322,7 @@ const AdminUsers = () => {
                         <td className="px-6 py-4 text-slate-400">12 May 2026</td>
                         <td className="px-6 py-4 text-slate-400">20 June 2026</td>
                         <td className="px-6 py-4 text-center">
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase border tracking-wider bg-purple-100 text-purple-800 border-purple-200">
-                            In Progress
-                          </span>
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase border tracking-wider bg-purple-100 text-purple-800 border-purple-200">In Progress</span>
                         </td>
                       </tr>
                       <tr className="hover:bg-slate-50/50 transition-colors">
@@ -398,21 +332,7 @@ const AdminUsers = () => {
                         <td className="px-6 py-4 text-slate-400">08 May 2026</td>
                         <td className="px-6 py-4 text-slate-400">10 June 2026</td>
                         <td className="px-6 py-4 text-center">
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase border tracking-wider bg-amber-100 text-amber-800 border-amber-200">
-                            Pending
-                          </span>
-                        </td>
-                      </tr>
-                      <tr className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 font-mono font-bold text-slate-500">REQ-2026-001</td>
-                        <td className="px-6 py-4 font-bold text-slate-800 text-sm">Blue Hill Institute</td>
-                        <td className="px-6 py-4">Biometric Attendance Machine SDK Sync</td>
-                        <td className="px-6 py-4 text-slate-400">22 Apr 2026</td>
-                        <td className="px-6 py-4 text-slate-400">15 May 2026</td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase border tracking-wider bg-emerald-100 text-emerald-800 border-emerald-200">
-                            Approved
-                          </span>
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase border tracking-wider bg-amber-100 text-amber-800 border-amber-200">Pending</span>
                         </td>
                       </tr>
                     </tbody>
@@ -422,7 +342,7 @@ const AdminUsers = () => {
             </div>
           )}
 
-          {/* Tab Content 5: Renewal / Add Product */}
+          {/* Tab Content: Renewal / Add Product */}
           {activePageTab === 'renewal' && (
             <div className="space-y-6">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -431,7 +351,6 @@ const AdminUsers = () => {
                   <span>Renewals & Products Management</span>
                 </h3>
               </div>
-              
               <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs">
@@ -452,26 +371,7 @@ const AdminUsers = () => {
                         <td className="px-6 py-4 text-slate-400">11 Jun 2026</td>
                         <td className="px-6 py-4 text-right font-black text-slate-800">₹30,000.00</td>
                         <td className="px-6 py-4 text-center">
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-200">
-                            5 Days Left
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <div className="flex gap-2 justify-center">
-                            <button className="px-2.5 py-1 bg-emerald-600 text-white rounded font-bold hover:bg-emerald-700 transition-colors">Renew</button>
-                            <button className="px-2.5 py-1 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 transition-colors">+ Add Product</button>
-                          </div>
-                        </td>
-                      </tr>
-                      <tr className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 font-bold text-slate-800 text-sm">Nova Tech Solutions</td>
-                        <td className="px-6 py-4">CRM Enterprise (Gold Plan)</td>
-                        <td className="px-6 py-4 text-slate-400">04 Feb 2027</td>
-                        <td className="px-6 py-4 text-right font-black text-slate-800">₹85,000.00</td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
-                            243 Days Left
-                          </span>
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-200">5 Days Left</span>
                         </td>
                         <td className="px-6 py-4 text-center">
                           <div className="flex gap-2 justify-center">
@@ -487,7 +387,7 @@ const AdminUsers = () => {
             </div>
           )}
 
-          {/* Tab Content 6: Due Payment */}
+          {/* Tab Content: Due Payment */}
           {activePageTab === 'due_payment' && (
             <div className="space-y-6">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -496,7 +396,6 @@ const AdminUsers = () => {
                   <span>Outstanding Client Payments</span>
                 </h3>
               </div>
-              
               <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs">
@@ -517,30 +416,10 @@ const AdminUsers = () => {
                         <td className="px-6 py-4 text-right font-black text-rose-600">₹15,000.00</td>
                         <td className="px-6 py-4 text-slate-400">28 May 2026</td>
                         <td className="px-6 py-4 text-center">
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-100 text-red-800 border border-red-200 animate-pulse">
-                            Overdue
-                          </span>
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-100 text-red-800 border border-red-200 animate-pulse">Overdue</span>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <button className="px-3 py-1.5 bg-[#ff6600] text-white rounded font-bold hover:bg-[#e05500] transition-colors text-xs">
-                            Send Reminder
-                          </button>
-                        </td>
-                      </tr>
-                      <tr className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 font-mono font-bold text-slate-500">INV-2026-095</td>
-                        <td className="px-6 py-4 font-bold text-slate-800 text-sm">Apex Retailers</td>
-                        <td className="px-6 py-4 text-right font-black text-slate-700">₹3,500.00</td>
-                        <td className="px-6 py-4 text-slate-400">10 Jun 2026</td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200">
-                            Grace Period
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <button className="px-3 py-1.5 bg-[#ff6600] text-white rounded font-bold hover:bg-[#e05500] transition-colors text-xs">
-                            Send Reminder
-                          </button>
+                          <button className="px-3 py-1.5 bg-[#ff6600] text-white rounded font-bold hover:bg-[#e05500] transition-colors text-xs">Send Reminder</button>
                         </td>
                       </tr>
                     </tbody>
@@ -550,7 +429,7 @@ const AdminUsers = () => {
             </div>
           )}
 
-          {/* Tab Content 7: Payment Report */}
+          {/* Tab Content: Payment Report */}
           {activePageTab === 'payment_report' && (
             <div className="space-y-6">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -559,7 +438,6 @@ const AdminUsers = () => {
                   <span>Payment History & Invoice Reports</span>
                 </h3>
               </div>
-              
               <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs">
@@ -586,18 +464,6 @@ const AdminUsers = () => {
                           </button>
                         </td>
                       </tr>
-                      <tr className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 font-mono font-bold text-slate-500">TXN-97554109</td>
-                        <td className="px-6 py-4 font-bold text-slate-800 text-sm">Apex Retailers</td>
-                        <td className="px-6 py-4 text-right font-black text-emerald-600">₹12,500.00</td>
-                        <td className="px-6 py-4 text-slate-400">20 Jan 2026</td>
-                        <td className="px-6 py-4 text-slate-600 font-semibold">NetBanking</td>
-                        <td className="px-6 py-4 text-center">
-                          <button className="text-blue-600 hover:text-blue-800 font-bold flex items-center justify-center gap-1 mx-auto">
-                            📥 Download
-                          </button>
-                        </td>
-                      </tr>
                     </tbody>
                   </table>
                 </div>
@@ -610,4 +476,4 @@ const AdminUsers = () => {
   )
 }
 
-export default AdminUsers
+export default AdminSaasClients

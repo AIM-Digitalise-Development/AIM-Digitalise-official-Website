@@ -12,6 +12,7 @@ export const ROUTES = {
   ADMIN: {
     DASHBOARD: '/admin',
     USERS: '/admin/users',
+    SAAS_CLIENTS: '/admin/saas-clients',
     SETTINGS: '/admin/settings',
     ANALYTICS: '/admin/analytics',
     PARTNERS: '/admin/partners',

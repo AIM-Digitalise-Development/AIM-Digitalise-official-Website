@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { useEffect } from 'react'
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { HelmetProvider } from 'react-helmet-async'
 import RootLayout from './layouts/RootLayout'
 import WebsiteLayout from './layouts/WebsiteLayout'
@@ -16,6 +17,7 @@ import MonthlySubscription from './pages/website/MonthlySubscription'
 import Users from './pages/website/Users'
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminUsers from './pages/admin/Users'
+import AdminSaasClients from './pages/admin/SaasClients'
 import AdminSettings from './pages/admin/Settings'
 import AdminAnalytics from './pages/admin/Analytics'
 import AdminPartners from './pages/admin/Partners'
@@ -27,10 +29,21 @@ import PartnerOrders from './pages/partner/Orders'
 import PartnerPayouts from './pages/partner/Payouts'
 import { ROUTES } from './constants/routes'
 
+function ScrollToTop() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+
+  return null
+}
+
 function App() {
   return (
     <HelmetProvider>
       <BrowserRouter>
+        <ScrollToTop />
         <Routes>
           {/* ── Public website (with header/footer) ── */}
           <Route element={<RootLayout />}>
@@ -52,6 +65,7 @@ function App() {
           <Route path={ROUTES.ADMIN.DASHBOARD} element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
             <Route path="users" element={<AdminUsers />} />
+            <Route path="saas-clients" element={<AdminSaasClients />} />
             <Route path="settings" element={<AdminSettings />} />
             <Route path="analytics" element={<AdminAnalytics />} />
             <Route path="partners" element={<AdminPartners />} />

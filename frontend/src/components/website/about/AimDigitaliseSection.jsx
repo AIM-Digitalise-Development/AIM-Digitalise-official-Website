@@ -46,10 +46,10 @@ const AimDigitaliseSection = () => {
           >
             {/* Glow backing */}
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/10 to-red-500/10 rounded-3xl blur-2xl opacity-50 rotate-2" />
+              <div className="absolute inset-0 bg-gradient-to-tr from-aim-gold/10 to-aim-purple/10 rounded-3xl blur-2xl opacity-50 rotate-2" />
               
               {/* Glass Image Frame */}
-              <div className="relative bg-white backdrop-blur-xl border border-slate-200 rounded-3xl p-3 shadow-2xl overflow-hidden group">
+              <div className="relative card-elevated rounded-3xl p-3 overflow-hidden group">
                 <img
                   src={imgSrc}
                   onError={() =>
@@ -62,7 +62,7 @@ const AimDigitaliseSection = () => {
                   loading="lazy"
                 />
                 {/* Hover overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-6 justify-center">
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-6 justify-center">
                   <span className="text-xs font-semibold text-slate-300 tracking-wider">
                     AIM Digitalise Pvt. Ltd.
                   </span>
@@ -74,7 +74,7 @@ const AimDigitaliseSection = () => {
             <motion.a
               href="/AIM_Digitalise_Portfolio.pdf"
               download
-              className="group flex items-center justify-center gap-3 w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold text-sm tracking-wide shadow-[0_0_25px_rgba(37,99,235,0.2)] hover:shadow-[0_0_40px_rgba(37,99,235,0.35)] transition-all duration-300"
+              className="group flex items-center justify-center gap-3 w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-aim-gold to-aim-gold-dark hover:from-aim-gold-dark hover:to-aim-gold text-white font-bold text-sm tracking-wide shadow-[0_0_25px_rgba(245,166,35,0.2)] hover:shadow-[0_0_40px_rgba(245,166,35,0.35)] transition-all duration-300"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -98,10 +98,10 @@ const AimDigitaliseSection = () => {
                   viewport={{ once: true }}
                   transition={{ delay: 0.1 * i, duration: 0.4 }}
                 >
-                  <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-red-500">
+                  <div className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-aim-gold to-aim-purple">
                     {stat.value}
                   </div>
-                  <div className="text-slate-500 text-xs mt-1">{stat.label}</div>
+                  <div className="text-aim-copy-muted text-xs mt-1">{stat.label}</div>
                 </motion.div>
               ))}
             </div>
@@ -115,24 +115,24 @@ const AimDigitaliseSection = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.15 }}
           >
-            <div className="space-y-4 text-slate-600 text-sm leading-relaxed">
-              <p className="text-base leading-loose text-slate-600">
-                <span className="font-bold text-slate-800">AIM Digitalise Pvt. Ltd.</span>, comprising experts who are
+            <div className="space-y-4 text-aim-copy-muted text-sm leading-relaxed">
+              <p className="text-base leading-loose text-aim-copy-muted">
+                <span className="font-bold text-white">AIM Digitalise Pvt. Ltd.</span>, comprising experts who are
                 perfectly aligned with your business goals, proudly represents one of the largest performance digital
                 marketing agencies in India. With a relentless focus on innovation, we bring the latest and most
                 advanced marketing technologies to our clients, ensuring their brands stay ahead in the ever-evolving
                 digital landscape.
               </p>
 
-              <p className="leading-loose text-slate-600">
+              <p className="leading-loose text-aim-copy-muted">
                 Our team at AIM Digitalise Pvt. Ltd., the best digital solution company in India, works for clients to
                 create and implement sustainable business solutions to increase their company performance and value.
-                Founded in the year <span className="text-blue-600 font-semibold">2020</span>, we're a young,
+                Founded in the year <span className="text-aim-gold font-semibold">2020</span>, we're a young,
                 energetic team and we strive to give our clients the best. We treat clients business like our own and
                 we develop strategic and innovative ideas to make clients' brands stand out from the rest.
               </p>
 
-              <p className="leading-loose text-slate-600">
+              <p className="leading-loose text-aim-copy-muted">
                 We thrive to build a nation where digitalization can help to raise the idea from concept to execution.
                 We make every vision into reality. We are passionate and dedicated on our work and we treat each
                 project individually where our team makes sure to offer unique, personalized solution. We are determined
@@ -140,21 +140,21 @@ const AimDigitaliseSection = () => {
               </p>
 
               {/* Services Highlight */}
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 mt-2">
-                <p className="text-slate-600 text-sm leading-loose">
+              <div className="card-elevated rounded-2xl p-5 mt-2">
+                <p className="text-aim-copy-muted text-sm leading-loose">
                   AIM Digitalise Pvt. Ltd. offers services like{' '}
-                  <span className="text-slate-800 font-semibold">Website Design & Development</span>,{' '}
-                  <span className="text-slate-800 font-semibold">Software Development</span>,{' '}
-                  <span className="text-slate-800 font-semibold">Mobile App Development</span>,{' '}
-                  <span className="text-slate-800 font-semibold">Graphics Design</span>,{' '}
-                  <span className="text-slate-800 font-semibold">Digital Signature (DSC/DC)</span> — where we are the leader
+                  <span className="text-white font-semibold">Website Design & Development</span>,{' '}
+                  <span className="text-white font-semibold">Software Development</span>,{' '}
+                  <span className="text-white font-semibold">Mobile App Development</span>,{' '}
+                  <span className="text-white font-semibold">Graphics Design</span>,{' '}
+                  <span className="text-white font-semibold">Digital Signature (DSC/DC)</span> — where we are the leader
                   as direct controller of <em>eMudra, ID Sign, Sify, V-Sign, PantaSign</em> and{' '}
                   <em>Capricorn</em>. Also{' '}
-                  <span className="text-slate-800 font-semibold">Digital Marketing</span> — SEO, SEM, PPC, SMM and more.
+                  <span className="text-white font-semibold">Digital Marketing</span> — SEO, SEM, PPC, SMM and more.
                 </p>
               </div>
 
-              <p className="leading-loose text-slate-600">
+              <p className="leading-loose text-aim-copy-muted">
                 We are in belief that we together with our clients can reach the next level of success and business
                 growth. We believe in doing business with honesty, integrity, and sincerity and provide clients with
                 the best of digital services to optimize their business needs and objectives. Providing our clients
@@ -169,7 +169,7 @@ const AimDigitaliseSection = () => {
               {['Performance Marketing', 'Web Development', 'Digital Signature', 'SEO & SEM', 'SMM', 'Mobile Apps', 'Graphics Design', 'PPC'].map((tag) => (
                 <span
                   key={tag}
-                  className="px-3 py-1 text-xs font-medium rounded-full bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100/50 transition-colors duration-200"
+                  className="px-3 py-1 text-xs font-medium rounded-full bg-aim-gold/10 border border-aim-gold/20 text-aim-gold hover:bg-aim-gold/20 transition-colors duration-200"
                 >
                   {tag}
                 </span>

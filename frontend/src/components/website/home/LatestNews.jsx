@@ -62,11 +62,11 @@ const LatestNews = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-3 gap-8">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white border border-slate-200 rounded-2xl p-6 animate-pulse">
-                <div className="h-4 bg-slate-100 rounded w-1/4 mb-4"></div>
-                <div className="h-6 bg-slate-100 rounded w-3/4 mb-4"></div>
-                <div className="h-16 bg-slate-100 rounded mb-4"></div>
-                <div className="h-10 bg-slate-100 rounded"></div>
+              <div key={i} className="card-elevated p-6 animate-pulse">
+                <div className="h-4 bg-aim-navy-muted/20 rounded w-1/4 mb-4"></div>
+                <div className="h-6 bg-aim-navy-muted/20 rounded w-3/4 mb-4"></div>
+                <div className="h-16 bg-aim-navy-muted/20 rounded mb-4"></div>
+                <div className="h-10 bg-aim-navy-muted/20 rounded"></div>
               </div>
             ))}
           </div>
@@ -104,17 +104,17 @@ const LatestNews = () => {
         >
           {posts.map((post) => (
             <motion.div key={post.id} variants={itemVariants} className="flex">
-              <Card hover padding="lg" className="flex flex-col justify-between w-full bg-aim-navy-light border-slate-200">
+              <Card hover padding="lg" className="flex flex-col justify-between w-full">
                 <div className="space-y-4 text-left">
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-blue-600 font-bold uppercase tracking-wider">
+                    <span className="text-xs text-aim-gold font-bold uppercase tracking-wider">
                       {post.category}
                     </span>
-                    <span className="text-xs text-slate-400 font-mono">
+                    <span className="text-xs text-aim-copy-muted font-mono">
                       {post.readTime}
                     </span>
                   </div>
-                  <h3 className="text-xl font-bold text-white group-hover:text-aim-highlight transition-colors leading-snug">
+                  <h3 className="text-xl font-bold text-aim-copy group-hover:text-aim-highlight transition-colors leading-snug">
                     {post.title}
                   </h3>
                   <p className="text-aim-copy-muted text-sm leading-relaxed">
@@ -122,15 +122,15 @@ const LatestNews = () => {
                   </p>
                 </div>
 
-                <div className="flex items-center justify-between pt-6 mt-6 border-t border-slate-100">
-                  <span className="text-xs text-slate-400 font-medium">
+                <div className="flex items-center justify-between pt-6 mt-6 border-t border-aim-border">
+                  <span className="text-xs text-aim-copy-muted font-medium">
                     {new Date(post.date).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'short',
                       day: 'numeric'
                     })}
                   </span>
-                  <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1 cursor-pointer">
+                  <Button variant="ghost" size="sm" className="link-brand font-semibold flex items-center gap-1 cursor-pointer">
                     <span>Read Article</span>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

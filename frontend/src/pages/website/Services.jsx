@@ -53,8 +53,8 @@ const services = [
 
 const iconWrap = (accent) =>
   accent === 'red'
-    ? 'p-3.5 rounded-xl bg-red-50 text-red-600 border border-red-200'
-    : 'p-3.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-200'
+    ? 'p-3.5 rounded-xl bg-aim-purple/10 text-aim-purple border border-aim-purple/20'
+    : 'p-3.5 rounded-xl bg-aim-gold/10 text-aim-gold border border-aim-gold/20'
 
 const Services = () => {
   return (
@@ -87,15 +87,15 @@ const Services = () => {
                     <div className="space-y-6">
                       <div className="flex items-center gap-4">
                         <div className={iconWrap(service.accent)}>{service.icon}</div>
-                        <h3 className="text-2xl font-bold text-slate-900 text-left">{service.title}</h3>
+                        <h3 className="text-2xl font-bold text-aim-copy text-left">{service.title}</h3>
                       </div>
-                      <p className="text-slate-600 text-sm leading-relaxed text-left">{service.description}</p>
+                      <p className="text-aim-copy-muted text-sm leading-relaxed text-left">{service.description}</p>
                     </div>
                     <div className="mt-8 flex flex-wrap gap-2">
                       {service.techs.map((tech) => (
                         <span
                           key={tech}
-                          className="px-3 py-1 rounded-lg bg-white border border-slate-200 text-slate-600 text-xs font-medium"
+                          className="px-3 py-1 rounded-lg bg-aim-navy-muted/10 border border-aim-border text-aim-copy-muted text-xs font-medium"
                         >
                           {tech}
                         </span>
@@ -109,8 +109,8 @@ const Services = () => {
             <div className="cta-panel max-w-5xl mx-auto p-10 md:p-12">
               <div className="absolute inset-0 bg-grid-pattern opacity-25 pointer-events-none" />
               <div className="relative z-10 space-y-6 pt-2">
-                <h2 className="text-3xl font-bold text-slate-900">Have a specific roadmap requirement?</h2>
-                <p className="text-slate-600 max-w-2xl mx-auto text-sm leading-relaxed">
+                <h2 className="text-3xl font-bold text-aim-copy">Have a specific roadmap requirement?</h2>
+                <p className="text-aim-copy-muted max-w-2xl mx-auto text-sm leading-relaxed">
                   Our principal software architects can scope your system design, suggest cloud mappings, and estimate budget targets.
                 </p>
                 <div className="flex flex-col sm:flex-row justify-center gap-4">

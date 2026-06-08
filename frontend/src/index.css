@@ -415,24 +415,24 @@
   --color-aim-navy-card: #ffffff;
   --color-aim-copy: #1e293b;
   --color-aim-copy-muted: #64748b;
-  --color-aim-highlight: #2563eb;
+  --color-aim-highlight: #d97706;
   
   --aim-navy: #ffffff;
   --aim-navy-light: #f8fafc;
   --aim-navy-muted: #f1f5f9;
   --aim-navy-card: #ffffff;
-  --aim-gold: #2563eb;
-  --aim-purple: #4f46e5;
+  --aim-gold: #d97706;
+  --aim-purple: #6d28d9;
   --aim-text: #1e293b;
   --aim-text-muted: #64748b;
   --aim-heading: #0f172a;
-  --aim-text-accent: #2563eb;
-  --aim-border: rgba(15, 34, 72, 0.08);
-  --aim-mesh-image: radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.04), transparent 50%), radial-gradient(circle at 20% 80%, rgba(79, 70, 229, 0.05), transparent 50%);
-  --aim-shadow-card: 0 20px 40px -12px rgba(15, 34, 72, 0.08), 0 0 0 1px rgba(15, 34, 72, 0.04);
+  --aim-text-accent: #d97706;
+  --aim-border: rgba(109, 40, 217, 0.08);
+  --aim-mesh-image: radial-gradient(circle at 80% 20%, rgba(245, 166, 35, 0.06), transparent 50%), radial-gradient(circle at 20% 80%, rgba(109, 40, 217, 0.06), transparent 50%);
+  --aim-shadow-card: 0 20px 40px -12px rgba(109, 40, 217, 0.06), 0 0 0 1px rgba(109, 40, 217, 0.03);
 
   background-color: #f8fafc !important;
-  background-image: radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.04), transparent 50%), radial-gradient(circle at 20% 80%, rgba(79, 70, 229, 0.05), transparent 50%) !important;
+  background-image: radial-gradient(circle at 80% 20%, rgba(245, 166, 35, 0.07), transparent 50%), radial-gradient(circle at 20% 80%, rgba(109, 40, 217, 0.07), transparent 50%) !important;
 
   .text-white:not(.keep-white) {
     color: #0f172a !important;
@@ -449,97 +449,109 @@
   .heading-display:not(.keep-white) {
     color: #0f172a !important;
   }
+  
+  /* Genuine high-end text gradient */
   .text-gradient {
-    color: #2563eb !important;
-    background: none;
-    -webkit-text-fill-color: currentColor;
+    background: linear-gradient(135deg, #d97706 0%, #6d28d9 100%) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    display: inline-block;
   }
   .text-gradient-subtle {
-    color: #4f46e5 !important;
-    background: none;
-    -webkit-text-fill-color: currentColor;
+    background: linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    display: inline-block;
   }
 
   .section-white {
     background: #ffffff !important;
     color: #1e293b !important;
-    border-color: rgba(15, 34, 72, 0.06) !important;
+    border-color: rgba(109, 40, 217, 0.06) !important;
   }
   .section-muted {
-    background: #f8fafc !important;
+    background: linear-gradient(180deg, #ffffff 0%, #fcfbfe 50%, #f8fafc 100%) !important;
     color: #1e293b !important;
-    border-color: rgba(15, 34, 72, 0.06) !important;
+    border-color: rgba(109, 40, 217, 0.06) !important;
   }
   .section-tinted {
-    background: #f1f5f9 !important;
+    background: linear-gradient(135deg, #fcfbfe 0%, #f8fafc 40%, #f1f5f9 100%) !important;
     color: #1e293b !important;
-    border-color: rgba(15, 34, 72, 0.06) !important;
+    border-color: rgba(109, 40, 217, 0.06) !important;
   }
+
+  /* Two-tone color grading over white backgrounds */
   .glass-card {
-    background: rgba(255, 255, 255, 0.75) !important;
+    background: linear-gradient(135deg, rgba(245, 166, 35, 0.05) 0%, rgba(109, 40, 217, 0.06) 100%), rgba(255, 255, 255, 0.85) !important;
     backdrop-filter: blur(20px) !important;
-    border-color: rgba(15, 34, 72, 0.08) !important;
-    box-shadow: 0 20px 40px -12px rgba(15, 34, 72, 0.08), 0 0 0 1px rgba(15, 34, 72, 0.04) !important;
+    border-color: rgba(109, 40, 217, 0.12) !important;
+    box-shadow: 0 20px 40px -12px rgba(109, 40, 217, 0.06), 0 0 0 1px rgba(109, 40, 217, 0.03) !important;
   }
   .card-elevated {
-    background: #ffffff !important;
-    border-color: rgba(15, 34, 72, 0.06) !important;
-    box-shadow: 0 20px 40px -12px rgba(15, 34, 72, 0.08), 0 0 0 1px rgba(15, 34, 72, 0.04) !important;
+    background: linear-gradient(135deg, rgba(245, 166, 35, 0.05) 0%, rgba(109, 40, 217, 0.06) 100%), #ffffff !important;
+    border-color: rgba(109, 40, 217, 0.12) !important;
+    box-shadow: 0 20px 40px -12px rgba(109, 40, 217, 0.06), 0 0 0 1px rgba(109, 40, 217, 0.03) !important;
     color: #1e293b !important;
   }
+  
   .badge-pill {
-    background: rgba(37, 99, 235, 0.05) !important;
-    border-color: rgba(37, 99, 235, 0.25) !important;
-    color: #2563eb !important;
+    background: rgba(245, 166, 35, 0.07) !important;
+    border-color: rgba(245, 166, 35, 0.3) !important;
+    color: #b45309 !important;
   }
   .input-brand {
     background: #ffffff !important;
-    border-color: rgba(0, 0, 0, 0.15) !important;
+    border-color: rgba(109, 40, 217, 0.2) !important;
     color: #0f172a !important;
   }
   .input-brand::placeholder {
     color: #94a3b8 !important;
   }
   .input-brand:focus {
-    border-color: #2563eb !important;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
+    border-color: #d97706 !important;
+    box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.15) !important;
   }
   .divider-brand {
-    background: linear-gradient(90deg, transparent, #2563eb 25%, #4f46e5 75%, transparent) !important;
+    background: linear-gradient(90deg, transparent, #d97706 25%, #6d28d9 75%, transparent) !important;
   }
 
   .ambient-glows::before {
-    background: radial-gradient(circle, rgba(37, 99, 235, 0.05) 0%, transparent 70%) !important;
+    background: radial-gradient(circle, rgba(245, 166, 35, 0.07) 0%, transparent 70%) !important;
   }
   .ambient-glows::after {
-    background: radial-gradient(circle, rgba(79, 70, 229, 0.06) 0%, transparent 70%) !important;
+    background: radial-gradient(circle, rgba(109, 40, 217, 0.08) 0%, transparent 70%) !important;
   }
 
   .btn-danger {
     color: #ffffff !important;
-    background: #4f46e5 !important;
+    background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%) !important;
+    box-shadow: 0 4px 12px rgba(109, 40, 217, 0.2) !important;
   }
   .btn-primary {
     color: #ffffff !important;
-    background: #2563eb !important;
+    background: linear-gradient(135deg, #f5a623 0%, #d97706 100%) !important;
+    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25) !important;
   }
   .btn-outline-brand {
-    color: #2563eb !important;
-    border-color: rgba(37, 99, 235, 0.6) !important;
+    color: #d97706 !important;
+    border-color: rgba(245, 166, 35, 0.6) !important;
   }
   .btn-outline-brand:hover {
-    background: rgba(37, 99, 235, 0.05) !important;
+    background: rgba(245, 166, 35, 0.06) !important;
+    border-color: #d97706 !important;
   }
 
-  /* Vibrant light-mode component enhancements to prevent blandness */
-  .glass-card::before, .card-elevated::before {
+  /* Vibrant light-mode component enhancements to prevent blandness - only when explicitly accented */
+  .card-accent-top::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, #f5a623 0%, #5c2d91 100%);
+    background: linear-gradient(90deg, #f5a623 0%, #6d28d9 100%);
     border-top-left-radius: inherit;
     border-top-right-radius: inherit;
     opacity: 0.95;
@@ -549,15 +561,16 @@
   .glass-card, .card-elevated {
     position: relative;
     overflow: hidden;
-    background: #ffffff !important;
-    box-shadow: 0 10px 30px -5px rgba(92, 45, 145, 0.06), 0 1px 3px rgba(0, 0, 0, 0.02), 0 0 0 1px rgba(92, 45, 145, 0.04) !important;
+    background: linear-gradient(135deg, rgba(245, 166, 35, 0.05) 0%, rgba(109, 40, 217, 0.06) 100%), #ffffff !important;
+    box-shadow: 0 10px 30px -5px rgba(109, 40, 217, 0.06), 0 1px 3px rgba(0, 0, 0, 0.02), 0 0 0 1px rgba(109, 40, 217, 0.04) !important;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
   
-  .glass-card-hover:hover, .card-elevated-hover:hover {
+  .glass-card-hover:hover, .card-elevated-hover:hover,
+  .card-elevated:hover {
     transform: translateY(-4px) !important;
-    box-shadow: 0 20px 40px -10px rgba(92, 45, 145, 0.14), 0 0 0 1px rgba(92, 45, 145, 0.08) !important;
-    border-color: rgba(92, 45, 145, 0.15) !important;
+    box-shadow: 0 20px 40px -10px rgba(109, 40, 217, 0.14), 0 0 0 1px rgba(109, 40, 217, 0.08) !important;
+    border-color: rgba(109, 40, 217, 0.25) !important;
   }
 }
 

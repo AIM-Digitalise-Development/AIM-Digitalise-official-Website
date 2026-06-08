@@ -67,8 +67,8 @@ const NxtGenErpSection = () => {
           <h2 className="heading-display">
             Meet <span className="text-gradient">NxtGen ERP</span>
           </h2>
-          <p className="text-lg copy-on-dark-muted">
-            A comprehensive, cloud-based ERP ecosystem designed and developed by <span className="text-white font-semibold">AIM Digitalise Pvt. Ltd.</span> to streamline operations for small and medium-scale industries.
+          <p className="text-lg copy-on-dark-muted text-left sm:text-center">
+            A comprehensive, cloud-based ERP ecosystem designed and developed by <span className="text-aim-copy font-semibold">AIM Digitalise Pvt. Ltd.</span> to streamline operations for small and medium-scale industries.
           </p>
         </div>
 
@@ -78,7 +78,7 @@ const NxtGenErpSection = () => {
           <div className="lg:col-span-6 space-y-8 text-left">
             
             {/* Tab Selectors */}
-            <div className="flex flex-col sm:flex-row gap-2 bg-aim-navy-light/60 p-1.5 rounded-2xl border border-white/10">
+            <div className="flex flex-col sm:flex-row gap-2 bg-aim-navy-light/60 p-1.5 rounded-2xl border border-aim-border">
               {erpTabs.map((tab, idx) => (
                 <button
                   key={tab.id}
@@ -86,7 +86,7 @@ const NxtGenErpSection = () => {
                   className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer ${
                     activeTab === idx
                       ? 'bg-aim-gold text-aim-navy shadow-lg shadow-aim-gold/20'
-                      : 'text-aim-copy-muted hover:text-white hover:bg-white/5'
+                      : 'text-aim-copy-muted hover:text-aim-copy hover:bg-aim-navy-light/50'
                   }`}
                 >
                   {tab.label}
@@ -105,7 +105,7 @@ const NxtGenErpSection = () => {
                 className="space-y-6"
               >
                 <div className="space-y-3">
-                  <h3 className="text-2xl sm:text-3xl font-black text-white leading-tight">
+                  <h3 className="text-2xl sm:text-3xl font-black text-aim-copy leading-tight">
                     {currentTab.title}
                   </h3>
                   <p className="text-aim-copy text-sm leading-relaxed">
@@ -127,7 +127,7 @@ const NxtGenErpSection = () => {
                         </svg>
                       </div>
                       <div>
-                        <h4 className="text-xs font-bold text-white uppercase tracking-wider">{feature.name}</h4>
+                        <h4 className="text-xs font-bold text-aim-copy uppercase tracking-wider">{feature.name}</h4>
                         <p className="text-aim-copy-muted text-[11px] mt-0.5 leading-snug">{feature.desc}</p>
                       </div>
                     </Card>
@@ -153,23 +153,23 @@ const NxtGenErpSection = () => {
           {/* Right Column: Video Playback Screen */}
           <div className="lg:col-span-6 relative">
             {/* Glowing blur behind screen */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/10 to-red-500/10 rounded-3xl blur-2xl opacity-60"></div>
+            <div className="absolute inset-0 bg-gradient-to-tr from-aim-gold/10 to-aim-purple/10 rounded-3xl blur-2xl opacity-60"></div>
 
-            <div className="relative bg-aim-navy-light border border-slate-200 rounded-3xl p-4 shadow-2xl overflow-hidden">
+            <div className="relative card-elevated p-4 shadow-2xl overflow-hidden">
               
               {/* Fake Window Header bar */}
-              <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-4 px-2">
+              <div className="flex items-center justify-between pb-3 border-b border-aim-border mb-4 px-2">
                 <div className="flex items-center gap-1.5">
                   <span className="w-3 h-3 rounded-full bg-rose-500/80"></span>
                   <span className="w-3 h-3 rounded-full bg-red-500/85"></span>
                   <span className="w-3 h-3 rounded-full bg-blue-500/85"></span>
                 </div>
-                <span className="text-[10px] text-slate-400 font-mono tracking-widest uppercase">NxtGen_ERP_{currentTab.id}</span>
+                <span className="text-[10px] text-aim-copy-muted font-mono tracking-widest uppercase">NxtGen_ERP_{currentTab.id}</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span>
               </div>
 
               {/* Video Player */}
-              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 aspect-video relative">
+              <div className="overflow-hidden rounded-2xl border border-aim-border bg-aim-navy/40 aspect-video relative">
                 {/* 
                   Keying the video element to the tab id forces React to reconstruct it 
                   so that it immediately downloads and plays the correct fallback 
@@ -191,7 +191,7 @@ const NxtGenErpSection = () => {
               </div>
 
               {/* Bottom tag */}
-              <div className="mt-4 flex items-center justify-between px-2 text-[10px] text-slate-400">
+              <div className="mt-4 flex items-center justify-between px-2 text-[10px] text-aim-copy-muted">
                 <span>Designed &amp; Developed by AIM Digitalise Pvt. Ltd.</span>
                 <span>Active Model: Cloud-Subscription</span>
               </div>

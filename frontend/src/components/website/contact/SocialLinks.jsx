@@ -1,2 +1,11 @@
-const SocialLinks = () => <div><h2 className="text-2xl font-bold mb-4">Follow Us</h2><div className="flex space-x-4"><a href="#" className="text-blue-600">Twitter</a><a href="#" className="text-blue-600">LinkedIn</a><a href="#" className="text-blue-600">GitHub</a></div></div>
+const SocialLinks = () => (
+  <div>
+    <h2 className="text-2xl font-bold mb-4 text-aim-copy">Follow Us</h2>
+    <div className="flex space-x-4">
+      <a href="#" className="link-brand">Twitter</a>
+      <a href="#" className="link-brand">LinkedIn</a>
+      <a href="#" className="link-brand">GitHub</a>
+    </div>
+  </div>
+)
 export default SocialLinks

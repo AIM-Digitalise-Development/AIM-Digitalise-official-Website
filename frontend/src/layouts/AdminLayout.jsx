@@ -42,8 +42,9 @@ const AdminLayout = () => {
   // Exact menu items from the screenshot
   const menuItems = [
     { route: ROUTES.ADMIN.DASHBOARD, label: 'Dashboard', icon: 'dashboard', color: '#10b981' },
-    { route: ROUTES.ADMIN.USERS, label: 'Clients', icon: 'clients', color: '#38b34a' },
-    { route: ROUTES.ADMIN.SETTINGS, label: 'Subscription', icon: 'subscription', color: '#ef4444' },
+    { route: ROUTES.ADMIN.SAAS_CLIENTS, label: 'SaaS Based Client', icon: 'clients', color: '#38b34a' },
+    { route: ROUTES.ADMIN.SETTINGS, label: 'Subscribed Client', icon: 'subscription', color: '#ef4444' },
+    { route: ROUTES.ADMIN.USERS, label: 'General Client', icon: 'general_client', color: '#f97316' },
     { route: ROUTES.ADMIN.ANALYTICS, label: 'Accounts', icon: 'accounts', color: '#ec4899' },
     { route: null, label: 'Employee', icon: 'employee', color: '#3b82f6' },
     { route: null, label: 'Projects', icon: 'projects', color: '#f43f5e' },
@@ -67,6 +68,7 @@ const AdminLayout = () => {
       </svg>
     )
     if (type === 'subscription') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="6" width="18" height="12" rx="2" /><path d="M3 11h18" /></svg>
+    if (type === 'general_client') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="8" r="3.5" /><path d="M5 19c0-3 3-5 7-5s7 2 7 5" /><path d="M17 11l1.5 1.5L21 10" /></svg>
     if (type === 'accounts') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M4 7h16v10H4z" /><path d="M7 11h4" /></svg>
     if (type === 'employee') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="8" r="3.5" /><path d="M5 19c0-3 3-5 7-5s7 2 7 5" /></svg>
     if (type === 'projects') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M3 7h7l2 2h9v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>

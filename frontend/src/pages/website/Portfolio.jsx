@@ -78,8 +78,8 @@ const Portfolio = () => {
                 onClick={() => setFilter(cat)}
                 className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 border cursor-pointer ${
                   filter === cat
-                    ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/15'
-                    : 'bg-white border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-500'
+                    ? 'bg-aim-gold border-aim-gold-dark text-white shadow-lg shadow-aim-gold/15'
+                    : 'card-elevated text-slate-600 dark:text-aim-copy-muted hover:text-aim-gold hover:border-aim-gold/40'
                 }`}
               >
                 {cat}
@@ -102,30 +102,29 @@ const Portfolio = () => {
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.4 }}
                 >
-                  <Card hover padding="none" className="h-full overflow-hidden flex flex-col bg-white border-slate-200 shadow-sm">
+                  <Card hover padding="none" className="h-full overflow-hidden flex flex-col">
                     {/* Visual Card Top */}
-                    <div className={`p-8 bg-gradient-to-tr ${proj.gradient} border-b border-slate-200 relative`}>
-                      <span className="text-xs text-blue-600 uppercase font-black tracking-widest block mb-2">{proj.category}</span>
-                      <h3 className="text-2xl font-black text-slate-900 leading-snug mb-4 text-left">{proj.title}</h3>
+                    <div className="p-8 bg-gradient-to-tr from-aim-gold/10 dark:from-aim-gold/15 via-aim-purple/10 dark:via-aim-purple/5 to-transparent border-b border-aim-border relative">
+                      <span className="text-xs text-aim-gold uppercase font-black tracking-widest block mb-2">{proj.category}</span>
+                      <h3 className="text-2xl font-black text-white leading-snug mb-4 text-left">{proj.title}</h3>
                       <div className="flex gap-4">
-                        <div className="bg-white/90 border border-slate-200 backdrop-blur rounded-xl p-3 max-w-[160px] text-left shadow-sm">
-                          <span className="text-lg font-black text-blue-600 block leading-tight">{proj.stats.metric}</span>
-                          <span className="text-[10px] text-slate-500 font-semibold block uppercase tracking-wider">{proj.stats.label}</span>
+                        <div className="bg-white/70 dark:bg-white/5 border border-aim-border backdrop-blur rounded-xl p-3 max-w-[160px] text-left shadow-sm">
+                          <span className="text-lg font-black text-aim-gold block leading-tight">{proj.stats.metric}</span>
+                          <span className="text-[10px] text-aim-copy-muted font-semibold block uppercase tracking-wider">{proj.stats.label}</span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Card Content */}
                     <div className="p-8 flex-grow flex flex-col justify-between space-y-6 text-left">
                       <div className="space-y-4">
-                        <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">CLIENT: {proj.client}</p>
-                        <p className="text-slate-600 text-sm leading-relaxed">{proj.description}</p>
+                        <p className="text-[11px] text-aim-copy-muted font-bold uppercase tracking-wider">CLIENT: {proj.client}</p>
+                        <p className="text-aim-copy-muted text-sm leading-relaxed">{proj.description}</p>
                       </div>
 
                       <div className="space-y-4">
                         <div className="flex flex-wrap gap-2">
                           {proj.techs.map((tech) => (
-                            <span key={tech} className="px-2.5 py-0.5 rounded bg-slate-50 border border-slate-200 text-slate-600 text-xs font-medium">
+                            <span key={tech} className="px-2.5 py-0.5 rounded bg-white/5 border border-aim-border text-aim-copy-muted text-xs font-medium">
                               {tech}
                             </span>
                           ))}
@@ -139,11 +138,11 @@ const Portfolio = () => {
           </motion.div>
 
           {/* CTA */}
-          <div className="bg-gradient-to-br from-white via-slate-50 to-blue-50/20 max-w-5xl mx-auto p-10 text-center relative overflow-hidden border border-slate-200 shadow-xl rounded-3xl">
+          <div className="cta-panel max-w-5xl mx-auto p-10 text-center relative overflow-hidden rounded-3xl">
             <div className="absolute inset-0 bg-radial-glow pointer-events-none"></div>
             <div className="relative z-10 space-y-6">
-              <h2 className="text-3xl font-bold text-slate-900">Let's build your next system</h2>
-              <p className="text-slate-600 max-w-2xl mx-auto text-sm">
+              <h2 className="text-3xl font-bold text-white">Let's build your next system</h2>
+              <p className="text-aim-copy-muted max-w-2xl mx-auto text-sm">
                 Connect with our solutions architects to discuss your technical specifications, legacy migrations, or scaling requirements.
               </p>
               <div className="flex justify-center">
