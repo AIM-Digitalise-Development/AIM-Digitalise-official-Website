@@ -560,7 +560,7 @@
   
   .glass-card, .card-elevated {
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     background: linear-gradient(135deg, rgba(245, 166, 35, 0.05) 0%, rgba(109, 40, 217, 0.06) 100%), #ffffff !important;
     box-shadow: 0 10px 30px -5px rgba(109, 40, 217, 0.06), 0 1px 3px rgba(0, 0, 0, 0.02), 0 0 0 1px rgba(109, 40, 217, 0.04) !important;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;

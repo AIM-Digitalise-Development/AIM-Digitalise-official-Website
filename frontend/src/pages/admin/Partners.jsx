@@ -292,38 +292,40 @@ const AdminPartners = () => {
     const rankStyle = node.rank ? rankColors[node.rank] : { bg: 'bg-slate-50 text-slate-500 border-slate-300', label: 'NO RANK' }
 
     return (
-      <div key={node.id} className="mb-2" style={{ paddingLeft: level > 0 ? '2.5rem' : '0' }}>
-        <div className={`flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-100 shadow-sm transition hover:shadow-md ${isExpanded && hasChildren ? 'mb-2' : ''}`}>
+      <div key={node.id} className="mb-2">
+        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white rounded-xl border border-slate-100 shadow-sm transition hover:shadow-md ${isExpanded && hasChildren ? 'mb-2' : ''}`}>
           
-          {hasChildren ? (
-            <button
-              onClick={() => toggleExpand(node.id)}
-              className="w-6 h-6 rounded border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center font-bold text-xs cursor-pointer text-slate-600 transition-colors"
-            >
-              {isExpanded ? '−' : '+'}
-            </button>
-          ) : (
-            <div className="w-6 h-6" />
-          )}
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            {hasChildren ? (
+              <button
+                onClick={() => toggleExpand(node.id)}
+                className="w-6 h-6 rounded border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center font-bold text-xs cursor-pointer text-slate-600 transition-colors shrink-0"
+              >
+                {isExpanded ? '−' : '+'}
+              </button>
+            ) : (
+              <div className="w-6 h-6 shrink-0" />
+            )}
 
-          <span className={`inline-flex items-center justify-center min-w-[80px] px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${rankStyle.bg}`}>
-            {rankStyle.label}
-          </span>
+            <span className={`inline-flex items-center justify-center min-w-[80px] px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border shrink-0 ${rankStyle.bg}`}>
+              {rankStyle.label}
+            </span>
 
-          <div className="flex-1 min-w-0">
-            <h4 className="text-xs font-bold text-slate-800 truncate">{node.partner_name}</h4>
-            <p className="text-[10px] text-slate-400 font-mono mt-0.5 truncate">
-              ID: {node.partner_id} • {node.organization_name}
-            </p>
+            <div className="min-w-0 flex-1">
+              <h4 className="text-xs font-bold text-slate-800 truncate">{node.partner_name}</h4>
+              <p className="text-[10px] text-slate-400 font-mono mt-0.5 truncate">
+                ID: {node.partner_id} • {node.organization_name}
+              </p>
+            </div>
+
+            {hasChildren && (
+              <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded-full shrink-0">
+                {node.children.length}
+              </span>
+            )}
           </div>
 
-          {hasChildren && (
-            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
-              {node.children.length} subordinate{node.children.length !== 1 ? 's' : ''}
-            </span>
-          )}
-
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1.5 justify-end pl-8 sm:pl-0 shrink-0">
             <button
               onClick={() => {
                 setSelectedPartnerForRank(node)
@@ -358,7 +360,7 @@ const AdminPartners = () => {
         </div>
 
         {hasChildren && isExpanded && (
-          <div className="border-l-2 border-dashed border-slate-200 ml-3 pl-1">
+          <div className="border-l border-dashed border-slate-300 ml-6 pl-4 mt-1 space-y-2">
             {node.children.map(child => renderTreeNode(child, level + 1))}
           </div>
         )}
@@ -806,7 +808,7 @@ const AdminPartners = () => {
                 {activeSubTab === 'info' ? (
                   <div className="space-y-4 text-xs">
                     {/* General section */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold">RM Name</span>
                         <span className="text-slate-800 font-bold text-sm">{selectedPartner.rm_name}</span>
@@ -830,7 +832,7 @@ const AdminPartners = () => {
                       <span className="text-[10px] text-[#ff6600] uppercase tracking-wider font-bold block">Address Details</span>
                       <p className="text-slate-700 font-semibold">{selectedPartner.address_line1}</p>
                       {selectedPartner.address_line2 && <p className="text-slate-700">{selectedPartner.address_line2}</p>}
-                      <div className="grid grid-cols-3 gap-2 pt-1.5 text-[11px] text-slate-500 font-semibold">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1.5 text-[11px] text-slate-500 font-semibold">
                         <div>
                           <span className="text-[9px] text-slate-400 uppercase block font-medium">District</span>
                           {selectedPartner.district}
@@ -849,7 +851,7 @@ const AdminPartners = () => {
                 ) : (
                   <div className="space-y-4">
                     {/* Document buttons list */}
-                    <div className="grid grid-cols-2 gap-3.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                       {[
                         { key: 'pan_card_path', label: 'PAN Card Doc' },
                         { key: 'id_proof_path', label: 'ID Proof Doc' },

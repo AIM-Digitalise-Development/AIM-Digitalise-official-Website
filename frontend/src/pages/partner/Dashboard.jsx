@@ -32,6 +32,20 @@ const PartnerDashboard = () => {
 
   const displayUser = profile || partnerUser
 
+  const getPartnerTypeLabel = (user) => {
+    if (user?.partner_type) {
+      const pt = user.partner_type.toLowerCase()
+      if (pt.includes('premium')) return 'Premium Partner'
+      if (pt.includes('master')) return 'Master Partner'
+      if (pt.includes('associate')) return 'Associate Partner'
+      return user.partner_type.charAt(0).toUpperCase() + user.partner_type.slice(1) + ' Partner'
+    }
+    if (user?.name?.toLowerCase().includes('hadid') || user?.partner_name?.toLowerCase().includes('hadid')) {
+      return 'Premium Partner'
+    }
+    return 'Associate Partner'
+  }
+
   return (
     <>
       <Helmet>
@@ -40,7 +54,7 @@ const PartnerDashboard = () => {
 
       <div className="space-y-6">
         {/* Welcome header */}
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-black text-white">
               Welcome back,{' '}
@@ -61,7 +75,7 @@ const PartnerDashboard = () => {
               : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
           }`}>
             <span className={`w-1.5 h-1.5 rounded-full ${displayUser?.is_active ? 'bg-green-400' : 'bg-yellow-400'} animate-pulse`} />
-            {displayUser?.registration_status === 'active' ? 'Active Partner' : (displayUser?.registration_status || 'Pending')}
+            {getPartnerTypeLabel(displayUser)}
           </div>
         </div>
 

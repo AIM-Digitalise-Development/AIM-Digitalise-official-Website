@@ -16,8 +16,20 @@ const AdminSaasClients = () => {
     try {
       const res = await getAdminClients()
       if (res.data?.success) {
-        setClients(res.data.data.all_clients || [])
-        setSummary(res.data.data.summary || null)
+        const all = res.data.data.all_clients || []
+        const filtered = all.filter(c => c.product_category === 'nexgn')
+        setClients(filtered)
+        
+        // Calculate SaaS metrics dynamically
+        const totalClients = filtered.length
+        const activeClients = filtered.filter(c => c.is_active).length
+        const totalRevenue = filtered.reduce((acc, curr) => acc + (Number(curr.processing_fee) || 0), 0)
+        
+        setSummary({
+          total_clients: totalClients,
+          active_clients: activeClients,
+          total_revenue: totalRevenue
+        })
       } else {
         setError(res.data?.message || 'Failed to fetch clients list')
       }

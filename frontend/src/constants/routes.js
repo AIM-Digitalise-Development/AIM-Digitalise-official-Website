@@ -17,6 +17,8 @@ export const ROUTES = {
     ANALYTICS: '/admin/analytics',
     PARTNERS: '/admin/partners',
     SUPPORT: '/admin/support',
+    EMPLOYEE: '/admin/employee',
+    COMPLIANCE: '/admin/compliance',
   },
   EMPLOYEE: {
     DASHBOARD: '/employee',
@@ -29,6 +31,8 @@ export const ROUTES = {
     PAYOUTS: '/partner/payouts',
     LOGIN: '/partner/login',
     REGISTER: '/partner/register',
+    LEADS: '/partner/leads',
+    MARKETING: '/partner/marketing',
   },
   CUSTOMER: {
     DASHBOARD: '/customer',

@@ -3,12 +3,13 @@ import { ROUTES } from '../constants/routes'
 import { useAuth } from '../hooks/useAuth'
 import { useEffect, useState } from 'react'
 import { adminLogout } from '../api/adminAuth'
-import logoImg from '../assets/images/logo.png'
+import logoImg from '../assets/images/plogo.jpeg'
 
 const AdminLayout = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const { isAuthenticated, role, logout, user } = useAuth()
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   // Wait for Zustand persist rehydration and force dark mode
   const [ready, setReady] = useState(false)
@@ -46,9 +47,9 @@ const AdminLayout = () => {
     { route: ROUTES.ADMIN.SETTINGS, label: 'Subscribed Client', icon: 'subscription', color: '#ef4444' },
     { route: ROUTES.ADMIN.USERS, label: 'General Client', icon: 'general_client', color: '#f97316' },
     { route: ROUTES.ADMIN.ANALYTICS, label: 'Accounts', icon: 'accounts', color: '#ec4899' },
-    { route: null, label: 'Employee', icon: 'employee', color: '#3b82f6' },
+    { route: ROUTES.ADMIN.EMPLOYEE, label: 'Employee', icon: 'employee', color: '#3b82f6' },
     { route: null, label: 'Projects', icon: 'projects', color: '#f43f5e' },
-    { route: null, label: 'Compliance', icon: 'compliance', color: '#8b5cf6' },
+    { route: ROUTES.ADMIN.COMPLIANCE, label: 'Compliance', icon: 'compliance', color: '#8b5cf6' },
     { route: ROUTES.ADMIN.PARTNERS, label: 'Partner', icon: 'partners', color: '#38b34a' },
     { route: null, label: 'Reports', icon: 'reports', color: '#f59e0b' },
     { route: ROUTES.ADMIN.SUPPORT, label: 'Support', icon: 'support', color: '#06b6d4' },
@@ -99,16 +100,36 @@ const AdminLayout = () => {
   }
 
   return (
-    <div className="h-screen w-screen bg-[#eaecf4] flex flex-col lg:flex-row select-none overflow-hidden">
+    <div className="h-screen w-screen bg-[#eaecf4] flex select-none overflow-hidden">
       
+      {/* Mobile backdrop */}
+      {isSidebarOpen && (
+        <div 
+          onClick={() => setIsSidebarOpen(false)} 
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+        />
+      )}
+
       {/* Sidebar — fixed height, no scroll on the aside itself */}
-      <aside className="w-full lg:w-56 shrink-0 bg-[#b0b2ba] border-r border-slate-300/60 flex flex-col shadow-lg relative z-25 h-auto lg:h-full">
+      <aside className={`w-56 shrink-0 bg-[#b0b2ba] border-r border-slate-300/60 flex flex-col shadow-lg fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-full ${
+        isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
 
         {/* ── STICKY TOP: Logo + ADMIN badge ── */}
         <div className="shrink-0 p-3 pb-2">
           {/* Logo */}
-          <div className="bg-white rounded-xl py-1.5 px-3 shadow-md border border-slate-200/50 flex items-center justify-center h-14">
+          <div className="bg-white rounded-xl py-1.5 px-3 shadow-md border border-slate-200/50 flex items-center justify-between h-14 gap-2">
             <img src={logoImg} alt="NEXGN Logo" className="max-h-12 object-contain" />
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(false)}
+              className="p-1 text-slate-500 hover:text-slate-700 lg:hidden rounded-lg focus:outline-none cursor-pointer"
+              aria-label="Close Sidebar"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
           {/* ADMIN capsule */}
           <div className="mt-3 mx-auto w-[110px] rounded-lg bg-white text-[#ff6600] text-center py-1 text-[10px] font-black tracking-[0.4em] shadow-md border border-slate-200/30">
@@ -127,7 +148,12 @@ const AdminLayout = () => {
               <button
                 key={item.label}
                 type="button"
-                onClick={() => item.route && navigate(item.route)}
+                onClick={() => {
+                  if (item.route) {
+                    navigate(item.route)
+                    setIsSidebarOpen(false)
+                  }
+                }}
                 className={`${commonClasses} ${
                   isActive
                     ? 'bg-white border-slate-200 text-[#38b34a] shadow-slate-400/20 font-bold'
@@ -178,29 +204,40 @@ const AdminLayout = () => {
       <div className="flex-grow flex flex-col min-w-0 bg-[#f3f5fa] h-full overflow-hidden">
         
         {/* Sticky Top Header Bar */}
-        <header className="bg-white border-b border-slate-200/80 px-6 py-4 flex items-center justify-between shadow-sm sticky top-0 z-10 shrink-0">
-          <div className="flex items-center gap-3.5">
+        <header className="bg-white border-b border-slate-200/80 px-4 sm:px-6 py-4 flex items-center justify-between shadow-sm sticky top-0 z-10 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3.5 min-w-0">
             {/* Hamburger button */}
-            <button className="p-2 hover:bg-slate-50 rounded-lg text-slate-500 cursor-pointer transition-colors active:scale-95">
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="p-2 hover:bg-slate-50 rounded-lg text-slate-500 cursor-pointer transition-colors active:scale-95 lg:hidden shrink-0"
+            >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <span className="text-sm font-semibold text-slate-400 font-sans">
+            <span className="text-sm font-semibold text-slate-400 font-sans truncate hidden md:inline-block">
               {(() => {
                 if (location.pathname === ROUTES.ADMIN.DASHBOARD) return "Welcome back! Here's your business overview for June 2026."
                 if (location.pathname === ROUTES.ADMIN.USERS) return "Manage your client accounts."
                 if (location.pathname === ROUTES.ADMIN.SETTINGS) return "Manage client subscriptions, customization requests, and payment reports."
                 if (location.pathname === ROUTES.ADMIN.ANALYTICS) return "Manage financial records and statements."
                 if (location.pathname === ROUTES.ADMIN.PARTNERS) return "Manage partner accounts and sales."
+                if (location.pathname === ROUTES.ADMIN.EMPLOYEE) return "Manage your employees, attendance, leave, and payroll."
+                if (location.pathname === ROUTES.ADMIN.COMPLIANCE) return "Review corporate compliance, audit logs, and tax filings."
                 return "Manage your company overview."
+              })()}
+            </span>
+            <span className="text-sm font-bold text-slate-800 font-sans md:hidden">
+              {(() => {
+                const matchedItem = menuItems.find(item => item.route === location.pathname)
+                return matchedItem ? matchedItem.label : 'Admin Portal'
               })()}
             </span>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             {/* Dynamic Date display with calendar icon formatted as Fri, 05 Jun 2026 */}
-            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 bg-slate-50/70 border border-slate-200/40 rounded-lg px-3 py-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 bg-slate-50/70 border border-slate-200/40 rounded-lg px-3 py-2 hidden sm:flex">
               <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
@@ -228,8 +265,8 @@ const AdminLayout = () => {
             </button>
 
             {/* Profile Avatar & Name next to it */}
-            <div className="flex items-center gap-2.5">
-              <span className="text-sm font-bold text-slate-700 font-sans">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-slate-700 font-sans hidden sm:inline-block">
                 {user?.name || user?.username || 'Admin'}
               </span>
               <button

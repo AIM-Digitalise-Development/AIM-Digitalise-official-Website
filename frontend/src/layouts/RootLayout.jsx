@@ -122,24 +122,9 @@ const RootLayout = () => {
                   )}
                 </button>
                 
-                <div className={`h-6 w-px ${
-                  theme === 'dark' ? 'bg-white/10' : 'bg-slate-200'
-                }`}></div>
-                
-                <Link
-                  to="/partner/register"
-                  className={`px-4 py-2 text-sm font-medium transition-all duration-300 ${
-                    theme === 'dark'
-                      ? 'text-aim-copy-muted hover:text-aim-highlight'
-                      : 'text-slate-600 hover:text-blue-600'
-                  }`}
-                >
-                  Become a Partner
-                </Link>
-                
                 <Link
                   to="/partner/login"
-                  className={`px-5 py-2 text-sm font-semibold rounded-full transition-all duration-300 shadow-md hover:shadow-lg ${
+                  className={`px-5 py-2 text-sm font-semibold rounded-full transition-all duration-300 shadow-md hover:shadow-lg whitespace-nowrap ${
                     theme === 'dark'
                       ? 'bg-aim-gold text-aim-navy hover:bg-aim-gold-dark'
                       : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -222,18 +207,6 @@ const RootLayout = () => {
                         </>
                       )}
                     </button>
-                    
-                    <Link
-                      to="/partner/register"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={`block text-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                        theme === 'dark'
-                          ? 'text-aim-copy-muted hover:text-aim-highlight hover:bg-white/5'
-                          : 'text-slate-600 hover:text-blue-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      Become a Partner
-                    </Link>
                     
                     <Link
                       to="/partner/login"

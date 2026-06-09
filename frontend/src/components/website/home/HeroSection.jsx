@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import Button from '../../ui/Button'
 import Input from '../../ui/Input'
-import heroImage from '../../../assets/hero.png'
+import nexgnVideo from '../../../assets/videos/nexgn.mp4'
 
 const HeroSection = () => {
   const [email, setEmail] = useState('')
@@ -21,7 +21,7 @@ const HeroSection = () => {
   }
 
   return (
-    <section className="relative overflow-hidden pt-24 pb-20 md:pt-32 md:pb-28 bg-mesh-brand bg-grid-pattern section-white border-b border-white/10">
+    <section className="relative overflow-hidden pt-14 pb-20 md:pt-18 md:pb-28 bg-mesh-brand bg-grid-pattern section-white border-b border-white/10">
       <div className="ambient-glows" aria-hidden />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -158,14 +158,16 @@ const HeroSection = () => {
               </div>
               
               <div className="overflow-hidden rounded-2xl border border-white/10 bg-aim-navy-light/50 p-2">
-                <img
-                  src={heroImage}
-                  alt="AIM System Architecture Dashboard Preview"
-                  className="rounded-xl w-full h-auto shadow-inner hover:scale-105 transition-transform duration-700"
-                  loading="eager"
-                  width="500"
-                  height="350"
-                />
+                <video
+                  className="rounded-xl w-full h-auto shadow-inner object-cover"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                >
+                  <source src={nexgnVideo} type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
               </div>
               
               {/* Overlay Glass Badge */}

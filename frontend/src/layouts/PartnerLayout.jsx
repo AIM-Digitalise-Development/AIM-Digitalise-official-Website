@@ -1,8 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { ROUTES } from '../constants/routes'
 import { usePartnerAuthStore } from '../store/partnerAuthStore'
 import { partnerLogout as apiLogout } from '../api/partner'
+import logoImg from '../assets/images/plogo.jpeg'
 
 const navItems = [
   {
@@ -32,12 +33,31 @@ const navItems = [
       </svg>
     ),
   },
+  {
+    path: ROUTES.PARTNER.LEADS,
+    label: 'Leads Registry',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+    ),
+  },
+  {
+    path: ROUTES.PARTNER.MARKETING,
+    label: 'Promo Kit & Tiers',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    ),
+  },
 ]
 
 const PartnerLayout = () => {
   const { isPartnerAuthenticated, partnerUser, partnerLogout } = usePartnerAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   // Always force dark mode on Partner portal mount
   useEffect(() => {
@@ -61,21 +81,48 @@ const PartnerLayout = () => {
 
   const isActive = (path) => location.pathname === path
 
+  const getPartnerTypeLabel = (user) => {
+    if (user?.partner_type) {
+      const pt = user.partner_type.toLowerCase()
+      if (pt.includes('premium')) return 'Premium Partner'
+      if (pt.includes('master')) return 'Master Partner'
+      if (pt.includes('associate')) return 'Associate Partner'
+      return user.partner_type.charAt(0).toUpperCase() + user.partner_type.slice(1) + ' Partner'
+    }
+    if (user?.name?.toLowerCase().includes('hadid') || user?.partner_name?.toLowerCase().includes('hadid')) {
+      return 'Premium Partner'
+    }
+    return 'Associate Partner'
+  }
+
   return (
-    <div className="flex min-h-screen bg-[#0f1117]">
+    <div className="flex h-screen w-screen bg-[#0f1117] overflow-hidden select-none">
+      {/* Mobile backdrop */}
+      {isSidebarOpen && (
+        <div 
+          onClick={() => setIsSidebarOpen(false)} 
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 shrink-0 bg-aim-navy border-r border-white/5 flex flex-col">
+      <aside className={`w-64 shrink-0 bg-aim-navy border-r border-white/5 flex flex-col h-full fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static ${
+        isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
         {/* Logo / Brand */}
-        <div className="p-6 border-b border-white/5">
-          <Link to={ROUTES.HOME} className="flex items-center gap-2.5">
-            <span className="bg-gradient-to-br from-aim-gold via-aim-gold-light to-aim-purple w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold text-aim-navy shadow-md shadow-aim-gold/30">
-              A
-            </span>
-            <div>
-              <p className="text-white font-black text-sm leading-none">AIM</p>
-              <p className="text-aim-copy-muted text-[10px] font-medium tracking-widest uppercase">Partner Portal</p>
-            </div>
+        <div className="p-4 border-b border-white/5 flex items-center justify-between gap-2">
+          <Link to={ROUTES.HOME} className="flex-1 flex items-center justify-center bg-white rounded-xl py-1.5 px-3 border border-white/10 h-14 shadow-md">
+            <img src={logoImg} alt="AIM Partner Logo" className="max-h-11 object-contain" />
           </Link>
+          <button
+            onClick={() => setIsSidebarOpen(false)}
+            className="p-2 -mr-2 text-aim-copy-muted hover:text-white lg:hidden rounded-lg focus:outline-none cursor-pointer"
+            aria-label="Close Sidebar"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         {/* Partner info */}
@@ -100,12 +147,13 @@ const PartnerLayout = () => {
         )}
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           <p className="text-[10px] font-black uppercase tracking-widest text-aim-copy-muted px-3 mb-3">Navigation</p>
           {navItems.map((item) => (
             <Link
               key={item.path}
               to={item.path}
+              onClick={() => setIsSidebarOpen(false)}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                 isActive(item.path)
                   ? 'bg-aim-gold/10 text-aim-gold border border-aim-gold/20 shadow-sm shadow-aim-gold/10'
@@ -135,24 +183,34 @@ const PartnerLayout = () => {
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {/* Top bar */}
         <header className="h-16 border-b border-white/5 bg-aim-navy/50 backdrop-blur flex items-center px-6 shrink-0">
           <div className="flex items-center justify-between w-full">
-            <div>
+            <div className="flex items-center">
+              {/* Hamburger button */}
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="p-2 -ml-2 mr-2 text-aim-copy-muted hover:text-white lg:hidden rounded-lg focus:outline-none cursor-pointer"
+                aria-label="Open Sidebar"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
               <h2 className="text-white text-sm font-semibold capitalize">
                 {navItems.find((n) => isActive(n.path))?.label || 'Partner Portal'}
               </h2>
             </div>
-            <div className="flex items-center gap-2 text-xs text-aim-copy-muted">
+            <div className="flex items-center gap-2 text-xs text-aim-copy-muted font-semibold shrink-0 ml-3">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              Active Partner
+              <span className="truncate max-w-[150px] sm:max-w-none">{getPartnerTypeLabel(partnerUser)}</span>
             </div>
           </div>
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="flex-1 p-6 overflow-y-auto">
           <Outlet />
         </main>
       </div>

@@ -22,11 +22,15 @@ import AdminSettings from './pages/admin/Settings'
 import AdminAnalytics from './pages/admin/Analytics'
 import AdminPartners from './pages/admin/Partners'
 import AdminSupport from './pages/admin/Support'
+import AdminEmployee from './pages/admin/Employee'
+import AdminCompliance from './pages/admin/Compliance'
 import PartnerLogin from './pages/partner/Login'
 import PartnerRegister from './pages/partner/Register'
 import PartnerDashboard from './pages/partner/Dashboard'
 import PartnerOrders from './pages/partner/Orders'
 import PartnerPayouts from './pages/partner/Payouts'
+import PartnerLeads from './pages/partner/Leads'
+import PartnerMarketing from './pages/partner/Marketing'
 import { ROUTES } from './constants/routes'
 
 function ScrollToTop() {
@@ -70,6 +74,8 @@ function App() {
             <Route path="analytics" element={<AdminAnalytics />} />
             <Route path="partners" element={<AdminPartners />} />
             <Route path="support" element={<AdminSupport />} />
+            <Route path="employee" element={<AdminEmployee />} />
+            <Route path="compliance" element={<AdminCompliance />} />
           </Route>
 
           {/* ── Partner auth pages (standalone, no header/footer) ── */}
@@ -81,6 +87,8 @@ function App() {
             <Route index element={<PartnerDashboard />} />
             <Route path="orders" element={<PartnerOrders />} />
             <Route path="payouts" element={<PartnerPayouts />} />
+            <Route path="leads" element={<PartnerLeads />} />
+            <Route path="marketing" element={<PartnerMarketing />} />
           </Route>
         </Routes>
       </BrowserRouter>

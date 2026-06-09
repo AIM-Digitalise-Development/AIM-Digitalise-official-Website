@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
+import { getAdminClients } from '../../api/admin/partners'
 
 const AdminSettings = () => {
   const [productFilter, setProductFilter] = useState('All')
@@ -7,20 +8,84 @@ const AdminSettings = () => {
   const [statusFilter, setStatusFilter] = useState('All')
   const [activeTab, setActiveTab] = useState('client_list')
 
-  // High fidelity dataset matching the screenshot exactly
-  const mockSubscriptions = [
-    { id: 'SUB-001', name: 'Sunrise Academy', product: 'School MS', plan: 'Gold', amount: 45000, startDate: '10 Apr 2025', endDate: '09 Apr 2026', status: 'ACTIVE' },
-    { id: 'SUB-002', name: 'Greenfield School', product: 'School MS', plan: 'Silver', amount: 30000, startDate: '12 May 2025', endDate: '11 May 2026', status: 'ACTIVE' },
-    { id: 'SUB-003', name: 'Blue Hill Institute', product: 'College Portal', plan: 'Enterprise', amount: 120000, startDate: '15 Sep 2024', endDate: '14 Sep 2025', status: 'ACTIVE' },
-    { id: 'SUB-004', name: 'Apex Retailers', product: 'GST Billing Tool', plan: 'Bronze', amount: 12500, startDate: '20 Jan 2025', endDate: '19 Jan 2026', status: 'ACTIVE' },
-    { id: 'SUB-005', name: 'Nova Tech Solutions', product: 'CRM Enterprise', plan: 'Gold', amount: 85000, startDate: '05 Feb 2025', endDate: '04 Feb 2026', status: 'ACTIVE' },
-  ]
+  const [clients, setClients] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  const fetchClients = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await getAdminClients()
+      if (res.data?.success) {
+        const all = res.data.data.all_clients || []
+        // Filter out nexgn (SaaS Based Clients)
+        const filtered = all.filter(c => c.product_category !== 'nexgn')
+        setClients(filtered)
+      } else {
+        setError(res.data?.message || 'Failed to fetch clients list')
+      }
+    } catch (err) {
+      setError(err.message || 'An error occurred while fetching clients')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchClients()
+  }, [])
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '—'
+    try {
+      const d = new Date(dateStr)
+      if (isNaN(d.getTime())) return '—'
+      return d.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      })
+    } catch (e) {
+      return '—'
+    }
+  }
+
+  const getEndDate = (dateStr) => {
+    if (!dateStr) return '—'
+    try {
+      const d = new Date(dateStr)
+      if (isNaN(d.getTime())) return '—'
+      d.setFullYear(d.getFullYear() + 1)
+      return d.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      })
+    } catch (e) {
+      return '—'
+    }
+  }
 
   // Filter subscription rows
-  const filteredSubs = mockSubscriptions.filter(sub => {
-    const matchesProduct = productFilter === 'All' || sub.product === productFilter
-    const matchesStatus = statusFilter === 'All' || sub.status === statusFilter
-    const matchesSearch = sub.name.toLowerCase().includes(clientSearch.toLowerCase()) || sub.id.toLowerCase().includes(clientSearch.toLowerCase())
+  const filteredSubs = clients.filter(sub => {
+    const matchesProduct = productFilter === 'All' || sub.product_category === productFilter
+    const matchesStatus = statusFilter === 'All' || (statusFilter === 'ACTIVE' ? sub.is_active : !sub.is_active)
+    
+    const name = sub.client_name || ''
+    const email = sub.email || ''
+    const cid = sub.client_id || ''
+    const prod = sub.product_name || ''
+    const partner = sub.partner_name || ''
+    const searchLower = clientSearch.toLowerCase()
+    
+    const matchesSearch = 
+      name.toLowerCase().includes(searchLower) ||
+      email.toLowerCase().includes(searchLower) ||
+      cid.toString().toLowerCase().includes(searchLower) ||
+      prod.toLowerCase().includes(searchLower) ||
+      partner.toLowerCase().includes(searchLower)
+      
     return matchesProduct && matchesStatus && matchesSearch
   })
 
@@ -42,7 +107,18 @@ const AdminSettings = () => {
             <p className="text-xs font-bold text-slate-500">Financial Year: 2026-2027</p>
           </div>
 
-          <div className="w-48"></div>
+          {/* Right Side: Refresh button */}
+          <div className="w-48 flex justify-end">
+            {activeTab === 'client_list' && (
+              <button
+                onClick={fetchClients}
+                disabled={loading}
+                className="px-4 py-2 border border-slate-200 hover:border-[#ef4444] hover:bg-[#ef4444]/5 hover:text-[#ef4444] bg-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer text-slate-600 shadow-sm"
+              >
+                {loading ? 'Refreshing...' : 'Refresh Clients'}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Filters Panel Card */}
@@ -61,11 +137,11 @@ const AdminSettings = () => {
                 onChange={(e) => setProductFilter(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 transition-all font-semibold"
               >
-                <option value="All">All Products</option>
-                <option value="School MS">School MS</option>
-                <option value="College Portal">College Portal</option>
-                <option value="GST Billing Tool">GST Billing Tool</option>
-                <option value="CRM Enterprise">CRM Enterprise</option>
+                <option value="All">All Categories</option>
+                <option value="static">Static Websites</option>
+                <option value="dynamic">Dynamic Websites</option>
+                <option value="ecommerce">E-Commerce</option>
+                <option value="mobile">Mobile Apps</option>
               </select>
             </div>
           </div>
@@ -164,6 +240,13 @@ const AdminSettings = () => {
           {/* Tab 1 Content: Client List Table */}
           {activeTab === 'client_list' && (
             <div className="space-y-6">
+              {/* Error alert */}
+              {error && (
+                <div className="p-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 text-sm flex items-center justify-between animate-fade-in">
+                  <span>{error}</span>
+                  <button onClick={fetchClients} className="text-xs font-bold underline hover:no-underline">Try Again</button>
+                </div>
+              )}
               
               {/* Table Subtitle Bar */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -205,31 +288,46 @@ const AdminSettings = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700">
-                      {filteredSubs.length > 0 ? (
+                      {loading ? (
+                        <tr>
+                          <td colSpan="9" className="text-center py-10 font-bold">
+                            <span className="inline-block animate-spin mr-2">🔄</span> Loading subscriptions...
+                          </td>
+                        </tr>
+                      ) : filteredSubs.length > 0 ? (
                         filteredSubs.map((sub) => (
-                          <tr key={sub.id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-6 py-4 font-mono font-bold text-slate-500">{sub.id}</td>
-                            <td className="px-6 py-4 font-bold text-slate-800 text-sm">{sub.name}</td>
+                          <tr key={sub.client_id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-6 py-4 font-mono font-bold text-slate-500">{sub.client_id}</td>
+                            <td className="px-6 py-4">
+                              <p className="font-bold text-slate-800 text-sm">{sub.client_name}</p>
+                              <p className="text-[10px] text-slate-400 font-medium">{sub.email || '—'}</p>
+                            </td>
                             <td className="px-6 py-4">
                               <span className="px-2.5 py-1 rounded bg-[#e2e8f0] text-slate-700 font-bold text-[10px] uppercase">
-                                {sub.product}
+                                {sub.product_name}
                               </span>
                             </td>
-                            <td className="px-6 py-4 font-bold text-blue-600">{sub.plan}</td>
-                            <td className="px-6 py-4 text-right font-black text-slate-800 text-sm">
-                              ₹{sub.amount.toLocaleString('en-IN')}.00
+                            <td className="px-6 py-4 font-bold text-blue-600">
+                              {sub.product_category?.toUpperCase()}
                             </td>
-                            <td className="px-6 py-4 font-medium text-slate-500">{sub.startDate}</td>
-                            <td className="px-6 py-4 font-medium text-slate-500">{sub.endDate}</td>
+                            <td className="px-6 py-4 text-right font-black text-slate-800 text-sm">
+                              ₹{Number(sub.processing_fee || 0).toLocaleString('en-IN')}.00
+                            </td>
+                            <td className="px-6 py-4 font-medium text-slate-500">{formatDate(sub.created_at)}</td>
+                            <td className="px-6 py-4 font-medium text-slate-500">{getEndDate(sub.created_at)}</td>
                             <td className="px-6 py-4 text-center">
-                              <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase border tracking-wider bg-emerald-100 text-emerald-800 border-emerald-200">
-                                {sub.status}
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border tracking-wider ${
+                                sub.is_active
+                                  ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                  : 'bg-rose-100 text-rose-800 border-rose-200'
+                              }`}>
+                                {sub.is_active ? 'ACTIVE' : 'INACTIVE'}
                               </span>
                             </td>
                             <td className="px-6 py-4 text-center">
                               <button
                                 type="button"
-                                onClick={() => alert(`Showing details for ${sub.name}`)}
+                                onClick={() => alert(`Showing details for ${sub.client_name}`)}
                                 className="px-3 py-1.5 rounded-lg border border-blue-200 hover:border-blue-500 hover:bg-blue-50 text-blue-600 font-bold cursor-pointer transition-all flex items-center gap-1 mx-auto"
                               >
                                 <svg className="w-3.5 h-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
