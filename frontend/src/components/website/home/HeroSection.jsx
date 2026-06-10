@@ -39,7 +39,7 @@ const HeroSection = () => {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-aim-gold opacity-60" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-gradient-to-r from-aim-gold to-aim-purple" />
                 </span>
-                AIM Digitalise
+                AIM Digitalise PVT. LTD.
               </div>
               <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white leading-tight tracking-tight">
               Digital Nation तो{' '}
@@ -125,7 +125,7 @@ const HeroSection = () => {
               <div className="flex flex-wrap gap-4 text-xs font-semibold text-on-navy-muted uppercase tracking-widest">
                 <span>ISO 27001 Certified</span>
                 <span>•</span>
-                <span>SOC2 Compliant</span>
+                <span>DPIIT Certified</span>
               </div>
             </div>
           </motion.div>

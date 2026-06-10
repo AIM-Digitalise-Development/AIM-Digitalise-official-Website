@@ -154,14 +154,14 @@ const AimDigitaliseSection = () => {
                 </p>
               </div>
 
-              <p className="leading-loose text-aim-copy-muted">
+              {/* <p className="leading-loose text-aim-copy-muted">
                 We are in belief that we together with our clients can reach the next level of success and business
                 growth. We believe in doing business with honesty, integrity, and sincerity and provide clients with
                 the best of digital services to optimize their business needs and objectives. Providing our clients
                 with premium quality service is the foundation of our company. We have a worldwide client base ranging
                 from India to all across. We believe in keeping our word and doing business fairly and transparently —
                 that is the very vital point that we claim a reasonably lower price in exchange for our service.
-              </p>
+              </p> */}
             </div>
 
             {/* Tags */}

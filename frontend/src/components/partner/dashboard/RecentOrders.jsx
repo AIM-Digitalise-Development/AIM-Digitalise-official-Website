@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getDashboardStats } from '../../../api/partner'
 import { ROUTES } from '../../../constants/routes'
+import { usePartnerAuthStore } from '../../../store/partnerAuthStore'
 
 const statusStyle = (status, isActive) => {
   if (isActive) return 'text-green-400 bg-green-500/10 border-green-500/20'
@@ -10,14 +11,23 @@ const statusStyle = (status, isActive) => {
 }
 
 const RecentOrders = () => {
-  const [activities, setActivities] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { dashboardStats, setDashboardStats } = usePartnerAuthStore()
+  const [activities, setActivities] = useState(dashboardStats?.recent_activities?.slice(0, 5) || [])
+  const [loading, setLoading] = useState(!dashboardStats)
 
   useEffect(() => {
+    if (dashboardStats) {
+      setActivities(dashboardStats.recent_activities?.slice(0, 5) || [])
+    }
+
     getDashboardStats()
       .then((res) => {
         if (res.data?.success) {
-          setActivities(res.data.data.recent_activities?.slice(0, 5) || [])
+          const newData = res.data.data
+          if (JSON.stringify(newData) !== JSON.stringify(dashboardStats)) {
+            setActivities(newData.recent_activities?.slice(0, 5) || [])
+            setDashboardStats(newData)
+          }
         }
       })
       .catch(() => {})

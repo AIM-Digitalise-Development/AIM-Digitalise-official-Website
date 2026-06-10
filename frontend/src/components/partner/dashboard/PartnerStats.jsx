@@ -1,14 +1,26 @@
 import { useEffect, useState } from 'react'
 import { getDashboardStats } from '../../../api/partner'
+import { usePartnerAuthStore } from '../../../store/partnerAuthStore'
 
 const PartnerStats = () => {
-  const [stats, setStats] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const { dashboardStats, setDashboardStats } = usePartnerAuthStore()
+  const [stats, setStats] = useState(dashboardStats)
+  const [loading, setLoading] = useState(!dashboardStats)
 
   useEffect(() => {
+    if (dashboardStats) {
+      setStats(dashboardStats)
+    }
+
     getDashboardStats()
       .then((res) => {
-        if (res.data?.success) setStats(res.data.data)
+        if (res.data?.success) {
+          const newData = res.data.data
+          if (JSON.stringify(newData) !== JSON.stringify(dashboardStats)) {
+            setStats(newData)
+            setDashboardStats(newData)
+          }
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false))

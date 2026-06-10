@@ -1,23 +1,38 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 import PayoutChart from '../../components/partner/payouts/PayoutChart'
 import PayoutHistory from '../../components/partner/payouts/PayoutHistory'
 import WithdrawForm from '../../components/partner/payouts/WithdrawForm'
 import BankAccountForm from '../../components/partner/payouts/BankAccountForm'
+import { usePartnerAuthStore } from '../../store/partnerAuthStore'
+
+const INITIAL_PAYOUTS = [
+  { id: 'PAY-8921', date: '30 May 2026', amount: '₹9,800', method: 'Bank Transfer', status: 'Paid' },
+  { id: 'PAY-8920', date: '15 May 2026', amount: '₹12,400', method: 'Bank Transfer', status: 'Paid' },
+  { id: 'PAY-8919', date: '30 Apr 2026', amount: '₹7,200', method: 'Bank Transfer', status: 'Paid' },
+  { id: 'PAY-8918', date: '15 Apr 2026', amount: '₹11,500', method: 'Bank Transfer', status: 'Paid' },
+  { id: 'PAY-8917', date: '30 Mar 2026', amount: '₹6,400', method: 'Bank Transfer', status: 'Paid' }
+]
 
 const PartnerPayouts = () => {
-  const [balance, setBalance] = useState(5200)
-  const [payouts, setPayouts] = useState([
-    { id: 'PAY-8921', date: '30 May 2026', amount: '₹9,800', method: 'Bank Transfer', status: 'Paid' },
-    { id: 'PAY-8920', date: '15 May 2026', amount: '₹12,400', method: 'Bank Transfer', status: 'Paid' },
-    { id: 'PAY-8919', date: '30 Apr 2026', amount: '₹7,200', method: 'Bank Transfer', status: 'Paid' },
-    { id: 'PAY-8918', date: '15 Apr 2026', amount: '₹11,500', method: 'Bank Transfer', status: 'Paid' },
-    { id: 'PAY-8917', date: '30 Mar 2026', amount: '₹6,400', method: 'Bank Transfer', status: 'Paid' }
-  ])
+  const { payouts, setPayouts, payoutBalance, setPayoutBalance } = usePartnerAuthStore()
+
+  // Initialize store if null
+  useEffect(() => {
+    if (!payouts) {
+      setPayouts(INITIAL_PAYOUTS)
+    }
+    if (payoutBalance === null) {
+      setPayoutBalance(5200)
+    }
+  }, [payouts, payoutBalance, setPayouts, setPayoutBalance])
+
+  const currentPayouts = payouts || INITIAL_PAYOUTS
+  const currentBalance = payoutBalance ?? 5200
 
   const handleWithdrawalRequest = (amountSubmitted) => {
     // Reduce balance
-    setBalance(prev => prev - amountSubmitted)
+    setPayoutBalance(currentBalance - amountSubmitted)
     // Add to payout history as pending
     const newRequest = {
       id: `PAY-REQ-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -26,15 +41,15 @@ const PartnerPayouts = () => {
       method: 'Bank Transfer',
       status: 'Processing'
     }
-    setPayouts(prev => [newRequest, ...prev])
+    setPayouts([newRequest, ...currentPayouts])
   }
 
   // Calculate statistics
-  const totalPaid = payouts
+  const totalPaid = currentPayouts
     .filter(p => p.status === 'Paid')
     .reduce((acc, curr) => acc + parseInt(curr.amount.replace(/[^\d]/g, '')), 0)
   
-  const pendingClearances = payouts
+  const pendingClearances = currentPayouts
     .filter(p => p.status === 'Processing')
     .reduce((acc, curr) => acc + parseInt(curr.amount.replace(/[^\d]/g, '')), 0)
 
@@ -67,7 +82,7 @@ const PartnerPayouts = () => {
           </div>
           <div className="rounded-xl border border-white/10 bg-aim-navy-light/40 p-4">
             <span className="text-[10px] text-aim-copy-muted uppercase tracking-wider block">Withdrawal Balance</span>
-            <p className="text-2xl font-black text-aim-gold mt-1">₹{balance.toLocaleString()}</p>
+            <p className="text-2xl font-black text-aim-gold mt-1">₹{currentBalance.toLocaleString()}</p>
           </div>
         </div>
 
@@ -75,7 +90,7 @@ const PartnerPayouts = () => {
           {/* Left Column - Chart & History */}
           <div className="lg:col-span-2 space-y-6">
             <PayoutChart />
-            <PayoutHistory payouts={payouts} />
+            <PayoutHistory payouts={currentPayouts} />
           </div>
 
           {/* Right Column - Forms */}
@@ -87,7 +102,7 @@ const PartnerPayouts = () => {
                 <p className="text-[10px] text-aim-copy-muted mt-0.5">Transfer your commissions directly to bank account.</p>
               </div>
               <WithdrawForm 
-                availableBalance={balance} 
+                availableBalance={currentBalance} 
                 onWithdrawSubmitted={handleWithdrawalRequest} 
               />
             </div>

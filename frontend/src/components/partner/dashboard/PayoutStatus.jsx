@@ -1,14 +1,26 @@
 import { useEffect, useState } from 'react'
 import { getCommissionReport } from '../../../api/partner'
+import { usePartnerAuthStore } from '../../../store/partnerAuthStore'
 
 const PayoutStatus = () => {
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const { commissionReport, setCommissionReport } = usePartnerAuthStore()
+  const [data, setData] = useState(commissionReport)
+  const [loading, setLoading] = useState(!commissionReport)
 
   useEffect(() => {
+    if (commissionReport) {
+      setData(commissionReport)
+    }
+
     getCommissionReport()
       .then((res) => {
-        if (res.data?.success) setData(res.data.data)
+        if (res.data?.success) {
+          const newData = res.data.data
+          if (JSON.stringify(newData) !== JSON.stringify(commissionReport)) {
+            setData(newData)
+            setCommissionReport(newData)
+          }
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false))

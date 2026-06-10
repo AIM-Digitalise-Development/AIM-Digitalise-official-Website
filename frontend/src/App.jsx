@@ -9,11 +9,13 @@ import Home from './pages/website/Home'
 import About from './pages/website/About'
 import Contact from './pages/website/Contact'
 import Products from './pages/website/Products'
-import Services from './pages/website/Services'
+import CustomDevelopment from './pages/website/CustomDevelopment'
 import CodingClasses from './pages/website/CodingClasses'
 import Portfolio from './pages/website/Portfolio'
 import Career from './pages/website/Career'
-import MonthlySubscription from './pages/website/MonthlySubscription'
+import SaasBasedSoftware from './pages/website/SaasBasedSoftware'
+import DigitalMarketing from './pages/website/DigitalMarketing'
+import DigitalSignature from './pages/website/DigitalSignature'
 import Users from './pages/website/Users'
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminUsers from './pages/admin/Users'
@@ -31,14 +33,34 @@ import PartnerOrders from './pages/partner/Orders'
 import PartnerPayouts from './pages/partner/Payouts'
 import PartnerLeads from './pages/partner/Leads'
 import PartnerMarketing from './pages/partner/Marketing'
+import PartnerDueRenewal from './pages/partner/DueRenewal'
+import PartnerSupport from './pages/partner/Support'
+import ClientLayout from './layouts/ClientLayout'
+import ClientLogin from './pages/client/Login'
+import ClientProducts from './pages/client/Products'
+import ClientProfile from './pages/client/Profile'
 import { ROUTES } from './constants/routes'
 
 function ScrollToTop() {
-  const { pathname } = useLocation()
+  const { pathname, hash } = useLocation()
 
   useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [pathname])
+    if (hash) {
+      const id = hash.replace('#', '')
+      const element = document.getElementById(id)
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' })
+      } else {
+        const timer = setTimeout(() => {
+          const el = document.getElementById(id)
+          if (el) el.scrollIntoView({ behavior: 'smooth' })
+        }, 300)
+        return () => clearTimeout(timer)
+      }
+    } else {
+      window.scrollTo(0, 0)
+    }
+  }, [pathname, hash])
 
   return null
 }
@@ -55,11 +77,15 @@ function App() {
               <Route path={ROUTES.HOME} element={<Home />} />
               <Route path={ROUTES.ABOUT} element={<About />} />
               <Route path={ROUTES.CONTACT} element={<Contact />} />
-              <Route path={ROUTES.SERVICES} element={<Services />} />
+              <Route path={ROUTES.CUSTOM_DEVELOPMENT} element={<CustomDevelopment />} />
+              <Route path={ROUTES.SERVICES} element={<CustomDevelopment />} />
+              <Route path={ROUTES.SAAS_SOFTWARE} element={<SaasBasedSoftware />} />
+              <Route path="/subscription" element={<SaasBasedSoftware />} />
+              <Route path={ROUTES.DIGITAL_MARKETING} element={<DigitalMarketing />} />
+              <Route path={ROUTES.DIGITAL_SIGNATURE} element={<DigitalSignature />} />
               <Route path={ROUTES.CODING_CLASSES} element={<CodingClasses />} />
               <Route path={ROUTES.PORTFOLIO} element={<Portfolio />} />
               <Route path={ROUTES.CAREER} element={<Career />} />
-              <Route path={ROUTES.SUBSCRIPTION} element={<MonthlySubscription />} />
               <Route path={ROUTES.PRODUCTS} element={<Products />} />
               <Route path={ROUTES.USERS} element={<Users />} />
             </Route>
@@ -89,6 +115,16 @@ function App() {
             <Route path="payouts" element={<PartnerPayouts />} />
             <Route path="leads" element={<PartnerLeads />} />
             <Route path="marketing" element={<PartnerMarketing />} />
+            <Route path="due-renewal" element={<PartnerDueRenewal />} />
+            <Route path="support" element={<PartnerSupport />} />
+          </Route>
+
+          {/* ── Client portal & login (standalone, no header/footer) ── */}
+          <Route path={ROUTES.CLIENT.LOGIN} element={<ClientLogin />} />
+          
+          <Route path={ROUTES.CLIENT.PORTAL} element={<ClientLayout />}>
+            <Route index element={<ClientProducts />} />
+            <Route path="profile" element={<ClientProfile />} />
           </Route>
         </Routes>
       </BrowserRouter>

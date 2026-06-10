@@ -354,3 +354,27 @@ This architecture ensures **separation of concerns** - each file has ONE job, an
   - **Ranks Modal**: Assigns or modifies partner rank levels.
   - **Subordinate Modal**: Links junior level agents under eligible senior parent accounts.
 - `src/components/auth/AdminEmployeeLoginModal.jsx` now redirects admin users to `/admin` after successful login so the footer login dropdown flows directly into the dashboard.
+
+## Client Portal & Client Login Implementation Notes (Latest)
+
+- **Routing Group**: Mounts `/client/login` and `/client/portal` as standalone pages outside public header/footer templates.
+- **Dedicated Caching Zustand Store (`src/store/clientAuthStore.js`)**:
+  - Independent session tokens (`client_token`) and user credentials (`client_user`) saved in `localStorage`.
+  - Prevent token overlaps with administrator or partner sessions.
+  - Implements client caching: stores `profileData` and `productData` inside the Zustand state, checking flags (`profileFetched`, `productsFetched`).
+- **Snappy UI Cache Revalidation**:
+  - During component mount, if cached data exists, it is displayed immediately (eliminating spinners).
+  - A silent request is made in the background. If the fresh payload differs from the cache, the state updates automatically. Otherwise, no re-render or layout shifting is triggered.
+- **Client Login Page (`src/pages/client/Login.jsx`)**:
+  - Premium glassmorphism design with gradient titles and background glow elements.
+  - Form validations, loading handlers, error states, and automatic redirection to `/client/portal` on successful auth or active session detect.
+- **Client Layout Shell (`src/layouts/ClientLayout.jsx`)**:
+  - Provides a persistent sidebar dashboard shell mapping the AIM partner logo (`src/assets/images/plogo.jpeg`), active nav links ("My Products" & "My Profile"), client quick-info avatar details, and a bottom "Sign Out" option (matching the layout rules of the Partner Portal).
+- **Client Sub-Routing Structure**:
+  - `/client/portal` mounts the Products subpage (`pages/client/Products.jsx`).
+  - `/client/portal/profile` mounts the Profile subpage (`pages/client/Profile.jsx`).
+- **Client Components Extraction**:
+  - Broken down into dedicated component folders:
+    - **`components/client/profile/`**: Contains `BasicInfoCard.jsx`, `OrgDetailsCard.jsx`, `AddressCard.jsx`, and `PurchaseInfoCard.jsx`.
+    - **`components/client/products/`**: Contains `ProductActiveCard.jsx`, `BillingDetailsCard.jsx`, and `PurchaseSummaryCard.jsx`.
+

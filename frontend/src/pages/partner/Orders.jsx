@@ -4,37 +4,49 @@ import OrderFilters from '../../components/partner/orders/OrderFilters'
 import OrderCard from '../../components/partner/orders/OrderCard'
 import OrderDetails from '../../components/partner/orders/OrderDetails'
 import { getPartnerOrders, getPartnerOrderDetail } from '../../api/partner'
+import { usePartnerAuthStore } from '../../store/partnerAuthStore'
 
 const PartnerOrders = () => {
-  const [orders, setOrders] = useState([])
-  const [summary, setSummary] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const { orders, setOrders, ordersSummary, setOrdersSummary } = usePartnerAuthStore()
+  const [loading, setLoading] = useState(!orders)
   const [error, setError] = useState(null)
 
   const [filters, setFilters] = useState({ search: '', status: 'All' })
   const [selectedOrderDetail, setSelectedOrderDetail] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
 
-  const fetchOrders = async () => {
-    setLoading(true)
+  const fetchOrders = async (showSpinner = false) => {
+    if (showSpinner) {
+      setLoading(true)
+    }
     setError(null)
     try {
       const res = await getPartnerOrders()
       if (res.data?.success) {
-        setOrders(res.data.data.orders || [])
-        setSummary(res.data.data.summary || null)
+        const fetchedOrders = res.data.data.orders || []
+        const fetchedSummary = res.data.data.summary || null
+        if (JSON.stringify(fetchedOrders) !== JSON.stringify(orders) ||
+            JSON.stringify(fetchedSummary) !== JSON.stringify(ordersSummary)) {
+          setOrders(fetchedOrders)
+          setOrdersSummary(fetchedSummary)
+        }
       } else {
-        setError(res.data?.message || 'Failed to fetch orders')
+        if (!orders) {
+          setError(res.data?.message || 'Failed to fetch orders')
+        }
       }
     } catch (err) {
-      setError(err.message || 'An error occurred while fetching orders')
+      if (!orders) {
+        setError(err.message || 'An error occurred while fetching orders')
+      }
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchOrders()
+    const showSpinner = !orders
+    fetchOrders(showSpinner)
   }, [])
 
   const handleFilterChange = (newFilters) => {
@@ -52,7 +64,7 @@ const PartnerOrders = () => {
       }
     } catch (err) {
       // Check if we have this order in local state to show fallback demo details
-      const localFound = orders.find(o => o.id === orderId)
+      const localFound = (orders || []).find(o => o.id === orderId)
       if (localFound && typeof orderId === 'number') {
         setSelectedOrderDetail({
           client_id: localFound.client_id,
@@ -82,7 +94,7 @@ const PartnerOrders = () => {
     }
   }
 
-  const filteredOrders = orders.filter((order) => {
+  const filteredOrders = (orders || []).filter((order) => {
     const matchesSearch = 
       order.client_name?.toLowerCase().includes(filters.search.toLowerCase()) || 
       order.client_id?.toString().toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -98,20 +110,20 @@ const PartnerOrders = () => {
   return (
     <>
       <Helmet>
-        <title>Sold Products | AIM Partner</title>
+        <title>Client Details | AIM Partner</title>
       </Helmet>
 
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-2xl font-black text-white">Sold Products</h1>
+            <h1 className="text-2xl font-black text-white">Client Details</h1>
             <p className="text-aim-copy-muted text-xs mt-1">
               Track subscriptions, client details, and activation statuses for products you sold.
             </p>
           </div>
           <button
-            onClick={fetchOrders}
+            onClick={() => fetchOrders(true)}
             disabled={loading}
             className="px-4 py-2 bg-aim-gold/10 hover:bg-aim-gold/20 text-aim-gold border border-aim-gold/20 rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
           >
@@ -124,7 +136,7 @@ const PartnerOrders = () => {
           <div className="p-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 text-sm flex items-center justify-between flex-wrap gap-2">
             <span>{error}</span>
             <div className="flex items-center gap-3">
-              <button onClick={fetchOrders} className="text-xs font-bold underline hover:no-underline">Try Again</button>
+              <button onClick={() => fetchOrders(true)} className="text-xs font-bold underline hover:no-underline">Try Again</button>
               <button 
                 onClick={() => {
                   setError(null)
@@ -150,7 +162,7 @@ const PartnerOrders = () => {
                       created_at: new Date().toISOString()
                     }
                   ])
-                  setSummary({
+                  setOrdersSummary({
                     total_sales: 2,
                     total_revenue: 20700,
                     active_clients: 1,
@@ -170,25 +182,25 @@ const PartnerOrders = () => {
           <div className="rounded-xl border border-white/10 bg-aim-navy-light/40 p-4">
             <span className="text-[10px] text-aim-copy-muted uppercase tracking-wider block">Total Sales</span>
             <p className="text-2xl font-black text-white mt-1">
-              {loading ? '...' : (summary?.total_sales ?? 0)}
+              {loading ? '...' : (ordersSummary?.total_sales ?? 0)}
             </p>
           </div>
           <div className="rounded-xl border border-white/10 bg-aim-navy-light/40 p-4">
             <span className="text-[10px] text-aim-copy-muted uppercase tracking-wider block">Total Revenue</span>
             <p className="text-2xl font-black text-aim-gold mt-1">
-              {loading ? '...' : `₹${(summary?.total_revenue ?? 0).toLocaleString('en-IN')}`}
+              {loading ? '...' : `₹${(ordersSummary?.total_revenue ?? 0).toLocaleString('en-IN')}`}
             </p>
           </div>
           <div className="rounded-xl border border-white/10 bg-aim-navy-light/40 p-4">
             <span className="text-[10px] text-aim-copy-muted uppercase tracking-wider block">Active Clients</span>
             <p className="text-2xl font-black text-green-400 mt-1">
-              {loading ? '...' : (summary?.active_clients ?? 0)}
+              {loading ? '...' : (ordersSummary?.active_clients ?? 0)}
             </p>
           </div>
           <div className="rounded-xl border border-white/10 bg-aim-navy-light/40 p-4">
             <span className="text-[10px] text-aim-copy-muted uppercase tracking-wider block">Pending Activations</span>
             <p className="text-2xl font-black text-yellow-400 mt-1">
-              {loading ? '...' : (summary?.pending_activations ?? 0)}
+              {loading ? '...' : (ordersSummary?.pending_activations ?? 0)}
             </p>
           </div>
         </div>

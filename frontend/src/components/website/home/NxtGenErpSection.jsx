@@ -6,10 +6,10 @@ import Button from '../../ui/Button'
 const erpTabs = [
   {
     id: 'overview',
-    label: 'Overview & Cloud Model',
-    videoPath: '/src/assets/videos/erp_overview.mp4',
-    fallbackVideo: 'https://assets.mixkit.co/videos/preview/mixkit-abstract-laser-lights-background-loop-41852-large.mp4',
-    title: 'Cloud-Based Operations Suite',
+    label: 'School Management Software',
+    // videoPath: '/src/assets/videos/erp_overview.mp4',
+    fallbackVideo: 'https://youtu.be/DffkR8iyhg4?si=6EAUnrSrvdsWMwip',
+    title: 'School Management Software',
     description: 'Designed and developed by AIM Digitalise Pvt. Ltd. to cater to small and medium-scale industries. Providing a comprehensive suite of features to streamline various business operations on a subscription licensing model at a highly competitive lower price.',
     features: [
       { name: 'Subscription-Based licensing', desc: 'Lower, predictable monthly cost' },
@@ -20,10 +20,10 @@ const erpTabs = [
   },
   {
     id: 'inventory',
-    label: 'Inventory & Vendor Relations',
+    label: 'Accounts & Inventory Software',
     videoPath: '/src/assets/videos/inventory_mgmt.mp4',
     fallbackVideo: 'https://assets.mixkit.co/videos/preview/mixkit-data-center-server-racks-interstitial-40439-large.mp4',
-    title: 'Integrated Vendor & Stock Pipelines',
+    title: 'Accounts & Inventory Software',
     description: 'Track inventory lifecycles with absolute transparency. Integrate vendor profiles directly, build automatic re-order triggers, and analyze procurement streams instantly.',
     features: [
       { name: 'Vendor Profiles & SLAs', desc: 'Monitor delivery compliance & records' },
@@ -34,10 +34,10 @@ const erpTabs = [
   },
   {
     id: 'hr_finance',
-    label: 'HR Management & Sales Reports',
+    label: 'Hospital ERP Software',
     videoPath: '/src/assets/videos/hr_payroll.mp4',
     fallbackVideo: 'https://assets.mixkit.co/videos/preview/mixkit-working-with-business-analytics-and-financial-charts-40186-large.mp4',
-    title: 'HR Compliance & Advanced Performance Reports',
+    title: 'Hospital ERP Software',
     description: 'Track employee attendance, manage leaves, and automate compliance with payroll systems. Make informed decisions with executive-level sales reports and MTD/YTD tracking.',
     features: [
       { name: 'Automated HR & Payroll', desc: 'Automate salary releases & tax compliances' },

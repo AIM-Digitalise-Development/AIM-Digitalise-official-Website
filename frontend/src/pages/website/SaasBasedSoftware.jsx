@@ -211,7 +211,6 @@ const categories = [
   { id: 'nexgn', label: 'NEXGN SaaS', color: 'green' }
 ]
 
-// ─── Razorpay helper ──────────────────────────────────────────────────
 const loadRazorpayScript = () =>
   new Promise((resolve, reject) => {
     if (window.Razorpay) { resolve(true); return }
@@ -239,13 +238,12 @@ const emptyCheckout = (partnerId = '') => ({
   address: '',
 })
 
-const MonthlySubscription = () => {
+const SaasBasedSoftware = () => {
   const [activeCategory, setActiveCategory] = useState('static')
   const [activePlanId, setActivePlanId] = useState(1)
 
-  // ── Checkout / payment state ─────────────────────────────────────────
   const [partners, setPartners] = useState([])
-  const [paymentStep, setPaymentStep] = useState('idle') // idle | form | processing | success
+  const [paymentStep, setPaymentStep] = useState('idle')
   const [checkoutData, setCheckoutData] = useState(emptyCheckout())
   const [apiError, setApiError] = useState('')
   const [successData, setSuccessData] = useState(null)
@@ -258,13 +256,11 @@ const MonthlySubscription = () => {
   const filteredPlans = subscriptionPlans.filter(plan => plan.category === activeCategory)
   const isInstitutePro = activePlan.id === 15
 
-  // Fetch RM partners on mount
   useEffect(() => {
     purchaseApi.fetchPartners()
       .then(result => {
         if (result.success && result.data?.length) {
           setPartners(result.data)
-          // Use partner_id string (e.g. 'AIM1234567') — backend validates against partners.partner_id column
           setCheckoutData(prev => ({ ...prev, partner_id: result.data[0].partner_id }))
         }
       })
@@ -279,7 +275,6 @@ const MonthlySubscription = () => {
 
   const handlePlanSelect = (id) => {
     setActivePlanId(id)
-    // Reset the form when a different plan is chosen so fields stay relevant
     setPaymentStep('idle')
     setApiError('')
     setSuccessData(null)
@@ -308,9 +303,7 @@ const MonthlySubscription = () => {
     setApiError('')
     setPaymentStep('processing')
 
-    // Build API payload
     const processingFeeNum = parseInt(activePlan.securityDeposit.replace(/[^\d]/g, ''), 10) || 0
-    // For Institute Pro the monthly fee is calculated as 10 per student per month
     const monthlySubscriptionNum = isInstitutePro
       ? 10 * (parseInt(checkoutData.total_students, 10) || 0)
       : parseInt(activePlan.monthlySubscription.replace(/[^\d]/g, ''), 10) || 0
@@ -319,7 +312,6 @@ const MonthlySubscription = () => {
       client_name: checkoutData.client_name,
       contact_number: checkoutData.contact_number,
       email: checkoutData.email,
-      // Backend validates: exists:partners,partner_id — must be the partner_id string, NOT the numeric id
       partner_id: checkoutData.partner_id,
       district: checkoutData.district,
       state: checkoutData.state,
@@ -333,28 +325,22 @@ const MonthlySubscription = () => {
     }
 
     if (isInstitutePro) {
-      // Product ID 15: school fields are required; GSTIN optional
       payload.school_name = checkoutData.school_name
       payload.school_short_name = checkoutData.school_short_name
       payload.school_session = checkoutData.school_session
       payload.total_students = parseInt(checkoutData.total_students, 10)
       if (checkoutData.gstin) payload.gstin = checkoutData.gstin
     } else {
-      // All other products: company_name + optional GSTIN
       payload.company_name = checkoutData.company_name || null
       if (checkoutData.gstin) payload.gstin = checkoutData.gstin
     }
 
-    // Guard: partner_id must be set (an active partner must be loaded)
     if (!checkoutData.partner_id) {
       setApiError('Please select a Relationship Manager / Partner. If the list is empty, no active partners are available yet.')
       setPaymentStep('form')
       setIsSubmitting(false)
       return
     }
-
-    // Debug: log exact payload being sent
-    console.log('[create-order payload]', JSON.stringify(payload, null, 2))
 
     try {
       const orderResult = await purchaseApi.createOrder(payload)
@@ -377,7 +363,6 @@ const MonthlySubscription = () => {
         order_id: orderResult.order_id,
         handler: async (response) => {
           try {
-            // order_id here is the Razorpay order_id string stored in client_orders.order_id
             const verifyResult = await purchaseApi.verifyPayment({
               order_id: orderResult.order_id,
               razorpay_payment_id: response.razorpay_payment_id,
@@ -425,7 +410,6 @@ const MonthlySubscription = () => {
       const errData = err.response?.data
       let errorDetail
       if (errData?.errors && typeof errData.errors === 'object') {
-        // Flatten all Laravel validation field errors into one readable string
         errorDetail = Object.entries(errData.errors)
           .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
           .join(' | ')
@@ -438,7 +422,6 @@ const MonthlySubscription = () => {
     }
   }
 
-  // Active styles helpers for category tabs
   const getCategoryTabStyles = (catId) => {
     if (activeCategory !== catId) {
       return 'card-elevated text-aim-copy-muted hover:text-aim-gold hover:border-aim-gold/40 hover:bg-aim-gold/5 transition-all duration-200'
@@ -458,10 +441,10 @@ const MonthlySubscription = () => {
   return (
     <>
       <Helmet>
-        <title>Monthly Subscription Plans | AIM Digitalise</title>
-        <meta name="description" content="India's 1st monthly subscription based website and software with 100% data security & ownership. Clean layouts, quick activation." />
-        <meta name="keywords" content="monthly subscription website, dynamic website price, saas software billing, android mobile app development, e-commerce website packages, India" />
-        <link rel="canonical" href="https://aimdigitalise.com/subscription" />
+        <title>SaaS Based Software Plans | AIM Digitalise</title>
+        <meta name="description" content="India's 1st SaaS based website and software with 100% data security & ownership. Clean layouts, quick activation." />
+        <meta name="keywords" content="saas website, saas software, dynamic website price, saas software billing, android mobile app development, e-commerce website packages, India" />
+        <link rel="canonical" href="https://aimdigitalise.com/saas-software" />
       </Helmet>
 
       <div className="relative min-h-screen text-aim-copy py-12 px-4 sm:px-6 lg:px-8 bg-grid-pattern transition-colors duration-300">
@@ -478,19 +461,19 @@ const MonthlySubscription = () => {
               <nav className="flex justify-center items-center gap-2 text-xs font-semibold text-aim-copy-muted tracking-wider uppercase">
                 <a href="/" className="hover:text-aim-gold transition">Home</a>
                 <span className="text-aim-copy-muted">/</span>
-                <span className="text-aim-copy-muted/60">Monthly Subscriptions</span>
+                <span className="text-aim-copy-muted/60">SaaS Based Software</span>
               </nav>
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-aim-copy uppercase">
-                Website & Software <span className="text-gradient">On Monthly Subscriptions</span>
+                SaaS-Based Website &amp; Software <span className="text-gradient">Solutions</span>
               </h1>
             </div>
 
             {/* Slogan Banner */}
             <div className="w-full card-elevated p-4 rounded-xl max-w-4xl mx-auto transition-colors duration-300">
               <h2 className="text-xs sm:text-sm md:text-base font-bold text-aim-copy tracking-wide uppercase">
-                INDIA'S 1st MONTHLY SUBSCRIPTION BASED WEBSITE WITH{' '}
+                INDIA'S 1st SAAS-BASED WEBSITE &amp; SOFTWARE PROVIDER WITH{' '}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-aim-gold via-aim-purple to-aim-gold font-extrabold">
-                  100% DATA SECURITY & OWNERSHIP
+                  100% DATA SECURITY &amp; OWNERSHIP
                 </span>
               </h2>
             </div>
@@ -567,11 +550,11 @@ const MonthlySubscription = () => {
                   </div>
                 </div>
 
-                {/* TRUST & GUARANTEE CALLOUT WIDGET (Fills the blank space dynamically) */}
+                {/* TRUST & GUARANTEE CALLOUT WIDGET */}
                 <div className="card-elevated rounded-2xl p-5 space-y-4 transition-colors duration-300">
                   <div className="pb-3 border-b border-aim-border">
                     <h4 className="text-xs font-black tracking-widest text-aim-gold uppercase">
-                      AIM Subscription Guarantees
+                      AIM SaaS Guarantees
                     </h4>
                   </div>
 
@@ -584,7 +567,7 @@ const MonthlySubscription = () => {
                         </svg>
                       </div>
                       <div>
-                        <h5 className="text-xs font-bold text-aim-copy">100% Code & IP Ownership</h5>
+                        <h5 className="text-xs font-bold text-aim-copy">100% Code &amp; IP Ownership</h5>
                         <p className="text-[11px] text-aim-copy-muted leading-normal mt-0.5">Your source code, layout designs, and user databases belong completely to you upon contract terms completion.</p>
                       </div>
                     </div>
@@ -611,7 +594,7 @@ const MonthlySubscription = () => {
                       </div>
                       <div>
                         <h5 className="text-xs font-bold text-aim-copy">24/7 Priority Consultant Support</h5>
-                        <p className="text-[11px] text-aim-copy-muted leading-normal mt-0.5">Get direct assistance via phone or whatsapp. Speak to our relationship advisors about customized software requirements.</p>
+                        <p className="text-[11px] text-aim-copy-muted leading-normal mt-0.5">Get direct assistance via phone or WhatsApp. Speak to our relationship advisors about customized software requirements.</p>
                       </div>
                     </div>
                   </div>
@@ -643,7 +626,7 @@ const MonthlySubscription = () => {
                     <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-aim-border">
                       <div>
                         <span className="inline-block text-[9px] uppercase font-black text-aim-gold bg-aim-gold/10 px-2.5 py-0.5 rounded-md border border-aim-gold/20 mb-1.5">
-                          {activePlan.categoryLabel} Package
+                          {activePlan.categoryLabel} SaaS Package
                         </span>
                         <h2 className="text-xl sm:text-2xl font-black text-aim-copy leading-tight tracking-tight">
                           {activePlan.name}
@@ -654,11 +637,11 @@ const MonthlySubscription = () => {
                     {/* Pricing grid */}
                     <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-aim-navy-muted/5 border border-aim-border">
                       <div>
-                        <span className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">Security Deposit</span>
+                        <span className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">One-Time Setup Fee</span>
                         <span className="text-lg sm:text-xl font-black text-aim-copy tracking-tight">{activePlan.securityDeposit}</span>
                       </div>
                       <div className="border-l border-aim-border pl-4">
-                        <span className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">Monthly Subscription</span>
+                        <span className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">SaaS Monthly Subscription</span>
                         <span className="text-lg sm:text-xl font-black text-aim-gold tracking-tight">{activePlan.monthlySubscription}</span>
                       </div>
                     </div>
@@ -749,7 +732,7 @@ const MonthlySubscription = () => {
             </div>
           </div>
 
-          {/* ── CHECKOUT / PAYMENT SECTION ──────────────────────────────── */}
+          {/* ── CHECKOUT / PAYMENT SECTION ── */}
           <div ref={formSectionRef} className="pt-16 border-t border-aim-border scroll-mt-24">
             <div className="max-w-3xl mx-auto">
               <div className="card-elevated rounded-3xl p-6 sm:p-8 relative overflow-hidden transition-colors duration-300">
@@ -757,7 +740,7 @@ const MonthlySubscription = () => {
 
                 <div className="space-y-6 relative z-10">
 
-                  {/* ── IDLE: prompt to click Activate ── */}
+                  {/* IDLE: prompt to click Activate */}
                   {paymentStep === 'idle' && (
                     <div className="text-center space-y-4 py-6">
                       <span className="text-[10px] font-black tracking-widest text-aim-gold uppercase bg-aim-gold/10 px-3 py-1 rounded-full border border-aim-gold/20">
@@ -767,7 +750,7 @@ const MonthlySubscription = () => {
                         Ready to <span className="text-gradient">Get Started?</span>
                       </h3>
                       <p className="text-sm text-aim-copy-muted max-w-lg mx-auto">
-                        Select a plan above then click <strong>Activate Your Plan</strong> to complete your registration and make the one-time processing fee payment securely via Razorpay.
+                        Select a plan above then click <strong>Activate Your Plan</strong> to complete your registration and make the one-time setup fee payment securely via Razorpay.
                       </p>
                       <div className="pt-2">
                         <Button
@@ -781,7 +764,7 @@ const MonthlySubscription = () => {
                     </div>
                   )}
 
-                  {/* ── PROCESSING SPINNER ── */}
+                  {/* PROCESSING SPINNER */}
                   {paymentStep === 'processing' && (
                     <div className="flex flex-col items-center justify-center py-16 gap-5">
                       <div className="w-14 h-14 rounded-full border-4 border-aim-navy-light border-t-aim-gold animate-spin"></div>
@@ -789,7 +772,7 @@ const MonthlySubscription = () => {
                     </div>
                   )}
 
-                  {/* ── SUCCESS SCREEN ── */}
+                  {/* SUCCESS SCREEN */}
                   {paymentStep === 'success' && successData && (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.96 }}
@@ -803,7 +786,7 @@ const MonthlySubscription = () => {
                       </div>
                       <div>
                         <h3 className="text-2xl font-black text-aim-copy">Payment Successful! 🎉</h3>
-                        <p className="text-sm text-aim-copy-muted mt-1">Your subscription has been activated. Check your email for details.</p>
+                        <p className="text-sm text-aim-copy-muted mt-1">Your SaaS software account has been provisioned. Check your email for details.</p>
                       </div>
                       <div className="w-full grid sm:grid-cols-2 gap-4">
                         <div className="p-4 rounded-2xl bg-aim-gold/10 border border-aim-gold/20 text-left">
@@ -827,7 +810,7 @@ const MonthlySubscription = () => {
                     </motion.div>
                   )}
 
-                  {/* ── CHECKOUT FORM ── */}
+                  {/* CHECKOUT FORM */}
                   {paymentStep === 'form' && (
                     <>
                       {/* Header */}
@@ -840,7 +823,7 @@ const MonthlySubscription = () => {
                             {activePlan.name}
                           </h3>
                           <p className="text-xs text-aim-copy-muted mt-0.5">
-                            Processing Fee: <span className="font-black text-aim-gold">{activePlan.securityDeposit}</span>
+                            One-Time Setup Fee: <span className="font-black text-aim-gold">{activePlan.securityDeposit}</span>
                             &nbsp;·&nbsp;Then {isInstitutePro 
                               ? `₹${(10 * (parseInt(checkoutData.total_students, 10) || 0)).toLocaleString('en-IN')}/mo (${checkoutData.total_students || 0} students)`
                               : (activePlan.monthlySubscription.startsWith('₹') ? '' : '₹') + activePlan.monthlySubscription + (activePlan.monthlySubscription.includes('month') ? '' : '/mo')
@@ -875,7 +858,7 @@ const MonthlySubscription = () => {
 
                       <form onSubmit={handleCheckoutSubmit} className="space-y-5">
 
-                        {/* ── Section: Billing Details ── */}
+                        {/* Section: Billing Details */}
                         <div>
                           <h4 className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest mb-3">Billing Details</h4>
                           <div className="grid sm:grid-cols-2 gap-4">
@@ -1032,7 +1015,7 @@ const MonthlySubscription = () => {
                           </div>
                         </div>
 
-                        {/* ── Section: Relationship Manager ── */}
+                        {/* Section: Relationship Manager */}
                         <div>
                           <h4 className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest mb-3">Select Relationship Manager</h4>
                           <div className="relative">
@@ -1045,7 +1028,6 @@ const MonthlySubscription = () => {
                             >
                               <option value="">Select your RM / Partner</option>
                               {partners.map(p => (
-                                // value must be partner_id string — backend uses exists:partners,partner_id
                                 <option key={p.id} value={p.partner_id} className="bg-aim-navy text-aim-copy">
                                   {p.partner_name} — {p.partner_id}
                                 </option>
@@ -1057,7 +1039,7 @@ const MonthlySubscription = () => {
                           </div>
                         </div>
 
-                        {/* ── Section: Address ── */}
+                        {/* Section: Address */}
                         <div>
                           <h4 className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest mb-3">Address Details</h4>
                           <div className="grid sm:grid-cols-3 gap-4">
@@ -1120,7 +1102,7 @@ const MonthlySubscription = () => {
                           </div>
                         </div>
 
-                        {/* ── Pay Button ── */}
+                        {/* Pay Button */}
                         <div className="pt-2">
                           <Button
                             type="submit"
@@ -1137,7 +1119,7 @@ const MonthlySubscription = () => {
                                 <span>Opening Payment Gateway…</span>
                               </>
                             ) : (
-                              <span>Pay {activePlan.securityDeposit} Processing Fee via Razorpay</span>
+                              <span>Pay {activePlan.securityDeposit} Setup Fee via Razorpay</span>
                             )}
                           </Button>
                           <p className="text-center text-[11px] text-aim-copy-muted mt-2">
@@ -1160,4 +1142,4 @@ const MonthlySubscription = () => {
   )
 }
 
-export default MonthlySubscription
+export default SaasBasedSoftware

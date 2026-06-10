@@ -30,15 +30,21 @@ const About = () => {
       </Helmet>
 
       {/* 1. About AIM Digitalise – hero with image + description + portfolio download */}
-      <AimDigitaliseSection />
+      <div id="who-we-are" className="scroll-mt-20">
+        <AimDigitaliseSection />
+      </div>
 
       {/* 2. Mission & Vision */}
-      <MissionVision />
+      <div id="what-we-do" className="scroll-mt-20">
+        <MissionVision />
+      </div>
 
       {/* 3. Awards & Recognition */}
-      <Suspense fallback={<SectionSkeleton height="500px" />}>
-        <AwardsRecognition />
-      </Suspense>
+      <div id="success-story" className="scroll-mt-20">
+        <Suspense fallback={<SectionSkeleton height="500px" />}>
+          <AwardsRecognition />
+        </Suspense>
+      </div>
 
       {/* 4. Our Certifications */}
       <Suspense fallback={<SectionSkeleton height="600px" />}>

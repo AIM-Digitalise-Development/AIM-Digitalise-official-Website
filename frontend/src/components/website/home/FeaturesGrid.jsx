@@ -193,9 +193,27 @@ const icons = {
 
 /* ─── Tab Data ──────────────────────────────────────────────── */
 const tabs = [
+
+   {
+    id: 'software',
+    label: 'SAAS Base Cloud Software',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+      </svg>
+    ),
+    cards: [
+      { key: 'taxation',   label: 'Taxation Software' },
+      { key: 'accounting', label: 'Accounting Software' },
+      { key: 'payroll',    label: 'Payroll Software -\nGreytHR' },
+      { key: 'hospital',   label: 'Hospital Management\nSoftware' },
+      { key: 'school',     label: 'School Management\nSystem' },
+      { key: 'crm',        label: 'CRM Software' },
+    ]
+  },
   {
     id: 'web',
-    label: 'Website & App Development',
+    label: 'Coustom Development',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
@@ -229,38 +247,22 @@ const tabs = [
   },
   {
     id: 'signature',
-    label: 'Digital Signature',
+    label: 'Digital Signature Certificate',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
       </svg>
     ),
     cards: [
-      { key: 'emudhra',  label: 'E Mudhra' },
+      { key: 'emudhra',  label: 'SIGN X' },
       { key: 'capricorn',label: 'Capricorn' },
       { key: 'pantasign',label: 'Pantasign' },
       { key: 'vsign',    label: 'V Sign' },
       { key: 'idsign',   label: 'ID Sign' },
       { key: 'sify',     label: 'Sify' },
     ]
-  },
-  {
-    id: 'software',
-    label: 'Software Service',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-      </svg>
-    ),
-    cards: [
-      { key: 'taxation',   label: 'Taxation Software' },
-      { key: 'accounting', label: 'Accounting Software' },
-      { key: 'payroll',    label: 'Payroll Software -\nGreytHR' },
-      { key: 'hospital',   label: 'Hospital Management\nSoftware' },
-      { key: 'school',     label: 'School Management\nSystem' },
-      { key: 'crm',        label: 'CRM Software' },
-    ]
   }
+ 
 ]
 
 /* ─── Component ─────────────────────────────────────────────── */

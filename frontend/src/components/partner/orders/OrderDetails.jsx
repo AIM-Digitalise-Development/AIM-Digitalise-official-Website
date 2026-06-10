@@ -4,6 +4,10 @@ const OrderDetails = ({ order, isOpen, onClose }) => {
   if (!isOpen || !order) return null
 
   const isSchool = !!order.school_name
+  const isInstPro = order.product_name === 'NEXGN Institute Pro'
+  const calculatedSub = (isInstPro && (!order.monthly_subscription || Number(order.monthly_subscription) === 0))
+    ? 10 * (parseInt(order.total_students, 10) || 0)
+    : order.monthly_subscription || 0
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -91,7 +95,7 @@ const OrderDetails = ({ order, isOpen, onClose }) => {
               </div>
               <div>
                 <span className="text-[10px] text-aim-copy-muted uppercase block">Monthly Subscription</span>
-                <span className="text-aim-gold font-extrabold">₹{Number(order.monthly_subscription || 0).toLocaleString('en-IN')}</span>
+                <span className="text-aim-gold font-extrabold">₹{Number(calculatedSub).toLocaleString('en-IN')}</span>
               </div>
             </div>
           </div>

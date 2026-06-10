@@ -8,21 +8,27 @@ import RecentOrders from '../../components/partner/dashboard/RecentOrders'
 import PayoutStatus from '../../components/partner/dashboard/PayoutStatus'
 
 const PartnerDashboard = () => {
-  const { partnerUser, setPartnerUser } = usePartnerAuthStore()
-  const [profile, setProfile] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const { partnerUser, setPartnerUser, profileFetched } = usePartnerAuthStore()
+  const [profile, setProfile] = useState(partnerUser)
+  const [loading, setLoading] = useState(!partnerUser)
 
   useEffect(() => {
+    if (partnerUser) {
+      setProfile(partnerUser)
+    }
+
     const fetchProfile = async () => {
       try {
         const res = await getPartnerProfile()
         if (res.data?.success) {
-          setProfile(res.data.data)
-          setPartnerUser(res.data.data)
+          const newData = res.data.data
+          if (JSON.stringify(newData) !== JSON.stringify(partnerUser)) {
+            setProfile(newData)
+            setPartnerUser(newData)
+          }
         }
       } catch (_) {
-        // Use cached partnerUser if API fails
-        setProfile(partnerUser)
+        // Ignore background failure if we have a cache
       } finally {
         setLoading(false)
       }

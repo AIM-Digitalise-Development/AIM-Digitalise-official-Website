@@ -3,11 +3,14 @@ export const ROUTES = {
   ABOUT: '/about',
   CONTACT: '/contact',
   PRODUCTS: '/products',
-  SERVICES: '/services',
+  SERVICES: '/services', // keep temporarily if needed or just rename it. Let's do the rename.
+  CUSTOM_DEVELOPMENT: '/custom-development',
+  SAAS_SOFTWARE: '/saas-software',
+  DIGITAL_MARKETING: '/digital-marketing',
+  DIGITAL_SIGNATURE: '/digital-signature',
   CODING_CLASSES: '/coding-classes',
   PORTFOLIO: '/portfolio',
   CAREER: '/career',
-  SUBSCRIPTION: '/subscription',
   USERS: '/users',
   ADMIN: {
     DASHBOARD: '/admin',
@@ -33,11 +36,18 @@ export const ROUTES = {
     REGISTER: '/partner/register',
     LEADS: '/partner/leads',
     MARKETING: '/partner/marketing',
+    DUE_RENEWAL: '/partner/due-renewal',
+    SUPPORT: '/partner/support',
   },
   CUSTOMER: {
     DASHBOARD: '/customer',
     ORDERS: '/customer/orders',
     PROFILE: '/customer/profile',
+  },
+  CLIENT: {
+    LOGIN: '/client/login',
+    PORTAL: '/client/portal',
+    PROFILE: '/client/portal/profile',
   },
   AUTH: {
     LOGIN: '/login',

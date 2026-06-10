@@ -3,6 +3,11 @@ import OrderStatusBadge from './OrderStatusBadge'
 const OrderCard = ({ order, onClick }) => {
   if (!order) return null
 
+  const isInstPro = order.product_name === 'NEXGN Institute Pro'
+  const calculatedSub = (isInstPro && (!order.monthly_subscription || Number(order.monthly_subscription) === 0))
+    ? 10 * (parseInt(order.total_students, 10) || 0)
+    : order.monthly_subscription || 0
+
   return (
     <div
       onClick={onClick}
@@ -41,7 +46,7 @@ const OrderCard = ({ order, onClick }) => {
         <div className="text-right">
           <span className="text-[10px] text-aim-gold/80 block sm:text-right uppercase tracking-wider font-semibold">Monthly Subscription</span>
           <p className="text-aim-gold font-black text-sm">
-            ₹{Number(order.monthly_subscription || 0).toLocaleString('en-IN')}
+            ₹{Number(calculatedSub).toLocaleString('en-IN')}
           </p>
         </div>
       </div>

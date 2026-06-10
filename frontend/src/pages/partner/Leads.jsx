@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
+import { usePartnerAuthStore } from '../../store/partnerAuthStore'
 
 const INITIAL_LEADS = [
   { id: 1, date: '2026-06-01', name: 'Metro Multispeciality Hospital', email: 'purchase@metrohospitals.in', phone: '+91 99330 11223', product: 'NEXGN Hospital MS', value: 85000, status: 'Proposal Sent' },
@@ -10,10 +11,19 @@ const INITIAL_LEADS = [
 ]
 
 const PartnerLeads = () => {
-  const [leads, setLeads] = useState(INITIAL_LEADS)
+  const { leads, setLeads } = usePartnerAuthStore()
   const [search, setSearch] = useState('')
   const [showAddForm, setShowAddForm] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
+
+  // Initialize store if null
+  useEffect(() => {
+    if (!leads) {
+      setLeads(INITIAL_LEADS)
+    }
+  }, [leads, setLeads])
+
+  const currentLeads = leads || INITIAL_LEADS
 
   // Form states
   const [newLead, setNewLead] = useState({
@@ -26,9 +36,9 @@ const PartnerLeads = () => {
   })
 
   // Calculations
-  const totalLeads = leads.length
-  const wonLeads = leads.filter(l => l.status === 'Won').length
-  const hotLeads = leads.filter(l => l.status === 'Proposal Sent' || l.status === 'Negotiating').length
+  const totalLeads = currentLeads.length
+  const wonLeads = currentLeads.filter(l => l.status === 'Won').length
+  const hotLeads = currentLeads.filter(l => l.status === 'Proposal Sent' || l.status === 'Negotiating').length
   const conversionRate = totalLeads > 0 ? Math.round((wonLeads / totalLeads) * 100) : 0
 
   const handleAddLead = (e) => {
@@ -46,7 +56,7 @@ const PartnerLeads = () => {
       status: newLead.status
     }
 
-    setLeads([leadObj, ...leads])
+    setLeads([leadObj, ...currentLeads])
     setSuccessMessage(`Lead for "${newLead.name}" has been registered successfully!`)
     setNewLead({
       name: '',
@@ -61,10 +71,10 @@ const PartnerLeads = () => {
   }
 
   const handleStatusChange = (leadId, newStatus) => {
-    setLeads(leads.map(l => l.id === leadId ? { ...l, status: newStatus } : l))
+    setLeads(currentLeads.map(l => l.id === leadId ? { ...l, status: newStatus } : l))
   }
 
-  const filteredLeads = leads.filter(l => {
+  const filteredLeads = currentLeads.filter(l => {
     return (
       l.name.toLowerCase().includes(search.toLowerCase()) ||
       l.product.toLowerCase().includes(search.toLowerCase()) ||
@@ -75,14 +85,14 @@ const PartnerLeads = () => {
   return (
     <>
       <Helmet>
-        <title>Leads Registry | AIM Partner</title>
+        <title>Lead Management | AIM Partner</title>
       </Helmet>
 
       <div className="space-y-6 text-white">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-2xl font-black text-white">Leads Registry</h1>
+            <h1 className="text-2xl font-black text-white">Lead Management</h1>
             <p className="text-aim-copy-muted text-xs mt-1">
               Register and track prospective clients to protect your attribution and commissions.
             </p>

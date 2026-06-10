@@ -20,12 +20,14 @@ frontend/                              # React application root directory
 │   │   ├── products.js                # getProducts(), getProductById()
 │   │   ├── analytics.js               # getDashboardStats(), getChartsData()
 │   │   ├── partner.js                 # getPartnerEarnings(), getPayouts()
+│   │   ├── clientPortal.js            # clientLogin(), getClientProfile(), getClientProducts()
 │   │   └── index.js                   # Re-exports all API modules
 │   │
 │   ├── store/                         # 📦 STATE MANAGEMENT
 │   │   ├── index.js                   # Zustand stores + React Query client setup
 │   │   ├── authStore.js               # Zustand: User identity, roles, tokens (client state)
 │   │   ├── uiStore.js                 # Zustand: Sidebar toggle, modals, toasts (UI state)
+│   │   ├── clientAuthStore.js         # Zustand: Client identity, tokens, caching (client state)
 │   │   └── queries/                   # React Query - Server state management
 │   │       ├── queryKeys.js           # Centralized cache keys for invalidation
 │   │       ├── useUsersQuery.js       # Fetch users with caching + auto-refresh
@@ -55,7 +57,8 @@ frontend/                              # React application root directory
 │   │   ├── AdminLayout.jsx            # Screenshot-style admin shell (left nav + content area)
 │   │   ├── EmployeeLayout.jsx         # Employee portal layout
 │   │   ├── PartnerLayout.jsx          # Partner dashboard layout
-│   │   └── CustomerLayout.jsx         # Customer account layout
+│   │   ├── CustomerLayout.jsx         # Customer account layout
+│   │   └── ClientLayout.jsx           # Client dashboard shell layout
 │   │
 │   ├── pages/                         # 📄 ROUTE-BASED PAGES
 │   │   ├── website/                   # Public marketing pages
@@ -83,10 +86,14 @@ frontend/                              # React application root directory
 │   │   │   ├── Dashboard.jsx          # Partner earnings/stats
 │   │   │   ├── Orders.jsx             # Partner orders
 │   │   │   └── Payouts.jsx            # Payment history
-│   │   └── customer/                  # Customer account pages
-│   │       ├── Dashboard.jsx          # Order history + recommendations
-│   │       ├── Orders.jsx             # Past orders + tracking
-│   │       └── Profile.jsx            # Account management
+│   │   ├── customer/                  # Customer account pages
+│   │   │   ├── Dashboard.jsx          # Order history + recommendations
+│   │   │   ├── Orders.jsx             # Past orders + tracking
+│   │   │   └── Profile.jsx            # Account management
+│   │   └── client/                    # Client portal pages
+│   │       ├── Login.jsx              # Client Login page
+│   │       ├── Products.jsx           # Client active products page
+│   │       └── Profile.jsx            # Client profile details page
 │   │
 │   ├── components/                    # 🧩 REUSABLE UI COMPONENTS
 │   │   ├── common/                    # Cross-app components
@@ -201,6 +208,16 @@ frontend/                              # React application root directory
 │   │           ├── ChangePassword.jsx # Password update
 │   │           ├── AddressBook.jsx    # Saved addresses
 │   │           └── NotificationPrefs.jsx # Email/SMS preferences
+│   │       └── client/                    # Client portal components
+│   │           ├── profile/               # Client profile sub-cards
+│   │           │   ├── BasicInfoCard.jsx
+│   │           │   ├── OrgDetailsCard.jsx
+│   │           │   ├── AddressCard.jsx
+│   │           │   └── PurchaseInfoCard.jsx
+│   │           └── products/              # Client active products and billing sub-cards
+│   │               ├── ProductActiveCard.jsx
+│   │               ├── BillingDetailsCard.jsx
+│   │               └── PurchaseSummaryCard.jsx
 │   │
 │   ├── contexts/                      # 🔄 REACT CONTEXT (for simple state)
 │   │   └── AuthContext.jsx            # Provides auth state to entire app
