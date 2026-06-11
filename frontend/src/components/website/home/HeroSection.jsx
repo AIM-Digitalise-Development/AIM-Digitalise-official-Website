@@ -24,10 +24,10 @@ const HeroSection = () => {
     <section className="relative overflow-hidden pt-14 pb-20 md:pt-18 md:pb-28 bg-mesh-brand bg-grid-pattern section-white border-b border-white/10">
       <div className="ambient-glows" aria-hidden />
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-12 gap-12 items-center">
           {/* Left Content */}
-          <motion.div 
+          <motion.div
             className="lg:col-span-7 space-y-8 text-left"
             initial={{ opacity: 0, y: 25 }}
             animate={{ opacity: 1, y: 0 }}
@@ -42,13 +42,14 @@ const HeroSection = () => {
                 AIM Digitalise PVT. LTD.
               </div>
               <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white leading-tight tracking-tight">
-              Digital Nation तो{' '}
+                Digital Nation <span className="text-red-500">तो</span>
+                <br />
                 <span className="text-gradient">
                   Developed Nation
                 </span>
               </h1>
               <p className="text-lg copy-on-dark-muted max-w-2xl">
-                We design, engineer, and scale custom software systems, resilient cloud infrastructures, 
+                We design, engineer, and scale custom software systems, resilient cloud infrastructures,
                 and intelligent AI-driven applications for market leaders.
               </p>
             </div>
@@ -85,7 +86,7 @@ const HeroSection = () => {
                   </p>
                 </form>
               ) : (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   className="p-4 rounded-xl bg-aim-gold/10 border border-aim-gold/30 text-aim-gold"
@@ -106,22 +107,22 @@ const HeroSection = () => {
                     'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=64&h=64&q=80',
                     'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=64&h=64&q=80'
                   ].map((url, i) => (
-                    <img 
-                      key={i} 
-                      src={url} 
+                    <img
+                      key={i}
+                      src={url}
                       alt="Consultant Avatar"
                       className="w-9 h-9 rounded-full border-2 border-white object-cover shadow-md"
                     />
                   ))}
                 </div>
                 <div className="text-sm">
-                  <p className="font-bold text-white">Trust Score 4.9/5</p>
-                  <p className="text-on-navy-muted text-xs">Based on 150+ Enterprise projects</p>
+                  <p className="font-bold text-white">Trust Score 4.7/5</p>
+                  <p className="text-on-navy-muted text-xs">Based on 60+ Enterprise projects</p>
                 </div>
               </div>
-              
+
               <div className="h-px sm:h-8 w-full sm:w-px bg-white/10"></div>
-              
+
               <div className="flex flex-wrap gap-4 text-xs font-semibold text-on-navy-muted uppercase tracking-widest">
                 <span>ISO 27001 Certified</span>
                 <span>•</span>
@@ -131,16 +132,16 @@ const HeroSection = () => {
           </motion.div>
 
           {/* Right Preview Card / Graphic */}
-          <motion.div 
+          <motion.div
             className="lg:col-span-5 relative"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
             <div className="absolute inset-0 bg-gradient-to-tr from-aim-gold/15 to-aim-purple/15 rounded-3xl blur-2xl opacity-50 transform rotate-3"></div>
-            
+
             {/* Main Interactive Interface Preview */}
-            <motion.div 
+            <motion.div
               className="relative card-elevated border border-white/10 rounded-3xl p-4 shadow-2xl ring-1 ring-aim-black/20"
               animate={{ y: [0, -10, 0] }}
               transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
@@ -156,7 +157,7 @@ const HeroSection = () => {
                   <svg fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z"></path></svg>
                 </span>
               </div>
-              
+
               <div className="overflow-hidden rounded-2xl border border-white/10 bg-aim-navy-light/50 p-2">
                 <video
                   className="rounded-xl w-full h-auto shadow-inner object-cover"
@@ -169,7 +170,7 @@ const HeroSection = () => {
                   Your browser does not support the video tag.
                 </video>
               </div>
-              
+
               {/* Overlay Glass Badge */}
               <div className="absolute -bottom-6 -left-6 bg-aim-navy-light/95 backdrop-blur border border-aim-gold/30 rounded-2xl p-4 shadow-xl flex items-center gap-3 max-w-[200px]">
                 <div className="p-2.5 rounded-lg bg-aim-gold/15 text-aim-gold">

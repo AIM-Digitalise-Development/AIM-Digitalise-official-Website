@@ -142,13 +142,13 @@ const RootLayout = () => {
   }, [isFooterLoginMenuOpen])
 
   return (
-    <div className={`min-h-screen flex flex-col website-root transition-colors duration-300 ${theme === 'dark' ? 'dark bg-mesh-brand' : 'bg-white'}`}>
+    <div className={`min-h-screen flex flex-col website-root transition-colors duration-300 ${theme === 'dark' ? 'dark bg-mesh-brand' : 'bg-slate-200'}`}>
       {/* Sticky Header */}
       <header className="sticky top-0 z-50 w-full">
         <div className={`transition-all duration-300 ${
           theme === 'dark' 
             ? 'bg-aim-navy/95 dark:bg-aim-navy/95 backdrop-blur-xl border-b border-white/10 shadow-lg shadow-black/20' 
-            : 'bg-white/95 backdrop-blur-xl border-b border-slate-200 shadow-sm shadow-slate-200/80'
+            : 'bg-slate-100/90 backdrop-blur-xl border-b border-slate-300 shadow-sm shadow-slate-300/40'
         }`}>
           <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-aim-gold/40 dark:via-aim-gold/50 to-transparent pointer-events-none" aria-hidden />
           <nav className="container-custom py-3">
@@ -174,7 +174,7 @@ const RootLayout = () => {
                 <div className={`flex items-center gap-1 xl:gap-2 rounded-full px-2 py-1 transition-all duration-300 ${
                   theme === 'dark' 
                     ? 'bg-white/5' 
-                    : 'bg-slate-100/80'
+                    : 'bg-slate-200/80'
                 }`}>
                   {navLinks.map((link) => {
                     if (link.subLinks) {
@@ -291,6 +291,8 @@ const RootLayout = () => {
                 
                 <Link
                   to="/partner/login"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className={`px-5 py-2 text-sm font-semibold rounded-full transition-all duration-300 shadow-md hover:shadow-lg whitespace-nowrap ${
                     theme === 'dark'
                       ? 'bg-aim-gold text-aim-navy hover:bg-aim-gold-dark'
@@ -440,6 +442,8 @@ const RootLayout = () => {
                     
                     <Link
                       to="/partner/login"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       onClick={() => setIsMobileMenuOpen(false)}
                       className={`block text-center px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
                         theme === 'dark'
@@ -748,44 +752,40 @@ const RootLayout = () => {
                   {isFooterLoginMenuOpen && (
                     <div
                       role="menu"
-                      className={`absolute right-0 mt-2 w-52 rounded-xl border shadow-xl overflow-hidden ${
+                      className={`absolute right-0 mt-0.5 w-52 rounded-xl border shadow-xl overflow-hidden ${
                         theme === 'dark'
                           ? 'bg-aim-navy-card border-white/10 shadow-brand-gold/10'
                           : 'bg-white border-slate-200 shadow-lg'
                       }`}
                     >
-                      <button
+                      <Link
                         role="menuitem"
-                        type="button"
-                        onClick={() => {
-                          setLoginModalRole('employee')
-                          setIsFooterLoginMenuOpen(false)
-                          setIsLoginModalOpen(true)
-                        }}
-                        className={`w-full text-left px-4 py-3 text-sm font-semibold transition cursor-pointer ${
+                        to={`${ROUTES.AUTH.LOGIN}?role=employee`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setIsFooterLoginMenuOpen(false)}
+                        className={`w-full block text-left px-4 py-3 text-sm font-semibold transition cursor-pointer ${
                           theme === 'dark'
                             ? 'text-on-navy-muted hover:text-white hover:bg-white/5'
                             : 'text-slate-600 hover:text-blue-600 hover:bg-blue-50'
                         }`}
                       >
                         Employee Login
-                      </button>
-                      <button
+                      </Link>
+                      <Link
                         role="menuitem"
-                        type="button"
-                        onClick={() => {
-                          setLoginModalRole('admin')
-                          setIsFooterLoginMenuOpen(false)
-                          setIsLoginModalOpen(true)
-                        }}
-                        className={`w-full text-left px-4 py-3 text-sm font-semibold transition cursor-pointer ${
+                        to={`${ROUTES.AUTH.LOGIN}?role=admin`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setIsFooterLoginMenuOpen(false)}
+                        className={`w-full block text-left px-4 py-3 text-sm font-semibold transition cursor-pointer ${
                           theme === 'dark'
                             ? 'text-on-navy-muted hover:text-white hover:bg-aim-purple/10'
                             : 'text-slate-600 hover:text-purple-600 hover:bg-purple-50'
                         }`}
                       >
                         Admin Login
-                      </button>
+                      </Link>
                     </div>
                   )}
                 </div>

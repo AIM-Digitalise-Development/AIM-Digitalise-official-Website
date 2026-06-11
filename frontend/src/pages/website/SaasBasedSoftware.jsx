@@ -441,7 +441,7 @@ const SaasBasedSoftware = () => {
   return (
     <>
       <Helmet>
-        <title>SaaS Based Software Plans | AIM Digitalise</title>
+        <title>AIM Digitalise | SaaS Based Software Plans</title>
         <meta name="description" content="India's 1st SaaS based website and software with 100% data security & ownership. Clean layouts, quick activation." />
         <meta name="keywords" content="saas website, saas software, dynamic website price, saas software billing, android mobile app development, e-commerce website packages, India" />
         <link rel="canonical" href="https://aimdigitalise.com/saas-software" />
@@ -719,7 +719,7 @@ const SaasBasedSoftware = () => {
                           Download Agreement
                         </a>
 
-                        <Link to={ROUTES.CLIENT.LOGIN} className="text-xs font-semibold text-aim-copy-muted hover:text-aim-gold transition">
+                        <Link to={ROUTES.CLIENT.LOGIN} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-aim-copy-muted hover:text-aim-gold transition">
                           Login
                         </Link>
                       </div>

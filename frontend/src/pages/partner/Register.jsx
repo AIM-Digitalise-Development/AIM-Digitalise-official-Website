@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import StepIndicator from '../../components/partner/registration/StepIndicator'
@@ -7,6 +7,7 @@ import Step2DownloadAgreement from '../../components/partner/registration/Step2D
 import Step3UploadAndPay from '../../components/partner/registration/Step3UploadAndPay'
 import RegistrationSuccess from '../../components/partner/registration/RegistrationSuccess'
 import { ROUTES } from '../../constants/routes'
+import plogo from '../../assets/images/plogo.jpeg'
 
 const STEP_TITLES = [
   { step: 1, heading: 'Partner Registration', sub: 'Fill in your organization and personal details' },
@@ -19,6 +20,17 @@ const PartnerRegister = () => {
   const [partnerData, setPartnerData] = useState(null)   // from step 1 API
   const [verifyData, setVerifyData] = useState(null)     // from step 3 API
   const [formEmail, setFormEmail] = useState('')
+
+  useEffect(() => {
+    // Prevent page-level scrolling
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+    return () => {
+      // Restore scrolling on unmount
+      document.body.style.overflow = ''
+      document.documentElement.style.overflow = ''
+    }
+  }, [])
 
   const currentTitle = STEP_TITLES.find((t) => t.step === step) || STEP_TITLES[0]
   const isSuccess = step === 4
@@ -37,72 +49,75 @@ const PartnerRegister = () => {
   return (
     <>
       <Helmet>
-        <title>Partner Registration | AIM Digitalise</title>
+        <title>AIM Partner | Registration</title>
         <meta name="description" content="Register as an AIM Digitalise Partner. Complete the 3-step process to join our partner network." />
       </Helmet>
 
-      <div className="min-h-screen bg-aim-navy flex flex-col">
-        {/* Background decorations */}
+      <div className="h-screen bg-aim-navy flex flex-col justify-between overflow-hidden relative">
+        {/* Background decorations with image & glows */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-aim-gold/6 rounded-full blur-[140px]" />
-          <div className="absolute bottom-0 right-1/3 w-[500px] h-[500px] bg-aim-purple/8 rounded-full blur-[120px]" />
-          <div className="absolute inset-0 bg-grid-pattern opacity-25" />
+          <div 
+            className="absolute inset-0 opacity-20 bg-cover bg-center" 
+            style={{ backgroundImage: "url('https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&w=1920&q=80')" }}
+          />
+          <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-aim-gold/10 rounded-full blur-[140px] animate-pulse" style={{ animationDuration: '9s' }} />
+          <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] bg-aim-purple/12 rounded-full blur-[140px] animate-pulse" style={{ animationDuration: '13s' }} />
+          <div className="absolute inset-0 bg-grid-pattern opacity-20" />
         </div>
 
-        {/* Top bar */}
-        <header className="relative z-10 border-b border-white/5">
+        {/* Top bar with plogo.jpeg */}
+        <header className="relative z-10 border-b border-white/5 bg-aim-navy/40 backdrop-blur-md shrink-0">
           <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-            <Link to={ROUTES.HOME} className="flex items-center gap-2 text-white font-black text-xl">
-              <span className="bg-gradient-to-br from-aim-gold via-aim-gold-light to-aim-purple w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold text-aim-navy shadow-md shadow-aim-gold/30">
-                A
-              </span>
-              <span>AIM<span className="text-transparent bg-clip-text bg-gradient-to-r from-aim-gold to-aim-purple">.</span></span>
+            <Link to={ROUTES.HOME} className="flex items-center gap-2.5 group">
+              <img 
+                src={plogo} 
+                alt="AIM Digitalise Logo" 
+                className="h-10 sm:h-12 w-auto object-contain rounded-lg border border-white/10 shadow-lg shadow-black/30 transition-transform duration-300 group-hover:scale-[1.02]" 
+              />
             </Link>
             <Link
               to={ROUTES.PARTNER.LOGIN}
-              className="text-xs font-semibold text-aim-copy-muted hover:text-aim-gold transition-colors"
+              className="text-xs font-semibold text-aim-copy-muted hover:text-aim-gold transition-colors flex items-center gap-1"
             >
               Already a partner? Login →
             </Link>
           </div>
         </header>
 
-        {/* Main */}
-        <main className="relative z-10 flex-1 flex items-start justify-center px-4 py-10">
-          <div className="w-full max-w-2xl">
-
-            {/* Success state — no card wrapper needed */}
+        {/* Main Content Area - Center Card, scrollable form internally */}
+        <main className="relative z-10 flex-grow flex items-center justify-center px-4 py-6 overflow-hidden">
+          <div className="w-full max-w-2xl max-h-[calc(100vh-140px)] flex flex-col">
+            
             {isSuccess ? (
-              <div className="relative rounded-2xl border border-white/10 bg-aim-navy-card/80 backdrop-blur-xl p-8 shadow-2xl shadow-black/60">
+              <div className="relative rounded-3xl border border-white/10 bg-aim-navy-card/75 backdrop-blur-2xl p-8 shadow-2xl shadow-black/85 flex flex-col overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                 <div className="absolute top-0 right-0 -mr-12 -mt-12 w-48 h-48 bg-aim-gold/8 rounded-full blur-2xl pointer-events-none" />
                 <RegistrationSuccess partnerData={partnerData} verifyData={verifyData} />
               </div>
             ) : (
-              <div className="relative rounded-2xl border border-white/10 bg-aim-navy-card/80 backdrop-blur-xl p-8 shadow-2xl shadow-black/60">
-                {/* Ambient glows */}
+              <div className="relative rounded-3xl border border-white/10 bg-aim-navy-card/75 backdrop-blur-2xl p-6 sm:p-8 shadow-2xl shadow-black/85 flex flex-col overflow-hidden max-h-[calc(100vh-150px)]">
+                {/* Ambient glows inside card */}
                 <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-aim-gold/8 rounded-full blur-2xl pointer-events-none" />
                 <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-48 h-48 bg-aim-purple/8 rounded-full blur-2xl pointer-events-none" />
 
                 {/* Header */}
-                <div className="relative z-10 mb-8">
-                  {/* Partner badge */}
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-aim-gold/10 border border-aim-gold/20 mb-4">
+                <div className="relative z-10 mb-5 shrink-0">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-aim-gold/10 border border-aim-gold/20 mb-3">
                     <span className="w-1.5 h-1.5 rounded-full bg-aim-gold animate-pulse" />
-                    <span className="text-aim-gold text-[10px] font-bold uppercase tracking-widest">Become a Partner</span>
+                    <span className="text-aim-gold text-[10px] font-black uppercase tracking-widest">Become a Partner</span>
                   </div>
-                  <h1 className="text-2xl font-black text-white mb-1 tracking-tight">
+                  <h1 className="text-xl sm:text-2xl font-black text-white mb-1 tracking-tight leading-none">
                     {currentTitle.heading}
                   </h1>
-                  <p className="text-xs text-aim-copy-muted">{currentTitle.sub}</p>
+                  <p className="text-[11px] text-aim-copy-muted leading-tight">{currentTitle.sub}</p>
                 </div>
 
                 {/* Step indicator */}
-                <div className="relative z-10 mb-8">
+                <div className="relative z-10 mb-6 shrink-0">
                   <StepIndicator currentStep={step} />
                 </div>
 
-                {/* Step content */}
-                <div className="relative z-10">
+                {/* Step content - Internally Scrollable */}
+                <div className="relative z-10 flex-grow overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                   {step === 1 && (
                     <Step1RegistrationForm onSuccess={handleStep1Success} />
                   )}
@@ -125,15 +140,18 @@ const PartnerRegister = () => {
               </div>
             )}
 
-            {/* Footer */}
-            <p className="text-center text-xs text-aim-copy-muted mt-6">
-              Need help?{' '}
-              <a href="mailto:support@aimdigitalise.com" className="text-aim-gold hover:text-aim-gold-light transition-colors">
-                Contact Support
-              </a>
-            </p>
           </div>
         </main>
+
+        {/* Footer shrink-0 */}
+        <footer className="relative z-10 py-4 border-t border-white/5 bg-aim-navy/40 backdrop-blur-md shrink-0">
+          <p className="text-center text-[10px] text-aim-copy-muted">
+            Need registration help?{' '}
+            <a href="mailto:support@aimdigitalise.com" className="text-aim-gold hover:text-aim-gold-light transition-colors font-bold underline underline-offset-4">
+              Contact Support Desk
+            </a>
+          </p>
+        </footer>
       </div>
     </>
   )

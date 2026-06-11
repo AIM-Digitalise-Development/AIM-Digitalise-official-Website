@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import { ROUTES } from '../../../constants/routes'
+import bkImage from '../../../assets/images/bk.jpeg'
 
 const stats = [
   { value: '500+', label: 'Clients served', accent: 'gold' },
@@ -11,11 +12,11 @@ const stats = [
 const specialties = [
   {
     num: '01',
-    title: 'Cutting-edge Technology',
-    desc: 'Latest stack for speed, security, and compatibility across every device.',
+    title: 'AIM-Digitalise: A Digital-First Partner',
+    desc: 'Your digital future starts now. AIM-Digitalise is a full-spectrum IT partner creating web, mobile, and digital experiences that drive real business results. From strategy to launch and beyond, we help you grow with technology that works as hard as you do.',
     icon: (
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-    ),
+    ),          
     featured: true,
   },
   {
@@ -129,56 +130,53 @@ const SpecialtyCard = ({ item, index, reduceMotion }) => {
       transition={{ delay: index * 0.06, type: 'spring', stiffness: 90 }}
       className={`group relative overflow-hidden rounded-3xl border card-elevated transition-shadow duration-300 ${
         isFeatured
-          ? 'md:col-span-2 md:row-span-2 p-8 sm:p-10 border-aim-gold/30 shadow-xl shadow-aim-gold/10'
+          ? 'md:col-span-2 md:row-span-2 max-h-[320px] md:max-h-[380px] border-aim-gold/30 shadow-xl shadow-aim-gold/10 bg-[#050f24] flex items-center justify-center'
           : 'p-6 border-white/10 hover:shadow-xl hover:shadow-aim-gold/10'
       } ${isPurple && !isFeatured ? 'hover:border-aim-purple/40' : 'hover:border-aim-gold/40'}`}
     >
-      <div
-        className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${
-          isPurple ? 'from-aim-purple via-aim-purple-light to-transparent' : 'from-aim-gold via-aim-gold-light to-transparent'
-        } opacity-80`}
-      />
+      {isFeatured ? (
+        <img
+          src={bkImage}
+          alt="AIM Digitalise"
+          className="w-full h-auto md:h-full object-contain block"
+        />
+      ) : (
+        <>
+          <div
+            className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${
+              isPurple ? 'from-aim-purple via-aim-purple-light to-transparent' : 'from-aim-gold via-aim-gold-light to-transparent'
+            } opacity-80`}
+          />
 
-      <div
-        className={`absolute -right-8 -top-8 w-32 h-32 rounded-full blur-3xl pointer-events-none ${
-          isPurple ? 'bg-aim-purple/15' : 'bg-aim-gold/15'
-        }`}
-      />
+          <div
+            className={`absolute -right-8 -top-8 w-32 h-32 rounded-full blur-3xl pointer-events-none ${
+              isPurple ? 'bg-aim-purple/15' : 'bg-aim-gold/15'
+            }`}
+          />
 
-      <div className={`relative flex flex-col h-full ${isFeatured ? 'gap-6' : 'gap-4'}`}>
-        <div className="flex items-start justify-between gap-3">
-          <span className="text-xs font-black tracking-widest text-on-navy-muted">
-            {item.num}
-          </span>
-          <BouncingIcon delay={index * 0.15} reduceMotion={reduceMotion} isPurple={isPurple}>
-            {item.icon}
-          </BouncingIcon>
-        </div>
-
-        <div className="flex-grow">
-          <h3
-            className={`font-bold text-white mb-2 group-hover:text-aim-highlight transition-colors ${isFeatured ? 'text-2xl sm:text-3xl' : 'text-lg sm:text-xl'}`}
-          >
-            {item.title}
-          </h3>
-          <p className={`text-on-navy-muted leading-relaxed ${isFeatured ? 'text-base max-w-lg' : 'text-sm'}`}>
-            {item.desc}
-          </p>
-        </div>
-
-        {isFeatured && (
-          <div className="flex flex-wrap gap-2 pt-2">
-            {['React & Cloud', 'SEO & SEM', 'DSC & Compliance'].map((tag) => (
-              <span
-                key={tag}
-                className="px-3 py-1 text-xs font-semibold rounded-full bg-white/5 text-on-navy border border-white/15"
-              >
-                {tag}
+          <div className="relative flex flex-col h-full gap-4">
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-xs font-black tracking-widest text-on-navy-muted">
+                {item.num}
               </span>
-            ))}
+              <BouncingIcon delay={index * 0.15} reduceMotion={reduceMotion} isPurple={isPurple}>
+                {item.icon}
+              </BouncingIcon>
+            </div>
+
+            <div className="flex-grow">
+              <h3
+                className="font-bold text-white mb-2 group-hover:text-aim-highlight transition-colors text-lg sm:text-xl"
+              >
+                {item.title}
+              </h3>
+              <p className="text-on-navy-muted leading-relaxed text-sm">
+                {item.desc}
+              </p>
+            </div>
           </div>
-        )}
-      </div>
+        </>
+      )}
     </motion.div>
   )
 }
@@ -194,7 +192,7 @@ const SpecialtiesSection = () => {
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-aim-purple/10 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
+      <div className="relative container-custom z-10">
         <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-start mb-14 md:mb-20">
           <motion.div
             className="lg:col-span-5 space-y-6"
@@ -245,7 +243,7 @@ const SpecialtiesSection = () => {
           </motion.div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 auto-rows-fr">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
           {specialties.map((item, index) => (
             <SpecialtyCard key={item.num} item={item} index={index} reduceMotion={reduceMotion} />
           ))}

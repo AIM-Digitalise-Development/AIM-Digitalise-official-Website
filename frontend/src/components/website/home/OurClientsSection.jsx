@@ -70,7 +70,7 @@ const OurClientsSection = () => {
     <section className="py-24 section-tinted relative">
       <div className="ambient-glows" aria-hidden />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="container-custom relative z-10">
         <div className="text-center mb-16 flex flex-col items-center gap-3">
           <div className="badge-pill">
             <span className="badge-pill-dot" />

@@ -458,7 +458,7 @@ const MonthlySubscription = () => {
   return (
     <>
       <Helmet>
-        <title>Monthly Subscription Plans | AIM Digitalise</title>
+        <title>AIM Digitalise | Monthly Subscription Plans</title>
         <meta name="description" content="India's 1st monthly subscription based website and software with 100% data security & ownership. Clean layouts, quick activation." />
         <meta name="keywords" content="monthly subscription website, dynamic website price, saas software billing, android mobile app development, e-commerce website packages, India" />
         <link rel="canonical" href="https://aimdigitalise.com/subscription" />
@@ -736,7 +736,7 @@ const MonthlySubscription = () => {
                           Download Agreement
                         </a>
 
-                        <Link to={ROUTES.CLIENT.LOGIN} className="text-xs font-semibold text-aim-copy-muted hover:text-aim-gold transition">
+                        <Link to={ROUTES.CLIENT.LOGIN} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-aim-copy-muted hover:text-aim-gold transition">
                           Login
                         </Link>
                       </div>

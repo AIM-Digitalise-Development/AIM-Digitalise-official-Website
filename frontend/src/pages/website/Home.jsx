@@ -23,10 +23,10 @@ const Home = () => {
     <>
       {/* SEO Optimization */}
       <Helmet>
-        <title>AIM Innovations | Enterprise Software Engineering & IT Consulting</title>
-        <meta name="description" content="AIM Innovations designs, builds, and scales custom software systems, cloud architectures, and intelligence-driven AI platforms for global enterprises." />
+        <title>AIM Digitalise | Enterprise Software Engineering & IT Consulting</title>
+        <meta name="description" content="AIM Digitalise designs, builds, and scales custom software systems, cloud architectures, and intelligence-driven AI platforms for global enterprises." />
         <meta name="keywords" content="IT consulting, software engineering, cloud architecture, custom software development, AI integrations, DevOps" />
-        <link rel="canonical" href="https://aiminnovations.com/" />
+        <link rel="canonical" href="https://aimdigitalise.com/" />
       </Helmet>
 
       {/* Critical Content - Loads Immediately */}

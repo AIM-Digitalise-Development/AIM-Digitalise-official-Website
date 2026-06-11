@@ -17,6 +17,7 @@ import SaasBasedSoftware from './pages/website/SaasBasedSoftware'
 import DigitalMarketing from './pages/website/DigitalMarketing'
 import DigitalSignature from './pages/website/DigitalSignature'
 import Users from './pages/website/Users'
+import GeneralLogin from './pages/website/GeneralLogin'
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminUsers from './pages/admin/Users'
 import AdminSaasClients from './pages/admin/SaasClients'
@@ -121,6 +122,9 @@ function App() {
 
           {/* ── Client portal & login (standalone, no header/footer) ── */}
           <Route path={ROUTES.CLIENT.LOGIN} element={<ClientLogin />} />
+          
+          {/* ── General Login (standalone, no header/footer) ── */}
+          <Route path={ROUTES.AUTH.LOGIN} element={<GeneralLogin />} />
           
           <Route path={ROUTES.CLIENT.PORTAL} element={<ClientLayout />}>
             <Route index element={<ClientProducts />} />

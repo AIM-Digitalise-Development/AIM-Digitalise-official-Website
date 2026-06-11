@@ -51,7 +51,7 @@ const CodingClasses = () => {
   return (
     <>
       <Helmet>
-        <title>Professional Coding Classes | AIM Digitalise</title>
+        <title>AIM Digitalise | Professional Coding Classes</title>
         <meta name="description" content="Upskill your team or accelerate your career with professional development bootcamps in React, Cloud DevOps, AI Systems, and Software Architecture." />
       </Helmet>
 

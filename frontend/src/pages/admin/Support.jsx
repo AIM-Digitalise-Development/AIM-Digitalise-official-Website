@@ -84,6 +84,7 @@ const AdminSupport = () => {
   const [newSeverity, setNewSeverity] = useState('Low')
   const [newSubject, setNewSubject] = useState('')
   const [newDescription, setNewDescription] = useState('')
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
   // Interactive Reply states
   const [replyText, setReplyText] = useState('')
@@ -155,6 +156,7 @@ const AdminSupport = () => {
     setNewDescription('')
     
     alert('Support Ticket submitted successfully!')
+    setIsCreateModalOpen(false)
     setActiveTab('active_tickets')
   }
 
@@ -173,6 +175,9 @@ const AdminSupport = () => {
 
   // Filter for Active Tickets tab: OPEN or IN PROGRESS
   const activeSupportTickets = filteredTickets.filter(t => t.status === 'OPEN' || t.status === 'IN PROGRESS')
+
+  // Filter for Resolved Tickets tab: RESOLVED
+  const resolvedSupportTickets = filteredTickets.filter(t => t.status === 'RESOLVED')
 
   // Knowledge base list
   const faqs = [
@@ -349,6 +354,16 @@ const AdminSupport = () => {
               Active Tickets
             </button>
             <button
+              onClick={() => setActiveTab('resolved_tickets')}
+              className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${
+                activeTab === 'resolved_tickets'
+                  ? 'bg-white border-blue-600 text-blue-600 -mb-[13px] z-10'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
+              }`}
+            >
+              Resolved Tickets
+            </button>
+            <button
               onClick={() => setActiveTab('all_history')}
               className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${
                 activeTab === 'all_history'
@@ -357,16 +372,6 @@ const AdminSupport = () => {
               }`}
             >
               All History
-            </button>
-            <button
-              onClick={() => setActiveTab('generate_ticket')}
-              className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${
-                activeTab === 'generate_ticket'
-                  ? 'bg-white border-blue-600 text-blue-600 -mb-[13px] z-10'
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
-              }`}
-            >
-              Generate Ticket
             </button>
             <button
               onClick={() => setActiveTab('direct_support')}
@@ -402,7 +407,7 @@ const AdminSupport = () => {
                   <span>Active Support Tickets</span>
                 </h3>
                 <button
-                  onClick={() => setActiveTab('generate_ticket')}
+                  onClick={() => setIsCreateModalOpen(true)}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
                 >
                   New Ticket
@@ -502,12 +507,14 @@ const AdminSupport = () => {
                             >
                               Reply
                             </button>
-                            <button
-                              onClick={() => handleResolveTicket(t.id)}
-                              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1"
-                            >
-                              ✓ Mark Resolved
-                            </button>
+                             {t.status !== 'RESOLVED' && (
+                               <button
+                                 onClick={() => handleResolveTicket(t.id)}
+                                 className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1"
+                               >
+                                 ✓ Mark Resolved
+                               </button>
+                             )}
                           </>
                         )}
                       </div>
@@ -517,6 +524,123 @@ const AdminSupport = () => {
                   <div className="text-center py-12 text-slate-400">
                     <span className="text-3xl block">📁</span>
                     <p className="font-bold mt-2">No active support tickets match criteria</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 1.5: Resolved Tickets */}
+          {activeTab === 'resolved_tickets' && (
+            <div className="space-y-6">
+              {/* Tab Title and Action Button */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Resolved Support Tickets</span>
+                </h3>
+              </div>
+
+              {/* Ticket Cards List */}
+              <div className="space-y-5">
+                {resolvedSupportTickets.length > 0 ? (
+                  resolvedSupportTickets.map((t) => (
+                    <div key={t.id} className="bg-slate-50/50 rounded-2xl border border-slate-200/60 p-5 space-y-3 shadow-sm hover:shadow-md transition-shadow">
+                      {/* Ticket Badge tags + timestamp row */}
+                      <div className="flex items-center justify-between flex-wrap gap-2 text-[10px] font-bold">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-slate-500 bg-slate-200 px-2 py-0.5 rounded">
+                            {t.id}
+                          </span>
+                          <span className="px-2 py-0.5 rounded text-[9px] uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            {t.status}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded text-[9px] uppercase tracking-wider ${
+                            t.severity === 'Critical' || t.severity === 'High'
+                              ? 'bg-rose-50 text-rose-600 border-rose-100'
+                              : 'bg-amber-50 text-amber-600 border-amber-100'
+                          }`}>
+                            {t.severity} Severity
+                          </span>
+                        </div>
+                        <span className="text-slate-400 font-medium font-sans">📅 {t.dateLogged}</span>
+                      </div>
+
+                      {/* Ticket Title & Meta details */}
+                      <div>
+                        <h4 className="text-sm font-extrabold text-[#1e3e6b] leading-snug">
+                          [{t.product}] {t.subject}
+                        </h4>
+                        <p className="text-[10px] text-slate-400 font-semibold mt-1 flex items-center gap-3">
+                          <span>👤 Client: <strong>{t.client}</strong></span>
+                          <span>📁 Category: <strong>{t.category}</strong></span>
+                        </p>
+                      </div>
+
+                      {/* Description Quote Block */}
+                      <div className="border-l-4 border-emerald-500 bg-emerald-50/30 p-3.5 rounded-r-xl text-xs text-slate-600 font-sans leading-relaxed">
+                        {t.description}
+                      </div>
+
+                      {/* Dynamic Replies */}
+                      {ticketReplies[t.id] && ticketReplies[t.id].length > 0 && (
+                        <div className="mt-3 pl-4 space-y-2 border-l border-slate-300/60">
+                          {ticketReplies[t.id].map((rep, rIdx) => (
+                            <div key={rIdx} className="bg-white p-3 rounded-xl border border-slate-200 text-xs shadow-sm max-w-lg">
+                              <div className="flex justify-between font-bold text-slate-500 text-[10px] mb-1">
+                                <span>💬 {rep.sender}</span>
+                                <span>{rep.time}</span>
+                              </div>
+                              <p className="text-slate-700 font-medium font-sans">{rep.text}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Action buttons row */}
+                      <div className="flex justify-end items-center gap-2 pt-2.5 border-t border-slate-100">
+                        {activeReplyId === t.id ? (
+                          <div className="w-full flex items-center gap-2 mt-1">
+                            <input
+                              type="text"
+                              value={replyText}
+                              onChange={(e) => setReplyText(e.target.value)}
+                              placeholder="Write a message to the client..."
+                              className="flex-grow bg-white border border-slate-200 rounded-xl px-3.5 py-1.5 text-xs focus:outline-none focus:border-blue-500"
+                            />
+                            <button
+                              onClick={() => handleSendReply(t.id)}
+                              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+                            >
+                              Send
+                            </button>
+                            <button
+                              onClick={() => {
+                                setActiveReplyId(null)
+                                setReplyText('')
+                              }}
+                              className="px-3 py-1.5 border border-slate-200 hover:bg-slate-100 text-slate-500 font-bold rounded-xl text-xs"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setActiveReplyId(t.id)}
+                            className="px-3 py-1.5 border border-slate-200 hover:border-slate-400 hover:bg-slate-50 text-slate-500 font-bold rounded-xl text-xs transition-colors flex items-center gap-1"
+                          >
+                            Reply
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-12 text-slate-400">
+                    <span className="text-3xl block">📁</span>
+                    <p className="font-bold mt-2">No resolved support tickets match criteria</p>
                   </div>
                 )}
               </div>
@@ -618,140 +742,7 @@ const AdminSupport = () => {
             </div>
           )}
 
-          {/* TAB 3: Generate Ticket */}
-          {activeTab === 'generate_ticket' && (
-            <div className="space-y-6">
-              {/* Title row */}
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  <span>Generate New Ticket</span>
-                </h3>
-              </div>
-
-              <form onSubmit={handleCreateTicket} className="space-y-5 text-slate-600 max-w-4xl font-semibold">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {/* Client Name */}
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Client Name</label>
-                    <select
-                      value={newClientName}
-                      onChange={(e) => setNewClientName(e.target.value)}
-                      required
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-blue-500 cursor-pointer"
-                    >
-                      <option value="">Select or enter client name</option>
-                      <option value="Sunrise Academy">Sunrise Academy</option>
-                      <option value="Blue Hill Institute">Blue Hill Institute</option>
-                      <option value="Apex Retailers">Apex Retailers</option>
-                      <option value="Nova Tech Solutions">Nova Tech Solutions</option>
-                      <option value="Greenfield School">Greenfield School</option>
-                      <option value="City Mart Group">City Mart Group</option>
-                    </select>
-                  </div>
-
-                  {/* Product / Service */}
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Product / Service</label>
-                    <select
-                      value={newProduct}
-                      onChange={(e) => setNewProduct(e.target.value)}
-                      required
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-blue-500 cursor-pointer"
-                    >
-                      <option value="">Choose product...</option>
-                      <option value="School MS">School MS</option>
-                      <option value="College Portal">College Portal</option>
-                      <option value="GST Billing Tool">GST Billing Tool</option>
-                      <option value="CRM Enterprise">CRM Enterprise</option>
-                      <option value="E-Commerce Hub">E-Commerce Hub</option>
-                      <option value="Android Mobile App">Android Mobile App</option>
-                    </select>
-                  </div>
-
-                  {/* Issue Category */}
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Issue Category</label>
-                    <select
-                      value={newCategory}
-                      onChange={(e) => setNewCategory(e.target.value)}
-                      required
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-blue-500 cursor-pointer"
-                    >
-                      <option value="">Choose category...</option>
-                      <option value="Bug">Bug</option>
-                      <option value="Setup">Setup</option>
-                      <option value="Billing">Billing</option>
-                      <option value="Inquiry">Inquiry</option>
-                      <option value="Customization">Customization</option>
-                    </select>
-                  </div>
-
-                  {/* Severity Level */}
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Severity Level</label>
-                    <select
-                      value={newSeverity}
-                      onChange={(e) => setNewSeverity(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-blue-500 cursor-pointer"
-                    >
-                      <option value="Low">Low</option>
-                      <option value="Medium">Medium</option>
-                      <option value="High">High</option>
-                      <option value="Critical">Critical</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Ticket Subject */}
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Ticket Subject</label>
-                  <input
-                    type="text"
-                    value={newSubject}
-                    onChange={(e) => setNewSubject(e.target.value)}
-                    required
-                    placeholder="Brief summary of the issue"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                {/* Detailed Description */}
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Detailed Description</label>
-                  <textarea
-                    value={newDescription}
-                    onChange={(e) => setNewDescription(e.target.value)}
-                    required
-                    rows="5"
-                    placeholder="Provide full details, steps to reproduce, or any error messages..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-blue-500"
-                  ></textarea>
-                </div>
-
-                {/* Attachments */}
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Attachments (Optional)</label>
-                  <input
-                    type="file"
-                    className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 file:cursor-pointer cursor-pointer"
-                  />
-                </div>
-
-                {/* Action button */}
-                <div className="flex justify-end pt-3">
-                  <button
-                    type="submit"
-                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-1.5"
-                  >
-                    <span>➔ Submit Ticket</span>
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
+          {/* TAB 3: Generate Ticket removed from tab view */}
 
           {/* TAB 4: Direct Support */}
           {activeTab === 'direct_support' && (
@@ -923,6 +914,155 @@ const AdminSupport = () => {
                 Close Logs
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Generate Ticket Modal */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-fade-in text-slate-700">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+              <h3 className="text-base font-black text-slate-800 flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <span>Generate New Ticket</span>
+              </h3>
+              <button
+                onClick={() => setIsCreateModalOpen(false)}
+                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors font-bold text-sm cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateTicket} className="space-y-5 text-slate-600 font-semibold">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Client Name */}
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Client Name</label>
+                  <select
+                    value={newClientName}
+                    onChange={(e) => setNewClientName(e.target.value)}
+                    required
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-blue-500 cursor-pointer"
+                  >
+                    <option value="">Select or enter client name</option>
+                    <option value="Sunrise Academy">Sunrise Academy</option>
+                    <option value="Blue Hill Institute">Blue Hill Institute</option>
+                    <option value="Apex Retailers">Apex Retailers</option>
+                    <option value="Nova Tech Solutions">Nova Tech Solutions</option>
+                    <option value="Greenfield School">Greenfield School</option>
+                    <option value="City Mart Group">City Mart Group</option>
+                  </select>
+                </div>
+
+                {/* Product / Service */}
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Product / Service</label>
+                  <select
+                    value={newProduct}
+                    onChange={(e) => setNewProduct(e.target.value)}
+                    required
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-blue-500 cursor-pointer"
+                  >
+                    <option value="">Choose product...</option>
+                    <option value="School MS">School MS</option>
+                    <option value="College Portal">College Portal</option>
+                    <option value="GST Billing Tool">GST Billing Tool</option>
+                    <option value="CRM Enterprise">CRM Enterprise</option>
+                    <option value="E-Commerce Hub">E-Commerce Hub</option>
+                    <option value="Android Mobile App">Android Mobile App</option>
+                  </select>
+                </div>
+
+                {/* Issue Category */}
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Issue Category</label>
+                  <select
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    required
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-blue-500 cursor-pointer"
+                  >
+                    <option value="">Choose category...</option>
+                    <option value="Bug">Bug</option>
+                    <option value="Setup">Setup</option>
+                    <option value="Billing">Billing</option>
+                    <option value="Inquiry">Inquiry</option>
+                    <option value="Customization">Customization</option>
+                  </select>
+                </div>
+
+                {/* Severity Level */}
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Severity Level</label>
+                  <select
+                    value={newSeverity}
+                    onChange={(e) => setNewSeverity(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-blue-500 cursor-pointer"
+                  >
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Critical">Critical</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Ticket Subject */}
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Ticket Subject</label>
+                <input
+                  type="text"
+                  value={newSubject}
+                  onChange={(e) => setNewSubject(e.target.value)}
+                  required
+                  placeholder="Brief summary of the issue"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              {/* Detailed Description */}
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Detailed Description</label>
+                <textarea
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  required
+                  rows="4"
+                  placeholder="Provide full details, steps to reproduce, or any error messages..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-blue-500"
+                ></textarea>
+              </div>
+
+              {/* Attachments */}
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Attachments (Optional)</label>
+                <input
+                  type="file"
+                  className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 file:cursor-pointer cursor-pointer"
+                />
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-500 font-bold rounded-xl text-xs"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>Submit Ticket</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

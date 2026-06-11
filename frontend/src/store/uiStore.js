@@ -3,7 +3,7 @@ import { create } from 'zustand'
 const useUIStore = create((set) => ({
   sidebarOpen: true,
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
-  theme: localStorage.getItem('theme') || 'light',
+  theme: localStorage.getItem('theme') || 'dark',
   setTheme: (theme) => {
     localStorage.setItem('theme', theme)
     set({ theme })

@@ -59,7 +59,7 @@ const LatestNews = () => {
   if (loading) {
     return (
       <section className="py-24 section-muted">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="container-custom">
           <div className="grid md:grid-cols-3 gap-8">
             {[1, 2, 3].map((i) => (
               <div key={i} className="card-elevated p-6 animate-pulse">
@@ -79,7 +79,7 @@ const LatestNews = () => {
     <section className="py-24 section-muted relative overflow-hidden">
       <div className="ambient-glows" aria-hidden />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="container-custom relative z-10">
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
           <div className="badge-pill mx-auto w-fit">
             <span className="badge-pill-dot" />

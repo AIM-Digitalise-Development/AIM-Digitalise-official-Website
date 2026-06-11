@@ -76,7 +76,7 @@ const Career = () => {
   return (
     <>
       <Helmet>
-        <title>Careers at AIM | Join Our Engineering Team</title>
+        <title>AIM Digitalise | Careers</title>
         <meta name="description" content="Build the future of digital systems. We are hiring senior frontend engineers, cloud architects, and AI solutions specialists." />
       </Helmet>
 

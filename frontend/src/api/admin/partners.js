@@ -59,6 +59,20 @@ export const getAdminClients = () =>
 export const getAdminClientById = (id) =>
   adminFetch('GET', `/admin/clients/${id}`)
 
+// PUT /api/admin/clients/{id}/delivery  — body: { delivery_after: number }
+export const updateClientDelivery = (id, deliveryAfterDays) =>
+  adminFetch('PUT', `/admin/clients/${id}/delivery`, { delivery_after: deliveryAfterDays })
+
+// ─── Products ─────────────────────────────────────────────────────────────────
+// GET /api/admin/products
+export const getAdminProducts = () =>
+  adminFetch('GET', '/admin/products')
+
+// PUT /api/admin/products/{id}/discounts
+// body: { monthly_discount, quarterly_discount, half_yearly_discount, annual_discount }
+export const updateProductDiscounts = (id, discounts) =>
+  adminFetch('PUT', `/admin/products/${id}/discounts`, discounts)
+
 // ─── Hierarchy & Ranks ────────────────────────────────────────────────────────
 // GET /api/admin/partners-hierarchy
 export const getPartnersHierarchy = () =>

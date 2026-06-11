@@ -6,10 +6,10 @@ import Button from '../../ui/Button'
 const erpTabs = [
   {
     id: 'overview',
-    label: 'School Management Software',
+    label: 'School ERP Software',
     // videoPath: '/src/assets/videos/erp_overview.mp4',
     fallbackVideo: 'https://youtu.be/DffkR8iyhg4?si=6EAUnrSrvdsWMwip',
-    title: 'School Management Software',
+    title: 'School ERP Software',
     description: 'Designed and developed by AIM Digitalise Pvt. Ltd. to cater to small and medium-scale industries. Providing a comprehensive suite of features to streamline various business operations on a subscription licensing model at a highly competitive lower price.',
     features: [
       { name: 'Subscription-Based licensing', desc: 'Lower, predictable monthly cost' },
@@ -48,6 +48,13 @@ const erpTabs = [
   }
 ]
 
+const getYoutubeId = (url) => {
+  if (!url) return null
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/
+  const match = url.match(regExp)
+  return (match && match[2].length === 11) ? match[2] : null
+}
+
 const NxtGenErpSection = () => {
   const [activeTab, setActiveTab] = useState(0)
   const currentTab = erpTabs[activeTab]
@@ -56,7 +63,7 @@ const NxtGenErpSection = () => {
     <section className="relative py-24 overflow-hidden section-tinted bg-grid-pattern">
       <div className="ambient-glows" aria-hidden />
 
-      <div className="relative container-custom max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
+      <div className="relative container-custom z-10">
         
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
@@ -171,23 +178,43 @@ const NxtGenErpSection = () => {
               {/* Video Player */}
               <div className="overflow-hidden rounded-2xl border border-aim-border bg-aim-navy/40 aspect-video relative">
                 {/* 
-                  Keying the video element to the tab id forces React to reconstruct it 
+                  Keying the video/iframe element to the tab id forces React to reconstruct it 
                   so that it immediately downloads and plays the correct fallback 
                   or local stream when the active tab is switched.
                 */}
-                <video
-                  key={currentTab.id}
-                  className="w-full h-full object-cover shadow-inner"
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  controls
-                >
-                  <source src={currentTab.videoPath} type="video/mp4" />
-                  <source src={currentTab.fallbackVideo} type="video/mp4" />
-                  Your browser does not support the video tag.
-                </video>
+                {(() => {
+                  const videoUrl = currentTab.videoPath || currentTab.fallbackVideo
+                  const youtubeId = getYoutubeId(videoUrl)
+
+                  if (youtubeId) {
+                    return (
+                      <iframe
+                        key={currentTab.id}
+                        className="w-full h-full border-0 shadow-inner"
+                        src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&loop=1&playlist=${youtubeId}&controls=1`}
+                        title={currentTab.title}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                      />
+                    )
+                  }
+
+                  return (
+                    <video
+                      key={currentTab.id}
+                      className="w-full h-full object-cover shadow-inner"
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      controls
+                    >
+                      {currentTab.videoPath && <source src={currentTab.videoPath} type="video/mp4" />}
+                      {currentTab.fallbackVideo && <source src={currentTab.fallbackVideo} type="video/mp4" />}
+                      Your browser does not support the video tag.
+                    </video>
+                  )
+                })()}
               </div>
 
               {/* Bottom tag */}

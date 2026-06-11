@@ -1,106 +1,108 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import Button from '../../ui/Button'
 import Card from '../../ui/Card'
+import { ROUTES } from '../../../constants/routes'
 
-const engagementModels = {
-  growth: [
+const subscriptionModels = {
+  websites: [
     {
-      name: 'Advisory & Strategy',
-      badge: 'Discovery Phase',
-      price: '$150',
-      priceSuffix: '/hr',
-      description: 'Ideal for tech roadmapping, cloud security audits, architecture design, and technical scoping.',
+      name: 'Static Informative Website',
+      badge: 'Static Plan',
+      price: '₹2,000',
+      priceSuffix: ' Setup + ₹999/mo',
+      description: 'Ideal for small businesses seeking an elegant, fast, and secure corporate brochure page.',
       features: [
-        'Chief Solutions Architect lead',
-        'Detailed system design diagrams',
-        'Codebase & security audits',
-        'SOC2 compliance roadmapping',
-        'Flexible hourly engagements'
+        'Up to 5 Pages Corporate Look',
+        'Clean, fast static layouts',
+        'Assigned Relationship Manager',
+        'Free ESS Software (1 year)',
+        '100% Data Security & Ownership'
       ],
-      ctaText: 'Schedule Audit',
+      ctaText: 'Activate Plan',
       recommended: false
     },
     {
-      name: 'Dedicated Developer Pod',
-      badge: 'Most Popular',
-      price: '$8,500',
-      priceSuffix: '/mo per dev',
-      description: 'Retain dedicated, full-time senior engineers fully managed by a PM and QA. Perfect for building products.',
+      name: 'NEXGN Institute Pro',
+      badge: 'Educational ERP',
+      price: '₹1,000',
+      priceSuffix: ' Setup + ₹10/student/mo',
+      description: 'All-in-one school, college, and training center management system to control fee collection, timetables, and parent notifications.',
       features: [
-        'Dedicated senior engineers',
-        'Shared PM & QA oversight',
-        'Daily standups & weekly demos',
-        'Immediate scale capability',
-        'Full IP ownership'
+        'Student & Staff Database',
+        'Fee Collection with payment links',
+        'Class timetables & Exam scorecards',
+        'Parent Notification system',
+        'Free ESS Software (1 year)'
       ],
-      ctaText: 'Assemble Squad',
+      ctaText: 'Activate Plan',
       recommended: true
     },
     {
-      name: 'Fixed-Scope Projects',
-      badge: 'Turnkey Delivery',
-      price: 'Custom Scope',
-      priceSuffix: '',
-      description: 'We deliver your defined product end-to-end. Best for MVP launches or well-defined feature additions.',
+      name: 'E-Commerce Single Seller',
+      badge: 'Online Shop',
+      price: '₹5,000',
+      priceSuffix: ' Setup + ₹2,499/mo',
+      description: 'Full single seller marketplace solution with catalog management and automated invoicing systems.',
       features: [
-        'Guaranteed milestone delivery',
-        'Complete wireframes & specs',
-        'Rigorous automated testing',
-        '30 days post-launch support',
-        'Fixed budget timeline'
+        'Razorpay, Paytm & Stripe payment setup',
+        'Digital catalog & inventory dashboard',
+        'Order tracking & auto invoices',
+        'Free ESS Software (1 year)',
+        '100% Data Security & Ownership'
       ],
-      ctaText: 'Request Scoping',
+      ctaText: 'Activate Plan',
       recommended: false
     }
   ],
-  enterprise: [
+  software: [
     {
-      name: 'Advisory & Strategy',
-      badge: 'Enterprise Architecture',
-      price: '$250',
-      priceSuffix: '/hr',
-      description: 'On-demand technical executive advisory, systems modernization plans, and disaster recovery audits.',
+      name: 'NEXGN Accounts & Billing',
+      badge: 'Financials',
+      price: '₹2,000',
+      priceSuffix: ' Setup + ₹799/mo',
+      description: 'Quick GST-compliant invoicing, purchase orders, expense tracking, and customer ledgers on a secure cloud.',
       features: [
-        'Principal Architect & Partner lead',
-        'Zero-Trust network architecture',
-        'Legacy migration path design',
-        'DR & business continuity specs',
-        'Priority SLA consultation'
+        'GST-Compliant Invoicing templates',
+        'Expense tracking & customer ledger sheets',
+        'Auto billing reminders (SMS/WhatsApp)',
+        'Free ESS Software (1 year)',
+        '100% Data Security & Ownership'
       ],
-      ctaText: 'Consult Architect',
+      ctaText: 'Activate Plan',
       recommended: false
     },
     {
-      name: 'Dedicated Development Center',
-      badge: 'Scaling Teams',
-      price: '$12,000',
-      priceSuffix: '/mo per dev',
-      description: 'Elite developers, designers, QAs, and delivery managers dedicated entirely to your enterprise systems.',
+      name: 'NEXGN ERP Pro',
+      badge: 'All-In-One Workspace',
+      price: '₹1,000',
+      priceSuffix: ' Setup + ₹10/mo/student',
+      description: 'Fully integrated HRMS, inventory, purchase order logs, sales pipelines, and customer relationship manager.',
       features: [
-        '100% Dedicated senior developers',
-        'Dedicated QA & Lead PM',
-        'Enterprise grade security compliance',
-        'Continuous uptime SLA support',
-        '24/7 Priority engineering response'
+        'Integrated HRMS + Inventory + CRM',
+        'Sales pipeline & target tracking widgets',
+        'Custom print templates for PO/Quotes',
+        'Free ESS Software (1 year)',
+        '100% Data Security & Ownership'
       ],
-      ctaText: 'Initiate Center',
+      ctaText: 'Activate Plan',
       recommended: true
     },
     {
-      name: 'Enterprise Fixed Delivery',
-      badge: 'Defined Scope',
-      price: 'Custom SLA',
-      priceSuffix: '',
-      description: 'Large-scale digital transformations, migration projects, and product rewrites handled with strict delivery agreements.',
+      name: 'NEXGN Hotel & Hospital Pro',
+      badge: 'Industry Custom',
+      price: '₹4,000',
+      priceSuffix: ' Setup + ₹1,499/mo',
+      description: 'Dedicated software workflows for hotel property reservation or clinical EMR, doctor scheduler and pharmacy stock.',
       features: [
-        'SLA-backed milestone delivery',
-        'Full DevOps & security integration',
-        'Multi-stage staging deployments',
-        '90 days post-launch warranty',
-        'Detailed transition training'
+        'Clinical EMR, appointments & OPD bills',
+        'Hotel booking calendar & housekeeping logs',
+        'Integrated Restaurant/Pharmacy POS',
+        'Free ESS Software (1 year)',
+        '100% Data Security & Ownership'
       ],
-      ctaText: 'Contact Enterprise Sales',
+      ctaText: 'Activate Plan',
       recommended: false
     }
   ]
@@ -121,50 +123,50 @@ const itemVariants = {
 }
 
 const PricingCard = () => {
-  const [tier, setTier] = useState('growth')
+  const [tier, setTier] = useState('websites')
 
-  const currentModels = engagementModels[tier]
+  const currentModels = subscriptionModels[tier]
 
   return (
     <section className="py-24 section-white relative">
       <div className="ambient-glows" aria-hidden />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="container-custom relative z-10">
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
           <div className="badge-pill mx-auto w-fit">
             <span className="badge-pill-dot" />
-            Partnership Models
+            Pricing &amp; Subscriptions
           </div>
           <h2 className="heading-display">
-            Flexible Engagement Models
+            Flexible Subscription Models
           </h2>
           <div className="divider-brand" />
           <p className="text-lg copy-on-dark-muted">
-            Choose the alignment model that fits your company size, timeline, and engineering requirements.
+            India's first monthly subscription based website and software with 100% data security &amp; ownership.
           </p>
 
           {/* Tier Switcher */}
           <div className="flex justify-center mt-10">
             <div className="bg-aim-navy-light/60 border border-white/10 p-1 rounded-xl flex gap-1">
               <button
-                onClick={() => setTier('growth')}
+                onClick={() => setTier('websites')}
                 className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
-                  tier === 'growth'
+                  tier === 'websites'
                     ? 'bg-aim-gold text-aim-navy shadow-md'
                     : 'text-aim-copy-muted hover:text-white'
                 }`}
               >
-                Growth Stage &amp; Startups
+                SaaS Website Plans
               </button>
               <button
-                onClick={() => setTier('enterprise')}
+                onClick={() => setTier('software')}
                 className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
-                  tier === 'enterprise'
+                  tier === 'software'
                     ? 'bg-aim-gold text-aim-navy shadow-md'
                     : 'text-aim-copy-muted hover:text-white'
                 }`}
               >
-                Enterprise Systems
+                SaaS Software Solutions
               </button>
             </div>
           </div>
@@ -225,13 +227,15 @@ const PricingCard = () => {
                 </div>
 
                 <div className="mt-8 pt-6 border-t border-white/10">
-                  <Button
-                    variant={model.recommended ? 'primary' : 'outline'}
-                    size="lg"
-                    className="w-full text-sm font-bold"
-                  >
-                    {model.ctaText}
-                  </Button>
+                  <Link to={ROUTES.SAAS_SOFTWARE} className="block w-full">
+                    <Button
+                      variant={model.recommended ? 'primary' : 'outline'}
+                      size="lg"
+                      className="w-full text-sm font-bold cursor-pointer"
+                    >
+                      {model.ctaText}
+                    </Button>
+                  </Link>
                 </div>
               </Card>
             </motion.div>

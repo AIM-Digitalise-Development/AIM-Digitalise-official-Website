@@ -55,7 +55,7 @@ const PartnerDashboard = () => {
   return (
     <>
       <Helmet>
-        <title>Partner Dashboard | AIM Digitalise</title>
+        <title>AIM Partner | Dashboard</title>
       </Helmet>
 
       <div className="space-y-6">

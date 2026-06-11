@@ -1,7 +1,7 @@
 export const SectionSkeleton = ({ height = '400px' }) => {
   return (
     <div className="py-20 bg-slate-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="container-custom">
         <div className="animate-pulse">
           <div className="h-8 bg-slate-200 rounded w-1/3 mx-auto mb-4"></div>
           <div className="h-4 bg-slate-200 rounded w-1/2 mx-auto mb-12"></div>

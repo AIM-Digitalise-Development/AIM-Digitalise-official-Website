@@ -203,12 +203,12 @@ const tabs = [
       </svg>
     ),
     cards: [
-      { key: 'taxation',   label: 'Taxation Software' },
-      { key: 'accounting', label: 'Accounting Software' },
-      { key: 'payroll',    label: 'Payroll Software -\nGreytHR' },
-      { key: 'hospital',   label: 'Hospital Management\nSoftware' },
-      { key: 'school',     label: 'School Management\nSystem' },
-      { key: 'crm',        label: 'CRM Software' },
+      { key: 'taxation',   label: 'NEXGN Institute Pro' },
+      { key: 'accounting', label: 'NEXGN ERP Premium Plus' },
+      { key: 'payroll',    label: 'NEXGN Accounts & Billing' },
+      { key: 'hospital',   label: 'NEXGN Hospital Plus' },
+      { key: 'school',     label: 'NEXGN Hotel Pro' },
+      { key: 'crm',        label: 'NEXGN ERP Pro' },
     ]
   },
   {
@@ -277,7 +277,7 @@ const FeaturesGrid = () => {
     <section className="py-24 section-white relative">
       <div className="ambient-glows" aria-hidden />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="container-custom relative z-10">
 
         {/* Section header */}
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
