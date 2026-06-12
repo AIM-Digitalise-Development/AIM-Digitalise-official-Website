@@ -1,43 +1,42 @@
-import React from 'react'
-
 const ProductActiveCard = ({ activeProduct }) => {
   return (
-    <div className="bg-gradient-to-br from-indigo-900 via-purple-900 to-[#101730] border border-white/10 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden group">
-      {/* Interactive floating glows */}
-      <div className="absolute -right-16 -bottom-16 w-52 h-52 bg-aim-gold/15 rounded-full blur-[80px] pointer-events-none group-hover:scale-110 transition duration-500" />
-      <div className="absolute -left-16 -top-16 w-52 h-52 bg-aim-purple/20 rounded-full blur-[80px] pointer-events-none group-hover:scale-110 transition duration-500" />
-      
-      <div className="relative z-10 flex flex-col justify-between space-y-8">
-        <div className="flex items-start justify-between flex-wrap gap-2">
+    <div className="rounded-xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #1a2e3d 0%, #1f3a4f 50%, #264d66 100%)' }}>
+      <div className="p-6">
+        <div className="flex items-start justify-between flex-wrap gap-3">
           <div>
-            <h3 className="text-2xl font-black tracking-tight">{activeProduct?.product_name || activeProduct?.name || '—'}</h3>
-            <span className="text-aim-copy-muted text-xs font-bold block mt-1 uppercase tracking-widest font-mono">
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-white/40 mb-1">Active Product</p>
+            <h3 className="text-xl font-bold text-white tracking-tight">
+              {activeProduct?.product_name || activeProduct?.name || '—'}
+            </h3>
+            <span className="text-white/40 text-[11px] font-medium block mt-1 uppercase tracking-wider">
               {activeProduct?.category || activeProduct?.product_category || 'NEXGN'}
             </span>
           </div>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-black rounded-full uppercase tracking-wider shadow-md">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-semibold rounded-md uppercase tracking-wide"
+            style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}
+          >
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             {activeProduct?.status || 'Active'}
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 pt-5 border-t border-white/10">
-          <div>
-            <span className="text-aim-copy-muted text-[9px] uppercase font-bold tracking-wider block">Processing Fee</span>
-            <span className="text-lg font-black mt-0.5 block text-white">₹{Number(activeProduct?.processing_fee || 0).toLocaleString('en-IN')}</span>
-          </div>
-          <div>
-            <span className="text-aim-copy-muted text-[9px] uppercase font-bold tracking-wider block">Monthly Subscription</span>
-            <span className="text-lg font-black mt-0.5 block text-white">₹{Number(activeProduct?.monthly_subscription || 0).toLocaleString('en-IN')}</span>
-          </div>
-          <div>
-            <span className="text-aim-copy-muted text-[9px] uppercase font-bold tracking-wider block">Payment Status</span>
-            <span className={`inline-block text-xs font-black uppercase mt-1.5 ${
-              (activeProduct?.payment_status || '').toLowerCase() === 'paid' ? 'text-emerald-400' : 'text-amber-400'
-            }`}>
-              {activeProduct?.payment_status || 'Unpaid'}
-            </span>
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 pt-5 mt-5" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          {[
+            { label: 'Processing Fee', value: `₹${Number(activeProduct?.processing_fee || 0).toLocaleString('en-IN')}` },
+            { label: 'Monthly Subscription', value: `₹${Number(activeProduct?.monthly_subscription || 0).toLocaleString('en-IN')}` },
+            { label: 'Payment Status', value: activeProduct?.payment_status || 'Unpaid', isStatus: true },
+          ].map((item) => (
+            <div key={item.label}>
+              <span className="text-white/30 text-[10px] uppercase font-medium tracking-wider block">{item.label}</span>
+              {item.isStatus ? (
+                <span className={`inline-block text-[12px] font-semibold uppercase mt-1.5 ${
+                  (item.value || '').toLowerCase() === 'paid' ? 'text-emerald-400' : 'text-amber-400'
+                }`}>{item.value}</span>
+              ) : (
+                <span className="text-lg font-bold mt-1 block text-white">{item.value}</span>
+              )}
+            </div>
+          ))}
         </div>
       </div>
     </div>

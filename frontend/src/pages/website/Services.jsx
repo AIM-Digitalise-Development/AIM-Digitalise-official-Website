@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { Helmet } from 'react-helmet-async'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import useUIStore from '../../store/uiStore'
 import PageHero from '../../components/website/common/PageHero'
 
 const services = [
@@ -57,6 +58,7 @@ const iconWrap = (accent) =>
     : 'p-3.5 rounded-xl bg-aim-gold/10 text-aim-gold border border-aim-gold/20'
 
 const Services = () => {
+  const openAppointmentModal = useUIStore((state) => state.openAppointmentModal)
   return (
     <>
       <Helmet>
@@ -114,7 +116,12 @@ const Services = () => {
                   Our principal software architects can scope your system design, suggest cloud mappings, and estimate budget targets.
                 </p>
                 <div className="flex flex-col sm:flex-row justify-center gap-4">
-                  <Button variant="primary" size="lg" className="btn-primary cursor-pointer">
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    className="btn-primary cursor-pointer"
+                    onClick={openAppointmentModal}
+                  >
                     Request Free Scoping
                   </Button>
                   <Button variant="outline" size="lg" className="btn-outline-brand cursor-pointer">

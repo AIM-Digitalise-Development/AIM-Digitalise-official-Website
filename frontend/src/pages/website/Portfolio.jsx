@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Helmet } from 'react-helmet-async'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import useUIStore from '../../store/uiStore'
 import PageHero from '../../components/website/common/PageHero'
 
 const categories = ['Web', 'Graphics', 'Mobile Application', 'Software Development', 'Digital Marketing']
@@ -97,6 +98,7 @@ const projects = [
 
 const Portfolio = () => {
   const [filter, setFilter] = useState('Web')
+  const openAppointmentModal = useUIStore((state) => state.openAppointmentModal)
 
   const filteredProjects = projects.filter(p => p.category === filter)
 
@@ -109,7 +111,7 @@ const Portfolio = () => {
 
       <div className="page-shell bg-aim-navy">
         {/* Compact Title Section */}
-        <section className="relative pt-10 pb-6 bg-mesh-brand bg-grid-pattern border-b border-white/10 overflow-hidden">
+        <section className="relative pt-10 pb-6 border-b border-white/10 overflow-hidden">
           <div className="ambient-glows" aria-hidden />
           <div className="container-custom relative z-10">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 text-left">
@@ -150,11 +152,7 @@ const Portfolio = () => {
                 <button
                   key={cat}
                   onClick={() => setFilter(cat)}
-                  className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold uppercase tracking-wider transition-all duration-300 border cursor-pointer ${
-                    filter === cat
-                      ? 'bg-gradient-to-r from-aim-gold to-aim-gold-light border-aim-gold-dark text-aim-navy shadow-lg shadow-aim-gold/20'
-                      : 'card-elevated border-white/10 text-aim-copy-muted hover:text-white hover:border-aim-gold/40'
-                  }`}
+                  className={`tab-filter-btn ${filter === cat ? 'active' : ''}`}
                 >
                   {cat}
                 </button>
@@ -176,19 +174,19 @@ const Portfolio = () => {
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.4 }}
                   >
-                    <Card hover padding="none" className="h-full overflow-hidden flex flex-col group/card">
+                    <Card hover padding="none" className="h-full overflow-hidden flex flex-col group/card rounded-3xl border border-white/5 transition-all duration-300">
                       {/* Visual Card Image Header */}
-                      <div className="relative h-48 sm:h-56 overflow-hidden border-b border-white/5 bg-aim-navy">
-                        <img 
-                          src={proj.image} 
-                          alt={proj.title} 
-                          className="w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-105"
-                        />
-                        {/* Gradient overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-aim-navy via-transparent to-transparent opacity-80" />
+                      <div className="relative p-4 pb-0 overflow-hidden bg-aim-navy dark:bg-transparent">
+                        <div className="relative h-48 sm:h-56 overflow-hidden rounded-2xl">
+                          <img 
+                            src={proj.image} 
+                            alt={proj.title} 
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-105"
+                          />
+                        </div>
                         
                         {/* Category Badge */}
-                        <div className="absolute top-4 left-4 z-10">
+                        <div className="absolute top-8 left-8 z-10">
                           <span className="px-3 py-1 rounded-full bg-aim-navy/80 backdrop-blur border border-aim-gold/30 text-aim-gold text-[10px] font-black uppercase tracking-widest shadow-lg">
                             {proj.category}
                           </span>
@@ -205,7 +203,7 @@ const Portfolio = () => {
                         <div className="space-y-4">
                           <div className="flex flex-wrap gap-1.5">
                             {proj.techs.map((tech) => (
-                              <span key={tech} className="px-2.5 py-1 rounded bg-white/5 border border-white/5 text-aim-copy-muted text-xs font-semibold">
+                              <span key={tech} className="px-2.5 py-1 rounded bg-slate-200/50 dark:bg-white/5 border border-slate-300/50 dark:border-white/5 text-aim-copy-muted text-xs font-semibold">
                                 {tech}
                               </span>
                             ))}
@@ -227,7 +225,12 @@ const Portfolio = () => {
                   Connect with our solutions architects to discuss your technical specifications, legacy migrations, or scaling requirements.
                 </p>
                 <div className="flex justify-center">
-                  <Button variant="primary" size="lg" className="cursor-pointer">
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    className="cursor-pointer"
+                    onClick={openAppointmentModal}
+                  >
                     Schedule Strategy Call
                   </Button>
                 </div>

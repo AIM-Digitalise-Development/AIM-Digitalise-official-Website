@@ -40,6 +40,7 @@ import ClientLayout from './layouts/ClientLayout'
 import ClientLogin from './pages/client/Login'
 import ClientProducts from './pages/client/Products'
 import ClientProfile from './pages/client/Profile'
+import ClientSubscription from './pages/client/Subscription'
 import { ROUTES } from './constants/routes'
 
 function ScrollToTop() {
@@ -129,6 +130,7 @@ function App() {
           <Route path={ROUTES.CLIENT.PORTAL} element={<ClientLayout />}>
             <Route index element={<ClientProducts />} />
             <Route path="profile" element={<ClientProfile />} />
+            <Route path="subscription" element={<ClientSubscription />} />
           </Route>
         </Routes>
       </BrowserRouter>

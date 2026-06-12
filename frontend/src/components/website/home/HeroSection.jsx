@@ -24,7 +24,7 @@ const HeroSection = () => {
     <section className="relative overflow-hidden pt-14 pb-20 md:pt-18 md:pb-28 bg-mesh-brand bg-grid-pattern section-white border-b border-white/10">
       <div className="ambient-glows" aria-hidden />
 
-      <div className="relative max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative max-w-screen-2xl mx-auto px-10 sm:px-18 lg:px-18">
         <div className="grid lg:grid-cols-12 gap-12 items-center">
           {/* Left Content */}
           <motion.div
@@ -142,47 +142,20 @@ const HeroSection = () => {
 
             {/* Main Interactive Interface Preview */}
             <motion.div
-              className="relative card-elevated border border-white/10 rounded-3xl p-4 shadow-2xl ring-1 ring-aim-black/20"
+              className="relative overflow-hidden rounded-3xl border border-white/10 shadow-2xl ring-1 ring-aim-black/20"
               animate={{ y: [0, -10, 0] }}
               transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
             >
-              <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4 px-2">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-aim-gold/90"></span>
-                  <span className="w-3 h-3 rounded-full bg-white/30 border border-white/20"></span>
-                  <span className="w-3 h-3 rounded-full bg-aim-purple/90"></span>
-                </div>
-                <span className="text-[10px] text-on-navy-muted font-mono tracking-widest">aim-architecture-audit</span>
-                <span className="w-4 h-4 text-slate-400">
-                  <svg fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z"></path></svg>
-                </span>
-              </div>
-
-              <div className="overflow-hidden rounded-2xl border border-white/10 bg-aim-navy-light/50 p-2">
-                <video
-                  className="rounded-xl w-full h-auto shadow-inner object-cover"
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                >
-                  <source src={nexgnVideo} type="video/mp4" />
-                  Your browser does not support the video tag.
-                </video>
-              </div>
-
-              {/* Overlay Glass Badge */}
-              <div className="absolute -bottom-6 -left-6 bg-aim-navy-light/95 backdrop-blur border border-aim-gold/30 rounded-2xl p-4 shadow-xl flex items-center gap-3 max-w-[200px]">
-                <div className="p-2.5 rounded-lg bg-aim-gold/15 text-aim-gold">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
-                </div>
-                <div className="text-left">
-                  <p className="text-[11px] text-on-navy-muted font-bold uppercase tracking-wider">Infrastructure</p>
-                  <p className="text-xs font-black text-white">99.99% Uptime Verified</p>
-                </div>
-              </div>
+              <video
+                className="w-full h-auto object-cover"
+                autoPlay
+                loop
+                muted
+                playsInline
+              >
+                <source src={nexgnVideo} type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
             </motion.div>
           </motion.div>
         </div>

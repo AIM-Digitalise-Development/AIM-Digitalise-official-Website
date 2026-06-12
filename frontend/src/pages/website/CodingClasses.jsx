@@ -2,7 +2,6 @@ import { motion } from 'framer-motion'
 import { Helmet } from 'react-helmet-async'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
-import PageHero from '../../components/website/common/PageHero'
 
 const classes = [
   {
@@ -55,13 +54,25 @@ const CodingClasses = () => {
         <meta name="description" content="Upskill your team or accelerate your career with professional development bootcamps in React, Cloud DevOps, AI Systems, and Software Architecture." />
       </Helmet>
 
-      <div className="page-shell">
-        <PageHero
-          badge="Academy & Training"
-          title="Cohort-Based"
-          highlight="Coding Classes"
-          description="Accelerate your engineering skills with instructor-led, hands-on masterclasses. Real-world systems, production-ready curriculum, and active project feedback."
-        />
+      <div className="page-shell bg-aim-navy">
+        {/* Compact Title Section */}
+        <section className="relative pt-10 pb-8 border-b border-white/10 overflow-hidden">
+          <div className="ambient-glows" aria-hidden />
+          <div className="container-custom relative z-10 text-left">
+            <div className="max-w-4xl space-y-3">
+              <div className="badge-pill w-fit text-[10px] py-1 px-2.5 uppercase tracking-widest">
+                <span className="badge-pill-dot" />
+                Academy &amp; Training
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                Cohort-Based <span className="text-gradient">Coding Classes</span>
+              </h1>
+              <p className="text-xs sm:text-sm text-aim-copy-muted leading-relaxed max-w-3xl">
+                Accelerate your engineering skills with instructor-led, hands-on masterclasses. Real-world systems, production-ready curriculum, and active project feedback.
+              </p>
+            </div>
+          </div>
+        </section>
 
         <section className="section-muted py-16 md:py-20">
         <div className="container-custom">

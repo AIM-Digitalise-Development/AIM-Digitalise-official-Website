@@ -2,7 +2,6 @@ import { motion } from 'framer-motion'
 import { Helmet } from 'react-helmet-async'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
-import PageHero from '../../components/website/common/PageHero'
 
 const dscOfferings = [
   {
@@ -71,13 +70,25 @@ const DigitalSignature = () => {
         <meta name="description" content="Secure your business operations with Class 3 Digital Signature Certificates (DSC) and DGFT tokens from AIM Digitalise. Quick paperless registration." />
       </Helmet>
 
-      <div className="page-shell">
-        <PageHero
-          badge="Compliance & Trust"
-          title="Secure Digital"
-          highlight="Signature Certificates"
-          description="We issue government-authorized, legally compliant Class 3 DSC and DGFT cryptographic tokens for businesses, directors, and organizations."
-        />
+      <div className="page-shell bg-aim-navy">
+        {/* Compact Title Section */}
+        <section className="relative pt-10 pb-8 border-b border-white/10 overflow-hidden">
+          <div className="ambient-glows" aria-hidden />
+          <div className="container-custom relative z-10 text-left">
+            <div className="max-w-4xl space-y-3">
+              <div className="badge-pill w-fit text-[10px] py-1 px-2.5 uppercase tracking-widest">
+                <span className="badge-pill-dot" />
+                Compliance &amp; Trust
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                Secure Digital <span className="text-gradient">Signature Certificates</span>
+              </h1>
+              <p className="text-xs sm:text-sm text-aim-copy-muted leading-relaxed max-w-3xl">
+                We issue government-authorized, legally compliant Class 3 DSC and DGFT cryptographic tokens for businesses, directors, and organizations.
+              </p>
+            </div>
+          </div>
+        </section>
 
         <section className="section-muted py-16 md:py-20">
           <div className="container-custom">

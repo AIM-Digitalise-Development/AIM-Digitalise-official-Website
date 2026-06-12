@@ -1,7 +1,10 @@
 import { motion } from 'framer-motion'
 import Button from '../../ui/Button'
+import useUIStore from '../../../store/uiStore'
 
 const CTASection = () => {
+  const openAppointmentModal = useUIStore((state) => state.openAppointmentModal)
+
   return (
     <section className="py-24 section-muted relative overflow-hidden">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-blue-500/6 rounded-full blur-[100px] pointer-events-none" />
@@ -34,7 +37,8 @@ const CTASection = () => {
               <Button
                 variant="primary"
                 size="lg"
-                className="btn-primary"
+                className="btn-primary cursor-pointer"
+                onClick={openAppointmentModal}
               >
                 Book a Strategy Call
               </Button>

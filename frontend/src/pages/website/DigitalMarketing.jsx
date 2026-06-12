@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { Helmet } from 'react-helmet-async'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
-import PageHero from '../../components/website/common/PageHero'
+import useUIStore from '../../store/uiStore'
 
 const marketingServices = [
   {
@@ -57,6 +57,7 @@ const iconWrap = (accent) =>
     : 'p-3.5 rounded-xl bg-aim-gold/10 text-aim-gold border border-aim-gold/20'
 
 const DigitalMarketing = () => {
+  const openAppointmentModal = useUIStore((state) => state.openAppointmentModal)
   return (
     <>
       <Helmet>
@@ -64,13 +65,25 @@ const DigitalMarketing = () => {
         <meta name="description" content="Accelerate your brand growth with AIM Digitalise's elite digital marketing services, covering SEO optimization, Google Ads, SMM, and analytics." />
       </Helmet>
 
-      <div className="page-shell">
-        <PageHero
-          badge="Brand Positioning & Growth"
-          title="Vibrant Digital"
-          highlight="Marketing Services"
-          description="We blend data-driven optimization with premium creative execution to scale your search visibility, social engagement, and customer acquisition rates."
-        />
+      <div className="page-shell bg-aim-navy">
+        {/* Compact Title Section */}
+        <section className="relative pt-10 pb-8 border-b border-white/10 overflow-hidden">
+          <div className="ambient-glows" aria-hidden />
+          <div className="container-custom relative z-10 text-left">
+            <div className="max-w-4xl space-y-3">
+              <div className="badge-pill w-fit text-[10px] py-1 px-2.5 uppercase tracking-widest">
+                <span className="badge-pill-dot" />
+                Brand Positioning &amp; Growth
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                Vibrant Digital <span className="text-gradient">Marketing Services</span>
+              </h1>
+              <p className="text-xs sm:text-sm text-aim-copy-muted leading-relaxed max-w-3xl">
+                We blend data-driven optimization with premium creative execution to scale your search visibility, social engagement, and customer acquisition rates.
+              </p>
+            </div>
+          </div>
+        </section>
 
         <section className="section-muted py-16 md:py-20">
           <div className="container-custom">
@@ -114,7 +127,12 @@ const DigitalMarketing = () => {
                   Book a consultation with our digital marketing directors. We will audit your competitors, suggest targeted keyword roadmaps, and propose budget-optimized campaign funnels.
                 </p>
                 <div className="flex flex-col sm:flex-row justify-center gap-4">
-                  <Button variant="primary" size="lg" className="btn-primary cursor-pointer">
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    className="btn-primary cursor-pointer"
+                    onClick={openAppointmentModal}
+                  >
                     Request Free Marketing Audit
                   </Button>
                   <a href="https://wa.me/916290902922" target="_blank" rel="noopener noreferrer">

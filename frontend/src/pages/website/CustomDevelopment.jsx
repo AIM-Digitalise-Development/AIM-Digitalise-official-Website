@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { Helmet } from 'react-helmet-async'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
-import PageHero from '../../components/website/common/PageHero'
+import useUIStore from '../../store/uiStore'
 
 const services = [
   {
@@ -57,6 +57,7 @@ const iconWrap = (accent) =>
     : 'p-3.5 rounded-xl bg-aim-gold/10 text-aim-gold border border-aim-gold/20'
 
 const CustomDevelopment = () => {
+  const openAppointmentModal = useUIStore((state) => state.openAppointmentModal)
   return (
     <>
       <Helmet>
@@ -64,13 +65,25 @@ const CustomDevelopment = () => {
         <meta name="description" content="Explore our enterprise-grade bespoke technical solutions: custom software development, cloud systems, and AI model integrations." />
       </Helmet>
 
-      <div className="page-shell">
-        <PageHero
-          badge="Custom Software Engineering"
-          title="Bespoke Development"
-          highlight="Engineering Solutions"
-          description="We leverage modern technology stacks, architectural blueprints, and agile delivery to build robust, tailormade software systems for global brands."
-        />
+      <div className="page-shell bg-aim-navy">
+        {/* Compact Title Section */}
+        <section className="relative pt-10 pb-8 border-b border-white/10 overflow-hidden">
+          <div className="ambient-glows" aria-hidden />
+          <div className="container-custom relative z-10 text-left">
+            <div className="max-w-4xl space-y-3">
+              <div className="badge-pill w-fit text-[10px] py-1 px-2.5 uppercase tracking-widest">
+                <span className="badge-pill-dot" />
+                Custom Software Engineering
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                Bespoke Development <span className="text-gradient">Engineering Solutions</span>
+              </h1>
+              <p className="text-xs sm:text-sm text-aim-copy-muted leading-relaxed max-w-3xl">
+                We leverage modern technology stacks, architectural blueprints, and agile delivery to build robust, tailormade software systems for global brands.
+              </p>
+            </div>
+          </div>
+        </section>
 
         <section className="section-muted py-16 md:py-20">
           <div className="container-custom">
@@ -114,7 +127,12 @@ const CustomDevelopment = () => {
                   Our principal software architects can scope your system design, suggest cloud mappings, and estimate budget targets.
                 </p>
                 <div className="flex flex-col sm:flex-row justify-center gap-4">
-                  <Button variant="primary" size="lg" className="btn-primary cursor-pointer">
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    className="btn-primary cursor-pointer"
+                    onClick={openAppointmentModal}
+                  >
                     Request Free Scoping
                   </Button>
                   <Button variant="outline" size="lg" className="btn-outline-brand cursor-pointer">

@@ -86,7 +86,6 @@ const ClientProfile = () => {
     total_students: displayUser?.total_students
   }
 
-  // Calculate fallback monthly subscription fee if plan is Institute Pro and stored value is 0 or null
   const isInstPro = rawProduct?.product_name === 'NEXGN Institute Pro' || rawProduct?.name === 'NEXGN Institute Pro'
   const totalStudentsNum = parseInt(displayUser?.total_students || rawProduct?.total_students, 10) || 0
   const finalSub = (isInstPro && (!rawProduct?.monthly_subscription || Number(rawProduct.monthly_subscription) === 0))
@@ -101,7 +100,7 @@ const ClientProfile = () => {
   if (loading && !displayUser.client_id) {
     return (
       <div className="flex items-center justify-center py-20">
-        <svg className="w-8 h-8 animate-spin text-aim-gold" fill="none" viewBox="0 0 24 24">
+        <svg className="w-6 h-6 animate-spin text-gray-300" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
         </svg>
@@ -111,30 +110,19 @@ const ClientProfile = () => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 15 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25 }}
-      className="space-y-6 max-w-5xl mx-auto"
+      transition={{ duration: 0.2 }}
+      className="space-y-4 max-w-5xl mx-auto"
     >
-      <div className="flex items-center justify-between pb-3 border-b border-white/5">
-        <h2 className="text-lg font-black text-white flex items-center gap-2">
-          <span className="bg-blue-500/20 text-blue-400 p-2 rounded-xl border border-blue-500/10">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          </span>
-          Profile Information
-        </h2>
-      </div>
-
       {error && (
-        <div className="p-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 text-xs font-semibold">
+        <div className="p-3 rounded-lg text-[12px] font-medium" style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626' }}>
           {error}
         </div>
       )}
 
-      {/* Grid of sub-component cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Grid of profile cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <BasicInfoCard displayUser={displayUser} />
         <OrgDetailsCard displayUser={displayUser} />
         <AddressCard displayUser={displayUser} />

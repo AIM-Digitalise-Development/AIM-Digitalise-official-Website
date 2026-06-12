@@ -86,7 +86,6 @@ const ClientProducts = () => {
     total_students: displayUser?.total_students
   }
 
-  // Calculate fallback monthly subscription fee if plan is Institute Pro and stored value is 0 or null
   const isInstPro = rawProduct?.product_name === 'NEXGN Institute Pro' || rawProduct?.name === 'NEXGN Institute Pro'
   const totalStudentsNum = parseInt(displayUser?.total_students || rawProduct?.total_students, 10) || 0
   const finalSub = (isInstPro && (!rawProduct?.monthly_subscription || Number(rawProduct.monthly_subscription) === 0))
@@ -101,7 +100,7 @@ const ClientProducts = () => {
   if (loading && !activeProduct.name && !activeProduct.product_name) {
     return (
       <div className="flex items-center justify-center py-20">
-        <svg className="w-8 h-8 animate-spin text-aim-gold" fill="none" viewBox="0 0 24 24">
+        <svg className="w-6 h-6 animate-spin text-gray-300" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
         </svg>
@@ -111,43 +110,29 @@ const ClientProducts = () => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 15 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25 }}
-      className="space-y-6 max-w-5xl mx-auto"
+      transition={{ duration: 0.2 }}
+      className="space-y-5 max-w-5xl mx-auto"
     >
-      <div className="flex items-center justify-between pb-3 border-b border-white/5">
-        <h2 className="text-lg font-black text-white flex items-center gap-2">
-          <span className="bg-purple-500/20 text-purple-400 p-2 rounded-xl border border-purple-500/10">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-          </span>
-          My Products & Services
-        </h2>
-      </div>
-
       {error && (
-        <div className="p-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 text-xs font-semibold">
+        <div className="p-3 rounded-lg text-[12px] font-medium" style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626' }}>
           {error}
         </div>
       )}
 
       {(!activeProduct.name && !activeProduct.product_name) ? (
-        <div className="py-16 text-center text-aim-copy-muted border border-white/5 bg-white/5 rounded-2xl">
+        <div className="py-16 text-center text-gray-400 bg-white rounded-xl" style={{ border: '1px solid #ebedf0' }}>
           <span className="text-4xl block">📦</span>
-          <p className="font-bold mt-2 text-sm">No active product subscriptions found.</p>
+          <p className="font-semibold mt-2 text-[13px]">No active product subscriptions found.</p>
         </div>
       ) : (
-        <div className="space-y-6">
-          {/* Neon gradient active product card */}
+        <div className="space-y-4">
           <ProductActiveCard activeProduct={activeProduct} />
-
-          {/* Client billing details grid */}
-          <BillingDetailsCard displayUser={displayUser} />
-
-          {/* Purchase summary transaction card */}
-          <PurchaseSummaryCard activeProduct={activeProduct} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <BillingDetailsCard displayUser={displayUser} />
+            <PurchaseSummaryCard activeProduct={activeProduct} />
+          </div>
         </div>
       )}
     </motion.div>

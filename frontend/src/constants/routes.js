@@ -48,6 +48,7 @@ export const ROUTES = {
     LOGIN: '/client/login',
     PORTAL: '/client/portal',
     PROFILE: '/client/portal/profile',
+    SUBSCRIPTION: '/client/portal/subscription',
   },
   AUTH: {
     LOGIN: '/login',

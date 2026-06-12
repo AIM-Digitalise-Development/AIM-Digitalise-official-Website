@@ -43,7 +43,7 @@ const BankAccountForm = () => {
             name="beneficiaryName"
             value={form.beneficiaryName}
             onChange={handleChange}
-            placeholder="John Doe"
+            placeholder=""
             required
             className={inputCls}
           />

@@ -37,3 +37,19 @@ export const getClientProducts = (token) =>
 
 export const clientLogout = (token) =>
   clientPortalFetch('POST', '/client/logout', null, token)
+
+export const getClientStudentCount = (token) =>
+  clientPortalFetch('GET', '/client/student-count', null, token)
+
+export const getClientPaymentCycles = (token) =>
+  clientPortalFetch('GET', '/client/payment-cycles', null, token)
+
+export const calculateSubscription = (cycle, token) =>
+  clientPortalFetch('GET', '/client/calculate-subscription', { cycle }, token)
+
+export const createSubscriptionOrder = (cycle, token) =>
+  clientPortalFetch('POST', '/client/create-subscription-order', { cycle }, token)
+
+export const verifySubscriptionPayment = (paymentData, token) =>
+  clientPortalFetch('POST', '/client/verify-subscription-payment', paymentData, token)
+

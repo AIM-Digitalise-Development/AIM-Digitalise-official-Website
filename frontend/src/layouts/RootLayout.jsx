@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { ROUTES } from '../constants/routes'
 import AdminEmployeeLoginModal from '../components/auth/AdminEmployeeLoginModal'
+import AppointmentModal from '../components/website/common/AppointmentModal'
 import logo from '../assets/images/logo.png';
 import useUIStore from '../store/uiStore'
 
@@ -75,7 +76,7 @@ const RootLayout = () => {
   const footerLoginMenuRef = useRef(null)
   const location = useLocation()
   const { theme, setTheme } = useUIStore()
-  
+
   useEffect(() => {
     const root = window.document.documentElement
     if (theme === 'dark') {
@@ -93,8 +94,8 @@ const RootLayout = () => {
 
   const navLinks = [
     { name: 'Home', path: ROUTES.HOME },
-    { 
-      name: 'About Us', 
+    {
+      name: 'About Us',
       path: ROUTES.ABOUT,
       subLinks: [
         { name: 'Who We Are?', path: `${ROUTES.ABOUT}#who-we-are`, desc: 'Discover our origin, team expertise & core mission.' },
@@ -102,8 +103,8 @@ const RootLayout = () => {
         { name: 'Our Success Story', path: `${ROUTES.ABOUT}#success-story`, desc: 'Take a look at our timeline, achievements & satisfaction rate.' },
       ]
     },
-    { 
-      name: 'Services', 
+    {
+      name: 'Services',
       path: ROUTES.CUSTOM_DEVELOPMENT,
       subLinks: [
         { name: 'SaaS Based Software', path: ROUTES.SAAS_SOFTWARE, desc: 'Flexible flat-rate cloud software systems.' },
@@ -117,7 +118,7 @@ const RootLayout = () => {
     { name: 'Career', path: ROUTES.CAREER },
     { name: 'Contact Us', path: ROUTES.CONTACT },
   ]
-  
+
   const isActive = (path) => location.pathname === path
 
   const isLinkActive = (link) => {
@@ -145,99 +146,91 @@ const RootLayout = () => {
     <div className={`min-h-screen flex flex-col website-root transition-colors duration-300 ${theme === 'dark' ? 'dark bg-mesh-brand' : 'bg-slate-200'}`}>
       {/* Sticky Header */}
       <header className="sticky top-0 z-50 w-full">
-        <div className={`transition-all duration-300 ${
-          theme === 'dark' 
-            ? 'bg-aim-navy/95 dark:bg-aim-navy/95 backdrop-blur-xl border-b border-white/10 shadow-lg shadow-black/20' 
+        <div className={`transition-all duration-300 ${theme === 'dark'
+            ? 'bg-aim-navy/95 dark:bg-aim-navy/95 backdrop-blur-xl border-b border-white/10 shadow-lg shadow-black/20'
             : 'bg-slate-100/90 backdrop-blur-xl border-b border-slate-300 shadow-sm shadow-slate-300/40'
-        }`}>
+          }`}>
           <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-aim-gold/40 dark:via-aim-gold/50 to-transparent pointer-events-none" aria-hidden />
           <nav className="container-custom py-3">
             <div className="flex justify-between items-center gap-4">
               {/* Logo */}
               <Link to="/" className="flex-shrink-0 flex items-center gap-2.5 group">
-                <img 
-                  src={logo} 
-                  alt="AIM Logo" 
-                  className="w-12 h-auto object-contain transition-transform duration-300 group-hover:scale-105" 
+                <img
+                  src={logo}
+                  alt="AIM Logo"
+                  className="w-12 h-auto object-contain transition-transform duration-300 group-hover:scale-105"
                 />
-                <span className={`font-sans font-black text-sm sm:text-base tracking-wide transition-colors duration-300 ${
-                  theme === 'dark'
+                <span className={`font-sans font-black text-sm sm:text-base tracking-wide transition-colors duration-300 ${theme === 'dark'
                     ? 'text-white group-hover:text-aim-gold'
                     : 'text-slate-800 group-hover:text-blue-600'
-                }`}>
+                  }`}>
                   AIM Digitalise <span className="text-[10px] font-normal tracking-normal uppercase opacity-75 sm:inline hidden">Pvt. Ltd.</span>
                 </span>
               </Link>
-              
+
               {/* Desktop Navigation Links */}
               <div className="hidden lg:flex items-center justify-center flex-1">
-                <div className={`flex items-center gap-1 xl:gap-2 rounded-full px-2 py-1 transition-all duration-300 ${
-                  theme === 'dark' 
-                    ? 'bg-white/5' 
+                <div className={`flex items-center gap-1 xl:gap-2 rounded-full px-2 py-1 transition-all duration-300 ${theme === 'dark'
+                    ? 'bg-white/5'
                     : 'bg-slate-200/80'
-                }`}>
+                  }`}>
                   {navLinks.map((link) => {
                     if (link.subLinks) {
                       return (
-                        <div 
+                        <div
                           key={link.name}
                           className="relative group py-2"
                         >
                           <button
                             type="button"
-                            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-all duration-300 whitespace-nowrap ${
-                              isLinkActive(link) 
+                            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-all duration-300 whitespace-nowrap ${isLinkActive(link)
                                 ? theme === 'dark'
                                   ? 'text-aim-highlight bg-aim-navy-card shadow-md'
                                   : 'text-blue-600 bg-white shadow-md'
                                 : theme === 'dark'
                                   ? 'text-aim-copy-muted hover:text-aim-highlight hover:bg-white/10'
                                   : 'text-slate-600 hover:text-blue-600 hover:bg-white/60'
-                            }`}
+                              }`}
                           >
                             <span>{link.name}</span>
-                            <svg 
-                              className="w-3.5 h-3.5 transition-transform duration-300 group-hover:rotate-180 opacity-70" 
-                              fill="none" 
-                              viewBox="0 0 24 24" 
-                              stroke="currentColor" 
+                            <svg
+                              className="w-3.5 h-3.5 transition-transform duration-300 group-hover:rotate-180 opacity-70"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
                               strokeWidth="2.5"
                             >
                               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                             </svg>
                           </button>
-                          
+
                           {/* Dropdown Menu */}
                           <div className="absolute left-1/2 -translate-x-1/2 top-full pt-2 w-80 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
-                            <div className={`rounded-2xl border p-2 shadow-xl ${
-                              theme === 'dark'
+                            <div className={`rounded-2xl border p-2 shadow-xl ${theme === 'dark'
                                 ? 'bg-aim-navy/95 border-white/10 shadow-black/40 backdrop-blur-xl'
                                 : 'bg-white border-slate-200 shadow-slate-200/80 backdrop-blur-xl'
-                            }`}>
+                              }`}>
                               {link.subLinks.map((sub) => (
                                 <Link
                                   key={sub.name}
                                   to={sub.path}
-                                  className={`flex items-start gap-3 p-2.5 rounded-xl transition-all duration-200 ${
-                                    location.pathname === sub.path
+                                  className={`flex items-start gap-3 p-2.5 rounded-xl transition-all duration-200 ${location.pathname === sub.path
                                       ? theme === 'dark'
                                         ? 'bg-white/5 text-aim-highlight'
                                         : 'bg-blue-50 text-blue-600'
                                       : theme === 'dark'
                                         ? 'text-aim-copy hover:bg-white/5 hover:text-white'
                                         : 'text-slate-700 hover:bg-slate-50 hover:text-blue-600'
-                                  }`}
+                                    }`}
                                 >
-                                  <div className={`mt-0.5 p-1.5 rounded-lg shrink-0 ${
-                                    theme === 'dark' ? 'bg-white/5 text-aim-gold' : 'bg-blue-50 text-blue-500'
-                                  }`}>
+                                  <div className={`mt-0.5 p-1.5 rounded-lg shrink-0 ${theme === 'dark' ? 'bg-white/5 text-aim-gold' : 'bg-blue-50 text-blue-500'
+                                    }`}>
                                     {getSubIcon(sub.path)}
                                   </div>
                                   <div className="text-left font-sans">
                                     <div className="text-sm font-semibold leading-tight">{sub.name}</div>
-                                    <div className={`text-[11px] mt-1 leading-normal ${
-                                      theme === 'dark' ? 'text-aim-copy-muted' : 'text-slate-400'
-                                    }`}>{sub.desc}</div>
+                                    <div className={`text-[11px] mt-1 leading-normal ${theme === 'dark' ? 'text-aim-copy-muted' : 'text-slate-400'
+                                      }`}>{sub.desc}</div>
                                   </div>
                                 </Link>
                               ))}
@@ -247,18 +240,17 @@ const RootLayout = () => {
                       )
                     }
                     return (
-                      <Link 
-                        key={link.name} 
-                        to={link.path} 
-                        className={`relative px-3 py-2 text-sm font-medium rounded-full transition-all duration-300 whitespace-nowrap ${
-                          isActive(link.path) 
+                      <Link
+                        key={link.name}
+                        to={link.path}
+                        className={`relative px-3 py-2 text-sm font-medium rounded-full transition-all duration-300 whitespace-nowrap ${isActive(link.path)
                             ? theme === 'dark'
                               ? 'text-aim-highlight bg-aim-navy-card shadow-md'
                               : 'text-blue-600 bg-white shadow-md'
                             : theme === 'dark'
                               ? 'text-aim-copy-muted hover:text-aim-highlight hover:bg-white/10'
                               : 'text-slate-600 hover:text-blue-600 hover:bg-white/60'
-                        }`}
+                          }`}
                       >
                         {link.name}
                       </Link>
@@ -271,11 +263,10 @@ const RootLayout = () => {
               <div className="hidden lg:flex items-center gap-3">
                 <button
                   onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  className={`p-2 rounded-full transition-all duration-300 ${
-                    theme === 'dark'
+                  className={`p-2 rounded-full transition-all duration-300 ${theme === 'dark'
                       ? 'hover:bg-white/10 text-aim-copy-muted'
                       : 'hover:bg-slate-100 text-slate-600'
-                  }`}
+                    }`}
                   aria-label="Toggle theme"
                 >
                   {theme === 'dark' ? (
@@ -288,16 +279,15 @@ const RootLayout = () => {
                     </svg>
                   )}
                 </button>
-                
+
                 <Link
                   to="/partner/login"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`px-5 py-2 text-sm font-semibold rounded-full transition-all duration-300 shadow-md hover:shadow-lg whitespace-nowrap ${
-                    theme === 'dark'
+                  className={`px-5 py-2 text-sm font-semibold rounded-full transition-all duration-300 shadow-md hover:shadow-lg whitespace-nowrap ${theme === 'dark'
                       ? 'bg-aim-gold text-aim-navy hover:bg-aim-gold-dark'
                       : 'bg-blue-600 text-white hover:bg-blue-700'
-                  }`}
+                    }`}
                 >
                   Partner Portal
                 </Link>
@@ -305,13 +295,12 @@ const RootLayout = () => {
 
               {/* Mobile Menu Button */}
               <div className="lg:hidden">
-                <button 
+                <button
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  className={`p-2 rounded-lg transition-all duration-300 ${
-                    theme === 'dark'
+                  className={`p-2 rounded-lg transition-all duration-300 ${theme === 'dark'
                       ? 'hover:bg-white/10 text-aim-copy-muted'
                       : 'hover:bg-slate-100 text-slate-600'
-                  }`}
+                    }`}
                   aria-label="Toggle menu"
                 >
                   <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -337,32 +326,30 @@ const RootLayout = () => {
                           <button
                             type="button"
                             onClick={() => setOpenMobileDropdown(isOpen ? '' : link.name)}
-                            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-base font-medium transition-all duration-200 ${
-                              isLinkActive(link)
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-base font-medium transition-all duration-200 ${isLinkActive(link)
                                 ? theme === 'dark'
                                   ? 'bg-aim-gold/15 text-aim-highlight font-semibold'
                                   : 'bg-blue-50 text-blue-600 font-semibold'
                                 : theme === 'dark'
                                   ? 'text-aim-copy-muted hover:bg-white/5'
                                   : 'text-slate-600 hover:bg-slate-50'
-                            }`}
+                              }`}
                           >
                             <span>{link.name}</span>
-                            <svg 
-                              className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
-                              fill="none" 
-                              viewBox="0 0 24 24" 
-                              stroke="currentColor" 
+                            <svg
+                              className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
                               strokeWidth="2.5"
                             >
                               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                             </svg>
                           </button>
-                          
+
                           {/* Sub-links accordion */}
-                          <div className={`pl-4 space-y-1 transition-all duration-300 overflow-hidden ${
-                            isOpen ? 'max-h-60 opacity-100 py-1' : 'max-h-0 opacity-0 pointer-events-none'
-                          }`}>
+                          <div className={`pl-4 space-y-1 transition-all duration-300 overflow-hidden ${isOpen ? 'max-h-60 opacity-100 py-1' : 'max-h-0 opacity-0 pointer-events-none'
+                            }`}>
                             {link.subLinks.map((sub) => (
                               <Link
                                 key={sub.name}
@@ -371,15 +358,14 @@ const RootLayout = () => {
                                   setIsMobileMenuOpen(false);
                                   setOpenMobileDropdown('');
                                 }}
-                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                  location.pathname === sub.path
+                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${location.pathname === sub.path
                                     ? theme === 'dark'
                                       ? 'bg-white/10 text-aim-highlight'
                                       : 'bg-blue-100 text-blue-700'
                                     : theme === 'dark'
                                       ? 'text-aim-copy-muted hover:bg-white/5'
                                       : 'text-slate-600 hover:bg-slate-50'
-                                }`}
+                                  }`}
                               >
                                 <div className={theme === 'dark' ? 'text-aim-gold' : 'text-blue-500'}>
                                   {getSubIcon(sub.path)}
@@ -396,32 +382,30 @@ const RootLayout = () => {
                         key={link.name}
                         to={link.path}
                         onClick={() => setIsMobileMenuOpen(false)}
-                        className={`block px-3 py-2 rounded-lg text-base font-medium transition-all duration-200 ${
-                          isActive(link.path)
+                        className={`block px-3 py-2 rounded-lg text-base font-medium transition-all duration-200 ${isActive(link.path)
                             ? theme === 'dark'
                               ? 'bg-aim-gold/15 text-aim-highlight'
                               : 'bg-blue-50 text-blue-600'
                             : theme === 'dark'
                               ? 'text-aim-copy-muted hover:bg-white/5'
                               : 'text-slate-600 hover:bg-slate-50'
-                        }`}
+                          }`}
                       >
                         {link.name}
                       </Link>
                     )
                   })}
-                  
+
                   <div className="pt-4 mt-2 border-t border-slate-200 dark:border-white/10 space-y-2">
                     <button
                       onClick={() => {
                         setTheme(theme === 'dark' ? 'light' : 'dark')
                         setIsMobileMenuOpen(false)
                       }}
-                      className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all duration-200 ${
-                        theme === 'dark'
+                      className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all duration-200 ${theme === 'dark'
                           ? 'border-white/10 text-aim-copy-muted hover:bg-white/5'
                           : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
+                        }`}
                     >
                       {theme === 'dark' ? (
                         <>
@@ -439,17 +423,16 @@ const RootLayout = () => {
                         </>
                       )}
                     </button>
-                    
+
                     <Link
                       to="/partner/login"
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className={`block text-center px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                        theme === 'dark'
+                      className={`block text-center px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${theme === 'dark'
                           ? 'bg-aim-gold text-aim-navy hover:bg-aim-gold-dark'
                           : 'bg-blue-600 text-white hover:bg-blue-700'
-                      }`}
+                        }`}
                     >
                       Partner Login
                     </Link>
@@ -460,39 +443,33 @@ const RootLayout = () => {
           </nav>
         </div>
       </header>
-      
+
       <main className="flex-grow relative">
         <Outlet />
       </main>
-      
+
       {/* Footer */}
-      <footer className={`py-8 mt-auto relative overflow-hidden border-t transition-colors duration-300 ${
-        theme === 'dark'
+      <footer className={`py-8 mt-auto relative overflow-hidden border-t transition-colors duration-300 ${theme === 'dark'
           ? 'bg-aim-navy-light/90 border-white/10 text-on-navy'
           : 'bg-slate-100 border-slate-200 text-slate-700'
-      }`}>
+        }`}>
         <div className="absolute inset-0 bg-grid-pattern opacity-30 dark:opacity-50 pointer-events-none" aria-hidden />
-        <div className={`absolute top-0 left-1/4 w-96 h-96 rounded-full blur-3xl pointer-events-none ${
-          theme === 'dark' ? 'bg-aim-gold/10' : 'bg-blue-500/5'
-        }`} />
-        <div className={`absolute bottom-0 right-1/4 w-96 h-96 rounded-full blur-3xl pointer-events-none ${
-          theme === 'dark' ? 'bg-aim-purple/12' : 'bg-purple-500/5'
-        }`} />
-        <div className={`absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent pointer-events-none ${
-          theme === 'dark' ? 'dark:from-aim-gold/30 dark:via-aim-purple/30 dark:to-aim-gold/30' : ''
-        }`} aria-hidden />
+        <div className={`absolute top-0 left-1/4 w-96 h-96 rounded-full blur-3xl pointer-events-none ${theme === 'dark' ? 'bg-aim-gold/10' : 'bg-blue-500/5'
+          }`} />
+        <div className={`absolute bottom-0 right-1/4 w-96 h-96 rounded-full blur-3xl pointer-events-none ${theme === 'dark' ? 'bg-aim-purple/12' : 'bg-purple-500/5'
+          }`} />
+        <div className={`absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent pointer-events-none ${theme === 'dark' ? 'dark:from-aim-gold/30 dark:via-aim-purple/30 dark:to-aim-gold/30' : ''
+          }`} aria-hidden />
 
         <div className="container-custom relative z-10">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-            
+
             {/* Column 1: Quick Links */}
             <div>
-              <h3 className={`text-xs font-black tracking-widest uppercase mb-6 flex items-center gap-2 ${
-                theme === 'dark' ? 'text-white' : 'text-slate-900'
-              }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${
-                  theme === 'dark' ? 'bg-aim-gold' : 'bg-blue-500'
-                }`}></span>
+              <h3 className={`text-xs font-black tracking-widest uppercase mb-6 flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-slate-900'
+                }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${theme === 'dark' ? 'bg-aim-gold' : 'bg-blue-500'
+                  }`}></span>
                 QUICK LINKS
               </h3>
               <ul className="space-y-2.5">
@@ -508,19 +485,17 @@ const RootLayout = () => {
                   { name: 'Download Portfolio', path: '/download-portfolio' },
                   { name: 'Privacy Policy', path: '/privacy-policy' },
 
-                  
+
                 ].map((link) => (
                   <li key={link.name}>
-                    <Link to={link.path} className={`flex items-center gap-3 pb-2 group text-[13px] font-medium transition-colors ${
-                      theme === 'dark'
+                    <Link to={link.path} className={`flex items-center gap-3 pb-2 group text-[13px] font-medium transition-colors ${theme === 'dark'
                         ? 'text-aim-copy hover:text-aim-highlight'
                         : 'text-slate-600 hover:text-blue-600'
-                    }`}>
-                      <svg className={`w-3 h-3 transition-all group-hover:translate-x-0.5 ${
-                        theme === 'dark'
+                      }`}>
+                      <svg className={`w-3 h-3 transition-all group-hover:translate-x-0.5 ${theme === 'dark'
                           ? 'text-aim-highlight/70 group-hover:text-aim-highlight'
                           : 'text-blue-400 group-hover:text-blue-600'
-                      }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                        }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                       </svg>
                       {link.name}
@@ -528,41 +503,34 @@ const RootLayout = () => {
                   </li>
                 ))}
               </ul>
-               
+
             </div>
 
             {/* Column 2: Address */}
             <div>
-              <h3 className={`text-xs font-black tracking-widest uppercase mb-6 flex items-center gap-2 ${
-                theme === 'dark' ? 'text-white' : 'text-slate-900'
-              }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${
-                  theme === 'dark' ? 'bg-aim-gold' : 'bg-blue-500'
-                }`}></span>
+              <h3 className={`text-xs font-black tracking-widest uppercase mb-6 flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-slate-900'
+                }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${theme === 'dark' ? 'bg-aim-gold' : 'bg-blue-500'
+                  }`}></span>
                 ADDRESS
               </h3>
               <div className="space-y-4 text-[13px]">
-                <div className={`p-3 rounded-xl border shadow-sm ${
-                  theme === 'dark'
+                <div className={`p-3 rounded-xl border shadow-sm ${theme === 'dark'
                     ? 'border-white/10 bg-aim-navy-light/50'
                     : 'border-slate-200 bg-white'
-                }`}>
-                  <div className={`flex items-center justify-between text-xs font-bold uppercase tracking-wider ${
-                    theme === 'dark' ? 'text-white' : 'text-slate-800'
                   }`}>
+                  <div className={`flex items-center justify-between text-xs font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-slate-800'
+                    }`}>
                     <span>Corporate Office</span>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded border ${
-                      theme === 'dark'
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded border ${theme === 'dark'
                         ? 'bg-aim-gold/15 text-aim-gold border-aim-gold/30'
                         : 'bg-amber-50 text-amber-600 border-amber-200'
-                    }`}>India</span>
+                      }`}>India</span>
                   </div>
-                  <p className={`mt-2 leading-relaxed flex gap-2 ${
-                    theme === 'dark' ? 'text-on-navy-muted' : 'text-slate-500'
-                  }`}>
-                    <svg className={`w-4 h-4 shrink-0 mt-0.5 ${
-                      theme === 'dark' ? 'text-aim-gold/80' : 'text-amber-500'
-                    }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <p className={`mt-2 leading-relaxed flex gap-2 ${theme === 'dark' ? 'text-on-navy-muted' : 'text-slate-500'
+                    }`}>
+                    <svg className={`w-4 h-4 shrink-0 mt-0.5 ${theme === 'dark' ? 'text-aim-gold/80' : 'text-amber-500'
+                      }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
@@ -570,27 +538,22 @@ const RootLayout = () => {
                   </p>
                 </div>
 
-                <div className={`p-3 rounded-xl border shadow-sm ${
-                  theme === 'dark'
+                <div className={`p-3 rounded-xl border shadow-sm ${theme === 'dark'
                     ? 'border-white/10 bg-aim-navy-light/50'
                     : 'border-slate-200 bg-white'
-                }`}>
-                  <div className={`flex items-center justify-between text-xs font-bold uppercase tracking-wider ${
-                    theme === 'dark' ? 'text-white' : 'text-slate-800'
                   }`}>
+                  <div className={`flex items-center justify-between text-xs font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-slate-800'
+                    }`}>
                     <span>Branch Office</span>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded border ${
-                      theme === 'dark'
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded border ${theme === 'dark'
                         ? 'bg-aim-gold/15 text-aim-gold border-aim-gold/30'
                         : 'bg-amber-50 text-amber-600 border-amber-200'
-                    }`}>India</span>
+                      }`}>India</span>
                   </div>
-                  <p className={`mt-2 leading-relaxed flex gap-2 ${
-                    theme === 'dark' ? 'text-on-navy-muted' : 'text-slate-500'
-                  }`}>
-                    <svg className={`w-4 h-4 shrink-0 mt-0.5 ${
-                      theme === 'dark' ? 'text-aim-gold/80' : 'text-amber-500'
-                    }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <p className={`mt-2 leading-relaxed flex gap-2 ${theme === 'dark' ? 'text-on-navy-muted' : 'text-slate-500'
+                    }`}>
+                    <svg className={`w-4 h-4 shrink-0 mt-0.5 ${theme === 'dark' ? 'text-aim-gold/80' : 'text-amber-500'
+                      }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
@@ -598,27 +561,22 @@ const RootLayout = () => {
                   </p>
                 </div>
 
-                <div className={`p-3 rounded-xl border shadow-sm ${
-                  theme === 'dark'
+                <div className={`p-3 rounded-xl border shadow-sm ${theme === 'dark'
                     ? 'border-white/10 bg-aim-navy-light/50'
                     : 'border-slate-200 bg-white'
-                }`}>
-                  <div className={`flex items-center justify-between text-xs font-bold uppercase tracking-wider ${
-                    theme === 'dark' ? 'text-white' : 'text-slate-800'
                   }`}>
+                  <div className={`flex items-center justify-between text-xs font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-slate-800'
+                    }`}>
                     <span>Corporate Office Nepal</span>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded border ${
-                      theme === 'dark'
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded border ${theme === 'dark'
                         ? 'bg-aim-purple/15 text-aim-purple-light border-aim-purple/30'
                         : 'bg-purple-50 text-purple-600 border-purple-200'
-                    }`}>Nepal</span>
+                      }`}>Nepal</span>
                   </div>
-                  <p className={`mt-2 leading-relaxed flex gap-2 ${
-                    theme === 'dark' ? 'text-on-navy-muted' : 'text-slate-500'
-                  }`}>
-                    <svg className={`w-4 h-4 shrink-0 mt-0.5 ${
-                      theme === 'dark' ? 'text-aim-purple-light/80' : 'text-purple-500'
-                    }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <p className={`mt-2 leading-relaxed flex gap-2 ${theme === 'dark' ? 'text-on-navy-muted' : 'text-slate-500'
+                    }`}>
+                    <svg className={`w-4 h-4 shrink-0 mt-0.5 ${theme === 'dark' ? 'text-aim-purple-light/80' : 'text-purple-500'
+                      }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
@@ -639,18 +597,16 @@ const RootLayout = () => {
                   <span>Office Timings: 10 a.m to 7 p.m</span>
                 </div> */}
 
-                
+
               </div>
             </div>
 
             {/* Column 3: Support */}
             <div>
-              <h3 className={`text-xs font-black tracking-widest uppercase mb-6 flex items-center gap-2 ${
-                theme === 'dark' ? 'text-white' : 'text-slate-900'
-              }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${
-                  theme === 'dark' ? 'bg-aim-gold' : 'bg-blue-500'
-                }`}></span>
+              <h3 className={`text-xs font-black tracking-widest uppercase mb-6 flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-slate-900'
+                }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${theme === 'dark' ? 'bg-aim-gold' : 'bg-blue-500'
+                  }`}></span>
                 SUPPORT
               </h3>
               <div className="space-y-4 text-[13px]">
@@ -660,17 +616,14 @@ const RootLayout = () => {
                   { label: 'Nepal Support', value: '+977 9858422178', href: 'tel:+9779858422178' },
                 ].map((item) => (
                   <div key={item.label}>
-                    <span className={`text-[10px] font-bold uppercase tracking-wider block ${
-                      theme === 'dark' ? 'text-aim-copy-muted' : 'text-slate-400'
-                    }`}>{item.label}</span>
-                    <a href={item.href} className={`inline-flex items-center gap-2 mt-1 transition-colors ${
-                      theme === 'dark'
+                    <span className={`text-[10px] font-bold uppercase tracking-wider block ${theme === 'dark' ? 'text-aim-copy-muted' : 'text-slate-400'
+                      }`}>{item.label}</span>
+                    <a href={item.href} className={`inline-flex items-center gap-2 mt-1 transition-colors ${theme === 'dark'
                         ? 'text-white/90 hover:text-aim-gold'
                         : 'text-slate-700 hover:text-blue-600'
-                    }`}>
-                      <svg className={`w-3.5 h-3.5 ${
-                        theme === 'dark' ? 'text-aim-gold/80' : 'text-amber-500'
-                      }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      }`}>
+                      <svg className={`w-3.5 h-3.5 ${theme === 'dark' ? 'text-aim-gold/80' : 'text-amber-500'
+                        }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                       </svg>
                       <span className="font-semibold">{item.value}</span>
@@ -679,42 +632,35 @@ const RootLayout = () => {
                 ))}
 
                 <div>
-                  <span className={`text-[10px] font-bold uppercase tracking-wider block ${
-                    theme === 'dark' ? 'text-aim-copy-muted' : 'text-slate-400'
-                  }`}>Whatsapp</span>
-                  <a href="https://wa.me/916290902922" target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-2 mt-1 transition-colors ${
-                    theme === 'dark'
+                  <span className={`text-[10px] font-bold uppercase tracking-wider block ${theme === 'dark' ? 'text-aim-copy-muted' : 'text-slate-400'
+                    }`}>Whatsapp</span>
+                  <a href="https://wa.me/916290902922" target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-2 mt-1 transition-colors ${theme === 'dark'
                       ? 'text-white/90 hover:text-aim-gold'
                       : 'text-slate-700 hover:text-blue-600'
-                  }`}>
-                    <svg className={`w-3.5 h-3.5 ${
-                      theme === 'dark' ? 'text-aim-gold/80' : 'text-amber-500'
-                    }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    }`}>
+                    <svg className={`w-3.5 h-3.5 ${theme === 'dark' ? 'text-aim-gold/80' : 'text-amber-500'
+                      }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
                     <span className="font-semibold">+91 62909 02922</span>
                   </a>
                 </div>
 
-                <div className={`pt-3 border-t ${
-                  theme === 'dark' ? 'border-white/10' : 'border-slate-200'
-                }`}>
-                  <a href="mailto:support@aimdigitalise.com" className={`inline-flex items-center gap-2 transition-colors ${
-                    theme === 'dark'
+                <div className={`pt-3 border-t ${theme === 'dark' ? 'border-white/10' : 'border-slate-200'
+                  }`}>
+                  <a href="mailto:support@aimdigitalise.com" className={`inline-flex items-center gap-2 transition-colors ${theme === 'dark'
                       ? 'text-on-navy-muted hover:text-aim-gold'
                       : 'text-slate-500 hover:text-blue-600'
-                  }`}>
-                    <svg className={`w-3.5 h-3.5 ${
-                      theme === 'dark' ? 'text-aim-gold/80' : 'text-amber-500'
-                    }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    }`}>
+                    <svg className={`w-3.5 h-3.5 ${theme === 'dark' ? 'text-aim-gold/80' : 'text-amber-500'
+                      }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                     <span>support@aimdigitalise.com</span>
                   </a>
                 </div>
-                <div className={`text-[11px] font-bold uppercase tracking-widest pl-1 ${
-                  theme === 'dark' ? 'text-on-navy-muted' : 'text-slate-400'
-                }`}>
+                <div className={`text-[11px] font-bold uppercase tracking-widest pl-1 ${theme === 'dark' ? 'text-on-navy-muted' : 'text-slate-400'
+                  }`}>
                   GST NO: <span className={theme === 'dark' ? 'text-white' : 'text-slate-700'}>19ABCCA9672L1Z0</span>
                 </div>
 
@@ -725,20 +671,18 @@ const RootLayout = () => {
                       e.stopPropagation()
                       setIsFooterLoginMenuOpen((v) => !v)
                     }}
-                    className={`inline-flex items-center gap-1.5 transition-colors font-semibold group cursor-pointer ${
-                      theme === 'dark'
+                    className={`inline-flex items-center gap-1.5 transition-colors font-semibold group cursor-pointer ${theme === 'dark'
                         ? 'text-white/90 hover:text-aim-gold'
                         : 'text-slate-700 hover:text-blue-600'
-                    }`}
+                      }`}
                     aria-haspopup="menu"
                     aria-expanded={isFooterLoginMenuOpen}
                   >
                     <svg
-                      className={`w-3 h-3 transition-all group-hover:translate-x-0.5 ${
-                        theme === 'dark'
+                      className={`w-3 h-3 transition-all group-hover:translate-x-0.5 ${theme === 'dark'
                           ? 'text-aim-gold/70 group-hover:text-aim-gold'
                           : 'text-blue-400 group-hover:text-blue-600'
-                      }`}
+                        }`}
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -752,11 +696,10 @@ const RootLayout = () => {
                   {isFooterLoginMenuOpen && (
                     <div
                       role="menu"
-                      className={`absolute right-0 mt-0.5 w-52 rounded-xl border shadow-xl overflow-hidden ${
-                        theme === 'dark'
+                      className={`absolute right-0 mt-0.5 w-52 rounded-xl border shadow-xl overflow-hidden ${theme === 'dark'
                           ? 'bg-aim-navy-card border-white/10 shadow-brand-gold/10'
                           : 'bg-white border-slate-200 shadow-lg'
-                      }`}
+                        }`}
                     >
                       <Link
                         role="menuitem"
@@ -764,11 +707,10 @@ const RootLayout = () => {
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => setIsFooterLoginMenuOpen(false)}
-                        className={`w-full block text-left px-4 py-3 text-sm font-semibold transition cursor-pointer ${
-                          theme === 'dark'
+                        className={`w-full block text-left px-4 py-3 text-sm font-semibold transition cursor-pointer ${theme === 'dark'
                             ? 'text-on-navy-muted hover:text-white hover:bg-white/5'
                             : 'text-slate-600 hover:text-blue-600 hover:bg-blue-50'
-                        }`}
+                          }`}
                       >
                         Employee Login
                       </Link>
@@ -778,11 +720,10 @@ const RootLayout = () => {
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => setIsFooterLoginMenuOpen(false)}
-                        className={`w-full block text-left px-4 py-3 text-sm font-semibold transition cursor-pointer ${
-                          theme === 'dark'
+                        className={`w-full block text-left px-4 py-3 text-sm font-semibold transition cursor-pointer ${theme === 'dark'
                             ? 'text-on-navy-muted hover:text-white hover:bg-aim-purple/10'
                             : 'text-slate-600 hover:text-purple-600 hover:bg-purple-50'
-                        }`}
+                          }`}
                       >
                         Admin Login
                       </Link>
@@ -794,12 +735,10 @@ const RootLayout = () => {
 
             {/* Column 4: Follow Us */}
             <div>
-              <h3 className={`text-xs font-black tracking-widest uppercase mb-6 flex items-center gap-2 ${
-                theme === 'dark' ? 'text-white' : 'text-slate-900'
-              }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${
-                  theme === 'dark' ? 'bg-aim-gold' : 'bg-blue-500'
-                }`}></span>
+              <h3 className={`text-xs font-black tracking-widest uppercase mb-6 flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-slate-900'
+                }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${theme === 'dark' ? 'bg-aim-gold' : 'bg-blue-500'
+                  }`}></span>
                 FOLLOW US
               </h3>
               <div className="grid grid-cols-2 gap-2">
@@ -817,48 +756,42 @@ const RootLayout = () => {
                     href={item.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`flex items-center gap-2 p-2 rounded-lg border transition-all duration-300 text-xs font-semibold ${
-                      theme === 'dark'
+                    className={`flex items-center gap-2 p-2 rounded-lg border transition-all duration-300 text-xs font-semibold ${theme === 'dark'
                         ? 'border-white/10 bg-aim-navy-light/50 text-on-navy-muted hover:text-aim-gold hover:border-aim-gold/40 hover:bg-white/5'
                         : 'border-slate-200 bg-white text-slate-600 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50'
-                    }`}
+                      }`}
                   >
-                    <span className={`w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold shrink-0 ${
-                      theme === 'dark'
+                    <span className={`w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold shrink-0 ${theme === 'dark'
                         ? 'bg-aim-gold/10 text-aim-gold'
                         : 'bg-blue-50 text-blue-600'
-                    }`}>{item.label}</span>
+                      }`}>{item.label}</span>
                     <span>{item.name}</span>
                   </a>
                 ))}
               </div>
-              <div className={`mt-15 ${
-                theme === 'dark'
+              <div className={`mt-15 ${theme === 'dark'
                   ? 'border-white/10 bg-aim-navy-light/50 text-on-navy-muted'
                   : 'border-slate-200 bg-white text-slate-500'
-              }`}>
-               <div className={`flex items-center gap-1 py-1 px-1 rounded-lg border shadow-sm ${
-                  theme === 'dark'
+                }`}>
+                <div className={`flex items-center gap-1 py-1 px-1 rounded-lg border shadow-sm ${theme === 'dark'
                     ? 'border-white/10 bg-aim-navy-light/50 text-on-navy-muted'
                     : 'border-slate-200 bg-white text-slate-500'
-                }`}>
-                  <svg className={`w-4 h-4 shrink-0 ${
-                    theme === 'dark' ? 'text-aim-gold/80' : 'text-amber-500'
-                  }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  }`}>
+                  <svg className={`w-4 h-4 shrink-0 ${theme === 'dark' ? 'text-aim-gold/80' : 'text-amber-500'
+                    }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <span>Office Timings: 10 a.m to 7 p.m</span>
                 </div>
-                </div>
+              </div>
             </div>
 
           </div>
 
-          <div className={`border-t mt-3 pt-8 text-center text-xs ${
-            theme === 'dark'
+          <div className={`border-t mt-3 pt-8 text-center text-xs ${theme === 'dark'
               ? 'border-white/10 text-on-navy-muted'
               : 'border-slate-200 text-slate-400'
-          }`}>
+            }`}>
             <p>Copyright Update© 2026. All Rights Reserved by AIM Digitalise Pvt. Ltd.</p>
           </div>
         </div>
@@ -869,6 +802,8 @@ const RootLayout = () => {
         onClose={() => setIsLoginModalOpen(false)}
         initialRole={loginModalRole}
       />
+
+      <AppointmentModal />
     </div>
   )
 }

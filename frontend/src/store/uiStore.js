@@ -13,6 +13,11 @@ const useUIStore = create((set) => ({
   hideToast: () => set({ toast: null }),
   isLoading: false,
   setLoading: (loading) => set({ isLoading: loading }),
+  
+  // Appointment modal state
+  appointmentModalOpen: false,
+  openAppointmentModal: () => set({ appointmentModalOpen: true }),
+  closeAppointmentModal: () => set({ appointmentModalOpen: false }),
 }))
 
 export default useUIStore
