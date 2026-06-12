@@ -204,11 +204,11 @@ const subscriptionPlans = [
 ]
 
 const categories = [
+  { id: 'nexgn', label: 'NEXGN SaaS', color: 'green' },
   { id: 'static', label: 'STATIC', color: 'sky' },
   { id: 'dynamic', label: 'DYNAMIC', color: 'teal' },
   { id: 'ecommerce', label: 'E-COMMERCE', color: 'orange' },
-  { id: 'mobile', label: 'MOBILE APP', color: 'indigo' },
-  { id: 'nexgn', label: 'NEXGN SaaS', color: 'green' }
+  { id: 'mobile', label: 'MOBILE APP', color: 'indigo' }
 ]
 
 const loadRazorpayScript = () =>
@@ -239,8 +239,12 @@ const emptyCheckout = (partnerId = '') => ({
 })
 
 const SaasBasedSoftware = () => {
-  const [activeCategory, setActiveCategory] = useState('static')
-  const [activePlanId, setActivePlanId] = useState(1)
+  const queryParams = new URLSearchParams(window.location.search)
+  const initialPlanId = parseInt(queryParams.get('plan'), 10) || 9
+  const initialPlan = subscriptionPlans.find(p => p.id === initialPlanId) || subscriptionPlans.find(p => p.id === 9)
+
+  const [activeCategory, setActiveCategory] = useState(initialPlan.category)
+  const [activePlanId, setActivePlanId] = useState(initialPlan.id)
 
   const [partners, setPartners] = useState([])
   const [paymentStep, setPaymentStep] = useState('idle')
@@ -249,7 +253,6 @@ const SaasBasedSoftware = () => {
   const [successData, setSuccessData] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const formSectionRef = useRef(null)
   const nameInputRef = useRef(null)
 
   const activePlan = subscriptionPlans.find(plan => plan.id === activePlanId) || subscriptionPlans[0]
@@ -284,12 +287,9 @@ const SaasBasedSoftware = () => {
     setPaymentStep('form')
     setApiError('')
     setSuccessData(null)
-    if (formSectionRef.current) {
-      formSectionRef.current.scrollIntoView({ behavior: 'smooth' })
-    }
     setTimeout(() => {
       if (nameInputRef.current) nameInputRef.current.focus()
-    }, 600)
+    }, 400)
   }
 
   const handleCheckoutChange = (e) => {
@@ -719,9 +719,9 @@ const SaasBasedSoftware = () => {
                           Download Agreement
                         </a>
 
-                        <Link to={ROUTES.CLIENT.LOGIN} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-aim-copy-muted hover:text-aim-gold transition">
+                        <a href={ROUTES.CLIENT.LOGIN} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-aim-copy-muted hover:text-aim-gold transition">
                           Login
-                        </Link>
+                        </a>
                       </div>
                     </div>
                   </div>
@@ -733,409 +733,472 @@ const SaasBasedSoftware = () => {
           </div>
 
           {/* ── CHECKOUT / PAYMENT SECTION ── */}
-          <div ref={formSectionRef} className="pt-16 border-t border-aim-border scroll-mt-24">
+          <div className="pt-16 border-t border-aim-border scroll-mt-24">
             <div className="max-w-3xl mx-auto">
               <div className="card-elevated rounded-3xl p-6 sm:p-8 relative overflow-hidden transition-colors duration-300">
                 <div className="absolute -bottom-20 -right-20 w-48 h-48 bg-aim-gold/5 rounded-full blur-2xl pointer-events-none"></div>
 
                 <div className="space-y-6 relative z-10">
-
-                  {/* IDLE: prompt to click Activate */}
-                  {paymentStep === 'idle' && (
-                    <div className="text-center space-y-4 py-6">
-                      <span className="text-[10px] font-black tracking-widest text-aim-gold uppercase bg-aim-gold/10 px-3 py-1 rounded-full border border-aim-gold/20">
-                        PURCHASE &amp; ACTIVATE
-                      </span>
-                      <h3 className="text-2xl font-black text-aim-copy tracking-tight mt-2">
-                        Ready to <span className="text-gradient">Get Started?</span>
-                      </h3>
-                      <p className="text-sm text-aim-copy-muted max-w-lg mx-auto">
-                        Select a plan above then click <strong>Activate Your Plan</strong> to complete your registration and make the one-time setup fee payment securely via Razorpay.
-                      </p>
-                      <div className="pt-2">
-                        <Button
-                          variant="primary"
-                          onClick={handleActivateClick}
-                          className="font-black px-10 py-3 rounded-xl shadow-lg cursor-pointer text-sm uppercase tracking-wider"
-                        >
-                          Activate — {activePlan.name}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* PROCESSING SPINNER */}
-                  {paymentStep === 'processing' && (
-                    <div className="flex flex-col items-center justify-center py-16 gap-5">
-                      <div className="w-14 h-14 rounded-full border-4 border-aim-navy-light border-t-aim-gold animate-spin"></div>
-                      <p className="text-sm font-semibold text-aim-copy-muted">Processing your request…</p>
-                    </div>
-                  )}
-
-                  {/* SUCCESS SCREEN */}
-                  {paymentStep === 'success' && successData && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.96 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="flex flex-col items-center gap-6 py-8 text-center"
-                    >
-                      <div className="w-16 h-16 rounded-full bg-emerald-500/10 border-2 border-emerald-500/20 flex items-center justify-center">
-                        <svg className="w-9 h-9 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <h3 className="text-2xl font-black text-aim-copy">Payment Successful! 🎉</h3>
-                        <p className="text-sm text-aim-copy-muted mt-1">Your SaaS software account has been provisioned. Check your email for details.</p>
-                      </div>
-                      <div className="w-full grid sm:grid-cols-2 gap-4">
-                        <div className="p-4 rounded-2xl bg-aim-gold/10 border border-aim-gold/20 text-left">
-                          <span className="text-[10px] font-black text-aim-gold uppercase tracking-widest block mb-1">Your Client ID</span>
-                          <span className="text-xl font-black text-aim-copy tracking-widest">{successData.client_id}</span>
-                        </div>
-                        <div className="p-4 rounded-2xl bg-aim-purple/10 border border-aim-purple/20 text-left">
-                          <span className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest block mb-1">Default Password</span>
-                          <span className="text-xl font-black text-aim-copy tracking-mono">{successData.default_password}</span>
-                        </div>
-                      </div>
-                      <p className="text-xs text-aim-copy-muted max-w-sm">
-                        Please save these credentials. Your Relationship Manager will contact you shortly.
-                      </p>
-                      <button
-                        onClick={() => { setPaymentStep('idle'); setSuccessData(null) }}
-                        className="text-xs font-bold text-aim-gold hover:text-aim-highlight underline underline-offset-2 transition cursor-pointer"
+                  {/* Static IDLE prompt always displayed on page */}
+                  <div className="text-center space-y-4 py-6">
+                    <span className="text-[10px] font-black tracking-widest text-aim-gold uppercase bg-aim-gold/10 px-3 py-1 rounded-full border border-aim-gold/20">
+                      PURCHASE &amp; ACTIVATE
+                    </span>
+                    <h3 className="text-2xl font-black text-aim-copy tracking-tight mt-2">
+                      Ready to <span className="text-gradient">Get Started?</span>
+                    </h3>
+                    <p className="text-sm text-aim-copy-muted max-w-lg mx-auto">
+                      Select a plan above then click <strong>Activate Your Plan</strong> to complete your registration and make the one-time setup fee payment securely via Razorpay.
+                    </p>
+                    <div className="pt-2">
+                      <Button
+                        variant="primary"
+                        onClick={handleActivateClick}
+                        className="font-black px-10 py-3 rounded-xl shadow-lg cursor-pointer text-sm uppercase tracking-wider"
                       >
-                        Purchase another plan →
-                      </button>
-                    </motion.div>
-                  )}
-
-                  {/* CHECKOUT FORM */}
-                  {paymentStep === 'form' && (
-                    <>
-                      {/* Header */}
-                      <div className="flex items-center justify-between pb-4 border-b border-aim-border">
-                        <div>
-                          <span className="text-[10px] font-black tracking-widest text-aim-gold uppercase bg-aim-gold/10 px-3 py-1 rounded-full border border-aim-gold/20">
-                            COMPLETE REGISTRATION
-                          </span>
-                          <h3 className="text-xl font-black text-aim-copy tracking-tight mt-2">
-                            {activePlan.name}
-                          </h3>
-                          <p className="text-xs text-aim-copy-muted mt-0.5">
-                            One-Time Setup Fee: <span className="font-black text-aim-gold">{activePlan.securityDeposit}</span>
-                            &nbsp;·&nbsp;Then {isInstitutePro 
-                              ? `₹${(10 * (parseInt(checkoutData.total_students, 10) || 0)).toLocaleString('en-IN')}/mo (${checkoutData.total_students || 0} students)`
-                              : (activePlan.monthlySubscription.startsWith('₹') ? '' : '₹') + activePlan.monthlySubscription + (activePlan.monthlySubscription.includes('month') ? '' : '/mo')
-                            }
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => { setPaymentStep('idle'); setApiError('') }}
-                          className="text-xs font-bold text-aim-copy-muted hover:text-red-500 dark:hover:text-red-400 transition cursor-pointer border border-aim-border hover:border-red-300 dark:hover:border-red-500/40 px-3 py-1.5 rounded-lg"
-                        >
-                          ✕ Change Plan
-                        </button>
-                      </div>
-
-                      {/* Error banner */}
-                      <AnimatePresence>
-                        {apiError && (
-                          <motion.div
-                            initial={{ opacity: 0, y: -6 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -6 }}
-                            className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-600 dark:text-red-400 flex items-start gap-2"
-                          >
-                            <svg className="w-4 h-4 shrink-0 mt-0.5 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                            {apiError}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-
-                      <form onSubmit={handleCheckoutSubmit} className="space-y-5">
-
-                        {/* Section: Billing Details */}
-                        <div>
-                          <h4 className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest mb-3">Billing Details</h4>
-                          <div className="grid sm:grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                Client Name <span className="text-aim-gold">*</span>
-                              </label>
-                              <input
-                                ref={nameInputRef}
-                                type="text"
-                                name="client_name"
-                                value={checkoutData.client_name}
-                                onChange={handleCheckoutChange}
-                                placeholder="Full name"
-                                required
-                                className="input-brand text-sm"
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                Contact Number <span className="text-aim-gold">*</span>
-                              </label>
-                              <input
-                                type="tel"
-                                name="contact_number"
-                                value={checkoutData.contact_number}
-                                onChange={handleCheckoutChange}
-                                placeholder="+91 XXXXX XXXXX"
-                                required
-                                className="input-brand text-sm"
-                              />
-                            </div>
-                            <div className="space-y-1.5 sm:col-span-2">
-                              <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                Email Address <span className="text-aim-gold">*</span>
-                              </label>
-                              <input
-                                type="email"
-                                name="email"
-                                value={checkoutData.email}
-                                onChange={handleCheckoutChange}
-                                placeholder="name@company.com"
-                                required
-                                className="input-brand text-sm"
-                              />
-                            </div>
-
-                            {/* Conditional fields for Institute Pro (id=15) vs others */}
-                            {!isInstitutePro ? (
-                              <>
-                                <div className="space-y-1.5">
-                                  <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                    Company Name
-                                  </label>
-                                  <input
-                                    type="text"
-                                    name="company_name"
-                                    value={checkoutData.company_name}
-                                    onChange={handleCheckoutChange}
-                                    placeholder="Your organization"
-                                    className="input-brand text-sm"
-                                  />
-                                </div>
-                                <div className="space-y-1.5">
-                                  <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                    GSTIN <span className="text-aim-copy-muted normal-case font-normal">(optional)</span>
-                                  </label>
-                                  <input
-                                    type="text"
-                                    name="gstin"
-                                    value={checkoutData.gstin}
-                                    onChange={handleCheckoutChange}
-                                    placeholder="22AAAAA0000A1Z5"
-                                    className="input-brand text-sm"
-                                  />
-                                </div>
-                              </>
-                            ) : (
-                              <>
-                                <div className="space-y-1.5">
-                                  <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                    School Name <span className="text-aim-gold">*</span>
-                                  </label>
-                                  <input
-                                    type="text"
-                                    name="school_name"
-                                    value={checkoutData.school_name}
-                                    onChange={handleCheckoutChange}
-                                    required
-                                    placeholder="Full school name"
-                                    className="input-brand text-sm"
-                                  />
-                                </div>
-                                <div className="space-y-1.5">
-                                  <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                    Short Name <span className="text-aim-gold">*</span> <span className="text-aim-copy-muted normal-case font-normal">(max 8 chars)</span>
-                                  </label>
-                                  <input
-                                    type="text"
-                                    name="school_short_name"
-                                    maxLength="8"
-                                    value={checkoutData.school_short_name}
-                                    onChange={handleCheckoutChange}
-                                    required
-                                    placeholder="e.g. STMARY"
-                                    className="input-brand text-sm"
-                                  />
-                                </div>
-                                <div className="space-y-1.5">
-                                  <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                    Current Session <span className="text-aim-gold">*</span> <span className="text-aim-copy-muted normal-case font-normal">(max 10 chars)</span>
-                                  </label>
-                                  <input
-                                    type="text"
-                                    name="school_session"
-                                    maxLength="10"
-                                    value={checkoutData.school_session}
-                                    onChange={handleCheckoutChange}
-                                    required
-                                    placeholder="2025-26"
-                                    className="input-brand text-sm"
-                                  />
-                                </div>
-                                <div className="space-y-1.5">
-                                  <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                    Total Students <span className="text-aim-gold">*</span>
-                                  </label>
-                                  <input
-                                    type="number"
-                                    name="total_students"
-                                    min="1"
-                                    value={checkoutData.total_students}
-                                    onChange={handleCheckoutChange}
-                                    required
-                                    placeholder="e.g. 450"
-                                    className="input-brand text-sm"
-                                  />
-                                </div>
-                                <div className="space-y-1.5 sm:col-span-2">
-                                  <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                    GSTIN <span className="text-aim-copy-muted normal-case font-normal">(optional)</span>
-                                  </label>
-                                  <input
-                                    type="text"
-                                    name="gstin"
-                                    value={checkoutData.gstin}
-                                    onChange={handleCheckoutChange}
-                                    placeholder="22AAAAA0000A1Z5"
-                                    className="input-brand text-sm"
-                                  />
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Section: Relationship Manager */}
-                        <div>
-                          <h4 className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest mb-3">Select Relationship Manager</h4>
-                          <div className="relative">
-                            <select
-                              name="partner_id"
-                              value={checkoutData.partner_id}
-                              onChange={handleCheckoutChange}
-                              required
-                              className="input-brand text-sm appearance-none cursor-pointer"
-                            >
-                              <option value="">Select your RM / Partner</option>
-                              {partners.map(p => (
-                                <option key={p.id} value={p.partner_id} className="bg-aim-navy text-aim-copy">
-                                  {p.partner_name} — {p.partner_id}
-                                </option>
-                              ))}
-                            </select>
-                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-aim-copy-muted">
-                              <svg className="fill-current h-4 w-4" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Section: Address */}
-                        <div>
-                          <h4 className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest mb-3">Address Details</h4>
-                          <div className="grid sm:grid-cols-3 gap-4">
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                District <span className="text-aim-gold">*</span>
-                              </label>
-                              <input
-                                type="text"
-                                name="district"
-                                value={checkoutData.district}
-                                onChange={handleCheckoutChange}
-                                required
-                                placeholder="e.g. Kolkata"
-                                className="input-brand text-sm"
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                State <span className="text-aim-gold">*</span>
-                              </label>
-                              <input
-                                type="text"
-                                name="state"
-                                value={checkoutData.state}
-                                onChange={handleCheckoutChange}
-                                required
-                                placeholder="e.g. West Bengal"
-                                className="input-brand text-sm"
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                PIN Code <span className="text-aim-gold">*</span>
-                              </label>
-                              <input
-                                type="text"
-                                name="pin_code"
-                                value={checkoutData.pin_code}
-                                onChange={handleCheckoutChange}
-                                required
-                                placeholder="700001"
-                                className="input-brand text-sm"
-                              />
-                            </div>
-                            <div className="space-y-1.5 sm:col-span-3">
-                              <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                Full Address <span className="text-aim-gold">*</span>
-                              </label>
-                              <textarea
-                                name="address"
-                                value={checkoutData.address}
-                                onChange={handleCheckoutChange}
-                                required
-                                rows="3"
-                                placeholder="Street, building, locality…"
-                                className="input-brand text-sm transition resize-none"
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Pay Button */}
-                        <div className="pt-2">
-                          <Button
-                            type="submit"
-                            disabled={isSubmitting}
-                            variant="primary"
-                            className="w-full font-black py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-sm uppercase tracking-wider"
-                          >
-                            {isSubmitting ? (
-                              <>
-                                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                </svg>
-                                <span>Opening Payment Gateway…</span>
-                              </>
-                            ) : (
-                              <span>Pay {activePlan.securityDeposit} Setup Fee via Razorpay</span>
-                            )}
-                          </Button>
-                          <p className="text-center text-[11px] text-aim-copy-muted mt-2">
-                            Secured by Razorpay · Your data is encrypted
-                          </p>
-                        </div>
-
-                      </form>
-                    </>
-                  )}
-
+                        Activate — {activePlan.name}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
+          {/* ── CHECKOUT MODAL DIALOG ── */}
+          <AnimatePresence>
+            {paymentStep !== 'idle' && (
+              <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 overflow-y-auto">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => {
+                    if (paymentStep !== 'processing') {
+                      setPaymentStep('idle')
+                      setApiError('')
+                    }
+                  }}
+                  className="fixed inset-0 bg-slate-950/75 backdrop-blur-md cursor-default"
+                />
+
+                {/* Modal Container */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+                  className="relative w-full max-w-5xl bg-slate-900 border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl z-10 max-h-[95vh] overflow-y-auto text-left"
+                >
+                  {/* Close button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (paymentStep !== 'processing') {
+                        setPaymentStep('idle')
+                        setApiError('')
+                      }
+                    }}
+                    className="absolute top-4 right-4 p-2 rounded-xl bg-white/5 hover:bg-white/10 text-aim-copy-muted hover:text-white transition cursor-pointer z-20"
+                    aria-label="Close checkout modal"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+
+                  <div className="absolute -bottom-20 -right-20 w-48 h-48 bg-aim-gold/5 rounded-full blur-2xl pointer-events-none"></div>
+
+                  <div className="space-y-6 relative z-10">
+
+                    {/* PROCESSING SPINNER */}
+                    {paymentStep === 'processing' && (
+                      <div className="flex flex-col items-center justify-center py-16 gap-5">
+                        <div className="w-14 h-14 rounded-full border-4 border-aim-navy-light border-t-aim-gold animate-spin"></div>
+                        <p className="text-sm font-semibold text-aim-copy-muted animate-pulse">Processing your request…</p>
+                      </div>
+                    )}
+
+                    {/* SUCCESS SCREEN */}
+                    {paymentStep === 'success' && successData && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.96 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="flex flex-col items-center gap-6 py-8 text-center"
+                      >
+                        <div className="w-16 h-16 rounded-full bg-emerald-500/10 border-2 border-emerald-500/20 flex items-center justify-center">
+                          <svg className="w-9 h-9 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h3 className="text-2xl font-black text-aim-copy">Payment Successful! 🎉</h3>
+                          <p className="text-sm text-aim-copy-muted mt-1">Your SaaS software account has been provisioned. Check your email for details.</p>
+                        </div>
+                        <div className="w-full grid sm:grid-cols-2 gap-4">
+                          <div className="p-4 rounded-2xl bg-aim-gold/10 border border-aim-gold/20 text-left">
+                            <span className="text-[10px] font-black text-aim-gold uppercase tracking-widest block mb-1">Your Client ID</span>
+                            <span className="text-xl font-black text-aim-copy tracking-widest">{successData.client_id}</span>
+                          </div>
+                          <div className="p-4 rounded-2xl bg-aim-purple/10 border border-aim-purple/20 text-left">
+                            <span className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest block mb-1">Default Password</span>
+                            <span className="text-xl font-black text-aim-copy tracking-mono">{successData.default_password}</span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-aim-copy-muted max-w-sm">
+                          Please save these credentials. Your Relationship Manager will contact you shortly.
+                        </p>
+                        <button
+                          onClick={() => { setPaymentStep('idle'); setSuccessData(null) }}
+                          className="text-xs font-bold text-aim-gold hover:text-aim-highlight underline underline-offset-2 transition cursor-pointer"
+                        >
+                          Purchase another plan →
+                        </button>
+                      </motion.div>
+                    )}
+
+                    {/* CHECKOUT FORM */}
+                    {paymentStep === 'form' && (
+                      <>
+                        {/* Header */}
+                        <div className="flex items-center justify-between pb-4 border-b border-aim-border">
+                          <div>
+                            <span className="text-[10px] font-black tracking-widest text-aim-gold uppercase bg-aim-gold/10 px-3 py-1 rounded-full border border-aim-gold/20">
+                              COMPLETE REGISTRATION
+                            </span>
+                            <h3 className="text-xl font-black text-aim-copy tracking-tight mt-2">
+                              {activePlan.name}
+                            </h3>
+                            <p className="text-xs text-aim-copy-muted mt-0.5">
+                              One-Time Setup Fee: <span className="font-black text-aim-gold">{activePlan.securityDeposit}</span>
+                              &nbsp;·&nbsp;Then {isInstitutePro 
+                                ? `₹${(10 * (parseInt(checkoutData.total_students, 10) || 0)).toLocaleString('en-IN')}/mo (${checkoutData.total_students || 0} students)`
+                                : (activePlan.monthlySubscription.startsWith('₹') ? '' : '₹') + activePlan.monthlySubscription + (activePlan.monthlySubscription.includes('month') ? '' : '/mo')
+                              }
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => { setPaymentStep('idle'); setApiError('') }}
+                            className="text-xs font-bold text-aim-copy-muted hover:text-red-500 dark:hover:text-red-400 transition cursor-pointer border border-aim-border hover:border-red-300 dark:hover:border-red-500/40 px-3 py-1.5 rounded-lg mr-8"
+                          >
+                            ✕ Change Plan
+                          </button>
+                        </div>
+
+                        {/* Error banner */}
+                        <AnimatePresence>
+                          {apiError && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -6 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -6 }}
+                              className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-600 dark:text-red-400 flex items-start gap-2"
+                            >
+                              <svg className="w-4 h-4 shrink-0 mt-0.5 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              {apiError}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+
+                        <form onSubmit={handleCheckoutSubmit} className="space-y-5">
+
+                          <div className="grid md:grid-cols-2 gap-6 md:gap-8 items-start">
+                            {/* Left Column: Billing Details */}
+                            <div className="space-y-4">
+                              <div>
+                                <h4 className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest mb-3">Billing Details</h4>
+                                <div className="grid sm:grid-cols-2 gap-3.5">
+                                  <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                      Client Name <span className="text-aim-gold">*</span>
+                                    </label>
+                                    <input
+                                      ref={nameInputRef}
+                                      type="text"
+                                      name="client_name"
+                                      value={checkoutData.client_name}
+                                      onChange={handleCheckoutChange}
+                                      placeholder="Full name"
+                                      required
+                                      className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                    />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                      Contact Number <span className="text-aim-gold">*</span>
+                                    </label>
+                                    <input
+                                      type="tel"
+                                      name="contact_number"
+                                      value={checkoutData.contact_number}
+                                      onChange={handleCheckoutChange}
+                                      placeholder="+91 XXXXX XXXXX"
+                                      required
+                                      className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                    />
+                                  </div>
+                                  <div className="space-y-1.5 sm:col-span-2">
+                                    <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                      Email Address <span className="text-aim-gold">*</span>
+                                    </label>
+                                    <input
+                                      type="email"
+                                      name="email"
+                                      value={checkoutData.email}
+                                      onChange={handleCheckoutChange}
+                                      placeholder="name@company.com"
+                                      required
+                                      className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                    />
+                                  </div>
+
+                                  {/* Conditional fields for Institute Pro (id=15) vs others */}
+                                  {!isInstitutePro ? (
+                                    <div className="space-y-1.5 sm:col-span-2">
+                                      <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                        Company Name
+                                      </label>
+                                      <input
+                                        type="text"
+                                        name="company_name"
+                                        value={checkoutData.company_name}
+                                        onChange={handleCheckoutChange}
+                                        placeholder="Your organization"
+                                        className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="space-y-1.5 sm:col-span-2">
+                                        <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                          School Name <span className="text-aim-gold">*</span>
+                                        </label>
+                                        <input
+                                          type="text"
+                                          name="school_name"
+                                          value={checkoutData.school_name}
+                                          onChange={handleCheckoutChange}
+                                          required
+                                          placeholder="Full school name"
+                                          className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                        />
+                                      </div>
+                                      <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                          Short Name <span className="text-aim-gold">*</span> <span className="text-aim-copy-muted normal-case font-normal">(max 8 chars)</span>
+                                        </label>
+                                        <input
+                                          type="text"
+                                          name="school_short_name"
+                                          maxLength="8"
+                                          value={checkoutData.school_short_name}
+                                          onChange={handleCheckoutChange}
+                                          required
+                                          placeholder="e.g. STMARY"
+                                          className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                        />
+                                      </div>
+                                      <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                          Current Session <span className="text-aim-gold">*</span> <span className="text-aim-copy-muted normal-case font-normal">(max 10 chars)</span>
+                                        </label>
+                                        <input
+                                          type="text"
+                                          name="school_session"
+                                          maxLength="10"
+                                          value={checkoutData.school_session}
+                                          onChange={handleCheckoutChange}
+                                          required
+                                          placeholder="2025-26"
+                                          className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                        />
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Right Column: Address details, RM, GST & Total Students */}
+                            <div className="space-y-4">
+                              <div>
+                                <h4 className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest mb-3">Address & RM Details</h4>
+                                <div className="grid sm:grid-cols-2 gap-3.5">
+                                  <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                      District <span className="text-aim-gold">*</span>
+                                    </label>
+                                    <input
+                                      type="text"
+                                      name="district"
+                                      value={checkoutData.district}
+                                      onChange={handleCheckoutChange}
+                                      required
+                                      placeholder="e.g. Kolkata"
+                                      className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                    />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                      State <span className="text-aim-gold">*</span>
+                                    </label>
+                                    <input
+                                      type="text"
+                                      name="state"
+                                      value={checkoutData.state}
+                                      onChange={handleCheckoutChange}
+                                      required
+                                      placeholder="e.g. West Bengal"
+                                      className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                    />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                      PIN Code <span className="text-aim-gold">*</span>
+                                    </label>
+                                    <input
+                                      type="text"
+                                      name="pin_code"
+                                      value={checkoutData.pin_code}
+                                      onChange={handleCheckoutChange}
+                                      required
+                                      placeholder="700001"
+                                      className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                    />
+                                  </div>
+
+                                  {/* Total Students & GSTIN conditional slots */}
+                                  {isInstitutePro ? (
+                                    <>
+                                      <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                          Total Students <span className="text-aim-gold">*</span>
+                                        </label>
+                                        <input
+                                          type="number"
+                                          name="total_students"
+                                          min="1"
+                                          value={checkoutData.total_students}
+                                          onChange={handleCheckoutChange}
+                                          required
+                                          placeholder="e.g. 450"
+                                          className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                        />
+                                      </div>
+                                      <div className="space-y-1.5 sm:col-span-2">
+                                        <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                          GSTIN <span className="text-aim-copy-muted normal-case font-normal">(optional)</span>
+                                        </label>
+                                        <input
+                                          type="text"
+                                          name="gstin"
+                                          value={checkoutData.gstin}
+                                          onChange={handleCheckoutChange}
+                                          placeholder="22AAAAA0000A1Z5"
+                                          className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                        />
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <div className="space-y-1.5">
+                                      <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                        GSTIN <span className="text-aim-copy-muted normal-case font-normal">(optional)</span>
+                                      </label>
+                                      <input
+                                        type="text"
+                                        name="gstin"
+                                        value={checkoutData.gstin}
+                                        onChange={handleCheckoutChange}
+                                        placeholder="22AAAAA0000A1Z5"
+                                        className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                      />
+                                    </div>
+                                  )}
+
+                                  {/* Select Relationship Manager */}
+                                  <div className="space-y-1.5 sm:col-span-2">
+                                    <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                      Select Relationship Manager <span className="text-aim-gold">*</span>
+                                    </label>
+                                    <div className="relative">
+                                      <select
+                                        name="partner_id"
+                                        value={checkoutData.partner_id}
+                                        onChange={handleCheckoutChange}
+                                        required
+                                        className="input-brand text-sm appearance-none cursor-pointer bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                      >
+                                        <option value="">Select your RM / Partner</option>
+                                        {partners.map(p => (
+                                          <option key={p.id} value={p.partner_id} className="bg-slate-900 text-white">
+                                            {p.partner_name} — {p.partner_id}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-aim-copy-muted">
+                                        <svg className="fill-current h-4 w-4" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Full Address */}
+                                  <div className="space-y-1.5 sm:col-span-2">
+                                    <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                      Full Address <span className="text-aim-gold">*</span>
+                                    </label>
+                                    <textarea
+                                      name="address"
+                                      value={checkoutData.address}
+                                      onChange={handleCheckoutChange}
+                                      required
+                                      rows="2"
+                                      placeholder="Street, building, locality…"
+                                      className="input-brand text-sm transition resize-none bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+
+                          {/* Pay Button */}
+                          <div className="pt-4 border-t border-white/10">
+                            <Button
+                              type="submit"
+                              disabled={isSubmitting}
+                              variant="primary"
+                              className="w-full font-black py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-sm uppercase tracking-wider"
+                            >
+                              {isSubmitting ? (
+                                <>
+                                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                  </svg>
+                                  <span>Opening Payment Gateway…</span>
+                                </>
+                              ) : (
+                                <span>Pay {activePlan.securityDeposit} Setup Fee via Razorpay</span>
+                              )}
+                            </Button>
+                            <p className="text-center text-[11px] text-aim-copy-muted mt-2">
+                              Secured by Razorpay · Your data is encrypted
+                            </p>
+                          </div>
+
+                        </form>
+                      </>
+                    )}
+
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </>

@@ -280,8 +280,8 @@ const RootLayout = () => {
                   )}
                 </button>
 
-                <Link
-                  to="/partner/login"
+                <a
+                  href="/partner/login"
                   target="_blank"
                   rel="noopener noreferrer"
                   className={`px-5 py-2 text-sm font-semibold rounded-full transition-all duration-300 shadow-md hover:shadow-lg whitespace-nowrap ${theme === 'dark'
@@ -290,7 +290,7 @@ const RootLayout = () => {
                     }`}
                 >
                   Partner Portal
-                </Link>
+                </a>
               </div>
 
               {/* Mobile Menu Button */}
@@ -424,8 +424,8 @@ const RootLayout = () => {
                       )}
                     </button>
 
-                    <Link
-                      to="/partner/login"
+                    <a
+                      href="/partner/login"
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => setIsMobileMenuOpen(false)}
@@ -435,7 +435,7 @@ const RootLayout = () => {
                         }`}
                     >
                       Partner Login
-                    </Link>
+                    </a>
                   </div>
                 </div>
               </div>
@@ -701,9 +701,9 @@ const RootLayout = () => {
                           : 'bg-white border-slate-200 shadow-lg'
                         }`}
                     >
-                      <Link
+                      <a
                         role="menuitem"
-                        to={`${ROUTES.AUTH.LOGIN}?role=employee`}
+                        href={`${ROUTES.AUTH.LOGIN}?role=employee`}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => setIsFooterLoginMenuOpen(false)}
@@ -713,10 +713,10 @@ const RootLayout = () => {
                           }`}
                       >
                         Employee Login
-                      </Link>
-                      <Link
+                      </a>
+                      <a
                         role="menuitem"
-                        to={`${ROUTES.AUTH.LOGIN}?role=admin`}
+                        href={`${ROUTES.AUTH.LOGIN}?role=admin`}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => setIsFooterLoginMenuOpen(false)}
@@ -726,7 +726,7 @@ const RootLayout = () => {
                           }`}
                       >
                         Admin Login
-                      </Link>
+                      </a>
                     </div>
                   )}
                 </div>

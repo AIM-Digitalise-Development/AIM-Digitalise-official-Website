@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Link } from 'react-router-dom'
+import useUIStore from '../../../store/uiStore'
 import Card from '../../ui/Card'
 import Button from '../../ui/Button'
 
@@ -57,6 +59,7 @@ const getYoutubeId = (url) => {
 
 const NxtGenErpSection = () => {
   const [activeTab, setActiveTab] = useState(0)
+  const openAppointmentModal = useUIStore(state => state.openAppointmentModal)
   const currentTab = erpTabs[activeTab]
 
   return (
@@ -145,15 +148,22 @@ const NxtGenErpSection = () => {
 
             {/* General CTA */}
             <div className="flex gap-4">
-              <Button variant="primary" size="lg" className="cursor-pointer">
-                <span>Book ERP Demo</span>
+              <Button 
+                variant="primary" 
+                size="lg" 
+                className="cursor-pointer"
+                onClick={openAppointmentModal}
+              >
+                <span>Book a Demo</span>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </Button>
-              <Button variant="secondary" size="lg" className="cursor-pointer">
-                <span>Read Case Study</span>
-              </Button>
+              <Link to="/saas-software?plan=15">
+                <Button variant="secondary" size="lg" className="cursor-pointer">
+                  <span>Buy Now</span>
+                </Button>
+              </Link>
             </div>
           </div>
 
@@ -191,7 +201,7 @@ const NxtGenErpSection = () => {
                       <iframe
                         key={currentTab.id}
                         className="w-full h-full border-0 shadow-inner"
-                        src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&loop=1&playlist=${youtubeId}&controls=1`}
+                        src={`https://www.youtube.com/embed/${youtubeId}?autoplay=0&controls=1`}
                         title={currentTab.title}
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                         allowFullScreen
@@ -203,7 +213,6 @@ const NxtGenErpSection = () => {
                     <video
                       key={currentTab.id}
                       className="w-full h-full object-cover shadow-inner"
-                      autoPlay
                       loop
                       muted
                       playsInline

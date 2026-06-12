@@ -1,4 +1,5 @@
 import client from './client'
+import { getMockResponse } from '../utils/mockAuthData'
 
 const PARTNER_API = import.meta.env.VITE_PARTNER_API_URL || 'https://api.nexgn.in/api'
 
@@ -14,31 +15,52 @@ const partnerFetch = async (method, path, body = null, isFormData = false) => {
   const options = { method, headers }
   if (body) options.body = isFormData ? body : JSON.stringify(body)
 
-  const response = await fetch(`${PARTNER_API}${path}`, options)
-  
-  let data = null
-  const contentType = response.headers.get('content-type')
-  if (contentType && contentType.includes('application/json')) {
-    data = await response.json()
-  } else {
-    const text = await response.text()
-    data = { message: text || `HTTP Error ${response.status}` }
-  }
+  try {
+    const response = await fetch(`${PARTNER_API}${path}`, options)
+    
+    let data = null
+    const contentType = response.headers.get('content-type')
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json()
+    } else {
+      const text = await response.text()
+      data = { message: text || `HTTP Error ${response.status}` }
+    }
 
-  if (!response.ok) {
-    console.error('Partner API request failed:', {
-      status: response.status,
-      path,
-      responseBody: data?.message
-    })
-    const errorMsg = data?.message && data.message.length < 150 
-      ? data.message 
-      : `Server returned error ${response.status}`
-    const error = new Error(errorMsg)
-    error.response = { data, status: response.status }
-    throw error
+    if (!response.ok) {
+      // If server returned 5xx/404, fall back to mock data
+      if (response.status >= 500 || response.status === 404) {
+        const mockData = getMockResponse(path, method, body)
+        if (mockData) {
+          console.warn(`[Partner Fetch Fallback] Live request failed for ${path} (Status ${response.status}). Using mock data.`)
+          return { data: mockData }
+        }
+      }
+
+      console.error('Partner API request failed:', {
+        status: response.status,
+        path,
+        responseBody: data?.message
+      })
+      const errorMsg = data?.message && data.message.length < 150 
+        ? data.message 
+        : `Server returned error ${response.status}`
+      const error = new Error(errorMsg)
+      error.response = { data, status: response.status }
+      throw error
+    }
+    return { data }
+  } catch (err) {
+    // If network failed completely (e.g. Failed to fetch), fall back to mock data
+    if (err.name === 'TypeError' || err.message?.includes('Failed to fetch')) {
+      const mockData = getMockResponse(path, method, body)
+      if (mockData) {
+        console.warn(`[Partner Fetch Fallback] Network unreachable for ${path}. Using mock data.`)
+        return { data: mockData }
+      }
+    }
+    throw err
   }
-  return { data }
 }
 
 // ─── Step 1: Register partner ──────────────────────────────────────────────

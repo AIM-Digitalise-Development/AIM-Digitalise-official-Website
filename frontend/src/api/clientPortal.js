@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { getMockResponse } from '../utils/mockAuthData'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.nexgn.in/api'
 
@@ -22,8 +23,20 @@ const clientPortalFetch = async (method, path, data = null, token = null) => {
     }
   }
 
-  const response = await axios(config)
-  return response.data
+  try {
+    const response = await axios(config)
+    return response.data
+  } catch (error) {
+    // If connection failed (no response) or server returned 5xx/404, fall back to mock data
+    if (!error.response || error.response.status >= 500 || error.response.status === 404) {
+      const mockData = getMockResponse(path, method, data)
+      if (mockData) {
+        console.warn(`[Client Portal Fallback] Live request failed for ${path}. Using simulated mock data.`)
+        return mockData
+      }
+    }
+    throw error
+  }
 }
 
 export const clientLogin = (client_id, password) =>

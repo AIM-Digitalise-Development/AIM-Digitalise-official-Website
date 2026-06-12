@@ -62,33 +62,7 @@ const specialties = [
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
     ),
   },
-  {
-    num: '07',
-    title: 'Prime Focus',
-    desc: 'Your goals drive every sprint — we plan from your customers’ view.',
-    icon: (
-      <>
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M12 2a10 10 0 100 20 10 10 0 000-20z" />
-      </>
-    ),
-  },
-  {
-    num: '08',
-    title: 'End-to-end Solution',
-    desc: 'Strategy through launch and support — one accountable partner.',
-    icon: (
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-    ),
-  },
-  {
-    num: '09',
-    title: 'Careful Inferences',
-    desc: 'Data-backed decisions — we test assumptions before we build.',
-    icon: (
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-    ),
-  },
+
 ]
 
 const BouncingIcon = ({ children, delay, reduceMotion, isPurple }) => (
@@ -138,7 +112,7 @@ const SpecialtyCard = ({ item, index, reduceMotion }) => {
         <img
           src={bkImage}
           alt="AIM Digitalise"
-          className="w-full h-auto md:h-full object-contain block"
+          className="w-full h-full object-fill block"
         />
       ) : (
         <>
@@ -216,30 +190,49 @@ const SpecialtiesSection = () => {
           </motion.div>
 
           <motion.div
-            className="lg:col-span-7 grid grid-cols-3 gap-4"
+            className="lg:col-span-7 flex flex-col gap-6"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.15 }}
           >
-            {stats.map((stat, i) => (
-              <motion.div
-                key={stat.label}
-                className={`relative text-center p-5 sm:p-6 rounded-2xl border-2 card-elevated overflow-hidden ${
-                  stat.accent === 'purple'
-                    ? 'border-aim-purple/30 shadow-lg shadow-aim-purple/15'
-                    : 'border-aim-gold/30 shadow-lg shadow-aim-gold/15'
-                } ${!reduceMotion ? (i === 1 ? 'animate-bounce-gentle-delayed' : 'animate-bounce-gentle') : ''}`}
-                style={{ animationDelay: `${i * 0.2}s` }}
-              >
-                <p className="text-2xl sm:text-3xl font-black text-white">
-                  {stat.value}
-                </p>
-                <p className="text-[11px] sm:text-xs font-semibold text-aim-copy-muted uppercase tracking-wider mt-1">
-                  {stat.label}
-                </p>
-              </motion.div>
-            ))}
+            <div className="grid grid-cols-3 gap-4">
+              {stats.map((stat, i) => (
+                <motion.div
+                  key={stat.label}
+                  className={`relative text-center p-5 sm:p-6 rounded-2xl border-2 card-elevated overflow-hidden ${
+                    stat.accent === 'purple'
+                      ? 'border-aim-purple/30 shadow-lg shadow-aim-purple/15'
+                      : 'border-aim-gold/30 shadow-lg shadow-aim-gold/15'
+                  } ${!reduceMotion ? (i === 1 ? 'animate-bounce-gentle-delayed' : 'animate-bounce-gentle') : ''}`}
+                  style={{ animationDelay: `${i * 0.2}s` }}
+                >
+                  <p className="text-2xl sm:text-3xl font-black text-white">
+                    {stat.value}
+                  </p>
+                  <p className="text-[11px] sm:text-xs font-semibold text-aim-copy-muted uppercase tracking-wider mt-1">
+                    {stat.label}
+                  </p>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Highlights in the gap next to the main details */}
+            <div className="flex flex-wrap items-center gap-3 p-4 rounded-2xl bg-aim-navy-light/40 mt-10">
+              <span className="text-[10px] font-black text-aim-gold uppercase tracking-widest block mr-1">Core Benefits:</span>
+              {[
+                { word: 'RECURRING INCOME', color: 'from-aim-gold to-aim-gold-light text-aim-navy' },
+                { word: 'ENTERTENMENT', color: 'from-aim-purple to-aim-purple/80 text-white border border-aim-purple/20' },
+                { word: 'RECOGNISATION', color: 'from-aim-gold to-aim-gold-light text-aim-navy' },
+              ].map((item, idx) => (
+                <span
+                  key={idx}
+                  className={`px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-black tracking-wider shadow-md bg-gradient-to-r ${item.color}`}
+                >
+                  {item.word}
+                </span>
+              ))}
+            </div>
           </motion.div>
         </div>
 
@@ -265,10 +258,10 @@ const SpecialtiesSection = () => {
             </p>
           </div>
           <Link
-            to={ROUTES.CONTACT}
-            className="relative z-10 shrink-0 btn-primary px-8 py-3.5 text-center font-semibold"
+            to={ROUTES.PARTNER.REGISTER}
+            className="relative z-10 shrink-0 btn-primary px-8 py-3.5 text-center font-black uppercase tracking-wider text-xs shadow-lg shadow-aim-gold/25 hover:shadow-aim-gold/45 transition-all duration-200"
           >
-            Start a Conversation
+            Register Now
           </Link>
         </motion.div>
       </div>
