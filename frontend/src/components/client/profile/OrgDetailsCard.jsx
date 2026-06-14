@@ -3,8 +3,6 @@ const OrgDetailsCard = ({ displayUser }) => {
     { label: 'Company / Organization', value: displayUser?.company_name || displayUser?.school_name || displayUser?.organization || displayUser?.company },
     { label: 'School Short Name', value: displayUser?.school_short_name },
     { label: 'Academic Session', value: displayUser?.school_session || displayUser?.session },
-    { label: 'Total Students', value: displayUser?.total_students },
-    { label: 'GSTIN', value: displayUser?.gstin },
   ]
 
   return (

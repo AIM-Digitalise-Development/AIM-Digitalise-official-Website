@@ -7,6 +7,16 @@ const PARTNER_API = import.meta.env.VITE_PARTNER_API_URL || 'https://api.nexgn.i
 // (uses fetch directly so it can point at a different base URL)
 const partnerFetch = async (method, path, body = null, isFormData = false) => {
   const token = localStorage.getItem('partner_token')
+  
+  // If mock token is used, skip live API request to avoid 401/Unauthorized errors in development
+  if (token && token.startsWith('mock-')) {
+    const mockData = getMockResponse(path, method, body)
+    if (mockData) {
+      console.warn(`[Partner Portal Mock] Bypassing live request for ${path} due to mock token.`)
+      return { data: mockData }
+    }
+  }
+
   const headers = {}
   if (token) headers['Authorization'] = `Bearer ${token}`
   if (body && !isFormData) headers['Content-Type'] = 'application/json'

@@ -4,6 +4,15 @@ import { getMockResponse } from '../utils/mockAuthData'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.nexgn.in/api'
 
 const clientPortalFetch = async (method, path, data = null, token = null) => {
+  // If mock token is used, skip live API request to avoid 401/Unauthorized errors in development
+  if (token && token.startsWith('mock-')) {
+    const mockData = getMockResponse(path, method, data)
+    if (mockData) {
+      console.warn(`[Client Portal Mock] Bypassing live request for ${path} due to mock token.`)
+      return mockData
+    }
+  }
+
   const headers = { 'Content-Type': 'application/json' }
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
@@ -23,20 +32,8 @@ const clientPortalFetch = async (method, path, data = null, token = null) => {
     }
   }
 
-  try {
-    const response = await axios(config)
-    return response.data
-  } catch (error) {
-    // If connection failed (no response) or server returned 5xx/404, fall back to mock data
-    if (!error.response || error.response.status >= 500 || error.response.status === 404) {
-      const mockData = getMockResponse(path, method, data)
-      if (mockData) {
-        console.warn(`[Client Portal Fallback] Live request failed for ${path}. Using simulated mock data.`)
-        return mockData
-      }
-    }
-    throw error
-  }
+  const response = await axios(config)
+  return response.data
 }
 
 export const clientLogin = (client_id, password) =>

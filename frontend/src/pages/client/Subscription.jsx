@@ -14,7 +14,7 @@ import PaymentCyclesCard from '../../components/client/subscription/PaymentCycle
 import PaymentSummaryCard from '../../components/client/subscription/PaymentSummaryCard'
 
 const ClientSubscription = () => {
-  const { clientToken, isClientAuthenticated, profileData, productData } = useClientAuthStore()
+  const { clientToken, isClientAuthenticated, profileData, productData, clientLogout } = useClientAuthStore()
   
   // UI states
   const [loading, setLoading] = useState(true)
@@ -56,7 +56,11 @@ const ClientSubscription = () => {
         }
       } catch (err) {
         console.error('Error fetching subscription init details:', err)
-        setError(err?.response?.data?.message || err?.message || 'Failed to initialize subscription page.')
+        if (err.response?.status === 401) {
+          clientLogout()
+        } else {
+          setError(err?.response?.data?.message || err?.message || 'Failed to initialize subscription page.')
+        }
       } finally {
         setLoading(false)
       }
@@ -78,7 +82,11 @@ const ClientSubscription = () => {
       }
     } catch (err) {
       console.error('Subscription calculation error:', err)
-      setError('Failed to calculate subscription amount.')
+      if (err.response?.status === 401) {
+        clientLogout()
+      } else {
+        setError('Failed to calculate subscription amount.')
+      }
     } finally {
       setLoadingSubscription(false)
     }
@@ -232,18 +240,39 @@ const ClientSubscription = () => {
 
   const subStatus = checkSubscriptionStatus(profileData, productData)
 
+  const schoolName = profileData?.company_name || profileData?.school_name || profileData?.organization || 'Academic Institute'
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-      className="space-y-4 max-w-5xl mx-auto"
-    >
-      {error && (
-        <div className="p-3 rounded-lg text-[12px] font-medium text-left" style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626' }}>
-          {error}
+    <div className="space-y-6 max-w-5xl mx-auto pb-10" style={{ fontFamily: "'Inter', sans-serif" }}>
+      
+      {/* Centered Page Header (Matching Admin Layout Header Banner style) */}
+      <div className="relative flex flex-col md:flex-row md:items-center justify-between pb-3 gap-3 min-h-[48px] border-b border-slate-200/80">
+        {/* Left Side: Page Title */}
+        <h1 className="text-3xl font-black text-[#1e3e6b] tracking-tight">Subscription</h1>
+
+        {/* Center: School / Org banner */}
+        <div className="text-center md:absolute md:left-1/2 md:-translate-x-1/2 mt-1 md:mt-0 select-none">
+          <h2 className="text-lg font-extrabold text-[#1e3e6b] tracking-tight uppercase">
+            {schoolName}
+          </h2>
+          <p className="text-xs font-bold text-slate-500">Academic Session: 2026-2027</p>
         </div>
-      )}
+
+        {/* Right Side: Spacer */}
+        <div className="w-48 hidden md:block"></div>
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+        className="space-y-4"
+      >
+        {error && (
+          <div className="p-3 rounded-lg text-[12px] font-medium text-left" style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626' }}>
+            {error}
+          </div>
+        )}
 
       {success && (
         <div className="p-3 rounded-lg text-[12px] font-medium text-left whitespace-pre-line" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a' }}>
@@ -325,6 +354,7 @@ const ClientSubscription = () => {
         </div>
       )}
     </motion.div>
+    </div>
   )
 }
 

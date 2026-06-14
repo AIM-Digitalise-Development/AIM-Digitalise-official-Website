@@ -5,7 +5,6 @@ import { getClientProfile, getClientProducts } from '../../api/clientPortal'
 import BasicInfoCard from '../../components/client/profile/BasicInfoCard'
 import OrgDetailsCard from '../../components/client/profile/OrgDetailsCard'
 import AddressCard from '../../components/client/profile/AddressCard'
-import PurchaseInfoCard from '../../components/client/profile/PurchaseInfoCard'
 
 const ClientProfile = () => {
   const {
@@ -18,6 +17,7 @@ const ClientProfile = () => {
     productsFetched,
     setProfileData,
     setProductData,
+    clientLogout,
   } = useClientAuthStore()
 
   const [loading, setLoading] = useState(!profileFetched)
@@ -39,7 +39,9 @@ const ClientProfile = () => {
         setError('')
       } catch (err) {
         console.error('Error syncing client profile:', err)
-        if (!profileData) {
+        if (err.response?.status === 401) {
+          clientLogout()
+        } else if (!profileData) {
           setError(err?.response?.data?.message || 'Failed to sync profile details.')
         }
       } finally {
@@ -58,17 +60,25 @@ const ClientProfile = () => {
     const syncProducts = async () => {
       try {
         const res = await getClientProducts(clientToken)
-        const rawProducts = res?.data?.products || res?.products || res?.data || res || []
-        const newProducts = Array.isArray(rawProducts) ? rawProducts : []
+        const raw = res?.data?.products || res?.products || res?.data || res
+        let newProducts = []
+        if (Array.isArray(raw)) {
+          newProducts = raw
+        } else if (raw && typeof raw === 'object') {
+          newProducts = [raw]
+        }
         if (JSON.stringify(productData) !== JSON.stringify(newProducts)) {
           setProductData(newProducts)
         }
       } catch (err) {
         console.error('Error syncing products:', err)
+        if (err.response?.status === 401) {
+          clientLogout()
+        }
       }
     }
     syncProducts()
-  }, [clientToken, isClientAuthenticated, productData, setProductData])
+  }, [clientToken, isClientAuthenticated, productsFetched, setProductData])
 
   const displayUser = profileData || clientUser || {}
   const displayProducts = productData || []
@@ -108,27 +118,48 @@ const ClientProfile = () => {
     )
   }
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-      className="space-y-4 max-w-5xl mx-auto"
-    >
-      {error && (
-        <div className="p-3 rounded-lg text-[12px] font-medium" style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626' }}>
-          {error}
-        </div>
-      )}
+  const schoolName = displayUser?.company_name || displayUser?.school_name || displayUser?.organization || 'Academic Institute'
 
-      {/* Grid of profile cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <BasicInfoCard displayUser={displayUser} />
-        <OrgDetailsCard displayUser={displayUser} />
-        <AddressCard displayUser={displayUser} />
-        <PurchaseInfoCard activeProduct={activeProduct} />
+  return (
+    <div className="space-y-6 max-w-5xl mx-auto pb-10" style={{ fontFamily: "'Inter', sans-serif" }}>
+      
+      {/* Centered Page Header (Matching Admin Layout Header Banner style) */}
+      <div className="relative flex flex-col md:flex-row md:items-center justify-between pb-3 gap-3 min-h-[48px] border-b border-slate-200/80">
+        {/* Left Side: Page Title */}
+        <h1 className="text-3xl font-black text-[#1e3e6b] tracking-tight">My Profile</h1>
+
+        {/* Center: School / Org banner */}
+        <div className="text-center md:absolute md:left-1/2 md:-translate-x-1/2 mt-1 md:mt-0 select-none">
+          <h2 className="text-lg font-extrabold text-[#1e3e6b] tracking-tight uppercase">
+            {schoolName}
+          </h2>
+          <p className="text-xs font-bold text-slate-500">Academic Session: 2026-2027</p>
+        </div>
+
+        {/* Right Side: Spacer */}
+        <div className="w-48 hidden md:block"></div>
       </div>
-    </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+        className="space-y-4"
+      >
+        {error && (
+          <div className="p-3 rounded-lg text-[12px] font-medium" style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626' }}>
+            {error}
+          </div>
+        )}
+
+        {/* Grid of profile cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <BasicInfoCard displayUser={displayUser} />
+          <OrgDetailsCard displayUser={displayUser} />
+          <AddressCard displayUser={displayUser} />
+        </div>
+      </motion.div>
+    </div>
   )
 }
 

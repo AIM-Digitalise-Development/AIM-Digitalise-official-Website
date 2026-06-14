@@ -178,38 +178,76 @@ const ClientLayout = () => {
       {/* ─── Main Area ─── */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         
-        {/* Top Header - Dark Teal/Navy */}
-        <header className="h-[56px] flex items-center px-6 shrink-0 justify-between text-white"
-          style={{ background: 'linear-gradient(90deg, #1a2e3d 0%, #1f3a4f 100%)' }}
-        >
-          <div className="flex items-center gap-3">
-            <button
+        {/* Top Header - Replicating Admin panel header styling */}
+        <header className="bg-white border-b border-slate-200/80 px-4 sm:px-6 py-4 flex items-center justify-between shadow-sm sticky top-0 z-10 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3.5 min-w-0">
+            {/* Hamburger button */}
+            <button 
               onClick={() => setIsSidebarOpen(true)}
-              className="p-1.5 -ml-1 text-white/60 hover:text-white lg:hidden rounded-lg cursor-pointer"
+              className="p-2 hover:bg-slate-50 rounded-lg text-slate-500 cursor-pointer transition-colors active:scale-95 lg:hidden shrink-0"
               aria-label="Open Sidebar"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <h2 className="text-[14px] font-semibold text-white/90">{getCurrentTitle()}</h2>
+            <span className="text-sm font-semibold text-slate-400 font-sans truncate hidden md:inline-block">
+              {(() => {
+                if (location.pathname === '/client/portal') return `Welcome back! Here's your workspace overview for June 2026.`
+                if (location.pathname === '/client/portal/profile') return 'Manage your client profile details.'
+                if (location.pathname === '/client/portal/subscription') return 'Manage your subscription, billing, and renewals.'
+                return 'Manage your workspace overview.'
+              })()}
+            </span>
+            <span className="text-sm font-bold text-slate-800 font-sans md:hidden">
+              {getCurrentTitle()}
+            </span>
           </div>
-          
-          <div className="flex items-center gap-4">
-            {/* Status */}
-            <div className="flex items-center gap-1.5 text-[11px] text-white/50 font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Online
+
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            {/* Academic Session */}
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-650 bg-slate-50/70 border border-slate-200/40 rounded-lg px-3 py-2 select-none">
+              🎓 Session: 2026-2027
             </div>
-            {/* Bell Icon */}
-            <button className="p-1.5 text-white/50 hover:text-white/90 transition-colors relative cursor-pointer">
-              <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+
+            {/* Dynamic Date display with calendar icon formatted as Fri, 05 Jun 2026 */}
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 bg-slate-50/70 border border-slate-200/40 rounded-lg px-3 py-2 hidden sm:flex select-none">
+              <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span>
+                {(() => {
+                  const d = new Date()
+                  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+                  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                  const dayName = days[d.getDay()]
+                  const dateNum = String(d.getDate()).padStart(2, '0')
+                  const monthName = months[d.getMonth()]
+                  const year = d.getFullYear()
+                  return `${dayName}, ${dateNum} ${monthName} ${year}`
+                })()}
+              </span>
+            </div>
+
+            {/* Notification Bell Icon */}
+            <button className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-605 transition-colors cursor-pointer relative active:scale-95">
+              <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
+              {/* Dot */}
+              <span className="absolute top-2 right-2.5 w-2 h-2 rounded-full bg-red-500 border border-white" />
             </button>
-            {/* Mini Avatar */}
-            <div className="w-8 h-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-[11px] font-bold text-white/80">
-              {initials}
+
+            {/* Profile Avatar & Name */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-slate-700 font-sans hidden sm:inline-block">
+                {displayName}
+              </span>
+              <div
+                className="w-10 h-10 rounded-full border border-slate-200 shadow-sm overflow-hidden flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white select-none font-bold text-sm"
+              >
+                {initials}
+              </div>
             </div>
           </div>
         </header>
