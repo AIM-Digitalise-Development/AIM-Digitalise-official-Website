@@ -5,6 +5,10 @@ import RootLayout from './layouts/RootLayout'
 import WebsiteLayout from './layouts/WebsiteLayout'
 import AdminLayout from './layouts/AdminLayout'
 import PartnerLayout from './layouts/PartnerLayout'
+import EmployeeLayout from './layouts/EmployeeLayout'
+import EmployeeDashboard from './pages/employee/Dashboard'
+import EmployeeTasks from './pages/employee/Tasks'
+import EmployeeTimesheet from './pages/employee/Timesheet'
 import Home from './pages/website/Home'
 import About from './pages/website/About'
 import Contact from './pages/website/Contact'
@@ -41,6 +45,10 @@ import ClientLogin from './pages/client/Login'
 import ClientProducts from './pages/client/Products'
 import ClientProfile from './pages/client/Profile'
 import ClientSubscription from './pages/client/Subscription'
+import DemoPortal from './pages/demo/DemoPortal'
+import DemoDashboard from './pages/demo/DemoDashboard'
+import DemoEmployeePunchIn from './pages/demo/DemoEmployeePunchIn'
+import { DemoSaasClients, DemoComingSoon } from './pages/demo/DemoPages'
 import { ROUTES } from './constants/routes'
 
 function ScrollToTop() {
@@ -106,6 +114,13 @@ function App() {
             <Route path="compliance" element={<AdminCompliance />} />
           </Route>
 
+          {/* ── Employee portal (authenticated shell with sidebar) ── */}
+          <Route path={ROUTES.EMPLOYEE.DASHBOARD} element={<EmployeeLayout />}>
+            <Route index element={<EmployeeDashboard />} />
+            <Route path="tasks" element={<EmployeeTasks />} />
+            <Route path="timesheet" element={<EmployeeTimesheet />} />
+          </Route>
+
           {/* ── Partner auth pages (standalone, no header/footer) ── */}
           <Route path={ROUTES.PARTNER.LOGIN} element={<PartnerLogin />} />
           <Route path={ROUTES.PARTNER.REGISTER} element={<PartnerRegister />} />
@@ -131,6 +146,23 @@ function App() {
             <Route index element={<ClientProducts />} />
             <Route path="profile" element={<ClientProfile />} />
             <Route path="subscription" element={<ClientSubscription />} />
+          </Route>
+
+          {/* ── Demo Portal (no auth required, dark admin-style with demo data) ── */}
+          <Route path={ROUTES.DEMO.PORTAL} element={<DemoPortal />}>
+            <Route index element={<DemoDashboard />} />
+            <Route path="saas-clients" element={<DemoSaasClients />} />
+            <Route path="subscription" element={<DemoComingSoon title="Subscribed Clients" icon="💳" />} />
+            <Route path="users" element={<DemoComingSoon title="General Clients" icon="👥" />} />
+            <Route path="accounts" element={<DemoComingSoon title="Accounts" icon="💰" />} />
+            <Route path="employee" element={<DemoComingSoon title="Employee Management" icon="👤" />} />
+            <Route path="projects" element={<DemoComingSoon title="Projects" icon="📁" />} />
+            <Route path="compliance" element={<DemoComingSoon title="Compliance" icon="🛡️" />} />
+            <Route path="partners" element={<DemoComingSoon title="Partner Network" icon="🤝" />} />
+            <Route path="reports" element={<DemoComingSoon title="Reports" icon="📊" />} />
+            <Route path="support" element={<DemoComingSoon title="Support" icon="💬" />} />
+            <Route path="settings" element={<DemoComingSoon title="Settings" icon="⚙️" />} />
+            <Route path="punch-in" element={<DemoEmployeePunchIn />} />
           </Route>
         </Routes>
       </BrowserRouter>

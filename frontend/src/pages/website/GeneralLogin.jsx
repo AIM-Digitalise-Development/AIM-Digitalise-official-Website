@@ -320,6 +320,17 @@ export default function GeneralLogin() {
                 Contact Technical Support
               </a>
             </p>
+            {/* Demo Portal Link */}
+            <div className="mt-4 text-center">
+              <Link
+                to={ROUTES.DEMO.PORTAL}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 hover:scale-105 active:scale-100"
+                style={{ background: 'rgba(56,179,74,0.12)', color: '#38b34a', border: '1px solid rgba(56,179,74,0.3)' }}
+              >
+                <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#38b34a' }} />
+                Try Demo Portal
+              </Link>
+            </div>
           </div>
         </main>
       </div>
