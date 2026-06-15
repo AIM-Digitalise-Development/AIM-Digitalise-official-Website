@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useClientAuthStore } from '../../store/clientAuthStore'
-import { getClientProfile, getClientProducts, getClientStudentCount, calculateSubscription } from '../../api/clientPortal'
+import { getClientProfile, getClientProducts, getClientStudentCount, calculateSubscription, getClientCustomizationRequests } from '../../api/clientPortal'
 
 const ClientProducts = () => {
   const navigate = useNavigate()
@@ -122,9 +122,30 @@ const ClientProducts = () => {
     }
   }
 
+  const syncCustomizations = async () => {
+    if (!isClientAuthenticated || !clientToken) return
+    try {
+      const res = await getClientCustomizationRequests(clientToken)
+      if (res?.success && res?.data?.requests) {
+        setCustomRequestsCount(res.data.requests.length)
+      } else {
+        const saved = localStorage.getItem('client_customizations')
+        if (saved) {
+          const list = JSON.parse(saved)
+          setCustomRequestsCount(list.length)
+        } else {
+          setCustomRequestsCount(0)
+        }
+      }
+    } catch (err) {
+      console.error('Error syncing customizations:', err)
+    }
+  }
+
   useEffect(() => {
     syncProfile()
     syncStudentCount()
+    syncCustomizations()
     fetchEstimatesData()
   }, [clientToken, isClientAuthenticated])
 
@@ -132,22 +153,6 @@ const ClientProducts = () => {
     if (!productsFetched) setLoading(true)
     syncProducts()
   }, [clientToken, isClientAuthenticated, productsFetched])
-
-  useEffect(() => {
-    const saved = localStorage.getItem('client_customizations')
-    if (saved) {
-      try {
-        const list = JSON.parse(saved)
-        if (list.length > 0) {
-          setCustomRequestsCount(list.length)
-        } else {
-          setCustomRequestsCount(199)
-        }
-      } catch {
-        setCustomRequestsCount(199)
-      }
-    }
-  }, [])
 
   // Dynamic sandbox price calculations based on slider student volume
   const estimates = useMemo(() => {
@@ -312,10 +317,23 @@ const ClientProducts = () => {
             </div>
           </div>
 
-          {/* Card 4: Pay Current Monthly Bill */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center justify-between gap-4 transition-transform hover:scale-[1.01]">
+          {/* Card 5: Total ERP Students */}
+          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center gap-5 transition-transform hover:scale-[1.01]">
+            <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 text-2xl font-bold shadow-inner">
+              👨‍🎓
+            </div>
+            <div className="space-y-1">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Total ERP Students</span>
+              <span className="text-3xl font-black text-slate-800 block font-mono">
+                {studentCountData?.student_count !== undefined ? studentCountData.student_count : '—'}
+              </span>
+            </div>
+          </div>
+
+          {/* Card 4: Pay Current Monthly Bill (Spans 2 columns) */}
+          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-transform hover:scale-[1.01] sm:col-span-2">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 text-2xl font-bold shadow-inner">
+              <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 text-2xl font-bold shadow-inner shrink-0">
                 💳
               </div>
               <div className="space-y-1">
@@ -332,7 +350,7 @@ const ClientProducts = () => {
             </div>
             <button
               onClick={() => navigate('/client/portal/subscription')}
-              className="px-4.5 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-extrabold rounded-xl text-xs shadow-md transition-all active:scale-95 whitespace-nowrap cursor-pointer shrink-0"
+              className="px-5 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-extrabold rounded-xl text-xs shadow-md transition-all active:scale-95 whitespace-nowrap cursor-pointer shrink-0"
             >
               Pay Now
             </button>

@@ -1,7 +1,10 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useClientAuthStore } from '../../store/clientAuthStore'
+import ClientPageHeader from '../../components/client/ClientPageHeader'
 
 const ClientAddonServices = () => {
+  const navigate = useNavigate()
   const { profileData, clientUser, productData } = useClientAuthStore()
 
   // Service 2-4 states (ID Cards Qty)
@@ -29,18 +32,7 @@ const ClientAddonServices = () => {
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-10 select-none animate-fade-in text-slate-705" style={{ fontFamily: "'Inter', sans-serif" }}>
 
-      {/* Centered Page Header */}
-      <div className="relative flex flex-col md:flex-row md:items-center justify-between pb-3 gap-3 min-h-[48px] border-b border-slate-200/80">
-        <h1 className="text-3xl font-black text-[#1e3e6b] tracking-tight">Add-on Services</h1>
-
-        <div className="text-center md:absolute md:left-1/2 md:-translate-x-1/2 mt-1 md:mt-0 select-none">
-          <h2 className="text-lg font-extrabold text-[#1e3e6b] tracking-tight uppercase">
-            {schoolName}
-          </h2>
-          <p className="text-xs font-bold text-slate-500">Academic Session: 2026-2027</p>
-        </div>
-        <div className="w-48 hidden md:block"></div>
-      </div>
+      <ClientPageHeader title="Add-on Services" />
 
       {isNexgnInstitutePro ? (
         <div className="space-y-6">
@@ -56,7 +48,7 @@ const ClientAddonServices = () => {
               <div className="space-y-3">
                 <div className="flex justify-between items-start">
                   <span className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-lg">🌐</span>
-                  <span className="bg-orange-100 text-orange-850 px-2 py-0.5 rounded text-[9px] font-black uppercase">Domain</span>
+                  <span className="bg-orange-100 text-orange-800 px-2 py-0.5 rounded text-[9px] font-black uppercase">Domain</span>
                 </div>
                 <h3 className="text-sm font-black text-slate-800">Domain Services</h3>
                 <p className="text-[11px] text-slate-400 leading-relaxed font-sans font-medium">
@@ -70,7 +62,7 @@ const ClientAddonServices = () => {
                 </div>
                 <button
                   onClick={() => handleOrder('Domain Services', 1, 7300, 7300)}
-                  className="px-4 py-2 bg-[#f97316] hover:bg-orange-600 text-white text-[10.5px] font-black rounded-lg transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-gradient-to-r from-[#1a3c5e] to-[#2a6f97] hover:opacity-90 text-white text-[10.5px] font-bold rounded-lg transition-opacity cursor-pointer"
                 >
                   Order Integration
                 </button>
@@ -82,7 +74,7 @@ const ClientAddonServices = () => {
               <div className="space-y-3">
                 <div className="flex justify-between items-start">
                   <span className="w-10 h-10 rounded-xl bg-[#475569]/10 flex items-center justify-center text-lg">🪪</span>
-                  <span className="bg-emerald-100 text-emerald-850 px-2 py-0.5 rounded text-[9px] font-black uppercase">Super PVC</span>
+                  <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[9px] font-black uppercase">Super PVC</span>
                 </div>
                 <h3 className="text-sm font-black text-slate-800">Students & Teachers ID Card (Type A)</h3>
                 <p className="text-[11px] text-slate-400 leading-relaxed font-sans font-medium">
@@ -97,7 +89,7 @@ const ClientAddonServices = () => {
                     min="1"
                     value={qtyA}
                     onChange={(e) => setQtyA(Math.max(1, parseInt(e.target.value) || 0))}
-                    className="w-20 px-2 py-1 bg-slate-50 border border-slate-200 rounded text-center font-mono font-bold"
+                    className="w-20 px-2 py-1 bg-white border border-slate-300 rounded text-center font-mono font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>
               </div>
@@ -108,7 +100,7 @@ const ClientAddonServices = () => {
                 </div>
                 <button
                   onClick={() => handleOrder('ID Card Type A (Super PVC)', qtyA, 60, qtyA * 60)}
-                  className="px-4 py-2 bg-[#f97316] hover:bg-orange-600 text-white text-[10.5px] font-black rounded-lg transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-gradient-to-r from-[#1a3c5e] to-[#2a6f97] hover:opacity-90 text-white text-[10.5px] font-bold rounded-lg transition-opacity cursor-pointer"
                 >
                   Order Cards
                 </button>
@@ -120,7 +112,7 @@ const ClientAddonServices = () => {
               <div className="space-y-3">
                 <div className="flex justify-between items-start">
                   <span className="w-10 h-10 rounded-xl bg-[#475569]/10 flex items-center justify-center text-lg">🪪</span>
-                  <span className="bg-blue-100 text-blue-850 px-2 py-0.5 rounded text-[9px] font-black uppercase">Regular PVC</span>
+                  <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-[9px] font-black uppercase">Regular PVC</span>
                 </div>
                 <h3 className="text-sm font-black text-slate-800">Students & Teachers ID Card (Type B)</h3>
                 <p className="text-[11px] text-slate-400 leading-relaxed font-sans font-medium">
@@ -135,7 +127,7 @@ const ClientAddonServices = () => {
                     min="1"
                     value={qtyB}
                     onChange={(e) => setQtyB(Math.max(1, parseInt(e.target.value) || 0))}
-                    className="w-20 px-2 py-1 bg-slate-50 border border-slate-200 rounded text-center font-mono font-bold"
+                    className="w-20 px-2 py-1 bg-white border border-slate-300 rounded text-center font-mono font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>
               </div>
@@ -146,7 +138,7 @@ const ClientAddonServices = () => {
                 </div>
                 <button
                   onClick={() => handleOrder('ID Card Type B (Regular PVC)', qtyB, 42, qtyB * 42)}
-                  className="px-4 py-2 bg-[#f97316] hover:bg-orange-600 text-white text-[10.5px] font-black rounded-lg transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-gradient-to-r from-[#1a3c5e] to-[#2a6f97] hover:opacity-90 text-white text-[10.5px] font-bold rounded-lg transition-opacity cursor-pointer"
                 >
                   Order Cards
                 </button>
@@ -158,7 +150,7 @@ const ClientAddonServices = () => {
               <div className="space-y-3">
                 <div className="flex justify-between items-start">
                   <span className="w-10 h-10 rounded-xl bg-[#475569]/10 flex items-center justify-center text-lg">🪪</span>
-                  <span className="bg-slate-100 text-slate-850 px-2 py-0.5 rounded text-[9px] font-black uppercase">Laminated</span>
+                  <span className="bg-slate-100 text-slate-800 px-2 py-0.5 rounded text-[9px] font-black uppercase">Laminated</span>
                 </div>
                 <h3 className="text-sm font-black text-slate-800">Students & Teachers ID Card (Type C)</h3>
                 <p className="text-[11px] text-slate-400 leading-relaxed font-sans font-medium">
@@ -173,7 +165,7 @@ const ClientAddonServices = () => {
                     min="1"
                     value={qtyC}
                     onChange={(e) => setQtyC(Math.max(1, parseInt(e.target.value) || 0))}
-                    className="w-20 px-2 py-1 bg-slate-50 border border-slate-200 rounded text-center font-mono font-bold"
+                    className="w-20 px-2 py-1 bg-white border border-slate-300 rounded text-center font-mono font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>
               </div>
@@ -184,7 +176,7 @@ const ClientAddonServices = () => {
                 </div>
                 <button
                   onClick={() => handleOrder('ID Card Type C (Laminated)', qtyC, 37, qtyC * 37)}
-                  className="px-4 py-2 bg-[#f97316] hover:bg-orange-600 text-white text-[10.5px] font-black rounded-lg transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-gradient-to-r from-[#1a3c5e] to-[#2a6f97] hover:opacity-90 text-white text-[10.5px] font-bold rounded-lg transition-opacity cursor-pointer"
                 >
                   Order Cards
                 </button>
@@ -196,7 +188,7 @@ const ClientAddonServices = () => {
               <div className="space-y-3">
                 <div className="flex justify-between items-start">
                   <span className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-lg">🚌</span>
-                  <span className="bg-emerald-100 text-emerald-850 px-2 py-0.5 rounded text-[9px] font-black uppercase">Transit</span>
+                  <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[9px] font-black uppercase">Transit</span>
                 </div>
                 <h3 className="text-sm font-black text-slate-800">Transportation Services</h3>
                 <p className="text-[11px] text-slate-400 leading-relaxed font-sans font-medium">
@@ -211,7 +203,7 @@ const ClientAddonServices = () => {
                     min="1"
                     value={qtyTransport}
                     onChange={(e) => setQtyTransport(Math.max(1, parseInt(e.target.value) || 0))}
-                    className="w-20 px-2 py-1 bg-slate-50 border border-slate-200 rounded text-center font-mono font-bold"
+                    className="w-20 px-2 py-1 bg-white border border-slate-300 rounded text-center font-mono font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>
               </div>
@@ -222,7 +214,7 @@ const ClientAddonServices = () => {
                 </div>
                 <button
                   onClick={() => handleOrder('Transportation Services', qtyTransport, 36, qtyTransport * 36)}
-                  className="px-4 py-2 bg-[#f97316] hover:bg-orange-600 text-white text-[10.5px] font-black rounded-lg transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-gradient-to-r from-[#1a3c5e] to-[#2a6f97] hover:opacity-90 text-white text-[10.5px] font-bold rounded-lg transition-opacity cursor-pointer"
                 >
                   Avail Services
                 </button>
@@ -234,7 +226,7 @@ const ClientAddonServices = () => {
               <div className="space-y-3">
                 <div className="flex justify-between items-start">
                   <span className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center text-lg">🏢</span>
-                  <span className="bg-violet-100 text-violet-850 px-2 py-0.5 rounded text-[9px] font-black uppercase">Hostel</span>
+                  <span className="bg-violet-100 text-violet-800 px-2 py-0.5 rounded text-[9px] font-black uppercase">Hostel</span>
                 </div>
                 <h3 className="text-sm font-black text-slate-800">Hostel Services</h3>
                 <p className="text-[11px] text-slate-400 leading-relaxed font-sans font-medium">
@@ -249,7 +241,7 @@ const ClientAddonServices = () => {
                     min="1"
                     value={qtyHostel}
                     onChange={(e) => setQtyHostel(Math.max(1, parseInt(e.target.value) || 0))}
-                    className="w-20 px-2 py-1 bg-slate-50 border border-slate-200 rounded text-center font-mono font-bold"
+                    className="w-20 px-2 py-1 bg-white border border-slate-300 rounded text-center font-mono font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>
               </div>
@@ -260,7 +252,7 @@ const ClientAddonServices = () => {
                 </div>
                 <button
                   onClick={() => handleOrder('Hostel Services', qtyHostel, 60, qtyHostel * 60)}
-                  className="px-4 py-2 bg-[#f97316] hover:bg-orange-600 text-white text-[10.5px] font-black rounded-lg transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-gradient-to-r from-[#1a3c5e] to-[#2a6f97] hover:opacity-90 text-white text-[10.5px] font-bold rounded-lg transition-opacity cursor-pointer"
                 >
                   Avail Services
                 </button>
@@ -272,7 +264,7 @@ const ClientAddonServices = () => {
               <div className="space-y-3">
                 <div className="flex justify-between items-start">
                   <span className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-lg">💾</span>
-                  <span className="bg-blue-100 text-blue-850 px-2 py-0.5 rounded text-[9px] font-black uppercase">Archives</span>
+                  <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-[9px] font-black uppercase">Archives</span>
                 </div>
                 <h3 className="text-sm font-black text-slate-800">Previous Year Data Backup</h3>
                 <p className="text-[11px] text-slate-400 leading-relaxed font-sans font-medium">
@@ -287,7 +279,7 @@ const ClientAddonServices = () => {
                     min="1"
                     value={qtyBackup}
                     onChange={(e) => setQtyBackup(Math.max(1, parseInt(e.target.value) || 0))}
-                    className="w-20 px-2 py-1 bg-slate-50 border border-slate-200 rounded text-center font-mono font-bold"
+                    className="w-20 px-2 py-1 bg-white border border-slate-300 rounded text-center font-mono font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>
               </div>
@@ -298,7 +290,7 @@ const ClientAddonServices = () => {
                 </div>
                 <button
                   onClick={() => handleOrder('Previous Year Data backup and record', qtyBackup, 36, qtyBackup * 36)}
-                  className="px-4 py-2 bg-[#f97316] hover:bg-orange-600 text-white text-[10.5px] font-black rounded-lg transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-gradient-to-r from-[#1a3c5e] to-[#2a6f97] hover:opacity-90 text-white text-[10.5px] font-bold rounded-lg transition-opacity cursor-pointer"
                 >
                   Get Backup
                 </button>
@@ -319,7 +311,7 @@ const ClientAddonServices = () => {
           </div>
           <button
             onClick={() => navigate('/client/portal/support')}
-            className="px-5 py-2.5 bg-[#f97316] hover:bg-orange-600 text-white text-xs font-black rounded-xl transition-colors active:scale-95 cursor-pointer"
+            className="px-5 py-2.5 bg-gradient-to-r from-[#1a3c5e] to-[#2a6f97] hover:opacity-90 text-white text-xs font-bold rounded-xl transition-opacity active:scale-95 cursor-pointer"
           >
             Contact Support Desk
           </button>
