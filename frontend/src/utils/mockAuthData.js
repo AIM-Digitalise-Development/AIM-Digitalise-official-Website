@@ -128,7 +128,168 @@ export const getMockResponse = (url, method, data = null) => {
     return {
       success: true,
       data: {
-        cycles: ['monthly', 'quarterly', 'half-yearly', 'yearly']
+        cycles: {
+          monthly: {
+            multiplier: 1,
+            discount: 0,
+            discounted_monthly: 2500,
+            subtotal: 2500,
+            gst_amount: 450,
+            total: 2950,
+            savings: 0
+          },
+          quarterly: {
+            multiplier: 3,
+            discount: 5,
+            discounted_monthly: 2375,
+            subtotal: 7125,
+            gst_amount: 1282.5,
+            total: 8407.5,
+            savings: 375
+          },
+          'half-yearly': {
+            multiplier: 6,
+            discount: 10,
+            discounted_monthly: 2250,
+            subtotal: 13500,
+            gst_amount: 2430,
+            total: 15930,
+            savings: 1500
+          },
+          yearly: {
+            multiplier: 12,
+            discount: 15,
+            discounted_monthly: 2125,
+            subtotal: 25500,
+            gst_amount: 4590,
+            total: 30090,
+            savings: 4500
+          }
+        }
+      }
+    }
+  }
+
+  if (lowercaseUrl.includes('/client/calculate-subscription')) {
+    const cycle = data?.cycle || 'quarterly'
+    const multipliers = { monthly: 1, quarterly: 3, 'half-yearly': 6, yearly: 12 }
+    const discounts = { monthly: 0, quarterly: 5, 'half-yearly': 10, yearly: 15 }
+    
+    const mult = multipliers[cycle] || 3
+    const disc = discounts[cycle] || 5
+    const studentCount = 250
+    const baseMonthly = studentCount * 10
+    const baseTotal = baseMonthly * mult
+    const discountVal = baseTotal * (disc / 100)
+    const subtotal = baseTotal - discountVal
+    const gst = subtotal * 0.18
+    const grandTotal = subtotal + gst
+    
+    return {
+      success: true,
+      data: {
+        calculation: {
+          student_count: studentCount,
+          base_monthly_amount: baseMonthly,
+          discount_percentage: disc,
+          discounted_monthly_amount: baseMonthly * (1 - disc / 100),
+          cycle: cycle,
+          multiplier: mult,
+          subtotal: subtotal,
+          gst_percentage: 18,
+          gst_amount: gst,
+          total_amount: grandTotal,
+          savings: discountVal
+        },
+        breakdown: {
+          formula: `${studentCount} Students * ₹10.00/student = ₹${baseMonthly.toLocaleString()}/month`,
+          with_discount: `₹${baseMonthly.toLocaleString()} * ${mult} months - ${disc}% = ₹${subtotal.toLocaleString()}`,
+          subtotal: `₹${subtotal.toLocaleString()}`,
+          gst: `18% CGST/SGST = ₹${gst.toLocaleString()}`,
+          total_for_cycle: `Total = ₹${grandTotal.toLocaleString()}`
+        }
+      }
+    }
+  }
+
+  if (lowercaseUrl.includes('/client/create-subscription-order')) {
+    const cycle = data?.cycle || 'quarterly'
+    return {
+      success: true,
+      simulated: true,
+      amount: data?.amount || 8408,
+      cycle: cycle,
+      order_id: 'order_mock_' + Math.random().toString(36).substring(2, 12),
+      key: 'rzp_test_mockkey123',
+      currency: 'INR',
+      client_name: 'Demo Client School',
+      client_email: 'client@demo.com'
+    }
+  }
+
+  if (lowercaseUrl.includes('/client/verify-subscription-payment')) {
+    return {
+      success: true,
+      message: 'Subscription payment successfully processed and recorded (Mock Mode).'
+    }
+  }
+
+  if (lowercaseUrl.includes('/client/payment-status')) {
+    return {
+      success: true,
+      data: {
+        show_pay_now: true,
+        next_payment_date: '2026-07-15',
+        message: 'Your subscription period has ended. Please renew your subscription.',
+        has_previous_payments: true,
+        total_payments_made: 2,
+        delivery_info: {
+          first_payment_date: '2026-01-01',
+          last_payment_date: '2026-04-01',
+          last_payment_cycle: 'quarterly',
+          next_due_date: '2026-07-15',
+          days_until_due: 30,
+          is_period_over: false,
+          activated_at: '2026-01-02'
+        }
+      }
+    }
+  }
+
+  if (lowercaseUrl.includes('/client/payment-history')) {
+    return {
+      success: true,
+      data: {
+        has_payments: true,
+        payments: [
+          {
+            id: 1,
+            razorpay_payment_id: 'pay_P1A2B3C4D5',
+            cycle: 'quarterly',
+            amount: 8408,
+            created_at: '2026-04-01T10:00:00Z',
+            period_start: '2026-04-01',
+            period_end: '2026-07-01',
+            status: 'success'
+          },
+          {
+            id: 2,
+            razorpay_payment_id: 'pay_P2A2B3C4D5',
+            cycle: 'quarterly',
+            amount: 8408,
+            created_at: '2026-01-01T10:00:00Z',
+            period_start: '2026-01-01',
+            period_end: '2026-04-01',
+            status: 'success'
+          }
+        ],
+        summary: {
+          total_payments: 2,
+          total_amount_formatted: '₹ 16,816.00',
+          latest_payment_cycle: 'quarterly',
+          next_payment_due_formatted: '15/07/2026',
+          is_overdue: false
+        }
       }
     }
   }

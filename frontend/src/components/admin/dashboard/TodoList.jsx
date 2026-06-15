@@ -26,10 +26,7 @@ const TodoList = ({ todos, onAddTask, onToggleTask, onDeleteTask }) => (
                 {todos.map((todo) => (
                     <TodoItem
                         key={todo.id}
-                        id={todo.id}
-                        task={todo.task}
-                        status={todo.status}
-                        priority={todo.priority}
+                        {...todo}
                         onToggle={onToggleTask}
                         onDelete={onDeleteTask}
                     />

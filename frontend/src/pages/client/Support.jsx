@@ -1,67 +1,49 @@
 import React, { useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useSupportStore } from '../../store/supportStore'
+import { useClientAuthStore } from '../../store/clientAuthStore'
 
-const AdminSupport = () => {
+const ClientSupport = () => {
+  const { clientUser, profileData } = useClientAuthStore()
+  const { tickets, ticketReplies, auditLogs, addTicket, addReply } = useSupportStore()
+
+  const clientName = profileData?.client_name || clientUser?.client_name || clientUser?.name || 'Client'
+  const schoolName = profileData?.company_name || profileData?.school_name || profileData?.organization || 'Academic Institute'
+
+  // Filter tickets for this client only
+  const clientTickets = tickets.filter(t => t.client.toLowerCase() === clientName.toLowerCase())
+
+  // States
   const [activeTab, setActiveTab] = useState('active_tickets')
   const [clientSearch, setClientSearch] = useState('')
   const [severityFilter, setSeverityFilter] = useState('All')
   const [categoryFilter, setCategoryFilter] = useState('All')
 
-  const {
-    tickets,
-    ticketReplies,
-    auditLogs,
-    addTicket,
-    addReply,
-    resolveTicket,
-    assignTicket
-  } = useSupportStore()
-
   // Form states
-  const [newClientName, setNewClientName] = useState('')
   const [newProduct, setNewProduct] = useState('')
   const [newCategory, setNewCategory] = useState('')
   const [newSeverity, setNewSeverity] = useState('Low')
-  const [newAssignee, setNewAssignee] = useState('Unassigned')
   const [newSubject, setNewSubject] = useState('')
   const [newDescription, setNewDescription] = useState('')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
-  // Interactive Reply states
+  // Reply states
   const [replyText, setReplyText] = useState('')
   const [activeReplyId, setActiveReplyId] = useState(null)
 
-  // Audit Logs modal state
+  // Audit logs modal
   const [selectedLogsTicket, setSelectedLogsTicket] = useState(null)
 
-  // FAQ Accordion state
-  const [openFaqIdx, setOpenFaqIdx] = useState(null)
-
-  // List of active employees for assignment
-  const employeeList = [
-    'Rohan Verma',
-    'Priya Singh',
-    'Aman Gupta',
-    'Neha Sharma',
-    'Vikram Malhotra'
-  ]
-
-  // Base counts from screenshots offset dynamically by current array edits
-  const totalTicketsCount = 32 + tickets.length
-  const openTicketsCount = 4 + tickets.filter(t => t.status === 'OPEN').length
-  const inProgressTicketsCount = 10 + tickets.filter(t => t.status === 'IN PROGRESS').length
-  const resolvedTicketsCount = 18 + tickets.filter(t => t.status === 'RESOLVED').length
-
-  const handleResolveTicket = (id) => {
-    resolveTicket(id)
-    alert(`Ticket ${id} marked as RESOLVED.`)
-  }
+  // Counts calculated specifically for this client
+  const totalTicketsCount = clientTickets.length
+  const openTicketsCount = clientTickets.filter(t => t.status === 'OPEN').length
+  const inProgressTicketsCount = clientTickets.filter(t => t.status === 'IN PROGRESS').length
+  const resolvedTicketsCount = clientTickets.filter(t => t.status === 'RESOLVED').length
 
   const handleSendReply = (ticketId) => {
     if (!replyText.trim()) return
     addReply(ticketId, {
-      sender: 'Admin',
+      sender: clientName,
       text: replyText,
       time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
     })
@@ -72,18 +54,17 @@ const AdminSupport = () => {
 
   const handleCreateTicket = (e) => {
     e.preventDefault()
-    if (!newClientName || !newProduct || !newCategory || !newSubject || !newDescription) {
+    if (!newProduct || !newCategory || !newSubject || !newDescription) {
       alert('Please fill out all required fields.')
       return
     }
     const createdTicket = {
       id: `TK-${Math.floor(7000 + Math.random() * 999)}`,
-      client: newClientName,
+      client: clientName,
       product: newProduct,
       subject: newSubject,
       category: newCategory,
       severity: newSeverity,
-      assignee: newAssignee,
       dateLogged: new Date().toLocaleDateString('en-GB', {
         day: '2-digit',
         month: 'short',
@@ -93,12 +74,11 @@ const AdminSupport = () => {
       description: newDescription
     }
     addTicket(createdTicket)
-    // Reset fields
-    setNewClientName('')
+    
+    // Reset
     setNewProduct('')
     setNewCategory('')
     setNewSeverity('Low')
-    setNewAssignee('Unassigned')
     setNewSubject('')
     setNewDescription('')
     
@@ -107,11 +87,10 @@ const AdminSupport = () => {
     setActiveTab('active_tickets')
   }
 
-  // Filter list based on search, severity, and category
-  const filteredTickets = tickets.filter(t => {
+  // Filter client tickets based on search, severity, and category
+  const filteredTickets = clientTickets.filter(t => {
     const matchesSearch = 
       t.subject.toLowerCase().includes(clientSearch.toLowerCase()) ||
-      t.client.toLowerCase().includes(clientSearch.toLowerCase()) ||
       t.id.toLowerCase().includes(clientSearch.toLowerCase())
       
     const matchesSeverity = severityFilter === 'All' || t.severity === severityFilter
@@ -120,50 +99,24 @@ const AdminSupport = () => {
     return matchesSearch && matchesSeverity && matchesCategory
   })
 
-  // Filter for Active Tickets tab: OPEN or IN PROGRESS
   const activeSupportTickets = filteredTickets.filter(t => t.status === 'OPEN' || t.status === 'IN PROGRESS')
-
-  // Filter for Resolved Tickets tab: RESOLVED
   const resolvedSupportTickets = filteredTickets.filter(t => t.status === 'RESOLVED')
-
-  // Knowledge base list
-  const faqs = [
-    {
-      q: 'How do I reset a client\'s login password?',
-      a: 'To reset a client\'s login password, navigate to the General Client or SaaS Based Client portal, select the respective client, click \'Reset Password\', and confirm. An automated password reset link will be sent to the client\'s registered email address.'
-    },
-    {
-      q: 'How can I manually renew a subscription?',
-      a: 'Navigate to the Subscribed Client page. Find the client in the list and click \'Details\' or \'Renew\'. You can choose the renewal duration (1 year standard) and issue a fresh invoice. Once payment is confirmed, the subscription status will automatically sync back to ACTIVE.'
-    },
-    {
-      q: 'How is GST customization handled for products?',
-      a: 'GST settings are configurable per invoice and product catalog. Go to Settings, click on the GST Configuration tab, and input the applicable CGST/SGST/IGST rates. For e-commerce and retail tools, HSN codes can be populated under individual product schemas.'
-    },
-    {
-      q: 'Resolving SMS gateway integration errors',
-      a: 'SMS gateway errors usually stem from unverified DLT Templates or incorrect sender ID parameters. Ensure the template ID matches the DLTR registry exactly, and that the SMS Gateway API key is up to date in the environment configuration settings.'
-    }
-  ]
-
-  const toggleFaq = (idx) => {
-    setOpenFaqIdx(openFaqIdx === idx ? null : idx)
-  }
 
   return (
     <>
       <Helmet>
-        <title>Support Panel | Admin Panel</title>
+        <title>Help & Support | Client Portal</title>
       </Helmet>
 
-      <div className="space-y-6 select-none text-slate-700 animate-fade-in">
+      <div className="space-y-6 select-none text-slate-700 animate-fade-in" style={{ fontFamily: "'Inter', sans-serif" }}>
+        
         {/* Header Section */}
-        <div className="relative flex flex-col md:flex-row md:items-center justify-between pb-3 gap-3 min-h-[48px]">
-          <h1 className="text-3xl font-black text-[#1e3e6b] tracking-tight">Support Panel</h1>
+        <div className="relative flex flex-col md:flex-row md:items-center justify-between pb-3 gap-3 min-h-[48px] border-b border-slate-200/85">
+          <h1 className="text-3xl font-black text-[#1a6b54] tracking-tight">Help & Support</h1>
 
           <div className="text-center md:absolute md:left-1/2 md:-translate-x-1/2 mt-1 md:mt-0">
-            <h2 className="text-lg font-extrabold text-[#1e3e6b]">AIM Digitalise pvt. ltd.</h2>
-            <p className="text-xs font-bold text-slate-500">Financial Year: 2026-2027</p>
+            <h2 className="text-lg font-extrabold text-[#1a6b54] uppercase tracking-tight">{schoolName}</h2>
+            <p className="text-xs font-bold text-slate-500">Academic Session: 2026-2027</p>
           </div>
 
           <div className="w-48"></div>
@@ -174,12 +127,12 @@ const AdminSupport = () => {
           {/* Card 1: Total Tickets */}
           <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-md flex items-center justify-between">
             <div>
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total Tickets</span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">My Total Tickets</span>
               <span className="text-3xl font-black text-slate-800 mt-1.5 block">
                 {totalTicketsCount}
               </span>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500 font-bold border border-blue-100">
+            <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500 border border-blue-100">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
@@ -194,7 +147,7 @@ const AdminSupport = () => {
                 {openTicketsCount}
               </span>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-rose-500 font-bold border border-red-100">
+            <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-rose-500 border border-red-100">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
@@ -209,7 +162,7 @@ const AdminSupport = () => {
                 {inProgressTicketsCount}
               </span>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center text-amber-500 font-bold border border-amber-100 font-sans">
+            <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center text-amber-500 border border-amber-100 font-sans">
               ⚙️
             </div>
           </div>
@@ -222,7 +175,7 @@ const AdminSupport = () => {
                 {resolvedTicketsCount}
               </span>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-500 font-bold border border-emerald-100">
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-500 border border-emerald-100">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -237,7 +190,7 @@ const AdminSupport = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6 pb-6 border-b border-slate-100 items-end">
             {/* Search Input */}
             <div className="w-full">
-              <label className="block text-[9.5px] font-black text-slate-500 uppercase tracking-widest mb-1.5 font-sans">Search Ticket Subject / Client</label>
+              <label className="block text-[9.5px] font-black text-slate-505 uppercase tracking-widest mb-1.5 font-sans">Search Ticket Subject</label>
               <div className="relative">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -248,7 +201,7 @@ const AdminSupport = () => {
                   type="text"
                   value={clientSearch}
                   onChange={(e) => setClientSearch(e.target.value)}
-                  placeholder="Type to search ticket details..."
+                  placeholder="Type to search ticket subject..."
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all font-sans"
                 />
               </div>
@@ -256,7 +209,7 @@ const AdminSupport = () => {
 
             {/* Severity Filter */}
             <div className="w-full">
-              <label className="block text-[9.5px] font-black text-slate-500 uppercase tracking-widest mb-1.5 font-sans">Severity</label>
+              <label className="block text-[9.5px] font-black text-slate-505 uppercase tracking-widest mb-1.5 font-sans">Severity</label>
               <select
                 value={severityFilter}
                 onChange={(e) => setSeverityFilter(e.target.value)}
@@ -272,11 +225,11 @@ const AdminSupport = () => {
 
             {/* Category Filter */}
             <div className="w-full">
-              <label className="block text-[9.5px] font-black text-slate-500 uppercase tracking-widest mb-1.5 font-sans">Category</label>
+              <label className="block text-[9.5px] font-black text-slate-505 uppercase tracking-widest mb-1.5 font-sans">Category</label>
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all font-semibold cursor-pointer"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-blue-505 focus:ring-2 focus:ring-blue-505/10 transition-all font-semibold cursor-pointer"
               >
                 <option value="All">All Categories</option>
                 <option value="Bug">Bug</option>
@@ -294,7 +247,7 @@ const AdminSupport = () => {
               onClick={() => setActiveTab('active_tickets')}
               className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${
                 activeTab === 'active_tickets'
-                  ? 'bg-white border-blue-600 text-blue-600 -mb-[13px] z-10'
+                  ? 'bg-white border-[#1a6b54] text-[#1a6b54] -mb-[13px] z-10'
                   : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
               }`}
             >
@@ -304,7 +257,7 @@ const AdminSupport = () => {
               onClick={() => setActiveTab('resolved_tickets')}
               className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${
                 activeTab === 'resolved_tickets'
-                  ? 'bg-white border-blue-600 text-blue-600 -mb-[13px] z-10'
+                  ? 'bg-white border-[#1a6b54] text-[#1a6b54] -mb-[13px] z-10'
                   : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
               }`}
             >
@@ -314,31 +267,11 @@ const AdminSupport = () => {
               onClick={() => setActiveTab('all_history')}
               className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${
                 activeTab === 'all_history'
-                  ? 'bg-white border-blue-600 text-blue-600 -mb-[13px] z-10'
+                  ? 'bg-white border-[#1a6b54] text-[#1a6b54] -mb-[13px] z-10'
                   : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
               }`}
             >
-              All History
-            </button>
-            <button
-              onClick={() => setActiveTab('direct_support')}
-              className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${
-                activeTab === 'direct_support'
-                  ? 'bg-white border-blue-600 text-blue-600 -mb-[13px] z-10'
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
-              }`}
-            >
-              Direct Support
-            </button>
-            <button
-              onClick={() => setActiveTab('knowledge_base')}
-              className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${
-                activeTab === 'knowledge_base'
-                  ? 'bg-white border-blue-600 text-blue-600 -mb-[13px] z-10'
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
-              }`}
-            >
-              Knowledge Base
+              Ticket History
             </button>
           </div>
 
@@ -348,16 +281,16 @@ const AdminSupport = () => {
               {/* Tab Title and Action Button */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <svg className="w-5 h-5 text-[#1a6b54]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
                   </svg>
                   <span>Active Support Tickets</span>
                 </h3>
                 <button
                   onClick={() => setIsCreateModalOpen(true)}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+                  className="px-4 py-2 bg-[#1a6b54] hover:bg-[#13503f] text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
                 >
-                  New Ticket
+                  Raise Ticket
                 </button>
               </div>
 
@@ -390,30 +323,17 @@ const AdminSupport = () => {
 
                       {/* Ticket Title & Meta details */}
                       <div>
-                        <h4 className="text-sm font-extrabold text-[#1e3e6b] leading-snug">
+                        <h4 className="text-sm font-extrabold text-[#1a6b54] leading-snug">
                           [{t.product}] {t.subject}
                         </h4>
                         <p className="text-[10px] text-slate-400 font-semibold mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
-                          <span>👤 Client: <strong>{t.client}</strong></span>
                           <span>📁 Category: <strong>{t.category}</strong></span>
-                          <span className="flex items-center gap-1">
-                            👤 Assign To:
-                            <select
-                              value={t.assignee || 'Unassigned'}
-                              onChange={(e) => assignTicket(t.id, e.target.value)}
-                              className="bg-white border border-slate-200 rounded px-1.5 py-0.5 text-[10px] font-bold text-slate-700 focus:outline-none cursor-pointer"
-                            >
-                              <option value="Unassigned">Unassigned</option>
-                              {employeeList.map(emp => (
-                                <option key={emp} value={emp}>{emp}</option>
-                              ))}
-                            </select>
-                          </span>
+                          <span>🛠️ Assignee: <strong className="text-slate-605">{t.assignee || 'Unassigned'}</strong></span>
                         </p>
                       </div>
 
                       {/* Description Quote Block */}
-                      <div className="border-l-4 border-blue-500 bg-blue-50/30 p-3.5 rounded-r-xl text-xs text-slate-600 font-sans leading-relaxed">
+                      <div className="border-l-4 border-teal-605 bg-teal-50/30 p-3.5 rounded-r-xl text-xs text-slate-600 font-sans leading-relaxed">
                         {t.description}
                       </div>
 
@@ -440,12 +360,12 @@ const AdminSupport = () => {
                               type="text"
                               value={replyText}
                               onChange={(e) => setReplyText(e.target.value)}
-                              placeholder="Write a message to the client..."
-                              className="flex-grow bg-white border border-slate-200 rounded-xl px-3.5 py-1.5 text-xs focus:outline-none focus:border-blue-500"
+                              placeholder="Write a message to support..."
+                              className="flex-grow bg-white border border-slate-200 rounded-xl px-3.5 py-1.5 text-xs focus:outline-none focus:border-teal-500"
                             />
                             <button
                               onClick={() => handleSendReply(t.id)}
-                              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+                              className="px-3.5 py-1.5 bg-[#1a6b54] hover:bg-[#13503f] text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
                             >
                               Send
                             </button>
@@ -463,27 +383,26 @@ const AdminSupport = () => {
                           <>
                             <button
                               onClick={() => setActiveReplyId(t.id)}
-                              className="px-3 py-1.5 border border-slate-200 hover:border-slate-400 hover:bg-slate-50 text-slate-500 font-bold rounded-xl text-xs transition-colors flex items-center gap-1"
+                              className="px-3 py-1.5 border border-slate-200 hover:border-slate-400 hover:bg-slate-50 text-slate-505 font-bold rounded-xl text-xs transition-colors flex items-center gap-1"
                             >
-                              Reply
+                              Add Reply
                             </button>
-                             {t.status !== 'RESOLVED' && (
-                               <button
-                                 onClick={() => handleResolveTicket(t.id)}
-                                 className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1"
-                               >
-                                 ✓ Mark Resolved
-                               </button>
-                             )}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedLogsTicket(t)}
+                              className="px-3 py-1.5 border border-slate-200 hover:border-slate-400 hover:bg-slate-50 text-slate-505 font-bold rounded-xl text-xs transition-colors flex items-center gap-1"
+                            >
+                              Check Logs
+                            </button>
                           </>
                         )}
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-12 text-slate-400">
-                    <span className="text-3xl block">📁</span>
-                    <p className="font-bold mt-2">No active support tickets match criteria</p>
+                  <div className="text-center py-12 text-slate-400 bg-slate-50 border border-slate-200/60 rounded-2xl">
+                     <span className="text-3xl block">📁</span>
+                     <p className="font-bold mt-2">No active support tickets logged</p>
                   </div>
                 )}
               </div>
@@ -493,7 +412,7 @@ const AdminSupport = () => {
           {/* TAB 1.5: Resolved Tickets */}
           {activeTab === 'resolved_tickets' && (
             <div className="space-y-6">
-              {/* Tab Title and Action Button */}
+              {/* Tab Title */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
                   <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -508,19 +427,18 @@ const AdminSupport = () => {
                 {resolvedSupportTickets.length > 0 ? (
                   resolvedSupportTickets.map((t) => (
                     <div key={t.id} className="bg-slate-50/50 rounded-2xl border border-slate-200/60 p-5 space-y-3 shadow-sm hover:shadow-md transition-shadow">
-                      {/* Ticket Badge tags + timestamp row */}
                       <div className="flex items-center justify-between flex-wrap gap-2 text-[10px] font-bold">
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-slate-500 bg-slate-200 px-2 py-0.5 rounded">
                             {t.id}
                           </span>
-                          <span className="px-2 py-0.5 rounded text-[9px] uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+                          <span className="px-2 py-0.5 rounded text-[9px] uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-205">
                             {t.status}
                           </span>
                           <span className={`px-2 py-0.5 rounded text-[9px] uppercase tracking-wider ${
                             t.severity === 'Critical' || t.severity === 'High'
-                              ? 'bg-rose-50 text-rose-600 border-rose-100'
-                              : 'bg-amber-50 text-amber-600 border-amber-100'
+                              ? 'bg-rose-50 text-rose-600 border border-rose-100'
+                              : 'bg-amber-50 text-amber-600 border border-amber-100'
                           }`}>
                             {t.severity} Severity
                           </span>
@@ -528,41 +446,25 @@ const AdminSupport = () => {
                         <span className="text-slate-400 font-medium font-sans">📅 {t.dateLogged}</span>
                       </div>
 
-                      {/* Ticket Title & Meta details */}
                       <div>
-                        <h4 className="text-sm font-extrabold text-[#1e3e6b] leading-snug">
+                        <h4 className="text-sm font-extrabold text-[#1a6b54] leading-snug">
                           [{t.product}] {t.subject}
                         </h4>
                         <p className="text-[10px] text-slate-400 font-semibold mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
-                          <span>👤 Client: <strong>{t.client}</strong></span>
                           <span>📁 Category: <strong>{t.category}</strong></span>
-                          <span className="flex items-center gap-1">
-                            👤 Assign To:
-                            <select
-                              value={t.assignee || 'Unassigned'}
-                              onChange={(e) => assignTicket(t.id, e.target.value)}
-                              className="bg-white border border-slate-200 rounded px-1.5 py-0.5 text-[10px] font-bold text-slate-700 focus:outline-none cursor-pointer"
-                            >
-                              <option value="Unassigned">Unassigned</option>
-                              {employeeList.map(emp => (
-                                <option key={emp} value={emp}>{emp}</option>
-                              ))}
-                            </select>
-                          </span>
+                          <span>🛠️ Assignee: <strong className="text-slate-605">{t.assignee || 'Unassigned'}</strong></span>
                         </p>
                       </div>
 
-                      {/* Description Quote Block */}
                       <div className="border-l-4 border-emerald-500 bg-emerald-50/30 p-3.5 rounded-r-xl text-xs text-slate-600 font-sans leading-relaxed">
                         {t.description}
                       </div>
 
-                      {/* Dynamic Replies */}
                       {ticketReplies[t.id] && ticketReplies[t.id].length > 0 && (
                         <div className="mt-3 pl-4 space-y-2 border-l border-slate-300/60">
                           {ticketReplies[t.id].map((rep, rIdx) => (
                             <div key={rIdx} className="bg-white p-3 rounded-xl border border-slate-200 text-xs shadow-sm max-w-lg">
-                              <div className="flex justify-between font-bold text-slate-500 text-[10px] mb-1">
+                              <div className="flex justify-between font-bold text-slate-505 text-[10px] mb-1">
                                 <span>💬 {rep.sender}</span>
                                 <span>{rep.time}</span>
                               </div>
@@ -572,75 +474,45 @@ const AdminSupport = () => {
                         </div>
                       )}
 
-                      {/* Action buttons row */}
                       <div className="flex justify-end items-center gap-2 pt-2.5 border-t border-slate-100">
-                        {activeReplyId === t.id ? (
-                          <div className="w-full flex items-center gap-2 mt-1">
-                            <input
-                              type="text"
-                              value={replyText}
-                              onChange={(e) => setReplyText(e.target.value)}
-                              placeholder="Write a message to the client..."
-                              className="flex-grow bg-white border border-slate-200 rounded-xl px-3.5 py-1.5 text-xs focus:outline-none focus:border-blue-500"
-                            />
-                            <button
-                              onClick={() => handleSendReply(t.id)}
-                              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
-                            >
-                              Send
-                            </button>
-                            <button
-                              onClick={() => {
-                                setActiveReplyId(null)
-                                setReplyText('')
-                              }}
-                              className="px-3 py-1.5 border border-slate-200 hover:bg-slate-100 text-slate-500 font-bold rounded-xl text-xs"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setActiveReplyId(t.id)}
-                            className="px-3 py-1.5 border border-slate-200 hover:border-slate-400 hover:bg-slate-50 text-slate-500 font-bold rounded-xl text-xs transition-colors flex items-center gap-1"
-                          >
-                            Reply
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedLogsTicket(t)}
+                          className="px-3 py-1.5 border border-slate-200 hover:border-slate-400 hover:bg-slate-50 text-slate-505 font-bold rounded-xl text-xs transition-colors flex items-center gap-1"
+                        >
+                          Check Logs
+                        </button>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-12 text-slate-400">
+                  <div className="text-center py-12 text-slate-400 bg-slate-50 border border-slate-200/60 rounded-2xl">
                     <span className="text-3xl block">📁</span>
-                    <p className="font-bold mt-2">No resolved support tickets match criteria</p>
+                    <p className="font-bold mt-2">No resolved support tickets found</p>
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* TAB 2: All History Table */}
+          {/* TAB 2: Full History Table */}
           {activeTab === 'all_history' && (
             <div className="space-y-6">
-              {/* Title row */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
                   <svg className="w-5 h-5 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span>Full Support Ticket Log</span>
+                  <span>My Ticket Logs History</span>
                 </h3>
               </div>
 
-              {/* Table wrapper */}
               <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50 text-slate-400 font-bold uppercase tracking-wider">
                         <th className="px-5 py-4">Ticket ID</th>
-                        <th className="px-5 py-4">Client Name</th>
                         <th className="px-5 py-4">Product</th>
                         <th className="px-5 py-4">Subject</th>
                         <th className="px-5 py-4">Category</th>
@@ -655,8 +527,7 @@ const AdminSupport = () => {
                       {filteredTickets.length > 0 ? (
                         filteredTickets.map((t) => (
                           <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-5 py-4 font-mono font-bold text-slate-500">{t.id}</td>
-                            <td className="px-5 py-4 font-bold text-slate-800">{t.client}</td>
+                            <td className="px-5 py-4 font-mono font-bold text-slate-505">{t.id}</td>
                             <td className="px-5 py-4">
                               <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-600 font-bold text-[9.5px] uppercase">
                                 {t.product}
@@ -675,26 +546,15 @@ const AdminSupport = () => {
                                 {t.severity}
                               </span>
                             </td>
-                            <td className="px-5 py-4 font-semibold text-slate-600">
-                              <select
-                                value={t.assignee || 'Unassigned'}
-                                onChange={(e) => assignTicket(t.id, e.target.value)}
-                                className="bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-[10px] font-bold text-slate-700 focus:outline-none cursor-pointer"
-                              >
-                                <option value="Unassigned">Unassigned</option>
-                                {employeeList.map(emp => (
-                                  <option key={emp} value={emp}>{emp}</option>
-                                ))}
-                              </select>
-                            </td>
+                            <td className="px-5 py-4 font-bold text-slate-600">{t.assignee || 'Unassigned'}</td>
                             <td className="px-5 py-4 font-medium text-slate-400 font-sans">{t.dateLogged.split(',')[0]}</td>
                             <td className="px-5 py-4 text-center">
                               <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase border tracking-wider ${
                                 t.status === 'RESOLVED'
-                                  ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                  ? 'bg-emerald-100 text-emerald-805 border border-emerald-200'
                                   : t.status === 'IN PROGRESS'
-                                  ? 'bg-amber-100 text-amber-800 border-amber-200'
-                                  : 'bg-red-100 text-red-800 border-red-200'
+                                  ? 'bg-amber-100 text-amber-805 border border-amber-200'
+                                  : 'bg-red-100 text-red-805 border border-red-200'
                               }`}>
                                 {t.status}
                               </span>
@@ -717,134 +577,13 @@ const AdminSupport = () => {
                         <tr>
                           <td colSpan="9" className="text-center py-12 text-slate-400">
                             <span className="text-3xl block">📁</span>
-                            <p className="font-bold mt-2">No history records match search criteria</p>
+                            <p className="font-bold mt-2">No ticket logs found</p>
                           </td>
                         </tr>
                       )}
                     </tbody>
                   </table>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 3: Generate Ticket removed from tab view */}
-
-          {/* TAB 4: Direct Support */}
-          {activeTab === 'direct_support' && (
-            <div className="space-y-6">
-              {/* Title row */}
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                  <span>Direct Call & Message Support</span>
-                </h3>
-              </div>
-
-              {/* Grid of contact channels */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-3">
-                {/* Channel 1: Technical Support Desk */}
-                <div className="bg-slate-50/50 rounded-2xl border border-slate-200/60 p-6 flex flex-col items-center justify-between text-center space-y-4">
-                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shadow-sm border border-blue-50">
-                    📞
-                  </div>
-                  <div>
-                    <h4 className="text-base font-black text-[#1e3e6b]">Technical Support Desk</h4>
-                    <p className="text-xs text-slate-400 font-semibold mt-1">Immediate assistance for critical server or software failures.</p>
-                  </div>
-                  <div className="text-lg font-black text-slate-800 font-mono">
-                    +91 98765 43210
-                  </div>
-                  <a
-                    href="tel:+919876543210"
-                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer text-center block w-full max-w-[180px]"
-                  >
-                    Call Now
-                  </a>
-                </div>
-
-                {/* Channel 2: Direct Messaging */}
-                <div className="bg-slate-50/50 rounded-2xl border border-slate-200/60 p-6 flex flex-col items-center justify-between text-center space-y-4">
-                  <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-50">
-                    💬
-                  </div>
-                  <div>
-                    <h4 className="text-base font-black text-[#1e3e6b]">Direct Messaging</h4>
-                    <p className="text-xs text-slate-400 font-semibold mt-1">Send a quick message to our dedicated client success managers.</p>
-                  </div>
-                  <div className="text-lg font-black text-slate-800 font-mono">
-                    +91 91234 56789
-                  </div>
-                  <a
-                    href="https://wa.me/919123456789"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer text-center block w-full max-w-[180px]"
-                  >
-                    Message Client
-                  </a>
-                </div>
-              </div>
-
-              {/* Channel 3: Email Escalation */}
-              <div className="bg-slate-50/50 rounded-2xl border border-slate-200/60 p-6 flex flex-col items-center text-center space-y-3 pt-5 mt-4">
-                <div className="text-slate-500 text-2xl">✉️</div>
-                <div>
-                  <h4 className="text-sm font-black text-[#1e3e6b]">Email Escalation</h4>
-                  <p className="text-xs text-slate-400 font-semibold mt-1">
-                    For business queries or severe escalations, write to us directly at:{' '}
-                    <a href="mailto:support@aimdigitalise.com" className="text-blue-600 hover:underline">
-                      support@aimdigitalise.com
-                    </a>
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 5: Knowledge Base */}
-          {activeTab === 'knowledge_base' && (
-            <div className="space-y-6">
-              {/* Title row */}
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                  </svg>
-                  <span>Troubleshooting & FAQ Guide</span>
-                </h3>
-              </div>
-
-              {/* Accordion FAQ Guide */}
-              <div className="bg-slate-50/50 rounded-2xl border border-slate-200/60 p-5 divide-y divide-slate-200/60 shadow-sm max-w-4xl">
-                {faqs.map((faq, idx) => (
-                  <div key={idx} className="border-b border-slate-200/60 last:border-0">
-                    <button
-                      onClick={() => toggleFaq(idx)}
-                      className="w-full flex items-center justify-between py-4 text-left font-black text-slate-800 hover:text-blue-600 transition-colors text-sm cursor-pointer"
-                    >
-                      <span>{faq.q}</span>
-                      <svg
-                        className={`w-4.5 h-4.5 text-slate-400 transition-transform duration-200 ${
-                          openFaqIdx === idx ? 'rotate-180 text-blue-600' : ''
-                        }`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                    {openFaqIdx === idx && (
-                      <div className="pb-4.5 text-xs text-slate-500 font-medium leading-relaxed font-sans animate-fade-in pr-6 pl-1">
-                        {faq.a}
-                      </div>
-                    )}
-                  </div>
-                ))}
               </div>
             </div>
           )}
@@ -868,41 +607,33 @@ const AdminSupport = () => {
               </button>
             </div>
             
-            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1 text-xs font-sans">
-              {auditLogs[selectedLogsTicket.id] && auditLogs[selectedLogsTicket.id].length > 0 ? (
-                auditLogs[selectedLogsTicket.id].map((log, idx) => (
-                  <div key={idx} className={`border-l-2 pl-3 py-0.5 ${
-                    log.action.includes('Created') ? 'border-emerald-500' :
-                    log.action.includes('Resolved') ? 'border-emerald-600' : 'border-amber-500'
-                  }`}>
-                    <p className="font-bold text-slate-800">{log.action}</p>
-                    <p className="text-[10px] text-slate-400 font-medium">{log.date}</p>
-                    <p className="text-slate-500 mt-1 leading-relaxed">{log.description}</p>
-                  </div>
-                ))
-              ) : (
-                <>
-                  <div className="border-l-2 border-emerald-500 pl-3 py-0.5">
-                    <p className="font-bold text-slate-800">Ticket Created</p>
-                    <p className="text-[10px] text-slate-400 font-medium">{selectedLogsTicket.dateLogged}</p>
-                    <p className="text-slate-500 mt-1 leading-relaxed">System recorded ticket submission from Relationship Manager.</p>
-                  </div>
-                  {selectedLogsTicket.status !== 'OPEN' && (
-                    <div className="border-l-2 border-amber-500 pl-3 py-0.5">
-                      <p className="font-bold text-slate-800">Status Changed to In Progress</p>
-                      <p className="text-[10px] text-slate-400 font-medium">19 May 2025, 02:00 PM</p>
-                      <p className="text-slate-500 mt-1 leading-relaxed">Assigned to Technical Desk Engineer.</p>
-                    </div>
-                  )}
-                  {selectedLogsTicket.status === 'RESOLVED' && (
-                    <div className="border-l-2 border-green-500 pl-3 py-0.5">
-                      <p className="font-bold text-slate-800">Status Changed to Resolved</p>
-                      <p className="text-[10px] text-slate-400 font-medium">20 May 2025, 11:30 AM</p>
-                      <p className="text-slate-500 mt-1 leading-relaxed">Issue resolved by technical desk. Resolution confirmed by client.</p>
-                    </div>
-                  )}
-                </>
-              )}
+            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1 text-xs">
+              {(auditLogs[selectedLogsTicket.id] || [
+                {
+                  action: 'Ticket Created',
+                  date: selectedLogsTicket.dateLogged,
+                  description: 'System recorded ticket submission from client portal.'
+                },
+                ...(selectedLogsTicket.status !== 'OPEN' ? [{
+                  action: 'Status Changed to In Progress',
+                  date: '19 May 2025, 02:00 PM',
+                  description: 'Assigned to Technical Desk Engineer.'
+                }] : []),
+                ...(selectedLogsTicket.status === 'RESOLVED' ? [{
+                  action: 'Status Changed to Resolved',
+                  date: '20 May 2025, 11:30 AM',
+                  description: 'Issue resolved by technical desk. Resolution confirmed by client.'
+                }] : [])
+              ]).map((log, logIdx) => (
+                <div key={logIdx} className={`border-l-2 pl-3 py-0.5 ${
+                  log.action.includes('Created') ? 'border-emerald-500' :
+                  log.action.includes('Resolved') ? 'border-green-500' : 'border-amber-500'
+                }`}>
+                  <p className="font-bold text-slate-800">{log.action}</p>
+                  <p className="text-[10px] text-slate-400 font-medium">{log.date}</p>
+                  <p className="text-slate-500 mt-1 leading-relaxed">{log.description}</p>
+                </div>
+              ))}
             </div>
             
             <div className="mt-6 flex justify-end">
@@ -923,38 +654,30 @@ const AdminSupport = () => {
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-fade-in text-slate-700">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <h3 className="text-base font-black text-slate-800 flex items-center gap-2">
-                <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <svg className="w-5 h-5 text-[#1a6b54]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
-                <span>Generate New Ticket</span>
+                <span>Raise New Support Ticket</span>
               </h3>
               <button
                 onClick={() => setIsCreateModalOpen(false)}
-                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors font-bold text-sm cursor-pointer"
+                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-650 transition-colors font-bold text-sm cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleCreateTicket} className="space-y-5 text-slate-600 font-semibold">
+            <form onSubmit={handleCreateTicket} className="space-y-5 text-slate-650 font-semibold">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {/* Client Name */}
+                {/* Client Name (Locked) */}
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Client Name</label>
-                  <select
-                    value={newClientName}
-                    onChange={(e) => setNewClientName(e.target.value)}
-                    required
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-blue-500 cursor-pointer"
-                  >
-                    <option value="">Select or enter client name</option>
-                    <option value="Sunrise Academy">Sunrise Academy</option>
-                    <option value="Blue Hill Institute">Blue Hill Institute</option>
-                    <option value="Apex Retailers">Apex Retailers</option>
-                    <option value="Nova Tech Solutions">Nova Tech Solutions</option>
-                    <option value="Greenfield School">Greenfield School</option>
-                    <option value="City Mart Group">City Mart Group</option>
-                  </select>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Client Name (Locked)</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={clientName}
+                    className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-500 cursor-not-allowed"
+                  />
                 </div>
 
                 {/* Product / Service */}
@@ -964,7 +687,7 @@ const AdminSupport = () => {
                     value={newProduct}
                     onChange={(e) => setNewProduct(e.target.value)}
                     required
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-blue-500 cursor-pointer"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-teal-500 cursor-pointer"
                   >
                     <option value="">Choose product...</option>
                     <option value="School MS">School MS</option>
@@ -972,6 +695,7 @@ const AdminSupport = () => {
                     <option value="GST Billing Tool">GST Billing Tool</option>
                     <option value="CRM Enterprise">CRM Enterprise</option>
                     <option value="E-Commerce Hub">E-Commerce Hub</option>
+                    <option value="NEXGN Institute Pro">NEXGN Institute Pro</option>
                     <option value="Android Mobile App">Android Mobile App</option>
                   </select>
                 </div>
@@ -983,7 +707,7 @@ const AdminSupport = () => {
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value)}
                     required
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-blue-500 cursor-pointer"
+                    className="w-full bg-slate-50 border border-slate-205 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-teal-500 cursor-pointer"
                   >
                     <option value="">Choose category...</option>
                     <option value="Bug">Bug</option>
@@ -1000,27 +724,12 @@ const AdminSupport = () => {
                   <select
                     value={newSeverity}
                     onChange={(e) => setNewSeverity(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-blue-500 cursor-pointer"
+                    className="w-full bg-slate-50 border border-slate-205 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-teal-500 cursor-pointer"
                   >
                     <option value="Low">Low</option>
                     <option value="Medium">Medium</option>
                     <option value="High">High</option>
                     <option value="Critical">Critical</option>
-                  </select>
-                </div>
-
-                {/* Assign To Developer / Employee */}
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Assign To Developer / Employee</label>
-                  <select
-                    value={newAssignee}
-                    onChange={(e) => setNewAssignee(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-blue-500 cursor-pointer"
-                  >
-                    <option value="Unassigned">Unassigned</option>
-                    {employeeList.map(emp => (
-                      <option key={emp} value={emp}>{emp}</option>
-                    ))}
                   </select>
                 </div>
               </div>
@@ -1034,7 +743,7 @@ const AdminSupport = () => {
                   onChange={(e) => setNewSubject(e.target.value)}
                   required
                   placeholder="Brief summary of the issue"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-blue-500"
+                  className="w-full bg-slate-50 border border-slate-205 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-teal-500"
                 />
               </div>
 
@@ -1046,8 +755,8 @@ const AdminSupport = () => {
                   onChange={(e) => setNewDescription(e.target.value)}
                   required
                   rows="4"
-                  placeholder="Provide full details, steps to reproduce, or any error messages..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-blue-500"
+                  placeholder="Provide full details of your issue, how to reproduce it, or any error messages..."
+                  className="w-full bg-slate-50 border border-slate-205 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-teal-500"
                 ></textarea>
               </div>
 
@@ -1065,13 +774,13 @@ const AdminSupport = () => {
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-500 font-bold rounded-xl text-xs"
+                  className="px-4 py-2 border border-slate-205 hover:bg-slate-50 text-slate-550 font-bold rounded-xl text-xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-1.5"
+                  className="px-5 py-2 bg-[#1a6b54] hover:bg-[#13503f] text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-1.5"
                 >
                   <span>Submit Ticket</span>
                 </button>
@@ -1084,4 +793,4 @@ const AdminSupport = () => {
   )
 }
 
-export default AdminSupport
+export default ClientSupport

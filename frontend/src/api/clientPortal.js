@@ -57,9 +57,20 @@ export const getClientPaymentCycles = (token) =>
 export const calculateSubscription = (cycle, token) =>
   clientPortalFetch('GET', '/client/calculate-subscription', { cycle }, token)
 
-export const createSubscriptionOrder = (cycle, token) =>
-  clientPortalFetch('POST', '/client/create-subscription-order', { cycle }, token)
+export const createSubscriptionOrder = (cycle, token, amount = null) =>
+  clientPortalFetch('POST', '/client/create-subscription-order', { cycle, ...(amount !== null ? { amount: Math.round(amount) } : {}) }, token)
 
 export const verifySubscriptionPayment = (paymentData, token) =>
   clientPortalFetch('POST', '/client/verify-subscription-payment', paymentData, token)
 
+export const getClientPaymentStatus = (token) =>
+  clientPortalFetch('GET', '/client/payment-status', null, token)
+
+export const getClientPaymentHistory = (token) =>
+  clientPortalFetch('GET', '/client/payment-history', null, token)
+
+export const getClientCustomizationRequests = (token) =>
+  clientPortalFetch('GET', '/client/customization/requests', null, token)
+
+export const submitClientCustomizationRequest = (customizationText, token) =>
+  clientPortalFetch('POST', '/client/customization/submit', { customization_text: customizationText }, token)

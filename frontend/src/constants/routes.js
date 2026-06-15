@@ -27,6 +27,7 @@ export const ROUTES = {
     DASHBOARD: '/employee',
     TASKS: '/employee/tasks',
     TIMESHEET: '/employee/timesheet',
+    SUPPORT: '/employee/support',
   },
   PARTNER: {
     DASHBOARD: '/partner',
@@ -49,6 +50,9 @@ export const ROUTES = {
     PORTAL: '/client/portal',
     PROFILE: '/client/portal/profile',
     SUBSCRIPTION: '/client/portal/subscription',
+    SUPPORT: '/client/portal/support',
+    CUSTOMIZATION: '/client/portal/customization',
+    ADDON_SERVICES: '/client/portal/addon-services',
   },
   AUTH: {
     LOGIN: '/login',

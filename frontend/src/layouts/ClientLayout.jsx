@@ -21,12 +21,37 @@ const navGroups = [
         ),
       },
       {
-        path: '/client/portal/profile',
-        routeKey: 'PROFILE',
-        label: 'My Profile',
+        path: '/client/portal/support',
+        routeKey: 'SUPPORT',
+        label: 'Help & Support',
         icon: (
           <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        ),
+      },
+    ]
+  },
+  {
+    title: 'ADD-ONS',
+    items: [
+      {
+        path: '/client/portal/customization',
+        routeKey: 'CUSTOMIZATION',
+        label: 'Customizations',
+        icon: (
+          <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+          </svg>
+        ),
+      },
+      {
+        path: '/client/portal/addon-services',
+        routeKey: 'ADDON_SERVICES',
+        label: 'Add-on Services',
+        icon: (
+          <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17 14v6m-3-3h6M6 10h2a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v2a2 2 0 002 2zm10 0h2a2 2 0 002-2V6a2 2 0 00-2-2h-2a2 2 0 00-2 2v2a2 2 0 002 2zM6 20h2a2 2 0 002-2v-2a2 2 0 00-2-2H6a2 2 0 00-2 2v2a2 2 0 002 2z" />
           </svg>
         ),
       },
@@ -117,13 +142,24 @@ const ClientLayout = () => {
             </svg>
           </button>
 
-          {/* Avatar */}
-          <div className="w-[72px] h-[72px] rounded-full mx-auto flex items-center justify-center text-white text-2xl font-bold shadow-md" 
+          {/* Avatar Link to Profile */}
+          <Link
+            to="/client/portal/profile"
+            onClick={() => setIsSidebarOpen(false)}
+            className="block w-[72px] h-[72px] rounded-full mx-auto flex items-center justify-center text-white text-2xl font-bold shadow-md hover:opacity-90 transition-opacity cursor-pointer focus:outline-none"
             style={{ background: 'linear-gradient(135deg, #1a3c5e 0%, #2a6f97 100%)' }}
+            title="View Profile"
           >
             {initials}
-          </div>
-          <h3 className="text-[15px] font-bold text-gray-800 mt-3 truncate">{displayName}</h3>
+          </Link>
+          <Link
+            to="/client/portal/profile"
+            onClick={() => setIsSidebarOpen(false)}
+            className="block hover:text-indigo-600 transition-colors mt-3"
+            title="View Profile"
+          >
+            <h3 className="text-[15px] font-bold text-gray-800 truncate">{displayName}</h3>
+          </Link>
           <p className="text-[11px] text-gray-400 font-medium mt-0.5 font-mono">{displayId}</p>
         </div>
 
@@ -142,11 +178,11 @@ const ClientLayout = () => {
                       onClick={() => setIsSidebarOpen(false)}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-150 ${
                         active
-                          ? 'text-[#1a6b54] bg-[#e8f5f0]'
+                          ? 'text-indigo-600 bg-indigo-50/60 font-bold border-r-2 border-indigo-500 rounded-r-none'
                           : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
                       }`}
                     >
-                      <span className={active ? 'text-[#1a6b54]' : 'text-gray-400'}>
+                      <span className={active ? 'text-indigo-600' : 'text-gray-400'}>
                         {item.icon}
                       </span>
                       {item.label}
@@ -177,78 +213,89 @@ const ClientLayout = () => {
 
       {/* ─── Main Area ─── */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        
-        {/* Top Header - Replicating Admin panel header styling */}
-        <header className="bg-white border-b border-slate-200/80 px-4 sm:px-6 py-4 flex items-center justify-between shadow-sm sticky top-0 z-10 shrink-0">
-          <div className="flex items-center gap-2 sm:gap-3.5 min-w-0">
-            {/* Hamburger button */}
+        {/* Top Header - Mockup Brand Header */}
+        <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between shadow-sm sticky top-0 z-10 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Hamburger button for sidebar toggle on mobile */}
             <button 
               onClick={() => setIsSidebarOpen(true)}
-              className="p-2 hover:bg-slate-50 rounded-lg text-slate-500 cursor-pointer transition-colors active:scale-95 lg:hidden shrink-0"
+              className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 cursor-pointer transition-colors active:scale-95 lg:hidden shrink-0"
               aria-label="Open Sidebar"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <span className="text-sm font-semibold text-slate-400 font-sans truncate hidden md:inline-block">
-              {(() => {
-                if (location.pathname === '/client/portal') return `Welcome back! Here's your workspace overview for June 2026.`
-                if (location.pathname === '/client/portal/profile') return 'Manage your client profile details.'
-                if (location.pathname === '/client/portal/subscription') return 'Manage your subscription, billing, and renewals.'
-                return 'Manage your workspace overview.'
-              })()}
-            </span>
-            <span className="text-sm font-bold text-slate-800 font-sans md:hidden">
-              {getCurrentTitle()}
-            </span>
+            
+            {/* Brand Name */}
+            <div className="flex items-baseline gap-1 select-none font-sans">
+              <span className="text-base sm:text-lg font-black text-[#1e3e6b] tracking-tight">AIM</span>
+              <span className="text-base sm:text-lg font-black text-[#dc2626] tracking-tight">Digitalise</span>
+              <span className="text-[11px] sm:text-xs font-bold text-slate-805 tracking-wide ml-0.5">Private Limited</span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-            {/* Academic Session */}
-            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-650 bg-slate-50/70 border border-slate-200/40 rounded-lg px-3 py-2 select-none">
-              🎓 Session: 2026-2027
-            </div>
-
-            {/* Dynamic Date display with calendar icon formatted as Fri, 05 Jun 2026 */}
-            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 bg-slate-50/70 border border-slate-200/40 rounded-lg px-3 py-2 hidden sm:flex select-none">
-              <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span>
-                {(() => {
-                  const d = new Date()
-                  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-                  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-                  const dayName = days[d.getDay()]
-                  const dateNum = String(d.getDate()).padStart(2, '0')
-                  const monthName = months[d.getMonth()]
-                  const year = d.getFullYear()
-                  return `${dayName}, ${dateNum} ${monthName} ${year}`
-                })()}
-              </span>
-            </div>
-
-            {/* Notification Bell Icon */}
-            <button className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-605 transition-colors cursor-pointer relative active:scale-95">
-              <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-              {/* Dot */}
-              <span className="absolute top-2 right-2.5 w-2 h-2 rounded-full bg-red-500 border border-white" />
-            </button>
-
-            {/* Profile Avatar & Name */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-slate-700 font-sans hidden sm:inline-block">
-                {displayName}
-              </span>
-              <div
-                className="w-10 h-10 rounded-full border border-slate-200 shadow-sm overflow-hidden flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white select-none font-bold text-sm"
+          {/* Social Icons Section */}
+          <div className="flex items-center gap-2">
+            {[
+              { 
+                name: 'Facebook',
+                url: 'https://facebook.com',
+                icon: (
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1V12h3v3h-3v6.8c4.56-.93 8-4.96 8-9.8z"/>
+                  </svg>
+                )
+              },
+              { 
+                name: 'Instagram',
+                url: 'https://instagram.com',
+                icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                    <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37zM17.5 6.5h.01"/>
+                  </svg>
+                )
+              },
+              { 
+                name: 'Skype',
+                url: 'https://skype.com',
+                icon: (
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M22 12c0-1.87-.58-3.6-1.57-5.02.05-.32.07-.65.07-.98 0-3.31-2.69-6-6-6-.33 0-.66.02-.98.07C12.1 1.08 10.37.5 8.5.5c-4.97 0-9 4.03-9 9 0 1.87.58 3.6 1.57 5.02-.05.32-.07.65-.07.98 0 3.31 2.69 6 6 6 .33 0 .66-.02.98-.07 1.42.99 3.15 1.57 5.02 1.57 4.97 0 9-4.03 9-9zm-10.74 3.48c-2.26 0-3.23-1.07-3.23-2.14 0-.84.62-1.35 1.34-1.35.98 0 1.07.74 1.54 1.15.46.39 1 .63 1.51.63.78 0 1.25-.43 1.25-1 0-.6-.35-.85-1.57-1.15-1.92-.47-3.08-1-3.08-2.67 0-1.86 1.5-2.62 3.12-2.62 1.94 0 2.94 1 2.94 1.88 0 .81-.53 1.3-1.32 1.3-.87 0-.93-.65-1.42-1.03-.43-.32-.88-.51-1.39-.51-.69 0-1 .34-1 .8 0 .52.37.74 1.48 1 1.95.46 3.18.99 3.18 2.76.01 1.96-1.47 2.93-3.12 2.93z"/>
+                  </svg>
+                )
+              },
+              { 
+                name: 'LinkedIn',
+                url: 'https://linkedin.com',
+                icon: (
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+                  </svg>
+                )
+              },
+              { 
+                name: 'Twitter',
+                url: 'https://twitter.com',
+                icon: (
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  </svg>
+                )
+              }
+            ].map(social => (
+              <a 
+                key={social.name}
+                href={social.url}
+                target="_blank"
+                rel="noreferrer"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors cursor-pointer"
+                title={social.name}
               >
-                {initials}
-              </div>
-            </div>
+                {social.icon}
+              </a>
+            ))}
           </div>
         </header>
 

@@ -9,6 +9,7 @@ import EmployeeLayout from './layouts/EmployeeLayout'
 import EmployeeDashboard from './pages/employee/Dashboard'
 import EmployeeTasks from './pages/employee/Tasks'
 import EmployeeTimesheet from './pages/employee/Timesheet'
+import EmployeeSupport from './pages/employee/Support'
 import Home from './pages/website/Home'
 import About from './pages/website/About'
 import Contact from './pages/website/Contact'
@@ -45,6 +46,9 @@ import ClientLogin from './pages/client/Login'
 import ClientProducts from './pages/client/Products'
 import ClientProfile from './pages/client/Profile'
 import ClientSubscription from './pages/client/Subscription'
+import ClientSupport from './pages/client/Support'
+import ClientCustomization from './pages/client/Customization'
+import ClientAddonServices from './pages/client/AddonServices'
 import DemoPortal from './pages/demo/DemoPortal'
 import DemoDashboard from './pages/demo/DemoDashboard'
 import DemoEmployeePunchIn from './pages/demo/DemoEmployeePunchIn'
@@ -119,6 +123,7 @@ function App() {
             <Route index element={<EmployeeDashboard />} />
             <Route path="tasks" element={<EmployeeTasks />} />
             <Route path="timesheet" element={<EmployeeTimesheet />} />
+            <Route path="support" element={<EmployeeSupport />} />
           </Route>
 
           {/* ── Partner auth pages (standalone, no header/footer) ── */}
@@ -146,6 +151,9 @@ function App() {
             <Route index element={<ClientProducts />} />
             <Route path="profile" element={<ClientProfile />} />
             <Route path="subscription" element={<ClientSubscription />} />
+            <Route path="support" element={<ClientSupport />} />
+            <Route path="customization" element={<ClientCustomization />} />
+            <Route path="addon-services" element={<ClientAddonServices />} />
           </Route>
 
           {/* ── Demo Portal (no auth required, dark admin-style with demo data) ── */}
@@ -160,7 +168,7 @@ function App() {
             <Route path="compliance" element={<DemoComingSoon title="Compliance" icon="🛡️" />} />
             <Route path="partners" element={<DemoComingSoon title="Partner Network" icon="🤝" />} />
             <Route path="reports" element={<DemoComingSoon title="Reports" icon="📊" />} />
-            <Route path="support" element={<DemoComingSoon title="Support" icon="💬" />} />
+            <Route path="support" element={<EmployeeSupport />} />
             <Route path="settings" element={<DemoComingSoon title="Settings" icon="⚙️" />} />
             <Route path="punch-in" element={<DemoEmployeePunchIn />} />
           </Route>
