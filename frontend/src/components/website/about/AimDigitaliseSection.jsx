@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 
+import abtImg from '../../../assets/images/abt_img.jpg'
+import portfolioPdf from '../../../assets/doc/AIM Digitalise Portfolio-1 (1).pdf'
+
 const AimDigitaliseSection = () => {
-  const [imgSrc, setImgSrc] = useState(
-    'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=800&q=80'
-  )
+  const [imgSrc, setImgSrc] = useState(abtImg)
 
   const stats = [
     { value: '5+', label: 'Years of Experience' },
@@ -72,8 +73,8 @@ const AimDigitaliseSection = () => {
 
             {/* Download Portfolio Button */}
             <motion.a
-              href="/AIM_Digitalise_Portfolio.pdf"
-              download
+              href={portfolioPdf}
+              download="AIM_Digitalise_Portfolio.pdf"
               className="group flex items-center justify-center gap-3 w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-aim-gold to-aim-gold-dark hover:from-aim-gold-dark hover:to-aim-gold text-white font-bold text-sm tracking-wide shadow-[0_0_25px_rgba(245,166,35,0.2)] hover:shadow-[0_0_40px_rgba(245,166,35,0.35)] transition-all duration-300"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}

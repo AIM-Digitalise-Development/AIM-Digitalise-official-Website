@@ -89,9 +89,11 @@ const PartnerDashboard = () => {
         {!loading && displayUser && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { label: 'Email', value: displayUser.email },
-              { label: 'Contact', value: displayUser.contact_no || displayUser.contact },
-              { label: 'Payment Status', value: displayUser.payment_status || '—' },
+              { label: 'This Month Earning',value:'00000'  },
+              // { label: 'This Month Earning', value: displayUser.email },
+              { label: 'TOtal Client',value:'0' },
+              // { label: 'Contact', value: displayUser.contact_no || displayUser.contact },
+              { label: 'Payment Status' },
               { label: 'Last Login', value: displayUser.last_login_at ? new Date(displayUser.last_login_at).toLocaleDateString('en-IN') : '—' },
             ].map(({ label, value }) => (
               <div key={label} className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">

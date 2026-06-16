@@ -142,7 +142,7 @@ const HeroSection = () => {
 
             {/* Main Interactive Interface Preview */}
             <motion.div
-              className="relative overflow-hidden rounded-3xl border border-white/10 shadow-2xl ring-1 ring-aim-black/20"
+              className="relative overflow-hidden rounded-3xl  shadow-2xl "
               animate={{ y: [0, -10, 0] }}
               transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
             >

@@ -1,28 +1,32 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
+import teamImg1 from '../../../assets/images/team_img.png'
+import teamImg2 from '../../../assets/images/team_img2.png'
+import teamImg4 from '../../../assets/images/team_img4.png'
+
 const management = [
   {
     id: 'md',
-    name: 'Mr. Rajesh Kumar',
+    name: 'Sabyasachi Pal',
     designation: 'Managing Director & CEO',
-    avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80',
-    badge: 'Founder',
+    avatar: teamImg1,
+    badge: 'Founder, MD',
     badgeColor: 'bg-aim-gold/10 border-aim-gold/25 text-aim-gold',
     accentFrom: 'from-aim-gold',
     accentTo: 'to-aim-gold-dark',
     borderHover: 'hover:border-aim-gold/50',
     shortBio:
-      'Visionary entrepreneur with 10+ years in digital marketing and technology. Leads AIM Digitalise with a passion for innovation and client success.',
+      'Visionary entrepreneur with 10+ years in digital marketing and technology. Leads AIM Digitalise with a passion for innovation, strategic growth, and client success.',
     message:
       `At AIM Digitalise, we believe every business deserves a digital presence that reflects its true potential. Our journey since 2020 has been defined by relentless innovation, honest partnerships, and a deep commitment to our clients' growth. We don't just build digital solutions—we build relationships, trust, and futures. I am proud of our young and energetic team who treat every client's challenge as their own, and I remain committed to leading this organization with integrity and purpose.`,
     social: { linkedin: '#', twitter: '#' },
   },
   {
-    id: 'director',
-    name: 'Ms. Priya Sharma',
-    designation: 'Director – Operations & Strategy',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80',
+    id: 'director1',
+    name: 'Uma Halder',
+    designation: 'Co-Founder, Director',
+    avatar: teamImg4,
     badge: 'Co-Founder',
     badgeColor: 'bg-aim-purple/10 border-aim-purple/25 text-aim-purple',
     accentFrom: 'from-aim-purple',
@@ -35,11 +39,11 @@ const management = [
     social: { linkedin: '#', twitter: '#' },
   },
   {
-    id: 'technical',
-    name: 'Mr. Ankit Verma',
-    designation: 'Chief Technology Officer',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
-    badge: 'CTO',
+    id: 'director2',
+    name: 'Shyamal Kr. Datta',
+    designation: 'Co-Founder, Director',
+    avatar: teamImg2,
+    badge: 'Co-Founder',
     badgeColor: 'bg-aim-gold/10 border-aim-gold/25 text-aim-gold',
     accentFrom: 'from-aim-gold',
     accentTo: 'to-aim-gold-dark',

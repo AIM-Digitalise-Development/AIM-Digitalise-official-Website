@@ -19,8 +19,8 @@ const values = [
   },
   {
     icon: '💎',
-    title: 'Premium Quality',
-    desc: 'Providing our clients with premium-quality service is the foundation of our company — no compromises.',
+    title: 'RECURRING INCOME',
+    desc: 'We create new income streams for our clients through the services we offer.',
     color: 'from-red-50/70 via-red-50/20 to-transparent',
     border: 'border-red-200',
     accent: 'text-red-600',
