@@ -85,3 +85,12 @@ export const setPartnerRank = (id, rank) =>
 // POST /api/admin/partners/subordinate/set
 export const setPartnerSubordinate = (subordinate_id, parent_id) =>
   adminFetch('POST', '/admin/partners/subordinate/set', { subordinate_id, parent_id })
+
+// ─── Commission Settings ──────────────────────────────────────────────────────
+// GET /api/admin/commission-settings
+export const getCommissionSettings = () =>
+  adminFetch('GET', '/admin/commission-settings')
+
+// POST /api/admin/commission-settings  — body: { rules: [...] }
+export const updateCommissionSettings = (payload) =>
+  adminFetch('POST', '/admin/commission-settings', payload)

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useClientAuthStore } from '../../store/clientAuthStore'
 import {
@@ -16,6 +16,13 @@ import StudentCountCard from '../../components/client/subscription/StudentCountC
 import PaymentCyclesCard from '../../components/client/subscription/PaymentCyclesCard'
 import PaymentSummaryCard from '../../components/client/subscription/PaymentSummaryCard'
 
+const cycleDisplayNames = {
+  'annual': 'Annual',
+  'half_yearly': 'Half Yearly',
+  'quarterly': 'Quarterly',
+  'monthly': 'Monthly'
+}
+
 const ClientSubscription = () => {
   const { clientToken, isClientAuthenticated, profileData, productData, clientLogout } = useClientAuthStore()
   
@@ -26,10 +33,15 @@ const ClientSubscription = () => {
   const [loadingSubscription, setLoadingSubscription] = useState(false)
   const [processingPayment, setProcessingPayment] = useState(false)
 
+  // Bill/Invoice State
+  const [showBillModal, setShowBillModal] = useState(false)
+  const [billData, setBillData] = useState(null)
+  const billRef = useRef(null)
+
   // Data states
   const [studentCount, setStudentCount] = useState(null)
   const [paymentCycles, setPaymentCycles] = useState(null)
-  const [selectedCycle, setSelectedCycle] = useState('quarterly')
+  const [selectedCycle, setSelectedCycle] = useState('annual')
   const [calculatedAmount, setCalculatedAmount] = useState(null)
 
   // Backend payment details and error warnings
@@ -40,6 +52,8 @@ const ClientSubscription = () => {
   const [paymentHistory, setPaymentHistory] = useState(null)
   const [studentCountWarning, setStudentCountWarning] = useState(null)
   const [hasZeroStudents, setHasZeroStudents] = useState(false)
+  const [unpaidMonths, setUnpaidMonths] = useState([])
+  const [totalDueAmount, setTotalDueAmount] = useState(null)
 
   const fetchData = async () => {
     if (!isClientAuthenticated || !clientToken) return
@@ -89,6 +103,21 @@ const ClientSubscription = () => {
         setShowPayNow(statusRes.data.show_pay_now)
         setNextPaymentDate(statusRes.data.next_payment_date)
         setDeliveryInfo(statusRes.data.delivery_info)
+        if (statusRes.data.delivery_info) {
+          if (statusRes.data.delivery_info.unpaid_months) {
+            setUnpaidMonths(statusRes.data.delivery_info.unpaid_months)
+          } else {
+            setUnpaidMonths([])
+          }
+          if (statusRes.data.delivery_info.total_due_amount) {
+            setTotalDueAmount(statusRes.data.delivery_info.total_due_amount)
+          } else {
+            setTotalDueAmount(null)
+          }
+        } else {
+          setUnpaidMonths([])
+          setTotalDueAmount(null)
+        }
       }
 
       if (historyRes?.success) {
@@ -100,7 +129,7 @@ const ClientSubscription = () => {
         const cyclesRes = await getClientPaymentCycles(clientToken)
         if (cyclesRes?.success) {
           setPaymentCycles(cyclesRes.data)
-          await calculateSubscriptionForCycle('quarterly', clientToken)
+          await calculateSubscriptionForCycle('annual', clientToken)
           setStudentCountWarning(null)
         } else {
           if (cyclesRes?.error_code === 'NO_STUDENTS_FOUND') {
@@ -141,6 +170,8 @@ const ClientSubscription = () => {
       if (res.success) {
         setCalculatedAmount(res.data)
         setSelectedCycle(cycle)
+        // Generate bill data when calculation is done
+        generateBillData(res.data, cycle)
       } else {
         if (res.error_code === 'NO_STUDENTS_FOUND') {
           setHasZeroStudents(true)
@@ -165,6 +196,182 @@ const ClientSubscription = () => {
       setLoadingSubscription(false)
     }
   };
+
+  const formatAmount = (amount) => {
+    if (amount === undefined || amount === null) return null
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
+    if (isNaN(numAmount)) return null
+    return `₹ ${numAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  }
+
+  // Generate Bill Data - COMPLETELY FIXED VERSION
+  const generateBillData = (data, cycle) => {
+    if (!data || !data.calculation) return
+
+    const calc = data.calculation
+    const isFirst = data.is_first_payment
+
+    // Get values from calculation
+    const baseMonthlyAmount = calc.base_monthly_amount || 0
+    const discountPercentage = calc.discount_percentage || 0
+    const cycleMonths = calc.cycle_months || 1
+    const carryoverFraction = calc.carryover_fraction || 0
+    const carryoverDays = calc.carryover_days || 0
+    const daysInMonth = calc.carryover_days_in_month || 30
+    const gstPercentage = calc.gst_percentage || 18
+
+    // IMPORTANT: Calculate discounted monthly amount from base + discount
+    // This ensures we use the CORRECT discounted rate
+    const discountedMonthlyAmount = baseMonthlyAmount * (1 - discountPercentage / 100)
+
+    // Step 1: Calculate carryover amount using DISCOUNTED monthly rate
+    const carryoverAmount = discountedMonthlyAmount * carryoverFraction
+
+    // Step 2: Calculate regular months amount using DISCOUNTED monthly rate
+    const regularMonthsAmount = discountedMonthlyAmount * cycleMonths
+
+    // Step 3: Total amount (already discounted)
+    const totalAmount = carryoverAmount + regularMonthsAmount
+
+    // Step 4: Calculate GST on the discounted total
+    const gstAmount = (totalAmount * gstPercentage) / 100
+    const totalWithGST = totalAmount + gstAmount
+
+    // Step 5: Calculate original amount (without discount) for savings display
+    const baseCarryover = baseMonthlyAmount * carryoverFraction
+    const baseRegular = baseMonthlyAmount * cycleMonths
+    const baseTotal = baseCarryover + baseRegular
+    const originalTotalWithGST = baseTotal + (baseTotal * gstPercentage / 100)
+
+    // Step 6: Calculate savings
+    const savings = baseTotal - totalAmount
+
+    // Step 7: Calculate per-day amount for carryover
+    const perDayAmount = carryoverDays > 0 ? discountedMonthlyAmount / daysInMonth : 0
+
+    // Get client and product info
+    const clientName = data.client?.client_name || profileData?.client_name || profileData?.name || ''
+    const clientId = data.client?.client_id || profileData?.client_id || ''
+    const schoolName = data.client?.school_name || profileData?.school_name || profileData?.company_name || profileData?.organization || ''
+    const productName = data.product?.name || productData?.name || ''
+
+    // Format dates
+    const today = new Date()
+    const invoiceDate = today.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    const invoiceNumber = `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+
+    // Get period details from delivery info or calculation
+    let periodStart = ''
+    let periodEnd = ''
+    let deliveryDate = ''
+
+    if (deliveryInfo) {
+      if (deliveryInfo.current_period_start) {
+        periodStart = new Date(deliveryInfo.current_period_start).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+      }
+      if (deliveryInfo.current_period_end) {
+        periodEnd = new Date(deliveryInfo.current_period_end).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+      }
+      if (deliveryInfo.delivery_date) {
+        deliveryDate = new Date(deliveryInfo.delivery_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+      }
+    }
+
+    // Build bill data
+    const bill = {
+      invoiceNumber,
+      invoiceDate,
+      clientName,
+      clientId,
+      schoolName,
+      productName,
+      cycle: cycleDisplayNames[cycle] || cycle,
+      isFirstPayment: isFirst,
+      periodStart,
+      periodEnd,
+      deliveryDate,
+      studentCount: data.student_count || 0,
+      // Base values (without discount) - for reference only
+      baseMonthlyAmount,
+      baseCarryover,
+      baseRegular,
+      baseTotal,
+      originalTotalWithGST,
+      // DISCOUNTED values - THESE ARE THE CORRECT ONES
+      discountedMonthlyAmount,
+      carryoverFraction,
+      carryoverDays,
+      daysInMonth,
+      carryoverAmount,
+      regularMonthsAmount,
+      totalAmount,
+      // Discount & GST
+      discountPercentage,
+      savings,
+      gstPercentage,
+      gstAmount,
+      totalWithGST,
+      // Per-day for display
+      perDayAmount,
+      cycleMonths
+    }
+
+    setBillData(bill)
+  }
+
+  // Download Bill as PDF/HTML
+  const downloadBill = () => {
+    if (!billRef.current) return
+
+    const content = billRef.current.innerHTML
+    const style = `
+      <style>
+        @media print {
+          body { margin: 0; padding: 20px; }
+          .no-print { display: none !important; }
+        }
+        body { font-family: Arial, sans-serif; }
+        .bill-container { max-width: 800px; margin: 0 auto; padding: 30px; background: white; }
+        .bill-header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 20px; }
+        .bill-title { font-size: 24px; font-weight: bold; color: #1e293b; }
+        .bill-subtitle { color: #64748b; font-size: 14px; }
+        .bill-info { display: flex; justify-content: space-between; margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; }
+        .bill-info-item { font-size: 14px; }
+        .bill-info-item strong { color: #1e293b; }
+        .bill-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .bill-table th { background: #1e293b; color: white; padding: 12px; text-align: left; font-size: 14px; }
+        .bill-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+        .bill-table tr:hover { background: #f8fafc; }
+        .bill-total { text-align: right; padding: 20px; background: #f8fafc; border-radius: 8px; margin-top: 20px; }
+        .bill-total-row { display: flex; justify-content: space-between; padding: 8px 0; }
+        .bill-total-grand { font-size: 20px; font-weight: bold; color: #3b82f6; border-top: 2px solid #333; padding-top: 12px; margin-top: 8px; }
+        .bill-footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #94a3b8; font-size: 12px; }
+        .carryover-section { background: #dbeafe; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #3b82f6; }
+        .regular-section { background: #d1fae5; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #10b981; }
+        .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        .badge-first { background: #dbeafe; color: #1e40af; }
+        .badge-regular { background: #d1fae5; color: #065f46; }
+      </style>
+    `
+
+    const fullHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head><title>Invoice ${billData?.invoiceNumber || ''}</title>${style}</head>
+        <body>${content}</body>
+      </html>
+    `
+
+    const blob = new Blob([fullHtml], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `Invoice_${billData?.invoiceNumber || 'bill'}.html`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
 
   const handleCycleChange = (cycle) => {
     if (hasZeroStudents) {
@@ -220,6 +427,21 @@ const ClientSubscription = () => {
         setShowPayNow(statusRes.data.show_pay_now)
         setNextPaymentDate(statusRes.data.next_payment_date)
         setDeliveryInfo(statusRes.data.delivery_info)
+        if (statusRes.data.delivery_info) {
+          if (statusRes.data.delivery_info.unpaid_months) {
+            setUnpaidMonths(statusRes.data.delivery_info.unpaid_months)
+          } else {
+            setUnpaidMonths([])
+          }
+          if (statusRes.data.delivery_info.total_due_amount) {
+            setTotalDueAmount(statusRes.data.delivery_info.total_due_amount)
+          } else {
+            setTotalDueAmount(null)
+          }
+        } else {
+          setUnpaidMonths([])
+          setTotalDueAmount(null)
+        }
       }
 
       if (historyRes?.success) {
@@ -292,10 +514,13 @@ const ClientSubscription = () => {
             razorpay_order_id: orderRes.order_id,
             razorpay_signature: 'sim_signature_' + Date.now(),
             cycle: selectedCycle,
-            amount: orderRes.amount
+            amount: orderRes.amount,
+            cycle_months: orderRes.cycle_months || 1,
+            is_first_payment: orderRes.is_first_payment || false
           }, clientToken)
 
           if (verifyRes.success) {
+            setShowBillModal(false)
             await refreshSubscriptionData()
           } else {
             setError(verifyRes.message || 'Verification simulation rejected by server.')
@@ -323,10 +548,13 @@ const ClientSubscription = () => {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_signature: response.razorpay_signature,
               cycle: selectedCycle,
-              amount: orderRes.amount
+              amount: orderRes.amount,
+              cycle_months: orderRes.cycle_months || 1,
+              is_first_payment: orderRes.is_first_payment || false
             }, clientToken)
 
             if (verifyRes.success) {
+              setShowBillModal(false)
               await refreshSubscriptionData()
             } else {
               setError(verifyRes.message || 'Payment verification failed.')
@@ -375,6 +603,279 @@ const ClientSubscription = () => {
     return dateCopy.toLocaleDateString('en-IN')
   }
 
+  // Bill Modal Component
+  const BillModal = () => {
+    if (!showBillModal || !billData) return null
+
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 9999,
+        padding: '20px',
+        overflow: 'auto'
+      }} onClick={() => setShowBillModal(false)}>
+        <style dangerouslySetInnerHTML={{ __html: `
+          .bill-container { max-width: 800px; margin: 0 auto; padding: 30px; background: white; }
+          .bill-header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 20px; }
+          .bill-title { font-size: 24px; font-weight: bold; color: #1e293b; }
+          .bill-subtitle { color: #64748b; font-size: 14px; }
+          .bill-info { display: flex; justify-content: space-between; margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; }
+          .bill-info-item { font-size: 14px; }
+          .bill-info-item strong { color: #1e293b; }
+          .bill-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+          .bill-table th { background: #1e293b; color: white; padding: 12px; text-align: left; font-size: 14px; }
+          .bill-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+          .bill-table tr:hover { background: #f8fafc; }
+          .bill-total { text-align: right; padding: 20px; background: #f8fafc; border-radius: 8px; margin-top: 20px; }
+          .bill-total-row { display: flex; justify-content: space-between; padding: 8px 0; }
+          .bill-total-grand { font-size: 20px; font-weight: bold; color: #3b82f6; border-top: 2px solid #333; padding-top: 12px; margin-top: 8px; }
+          .bill-footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #94a3b8; font-size: 12px; }
+          .carryover-section { background: #dbeafe; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #3b82f6; }
+          .regular-section { background: #d1fae5; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #10b981; }
+          .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+          .badge-first { background: #dbeafe; color: #1e40af; }
+          .badge-regular { background: #d1fae5; color: #065f46; }
+        ` }} />
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '16px',
+          maxWidth: '900px',
+          width: '100%',
+          maxHeight: '95vh',
+          overflow: 'auto',
+          padding: '30px',
+          position: 'relative'
+        }} onClick={(e) => e.stopPropagation()}>
+          
+          {/* Bill Content */}
+          <div ref={billRef} className="bill-container">
+            {/* Header */}
+            <div className="bill-header">
+              <div className="bill-title">🎓 AIM Digitalise</div>
+              <div className="bill-subtitle">Subscription Invoice</div>
+            </div>
+            
+            {/* Invoice Info */}
+            <div className="bill-info">
+              <div className="bill-info-item">
+                <strong>Invoice #:</strong> {billData.invoiceNumber}
+              </div>
+              <div className="bill-info-item">
+                <strong>Date:</strong> {billData.invoiceDate}
+              </div>
+              <div className="bill-info-item">
+                <strong>Status:</strong> <span style={{ color: '#10b981', fontWeight: 'bold' }}>Pending</span>
+              </div>
+            </div>
+            
+            {/* Client Info */}
+            <div style={{ marginBottom: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px' }}>
+                <div><strong>Client:</strong> {billData.clientName}</div>
+                <div><strong>Client ID:</strong> {billData.clientId}</div>
+                <div><strong>School:</strong> {billData.schoolName || '-'}</div>
+                <div><strong>Product:</strong> {billData.productName || '-'}</div>
+                <div><strong>Cycle:</strong> {billData.cycle}</div>
+                <div><strong>Students:</strong> {billData.studentCount}</div>
+                {billData.isFirstPayment && (
+                  <div>
+                    <span className="badge badge-first">First Payment</span>
+                  </div>
+                )}
+                {!billData.isFirstPayment && (
+                  <div>
+                    <span className="badge badge-regular">Regular Payment</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Period Info */}
+            {billData.periodStart && billData.periodEnd && (
+              <div style={{ marginBottom: '20px', padding: '12px', background: '#fef3c7', borderRadius: '8px', borderLeft: '4px solid #f59e0b' }}>
+                <strong>📅 Billing Period:</strong> {billData.periodStart} - {billData.periodEnd}
+                {billData.deliveryDate && (
+                  <span style={{ marginLeft: '20px', color: '#6b7280', fontSize: '14px' }}>
+                    (Delivery: {billData.deliveryDate})
+                  </span>
+                )}
+              </div>
+            )}
+            
+            {/* Bill Table */}
+            <table className="bill-table">
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th style={{ textAlign: 'right' }}>Rate</th>
+                  <th style={{ textAlign: 'right' }}>Months</th>
+                  <th style={{ textAlign: 'right' }}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* Carryover Section - USE DISCOUNTED RATE */}
+                {billData.isFirstPayment && billData.carryoverAmount > 0 && (
+                  <tr style={{ background: '#dbeafe' }}>
+                    <td>
+                      <strong>🔄 Carryover</strong>
+                      <div style={{ fontSize: '12px', color: '#64748b' }}>
+                        {billData.deliveryDate || 'Delivery'} to month end ({billData.carryoverDays}/{billData.daysInMonth} days, {(billData.carryoverFraction * 100).toFixed(1)}% of month)
+                        {billData.discountPercentage > 0 && (
+                          <span style={{ color: '#059669', marginLeft: '8px' }}>
+                            ({formatAmount(billData.discountedMonthlyAmount)}/month × {(billData.carryoverFraction * 100).toFixed(1)}%)
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>{formatAmount(billData.discountedMonthlyAmount)}</td>
+                    <td style={{ textAlign: 'right' }}>{(billData.carryoverFraction * 100).toFixed(1)}%</td>
+                    <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{formatAmount(billData.carryoverAmount)}</td>
+                  </tr>
+                )}
+                
+                {/* Regular Months Section - USE DISCOUNTED RATE */}
+                <tr style={{ background: '#d1fae5' }}>
+                  <td>
+                    <strong>📆 {billData.cycle} Subscription</strong>
+                    <div style={{ fontSize: '12px', color: '#64748b' }}>
+                      {billData.cycleMonths} month(s)
+                      {billData.isFirstPayment && ' (Full months)'}
+                      {billData.discountPercentage > 0 && (
+                        <span style={{ color: '#059669', marginLeft: '8px' }}>
+                          ({billData.discountPercentage}% discount applied)
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td style={{ textAlign: 'right' }}>{formatAmount(billData.discountedMonthlyAmount)}</td>
+                  <td style={{ textAlign: 'right' }}>{billData.cycleMonths}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{formatAmount(billData.regularMonthsAmount)}</td>
+                </tr>
+                
+                {/* Show Original Price (without discount) */}
+                {billData.discountPercentage > 0 && (
+                  <tr style={{ background: '#fef3c7' }}>
+                    <td colSpan="3" style={{ textAlign: 'right', fontSize: '13px', color: '#92400e' }}>
+                      <span style={{ textDecoration: 'line-through' }}>Original price (without discount)</span>
+                    </td>
+                    <td style={{ textAlign: 'right', fontSize: '13px', color: '#92400e' }}>
+                      <span style={{ textDecoration: 'line-through' }}>{formatAmount(billData.baseTotal)}</span>
+                    </td>
+                  </tr>
+                )}
+                
+                {/* Subtotal (after discount) - THIS SHOULD BE THE DISCOUNTED TOTAL */}
+                <tr>
+                  <td colSpan="3" style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '15px' }}>
+                    Subtotal (after {billData.discountPercentage}% discount)
+                  </td>
+                  <td style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '15px' }}>
+                    {formatAmount(billData.totalAmount)}
+                  </td>
+                </tr>
+                
+                {/* GST */}
+                <tr>
+                  <td colSpan="3" style={{ textAlign: 'right', color: '#f59e0b', fontSize: '14px' }}>
+                    GST ({billData.gstPercentage}%)
+                  </td>
+                  <td style={{ textAlign: 'right', color: '#f59e0b', fontSize: '14px', fontWeight: 'bold' }}>
+                    +{formatAmount(billData.gstAmount)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Total */}
+            <div className="bill-total">
+              <div className="bill-total-row">
+                <span style={{ fontSize: '18px', fontWeight: 'bold' }}>Total Amount (incl. GST)</span>
+                <span style={{ fontSize: '28px', fontWeight: 'bold', color: '#3b82f6' }}>
+                  {formatAmount(billData.totalWithGST)}
+                </span>
+              </div>
+              
+              {billData.savings > 0 && (
+                <div className="bill-total-row" style={{ color: '#059669', fontSize: '14px' }}>
+                  <span>💰 You saved {formatAmount(billData.savings)} by choosing {billData.cycle} plan</span>
+                  <span style={{ fontWeight: 'bold' }}>{formatAmount(billData.savings)}</span>
+                </div>
+              )}
+              
+              {billData.originalTotalWithGST > 0 && billData.savings > 0 && (
+                <div className="bill-total-row" style={{ fontSize: '13px', color: '#64748b' }}>
+                  <span>Original price (without discount, incl. GST)</span>
+                  <span style={{ textDecoration: 'line-through' }}>{formatAmount(billData.originalTotalWithGST)}</span>
+                </div>
+              )}
+            </div>
+            
+            {/* Footer */}
+            <div className="bill-footer">
+              <p>Thank you for your business! For any queries, please contact support.</p>
+              <p style={{ fontSize: '11px' }}>This is a system generated invoice.</p>
+            </div>
+          </div>
+          
+          {/* Buttons */}
+          <div style={{ display: 'flex', gap: '12px', marginTop: '20px', justifyContent: 'flex-end', borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
+            <button
+              onClick={() => setShowBillModal(false)}
+              style={{
+                padding: '10px 24px',
+                backgroundColor: '#e2e8f0',
+                color: '#1e293b',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              Close
+            </button>
+            <button
+              onClick={downloadBill}
+              style={{
+                padding: '10px 24px',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              📥 Download Bill
+            </button>
+            <button
+              onClick={handlePaymentSubmit}
+              disabled={processingPayment}
+              style={{
+                padding: '10px 24px',
+                backgroundColor: processingPayment ? '#9ca3af' : '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: processingPayment ? 'not-allowed' : 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              {processingPayment ? 'Processing...' : '💳 Pay Now'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (loading && !paymentCycles && !paymentStatus) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -387,6 +888,25 @@ const ClientSubscription = () => {
   }
 
   const subStatus = checkSubscriptionStatus(profileData, productData)
+
+  // Determine active expiry date and remaining days based on next payment date or period end
+  let activeExpiryDate = subStatus.planEndDate
+  if (nextPaymentDate) {
+    activeExpiryDate = new Date(nextPaymentDate)
+  } else if (deliveryInfo?.current_period_end) {
+    activeExpiryDate = new Date(deliveryInfo.current_period_end)
+  }
+
+  let activeDaysRemaining = subStatus.daysRemaining
+  if (activeExpiryDate) {
+    const currentDate = new Date()
+    currentDate.setHours(0, 0, 0, 0)
+    const expiryCopy = new Date(activeExpiryDate)
+    expiryCopy.setHours(0, 0, 0, 0)
+    const diffTime = expiryCopy.getTime() - currentDate.getTime()
+    activeDaysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)))
+  }
+
   const schoolName = profileData?.company_name || profileData?.school_name || profileData?.organization || 'Academic Institute'
   
   // Decide which screen structure to render
@@ -454,11 +974,27 @@ const ClientSubscription = () => {
         ) : canPay ? (
           <div className="space-y-4">
             {/* Pay Now Cycle Banner */}
-            <div className="p-4 rounded-xl bg-amber-50 border-l-4 border-amber-500 text-amber-800 flex justify-between items-center text-xs font-semibold">
-              <div>
+            <div className="p-4 rounded-xl bg-amber-50 border-l-4 border-amber-500 text-amber-800 flex flex-col justify-start text-xs font-semibold space-y-2">
+              <div className="flex items-center">
                 <span className="text-base mr-1.5">⏰</span>
                 {paymentStatus?.message || 'Your subscription period has ended. Please renew your billing cycle.'}
               </div>
+              {unpaidMonths && unpaidMonths.length > 0 && (
+                <div className="mt-1 bg-amber-100/50 p-2.5 rounded-lg border border-amber-200/60 text-[11px] text-amber-900 space-y-1 w-full">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold">📋 Unpaid Months:</span>
+                    <span className="font-normal text-amber-950">{unpaidMonths.join(', ')}</span>
+                  </div>
+                  {totalDueAmount !== null && totalDueAmount !== undefined && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold">Total Due:</span>
+                      <span className="text-rose-600 font-black text-xs">
+                        ₹{Number(totalDueAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <PaymentCyclesCard
@@ -484,7 +1020,7 @@ const ClientSubscription = () => {
                   <PaymentSummaryCard
                     calculatedAmount={calculatedAmount}
                     processingPayment={processingPayment}
-                    onPaymentSubmit={handlePaymentSubmit}
+                    onPaymentSubmit={() => setShowBillModal(true)}
                   />
                 )}
               </div>
@@ -511,18 +1047,18 @@ const ClientSubscription = () => {
                 <div className="grid grid-cols-2 gap-3 max-w-xs mx-auto">
                   <div className="p-3 rounded-lg text-left bg-[#f5f6fa] border border-[#ebedf0]">
                     <span className="text-[10px] uppercase font-semibold text-gray-400 tracking-wider block">Remaining</span>
-                    <span className="text-lg font-bold text-gray-800 block mt-0.5">{subStatus.daysRemaining} Days</span>
+                    <span className="text-lg font-bold text-gray-800 block mt-0.5">{activeDaysRemaining} Days</span>
                   </div>
                   <div className="p-3 rounded-lg text-left bg-[#f5f6fa] border border-[#ebedf0]">
                     <span className="text-[10px] uppercase font-semibold text-gray-400 tracking-wider block">Expires On</span>
                     <span className="text-lg font-bold text-gray-800 block mt-0.5">
-                      {subStatus.planEndDate ? subStatus.planEndDate.toLocaleDateString('en-IN') : (nextPaymentDate ? new Date(nextPaymentDate).toLocaleDateString('en-IN') : '—')}
+                      {activeExpiryDate ? activeExpiryDate.toLocaleDateString('en-IN') : '—'}
                     </span>
                   </div>
                 </div>
 
                 <div className="p-3 rounded-lg text-left text-[11px] text-gray-500 max-w-md mx-auto leading-relaxed bg-blue-50 border border-blue-200">
-                  ℹ️ Payment options will automatically appear <strong>3 days before expiration</strong> (on {subStatus.planEndDate ? getRenewalStartDateStr(subStatus.planEndDate) : '—'}).
+                  ℹ️ Payment options will automatically appear <strong>3 days before expiration</strong> (on {activeExpiryDate ? getRenewalStartDateStr(activeExpiryDate) : '—'}).
                 </div>
               </div>
             </div>
@@ -617,6 +1153,7 @@ const ClientSubscription = () => {
           </div>
         )}
       </motion.div>
+      <BillModal />
     </div>
   )
 }

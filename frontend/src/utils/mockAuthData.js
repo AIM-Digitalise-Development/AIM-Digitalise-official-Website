@@ -171,12 +171,12 @@ export const getMockResponse = (url, method, data = null) => {
   }
 
   if (lowercaseUrl.includes('/client/calculate-subscription')) {
-    const cycle = data?.cycle || 'quarterly'
-    const multipliers = { monthly: 1, quarterly: 3, 'half-yearly': 6, yearly: 12 }
-    const discounts = { monthly: 0, quarterly: 5, 'half-yearly': 10, yearly: 15 }
+    const cycle = data?.cycle || 'annual'
+    const multipliers = { monthly: 1, quarterly: 3, 'half-yearly': 6, half_yearly: 6, yearly: 12, annual: 12 }
+    const discounts = { monthly: 0, quarterly: 5, 'half-yearly': 10, half_yearly: 10, yearly: 15, annual: 15 }
     
-    const mult = multipliers[cycle] || 3
-    const disc = discounts[cycle] || 5
+    const mult = multipliers[cycle] || 12
+    const disc = discounts[cycle] || 15
     const studentCount = 250
     const baseMonthly = studentCount * 10
     const baseTotal = baseMonthly * mult
@@ -213,12 +213,15 @@ export const getMockResponse = (url, method, data = null) => {
   }
 
   if (lowercaseUrl.includes('/client/create-subscription-order')) {
-    const cycle = data?.cycle || 'quarterly'
+    const cycle = data?.cycle || 'annual'
+    const multipliers = { monthly: 1, quarterly: 3, 'half-yearly': 6, half_yearly: 6, yearly: 12, annual: 12 }
+    const mult = multipliers[cycle] || 12
     return {
       success: true,
       simulated: true,
       amount: data?.amount || 8408,
       cycle: cycle,
+      total_months: mult,
       order_id: 'order_mock_' + Math.random().toString(36).substring(2, 12),
       key: 'rzp_test_mockkey123',
       currency: 'INR',
@@ -250,7 +253,9 @@ export const getMockResponse = (url, method, data = null) => {
           next_due_date: '2026-07-15',
           days_until_due: 30,
           is_period_over: false,
-          activated_at: '2026-01-02'
+          activated_at: '2026-01-02',
+          unpaid_months: ['May 2026', 'June 2026'],
+          total_due_amount: 5000
         }
       }
     }
@@ -310,7 +315,12 @@ export const getMockResponse = (url, method, data = null) => {
           organization_name: 'AIM Partner Org',
           payment_status: 'Paid',
           is_active: true,
-          last_login_at: '2026-06-12'
+          last_login_at: '2026-06-12',
+          total_clients: 8,
+          total_clients_this_month: 3,
+          extra_earnings_percentage: '5%',
+          this_month_earnings: 58000,
+          validity_till: '2027-06-12'
         }
       }
     }
@@ -328,7 +338,12 @@ export const getMockResponse = (url, method, data = null) => {
         organization_name: 'AIM Partner Org',
         payment_status: 'Paid',
         is_active: true,
-        last_login_at: '2026-06-12'
+        last_login_at: '2026-06-12',
+        total_clients: 8,
+        total_clients_this_month: 3,
+        extra_earnings_percentage: '5%',
+        this_month_earnings: 58000,
+        validity_till: '2027-06-12'
       }
     }
   }
