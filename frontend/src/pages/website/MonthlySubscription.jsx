@@ -182,7 +182,7 @@ const subscriptionPlans = [
     category: 'nexgn',
     categoryLabel: 'Based NEXGN SOFTWARE',
     name: 'NEXGN Institute Pro',
-    securityDeposit: '₹1000/-',
+    securityDeposit: '₹1/-',
     monthlySubscription: '₹10/-/student/month',
     description: `Our "NEXGN Institute Pro" is an all-in-one school, college, and training center management app. Controls student databases, fee collection registers with payment link dispatch, class timetables, exam scorecard generation, and parent notifications.`,
     customization: `Custom exam grading rubrics, parent portal access, digital library catalogue, dynamic ID card generation, and online admission application portals.`,
