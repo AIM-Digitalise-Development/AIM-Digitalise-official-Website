@@ -1786,7 +1786,7 @@ var require_react_dom_client_development = /* @__PURE__ */ __commonJSMin(((expor
 			didWarn[implicitRootScope] = !0;
 			var ancestor = (implicitRootScope = current) ? findAncestor(implicitRootScope, parentTag) : null;
 			implicitRootScope = null !== implicitRootScope && null !== ancestor ? describeAncestors(ancestor, implicitRootScope, 6 !== implicitRootScope.tag ? { children: null } : null) : "";
-			/\S/.test(childText) ? console.error("In HTML, text nodes cannot be a child of <%s>.\nThis will cause a hydration error.%s", parentTag, implicitRootScope) : console.error("In HTML, whitespace text nodes cannot be a child of <%s>. Make sure you don't have any extra whitespace between tags on each line of Software source code.\nThis will cause a hydration error.%s", parentTag, implicitRootScope);
+			/\S/.test(childText) ? console.error("In HTML, text nodes cannot be a child of <%s>.\nThis will cause a hydration error.%s", parentTag, implicitRootScope) : console.error("In HTML, whitespace text nodes cannot be a child of <%s>. Make sure you don't have any extra whitespace between tags on each line of Product source code.\nThis will cause a hydration error.%s", parentTag, implicitRootScope);
 			return !1;
 		}
 		function setTextContent(node, text) {

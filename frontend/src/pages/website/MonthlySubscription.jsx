@@ -547,8 +547,8 @@ const MonthlySubscription = () => {
                         key={plan.id}
                         onClick={() => handlePlanSelect(plan.id)}
                         className={`w-full flex items-center gap-3.5 p-3.5 text-left rounded-xl border text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer ${activePlanId === plan.id
-                            ? getCategoryButtonActiveStyles(activeCategory)
-                            : 'card-elevated text-aim-copy-muted hover:text-aim-gold hover:bg-aim-gold/5'
+                          ? getCategoryButtonActiveStyles(activeCategory)
+                          : 'card-elevated text-aim-copy-muted hover:text-aim-gold hover:bg-aim-gold/5'
                           }`}
                       >
                         <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 transition-colors ${getCategoryNumberStyles(activeCategory, activePlanId === plan.id)
@@ -579,7 +579,7 @@ const MonthlySubscription = () => {
                       </div>
                       <div>
                         <h5 className="text-xs font-bold text-aim-copy">100% Code & IP Ownership</h5>
-                        <p className="text-[11px] text-aim-copy-muted leading-normal mt-0.5">Software source code, layout designs, and user databases belong completely to you upon contract terms completion.</p>
+                        <p className="text-[11px] text-aim-copy-muted leading-normal mt-0.5">Product source code, layout designs, and user databases belong completely to AIM Digitalise pvt. ltd.</p>
                       </div>
                     </div>
 

@@ -567,7 +567,7 @@ const SaasBasedSoftware = () => {
                       </div>
                       <div>
                         <h5 className="text-xs font-bold text-aim-copy">100% Code &amp; IP Ownership</h5>
-                        <p className="text-[11px] text-aim-copy-muted leading-normal mt-0.5">software, layout designs, and user databases belong completely to AIM Digitalise pvt. ltd. upon contract terms completion.</p>
+                        <p className="text-[11px] text-aim-copy-muted leading-normal mt-0.5">Product source code, layout designs, and user databases belong completely to AIM Digitalise pvt. ltd.</p>
                       </div>
                     </div>
 
