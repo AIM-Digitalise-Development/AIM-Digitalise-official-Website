@@ -6,6 +6,7 @@ import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import { purchaseApi } from '../../api'
 import { ROUTES } from '../../constants/routes'
+import nexgnLogo from '../../assets/images/nexgnlogo.png'
 
 // Complete detailed plan information for all 16 plans
 const subscriptionPlans = [
@@ -519,9 +520,7 @@ const SaasBasedSoftware = () => {
                       animate={{ opacity: 1, y: 0 }}
                       className="flex flex-col items-center py-2.5 px-3 bg-aim-navy-muted/10 rounded-xl border border-aim-border text-center select-none"
                     >
-                      <span className="text-lg font-black tracking-tight text-aim-copy">
-                        NEX<span className="text-aim-gold">G</span>N
-                      </span>
+                      <img src={nexgnLogo} alt="NEXGN Logo" className="h-16 w-auto object-contain" />
                       <p className="text-[8px] font-bold text-aim-gold uppercase tracking-widest mt-0.5">
                         Solutions Changing to Next Generation
                       </p>
@@ -568,7 +567,7 @@ const SaasBasedSoftware = () => {
                       </div>
                       <div>
                         <h5 className="text-xs font-bold text-aim-copy">100% Code &amp; IP Ownership</h5>
-                        <p className="text-[11px] text-aim-copy-muted leading-normal mt-0.5">Your source code, layout designs, and user databases belong completely to you upon contract terms completion.</p>
+                        <p className="text-[11px] text-aim-copy-muted leading-normal mt-0.5">software, layout designs, and user databases belong completely to AIM Digitalise pvt. ltd. upon contract terms completion.</p>
                       </div>
                     </div>
 
@@ -581,7 +580,7 @@ const SaasBasedSoftware = () => {
                       </div>
                       <div>
                         <h5 className="text-xs font-bold text-aim-copy">Zero Locked Contracts</h5>
-                        <p className="text-[11px] text-aim-copy-muted leading-normal mt-0.5">Scale packages up or down, pause ongoing development modules, or cancel subscriptions on a simple monthly cycle.</p>
+                        <p className="text-[11px] text-aim-copy-muted leading-normal mt-0.5">Scale packages up or down, pause ongoing development modules, or cancel subscriptions on a simple monthly/quartarlt/half-yearly/yearly cycle.</p>
                       </div>
                     </div>
 
