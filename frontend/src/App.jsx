@@ -10,6 +10,9 @@ import EmployeeDashboard from './pages/employee/Dashboard'
 import EmployeeTasks from './pages/employee/Tasks'
 import EmployeeTimesheet from './pages/employee/Timesheet'
 import EmployeeSupport from './pages/employee/Support'
+import EmployeeProfile from './pages/employee/Profile'
+import EmployeePunchIn from './pages/employee/PunchIn'
+import EmployeeLeads from './pages/employee/Leads'
 import Home from './pages/website/Home'
 import About from './pages/website/About'
 import Contact from './pages/website/Contact'
@@ -121,9 +124,20 @@ function App() {
           {/* ── Employee portal (authenticated shell with sidebar) ── */}
           <Route path={ROUTES.EMPLOYEE.DASHBOARD} element={<EmployeeLayout />}>
             <Route index element={<EmployeeDashboard />} />
-            <Route path="tasks" element={<EmployeeTasks />} />
-            <Route path="timesheet" element={<EmployeeTimesheet />} />
+            <Route path="saas-clients" element={<DemoSaasClients />} />
+            <Route path="subscription" element={<DemoComingSoon title="Subscribed Clients" icon="💳" />} />
+            <Route path="users" element={<DemoComingSoon title="General Clients" icon="👥" />} />
+            <Route path="accounts" element={<DemoComingSoon title="Accounts" icon="💰" />} />
+            <Route path="employee" element={<EmployeeProfile />} />
+            <Route path="projects" element={<DemoComingSoon title="Projects" icon="📁" />} />
+            <Route path="compliance" element={<DemoComingSoon title="Compliance" icon="🛡️" />} />
+            <Route path="partners" element={<DemoComingSoon title="Partner Network" icon="🤝" />} />
+            <Route path="reports" element={<DemoComingSoon title="Reports" icon="📊" />} />
             <Route path="support" element={<EmployeeSupport />} />
+            <Route path="settings" element={<DemoComingSoon title="Settings" icon="⚙️" />} />
+            <Route path="punch-in" element={<EmployeePunchIn />} />
+            <Route path="profile" element={<EmployeeProfile />} />
+            <Route path="leads" element={<EmployeeLeads />} />
           </Route>
 
           {/* ── Partner auth pages (standalone, no header/footer) ── */}

@@ -11,6 +11,12 @@ const AdminSettings = () => {
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [summary, setSummary] = useState({
+    saas_clients: 0,
+    total_clients: 0,
+    active_subscriptions: 0,
+    total_revenue: 0
+  })
 
   const fetchClients = async () => {
     setLoading(true)
@@ -22,6 +28,19 @@ const AdminSettings = () => {
         // Filter out nexgn (SaaS Based Clients)
         const filtered = all.filter(c => c.product_category !== 'nexgn')
         setClients(filtered)
+
+        // Calculate summary metrics
+        const saas = all.filter(c => c.product_category === 'nexgn').length
+        const total = all.length
+        const active = all.filter(c => c.is_active).length
+        const revenue = all.reduce((acc, c) => acc + (Number(c.processing_fee) || 0), 0)
+
+        setSummary({
+          saas_clients: saas,
+          total_clients: total,
+          active_subscriptions: active,
+          total_revenue: revenue
+        })
       } else {
         setError(res.data?.message || 'Failed to fetch clients list')
       }
@@ -247,6 +266,87 @@ const AdminSettings = () => {
                   <button onClick={fetchClients} className="text-xs font-bold underline hover:no-underline">Try Again</button>
                 </div>
               )}
+
+              {/* Stats Cards Section */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                {/* Card 1: SaaS Based Client */}
+                <div className="group bg-gradient-to-br from-white to-blue-50/20 rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-300 flex items-center justify-between overflow-hidden relative animate-slide-up">
+                  <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-blue-500/5 rounded-full blur-xl group-hover:scale-125 transition-all duration-500"></div>
+                  <div>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-sans">SaaS Based Clients</span>
+                    <span className="text-3xl font-black text-slate-800 mt-1.5 block tracking-tight">
+                      {loading ? (
+                        <span className="inline-block animate-pulse">...</span>
+                      ) : (
+                        summary.saas_clients
+                      )}
+                    </span>
+                    <span className="text-[10px] font-bold text-blue-500 mt-1 block">Active NEXGN suite</span>
+                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center text-xl font-bold border border-blue-100 group-hover:scale-110 group-hover:bg-blue-500 group-hover:text-white transition-all duration-300 shadow-sm">
+                    🚀
+                  </div>
+                </div>
+
+                {/* Card 2: Total Client */}
+                <div className="group bg-gradient-to-br from-white to-indigo-50/20 rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-300 flex items-center justify-between overflow-hidden relative animate-slide-up [animation-delay:100ms]">
+                  <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-indigo-500/5 rounded-full blur-xl group-hover:scale-125 transition-all duration-500"></div>
+                  <div>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-sans">Total Clients</span>
+                    <span className="text-3xl font-black text-slate-800 mt-1.5 block tracking-tight">
+                      {loading ? (
+                        <span className="inline-block animate-pulse">...</span>
+                      ) : (
+                        summary.total_clients
+                      )}
+                    </span>
+                    <span className="text-[10px] font-bold text-indigo-500 mt-1 block">SaaS + Custom portfolios</span>
+                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-500 flex items-center justify-center text-xl font-bold border border-indigo-100 group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white transition-all duration-300 shadow-sm">
+                    👥
+                  </div>
+                </div>
+
+                {/* Card 3: Active Subscriptions */}
+                <div className="group bg-gradient-to-br from-white to-emerald-50/20 rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all duration-300 flex items-center justify-between overflow-hidden relative animate-slide-up [animation-delay:200ms]">
+                  <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-emerald-500/5 rounded-full blur-xl group-hover:scale-125 transition-all duration-500"></div>
+                  <div>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-sans">Active Subscriptions</span>
+                    <span className="text-3xl font-black text-emerald-600 mt-1.5 block tracking-tight">
+                      {loading ? (
+                        <span className="inline-block animate-pulse">...</span>
+                      ) : (
+                        summary.active_subscriptions
+                      )}
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-500 mt-1 block">
+                      {loading ? '...' : `${((summary.active_subscriptions / (summary.total_clients || 1)) * 100).toFixed(0)}% retention rate`}
+                    </span>
+                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center text-xl font-bold border border-emerald-100 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300 shadow-sm">
+                    🛡️
+                  </div>
+                </div>
+
+                {/* Card 4: Total Revenue */}
+                <div className="group bg-gradient-to-br from-white to-amber-50/20 rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md hover:border-amber-200 transition-all duration-300 flex items-center justify-between overflow-hidden relative animate-slide-up [animation-delay:300ms]">
+                  <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-amber-500/5 rounded-full blur-xl group-hover:scale-125 transition-all duration-500"></div>
+                  <div>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-sans">Total Revenue</span>
+                    <span className="text-3xl font-black text-aim-gold mt-1.5 block tracking-tight">
+                      {loading ? (
+                        <span className="inline-block animate-pulse">...</span>
+                      ) : (
+                        `₹${summary.total_revenue.toLocaleString('en-IN')}`
+                      )}
+                    </span>
+                    <span className="text-[10px] font-bold text-aim-gold mt-1 block">Recurring fees collected</span>
+                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-amber-50 text-aim-gold flex items-center justify-center text-xl font-bold border border-amber-100 group-hover:scale-110 group-hover:bg-aim-gold group-hover:text-white transition-all duration-300 shadow-sm">
+                    ₹
+                  </div>
+                </div>
+              </div>
               
               {/* Table Subtitle Bar */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">

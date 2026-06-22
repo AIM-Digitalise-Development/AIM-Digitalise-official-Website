@@ -21,6 +21,7 @@ frontend/                              # React application root directory
 │   │   ├── analytics.js               # getDashboardStats(), getChartsData()
 │   │   ├── partner.js                 # getPartnerEarnings(), getPayouts()
 │   │   ├── clientPortal.js            # clientLogin(), getClientProfile(), getClientProducts()
+│   │   ├── leads.js                   # createLead(), getLeads(), updateLead()
 │   │   └── index.js                   # Re-exports all API modules
 │   │
 │   ├── store/                         # 📦 STATE MANAGEMENT
@@ -79,7 +80,11 @@ frontend/                              # React application root directory
 │   │   │   ├── Analytics.jsx          # Advanced business metrics
 │   │   │   └── Partners.jsx           # Partner approvals & agent rank hierarchy tree
 │   │   ├── employee/                  # Employee-only pages
-│   │   │   ├── Dashboard.jsx          # Employee tasks overview
+│   │   │   ├── Dashboard.jsx          # Employee dashboard
+│   │   │   ├── Leads.jsx              # CRM pipeline lead management
+│   │   │   ├── PunchIn.jsx            # Geolocation-verified punch-in attendance
+│   │   │   ├── Profile.jsx            # Personal employee details profile
+│   │   │   ├── Support.jsx            # Support ticket logs & creation
 │   │   │   ├── Tasks.jsx              # Task management board
 │   │   │   └── Timesheet.jsx          # Time logging
 │   │   ├── partner/                   # Partner portal pages
