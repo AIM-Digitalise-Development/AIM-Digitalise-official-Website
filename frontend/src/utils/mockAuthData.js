@@ -534,6 +534,50 @@ export const getMockResponse = (url, method, data = null) => {
       }
     }
 
+    // POST /employee/leads/{id}/send-demo
+    const sendDemoMatch = lowercaseUrl.match(/\/employee\/leads\/(\d+)\/send-demo$/)
+    if (sendDemoMatch && method === 'POST') {
+      const leadId = parseInt(sendDemoMatch[1])
+      const { email } = data || {}
+
+      let updated = false
+      window.__mockLeads = leadsList.map(l => {
+        if (l.id === leadId) {
+          updated = true
+          const updatedLead = {
+            ...l,
+            client_email: email || l.client_email,
+            lead_status: l.lead_status === 'new' ? 'contacted' : l.lead_status,
+            updated_at: new Date().toISOString()
+          }
+          if (!updatedLead.activities) updatedLead.activities = []
+          updatedLead.activities.unshift({
+            id: Math.floor(Math.random() * 100000),
+            lead_id: l.id,
+            employee_id: getLoggedInMockEmployee().id,
+            activity_type: 'email',
+            description: 'School Software Demo Sent',
+            notes: `Emailed school ERP software demo details to: ${email || l.client_email || 'client'}`,
+            scheduled_date: null,
+            completed_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            employee: getLoggedInMockEmployee()
+          })
+          return updatedLead
+        }
+        return l
+      })
+
+      if (updated) {
+        return {
+          success: true,
+          message: 'School software demo email sent successfully!'
+        }
+      } else {
+        return { success: false, message: 'Lead not found' }
+      }
+    }
+
     // GET /employee/leads/{id}
     const detailsMatch = lowercaseUrl.match(/\/employee\/leads\/(\d+)$/)
     if (detailsMatch && method === 'GET') {

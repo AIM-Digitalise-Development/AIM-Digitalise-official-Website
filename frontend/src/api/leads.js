@@ -39,3 +39,8 @@ export const bulkAssignLeads = (data) =>
 // Delete Lead - DELETE /employee/leads/{id}
 export const deleteLead = (id) =>
   client.delete(`/employee/leads/${id}`)
+
+// Send Demo Email - POST /employee/leads/{id}/send-demo
+export const sendDemoEmail = (id, data) =>
+  client.post(`/employee/leads/${id}/send-demo`, data)
+

@@ -8,7 +8,8 @@ import {
   updateLeadStatus,
   addLeadActivity,
   bulkAssignLeads,
-  deleteLead
+  deleteLead,
+  sendDemoEmail
 } from '../../api/leads'
 
 export default function EmployeeLeads() {
@@ -40,6 +41,15 @@ export default function EmployeeLeads() {
   const [activityLead, setActivityLead] = useState(null)
   const [isBulkAssignOpen, setIsBulkAssignOpen] = useState(false)
   const [selectedDrawerLead, setSelectedDrawerLead] = useState(null) // Slide-over detail drawer
+
+  // Mail Modal State
+  const [isMailModalOpen, setIsMailModalOpen] = useState(false)
+  const [mailLead, setMailLead] = useState(null)
+  const [mailForm, setMailForm] = useState({
+    email: '',
+    subject: 'Exclusive Demo: AIM Digitalise School ERP & Management Software'
+  })
+  const [sendingMail, setSendingMail] = useState(false)
 
   // Form states
   const [leadForm, setLeadForm] = useState({
@@ -312,6 +322,36 @@ export default function EmployeeLeads() {
     }
   }
 
+  const openMailModal = (lead) => {
+    setMailLead(lead)
+    setMailForm({
+      email: lead.client_email || '',
+      subject: 'Exclusive Demo: AIM Digitalise School ERP & Management Software'
+    })
+    setIsMailModalOpen(true)
+  }
+
+  const handleSendMailSubmit = async (e) => {
+    e.preventDefault()
+    if (!mailForm.email.trim()) {
+      alert('Recipient email address is required.')
+      return
+    }
+    try {
+      setSendingMail(true)
+      await sendDemoEmail(mailLead.id, mailForm)
+      triggerSuccess(`School software demo email sent to ${mailForm.email} successfully.`)
+      setIsMailModalOpen(false)
+      loadLeads()
+      loadStats()
+    } catch (err) {
+      console.error(err)
+      alert(err?.response?.data?.message || 'Failed to send demo email.')
+    } finally {
+      setSendingMail(false)
+    }
+  }
+
   const handleSelectAll = (e) => {
     if (e.target.checked) {
       setSelectedLeadIds(leads.map(l => l.id))
@@ -563,23 +603,22 @@ export default function EmployeeLeads() {
                   />
                 </th>
                 <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left">Lead Details</th>
-                <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left">Company & Product</th>
                 <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left">Pipeline Status</th>
-                <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left">Priority</th>
-                <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left">Next Action</th>
+                <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left">Demo Status</th>
+                <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left">Next Follow-up</th>
                 <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="p-12 text-center text-xs font-black text-gray-500 uppercase tracking-wider animate-pulse">
+                  <td colSpan="6" className="p-12 text-center text-xs font-black text-gray-500 uppercase tracking-wider animate-pulse">
                     Loading Leads registry...
                   </td>
                 </tr>
               ) : leads.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="p-12 text-center">
+                  <td colSpan="6" className="p-12 text-center">
                     <span className="text-2xl block mb-2">📁</span>
                     <p className="text-xs font-bold text-white">No leads found</p>
                     <p className="text-[11px] text-gray-550 mt-1">Try modifying your query search criteria or filter flags.</p>
@@ -607,7 +646,7 @@ export default function EmployeeLeads() {
                         />
                       </td>
 
-                      {/* Details */}
+                      {/* Lead Details */}
                       <td className="p-4">
                         <div className="text-left">
                           <button
@@ -617,43 +656,81 @@ export default function EmployeeLeads() {
                             {lead.client_name}
                           </button>
                           <span className="text-[9px] font-bold text-cyan-400 font-mono tracking-wider block mt-1">{lead.lead_id}</span>
-                          <span className="text-[10px] text-gray-550 block mt-0.5">{lead.client_phone}</span>
-                          {lead.employee && (
-                            <span className="text-[10px] text-gray-550 block mt-1">
-                              👤 Created: <strong className="text-gray-400 font-semibold">{lead.employee.full_name || lead.employee.name || `${lead.employee.first_name || ''} ${lead.employee.last_name || ''}`.trim()}</strong> ({lead.employee.employee_id})
+                          {lead.created_at && (
+                            <span className="text-[9px] text-gray-550 block mt-0.5">
+                              📅 {new Date(lead.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                             </span>
                           )}
+                          <span className="text-[10px] text-gray-400 font-semibold block mt-0.5">{lead.client_phone}</span>
                         </div>
                       </td>
 
-                      {/* Company & Product */}
+                      {/* Pipeline Status — Product + Status badge */}
                       <td className="p-4">
-                        <div className="text-left">
-                          <p className="text-xs font-semibold text-gray-300">{lead.company_name || 'Individual'}</p>
-                          <span className="text-[10px] text-gray-500 font-bold mt-0.5 block">{lead.product_interest || 'N/A'}</span>
-                        </div>
-                      </td>
-
-                      {/* Status */}
-                      <td className="p-4">
-                        <div className="text-left">
+                        <div className="text-left space-y-1">
+                          <span className="text-[10px] text-gray-400 font-bold block">{lead.product_interest || 'N/A'}</span>
                           {getStatusBadge(lead.lead_status)}
                         </div>
                       </td>
 
-                      {/* Priority */}
+                      {/* Demo Status */}
                       <td className="p-4">
-                        <div className="text-left">
-                          {getPriorityBadge(lead.lead_priority)}
+                        <div className="text-left space-y-1">
+                          {lead.demo_status ? (
+                            <>
+                              <span className={`inline-flex text-[9px] font-black uppercase tracking-wider border rounded-md px-2 py-0.5 ${
+                                lead.demo_status === 'assigned'
+                                  ? 'bg-blue-400/10 text-blue-400 border-blue-400/25'
+                                  : lead.demo_status === 'completed'
+                                  ? 'bg-green-400/10 text-green-400 border-green-400/25'
+                                  : lead.demo_status === 'scheduled'
+                                  ? 'bg-amber-400/10 text-amber-400 border-amber-400/25'
+                                  : 'bg-gray-400/10 text-gray-400 border-gray-400/25'
+                              }`}>{lead.demo_status}</span>
+                              {lead.demo_status === 'assigned' && lead.demo_link && (
+                                <a
+                                  href={lead.demo_link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[9px] text-blue-400 hover:text-blue-300 font-bold block underline truncate max-w-[120px]"
+                                  title={lead.demo_link}
+                                >
+                                  🔗 Demo Link
+                                </a>
+                              )}
+                              {lead.demo_slot && (
+                                <span className="text-[9px] text-amber-400 font-bold block">🕐 {lead.demo_slot}</span>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-[9px] text-gray-600 font-bold">—</span>
+                          )}
                         </div>
                       </td>
 
-                      {/* Next Action */}
+                      {/* Next Follow-up */}
                       <td className="p-4">
-                        <div className="text-left">
-                          <p className="text-xs font-semibold text-gray-300">{followUpText}</p>
-                          {lead.budget && (
-                            <span className="text-[10px] text-emerald-450 font-bold block mt-0.5">Budget: ₹{Number(lead.budget).toLocaleString()}</span>
+                        <div className="text-left space-y-0.5">
+                          {lead.lead_status === 'converted' || lead.is_converted ? (
+                            <>
+                              <span className="inline-flex text-[9px] font-black uppercase tracking-wider border rounded-md px-2 py-0.5 bg-green-400/10 text-green-400 border-green-400/25">Sold Out</span>
+                              {lead.budget && (
+                                <span className="text-[10px] text-emerald-400 font-bold block">₹{Number(lead.budget).toLocaleString()}</span>
+                              )}
+                              {lead.expected_close_date && (
+                                <span className="text-[9px] text-gray-400 font-semibold block">📅 {new Date(lead.expected_close_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                              )}
+                              {lead.invoice_no && (
+                                <span className="text-[9px] text-cyan-400 font-bold font-mono block">Inv: {lead.invoice_no}</span>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-xs font-semibold text-gray-300">{followUpText}</p>
+                              {lead.budget && (
+                                <span className="text-[10px] text-emerald-400 font-bold block">₹{Number(lead.budget).toLocaleString()}</span>
+                              )}
+                            </>
                           )}
                         </div>
                       </td>
@@ -681,6 +758,13 @@ export default function EmployeeLeads() {
                             className="p-1 text-gray-500 hover:text-[#38b34a] hover:bg-white/5 rounded transition-all cursor-pointer"
                           >
                             🔄
+                          </button>
+                          <button
+                            onClick={() => openMailModal(lead)}
+                            title="Send School Software Demo"
+                            className="p-1 text-gray-500 hover:text-yellow-400 hover:bg-white/5 rounded transition-all cursor-pointer"
+                          >
+                            ✉️
                           </button>
                           <button
                             onClick={() => openActivityModal(lead)}
@@ -763,6 +847,12 @@ export default function EmployeeLeads() {
                     className="px-3.5 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-bold border border-white/10 transition-all cursor-pointer"
                   >
                     ⏱️ Log Activity
+                  </button>
+                  <button
+                    onClick={() => openMailModal(selectedDrawerLead)}
+                    className="px-3.5 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-bold border border-white/10 transition-all cursor-pointer"
+                  >
+                    ✉️ Send School Demo
                   </button>
                   <button
                     onClick={() => {
@@ -1432,6 +1522,179 @@ export default function EmployeeLeads() {
                   className="px-5 py-2.5 bg-[#38b34a] text-black hover:bg-[#38b34a]/85 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer disabled:opacity-50"
                 >
                   {saving ? 'Reassigning...' : 'Transfer Leads'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ─────────────────────── MODAL: SEND EMAIL DEMO ─────────────────────── */}
+      <AnimatePresence>
+        {isMailModalOpen && mailLead && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMailModalOpen(false)}
+              className="absolute inset-0 bg-black cursor-pointer"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-2xl max-h-[90vh] flex flex-col justify-between rounded-3xl overflow-hidden shadow-2xl"
+              style={{ background: '#13151f', border: '1px solid rgba(255,255,255,0.08)' }}
+            >
+              {/* Header */}
+              <div className="px-6 py-5 flex items-center justify-between" style={{ background: '#1a1d2b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div>
+                  <h3 className="text-base font-black text-white">Send School Software Demo</h3>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">Configure and preview the demo email for {mailLead.client_name}</p>
+                </div>
+                <button onClick={() => setIsMailModalOpen(false)} className="text-gray-550 hover:text-white text-sm cursor-pointer">✕</button>
+              </div>
+
+              {/* Scrollable Modal Content */}
+              <form onSubmit={handleSendMailSubmit} className="flex-1 overflow-y-auto px-6 py-6 space-y-4 text-left">
+                {/* Inputs */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Recipient Email *</label>
+                    <input
+                      type="email"
+                      required
+                      value={mailForm.email}
+                      onChange={(e) => setMailForm({ ...mailForm, email: e.target.value })}
+                      placeholder="e.g. client@example.com"
+                      className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] font-bold"
+                    />
+                    {!mailForm.email.trim() && (
+                      <span className="text-[10px] text-yellow-500 font-bold block mt-1">⚠️ Recipient email is required to send the demo.</span>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Subject Line</label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={mailForm.subject}
+                      className="w-full bg-white/1.5 border border-white/3 text-gray-450 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none cursor-not-allowed font-semibold"
+                    />
+                  </div>
+                </div>
+
+                {/* Live Email Preview Canvas */}
+                <div className="space-y-1.5 pt-2">
+                  <label className="text-[9px] font-black text-[#38b34a] uppercase tracking-widest block">Live Email Preview (As Received by Client)</label>
+                  <div className="border border-white/5 rounded-2xl bg-white text-gray-800 p-6 overflow-hidden shadow-inner max-h-[380px] overflow-y-auto font-sans leading-relaxed select-text">
+                    
+                    {/* Simulated Mail Client Header */}
+                    <div className="border-b border-gray-100 pb-3 mb-4 text-xs text-gray-400">
+                      <p><strong className="text-gray-500">From:</strong> AIM Digitalise Sales &lt;sales@aimdigitalise.com&gt;</p>
+                      <p className="mt-1"><strong className="text-gray-500">To:</strong> {mailForm.email || '[Client Email Address]'}</p>
+                      <p className="mt-1"><strong className="text-gray-500">Subject:</strong> {mailForm.subject}</p>
+                    </div>
+
+                    {/* Email Newsletter Banner */}
+                    <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl p-4 text-center mb-6">
+                      <h2 className="text-lg font-black tracking-tight text-[#38b34a]">AIM DIGITALISE</h2>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Nexgn Educational Technology</p>
+                    </div>
+
+                    {/* Greeting */}
+                    <p className="text-xs text-gray-750 font-bold">Dear {mailLead.client_name || 'Client'},</p>
+                    
+                    {/* Intro */}
+                    <p className="text-xs text-gray-600 mt-3">
+                      Thank you for your interest in our solutions. We are excited to present an interactive demo of our flagship product, the <strong>AIM School Management & ERP Software</strong>.
+                    </p>
+                    <p className="text-xs text-gray-600 mt-2">
+                      Our system is tailored to reduce manual work and automate administrative tasks for schools and colleges, letting your educators focus on what matters most.
+                    </p>
+
+                    {/* Highlight Box / Features list */}
+                    <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 my-5 space-y-2.5">
+                      <p className="text-[10px] font-black uppercase text-[#38b34a] tracking-wider mb-1">Key System Modules Included:</p>
+                      
+                      <div className="flex items-start gap-2.5">
+                        <span className="text-sm">🏫</span>
+                        <div>
+                          <p className="text-xs font-bold text-gray-800">Student Lifecycle & Records</p>
+                          <p className="text-[11px] text-gray-500 font-semibold leading-normal">Digital admissions, profiles, custom enrollment registers, and certificates.</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-2.5">
+                        <span className="text-sm">💳</span>
+                        <div>
+                          <p className="text-xs font-bold text-gray-800">Smart Fees & Billing System</p>
+                          <p className="text-[11px] text-gray-500 font-semibold leading-normal">Automated invoices, online payment integrations, late fee triggers, and digital receipts.</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-2.5">
+                        <span className="text-sm">📊</span>
+                        <div>
+                          <p className="text-xs font-bold text-gray-800">Exams & Digital Report Cards</p>
+                          <p className="text-[11px] text-gray-500 font-semibold leading-normal">Marks sheets entry, grade calculations, and multi-format report card generation.</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-2.5">
+                        <span className="text-sm">👥</span>
+                        <div>
+                          <p className="text-xs font-bold text-gray-800">Bio-Metric Attendance & HR</p>
+                          <p className="text-[11px] text-gray-500 font-semibold leading-normal">Employee rosters, holiday registers, bio-metric syncing, and automated payroll slips.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* CTA Button */}
+                    <div className="text-center my-6">
+                      <a
+                        href="#demo-link"
+                        onClick={(e) => e.preventDefault()}
+                        className="inline-block bg-[#38b34a] hover:bg-[#38b34a]/90 text-white font-bold text-xs uppercase tracking-wide px-5 py-3 rounded-lg shadow-md transition-all decoration-none"
+                      >
+                        ⚡ Access Live Demo Portal
+                      </a>
+                      <p className="text-[9px] text-gray-400 mt-2 font-semibold">Username: admin | Password: admin123</p>
+                    </div>
+
+                    {/* Video Tour Callout */}
+                    <p className="text-xs text-gray-650 text-center font-medium">
+                      Prefer a quick overview? <a href="#video-tour" onClick={(e) => e.preventDefault()} className="text-blue-600 hover:underline font-bold">Watch our 5-minute video walkthrough ➔</a>
+                    </p>
+
+                    {/* Footer */}
+                    <div className="border-t border-gray-100 pt-4 mt-6 text-[10px] text-gray-400 text-center space-y-1">
+                      <p className="font-bold text-gray-600">AIM Digitalise Technologies Pvt Ltd</p>
+                      <p className="font-medium">Kolkata, India | Support: +91 98765 43210</p>
+                      <p className="font-medium">Website: <a href="https://aimdigitalise.com" onClick={(e) => e.preventDefault()} className="text-blue-500">www.aimdigitalise.com</a></p>
+                    </div>
+
+                  </div>
+                </div>
+              </form>
+
+              {/* Actions Footer */}
+              <div className="px-6 py-4 flex items-center justify-end gap-3 shrink-0" style={{ background: '#1a1d2b', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsMailModalOpen(false)}
+                  disabled={sendingMail}
+                  className="px-4 py-2.5 border border-white/10 hover:border-white/20 text-xs font-bold text-gray-400 hover:text-white rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSendMailSubmit}
+                  disabled={sendingMail || !mailForm.email.trim()}
+                  className="px-5 py-2.5 bg-[#38b34a] text-black hover:bg-[#38b34a]/85 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {sendingMail ? '✉️ Sending...' : '✉️ Send Demo Mail'}
                 </button>
               </div>
             </motion.div>
