@@ -195,6 +195,19 @@ if (typeof window !== 'undefined' && !window.__mockLeads) {
 export const getMockResponse = (url, method, data = null) => {
   const lowercaseUrl = url.toLowerCase()
 
+  if (lowercaseUrl.includes('/public/rm-options')) {
+    return {
+      success: true,
+      counts: { super_admins: 2, partners: 2 },
+      data: [
+        { id: 1, type: 'admin', name: 'Super Admin User 1', partner_id: null },
+        { id: 2, type: 'admin', name: 'Super Admin User 2', partner_id: null },
+        { id: 3, type: 'partner', name: 'Master Partner Kumar', partner_id: 'PIDIN26001' },
+        { id: 4, type: 'partner', name: 'Premium Partner Sharma', partner_id: 'PIDIN26002' }
+      ]
+    }
+  }
+
   // 1. Admin Auth Mocks
   if (lowercaseUrl.includes('/admin/login')) {
     return {

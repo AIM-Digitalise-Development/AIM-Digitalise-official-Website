@@ -26,7 +26,7 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
   const [signedFile, setSignedFile] = useState(null)
   const [fileError, setFileError] = useState('')
   const [currency, setCurrency] = useState('INR')
-  const [amount, setAmount] = useState(1)
+  const [amount, setAmount] = useState(1000)
   const [status, setStatus] = useState('') // progress message
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -249,10 +249,9 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
             </label>
             <input
               type="number"
-              min={1}
               value={amount}
-              onChange={(e) => setAmount(Number(e.target.value))}
-              className={inputCls}
+              readOnly
+              className={`${inputCls} opacity-60 cursor-not-allowed`}
             />
           </div>
         </div>
