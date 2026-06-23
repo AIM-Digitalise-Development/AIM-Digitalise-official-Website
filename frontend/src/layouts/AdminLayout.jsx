@@ -44,6 +44,7 @@ const AdminLayout = () => {
   const menuItems = [
     { route: ROUTES.ADMIN.DASHBOARD, label: 'Dashboard', icon: 'dashboard', color: '#10b981' },
     { route: ROUTES.ADMIN.SAAS_CLIENTS, label: 'SaaS Based Client', icon: 'clients', color: '#38b34a' },
+    { route: ROUTES.ADMIN.PRODUCTS, label: 'Products', icon: 'products', color: '#ff6600' },
     { route: ROUTES.ADMIN.SETTINGS, label: 'Subscribed Client', icon: 'subscription', color: '#ef4444' },
     { route: ROUTES.ADMIN.USERS, label: 'General Client', icon: 'general_client', color: '#f97316' },
     { route: ROUTES.ADMIN.ANALYTICS, label: 'Accounts', icon: 'accounts', color: '#ec4899' },
@@ -60,6 +61,13 @@ const AdminLayout = () => {
     const iconClass = `w-4.5 h-4.5 ${isActive ? 'text-[#38b34a]' : ''}`
     if (type === 'dashboard') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /></svg>
     if (type === 'clients') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><circle cx="9" cy="8" r="3.5" /><path d="M4 18c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5" /><path d="M16 11h5m-2.5-2.5v5" /></svg>
+    if (type === 'products') return (
+      <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+        <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+        <line x1="12" y1="22.08" x2="12" y2="12" />
+      </svg>
+    )
     if (type === 'partners') return (
       <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v5" />
@@ -219,6 +227,8 @@ const AdminLayout = () => {
               {(() => {
                 if (location.pathname === ROUTES.ADMIN.DASHBOARD) return "Welcome back! Here's your business overview for June 2026."
                 if (location.pathname === ROUTES.ADMIN.USERS) return "Manage your client accounts."
+                if (location.pathname === ROUTES.ADMIN.SAAS_CLIENTS) return "Manage SaaS clients and deliveries."
+                if (location.pathname === ROUTES.ADMIN.PRODUCTS) return "Manage your products, categories, sub-categories, and discounts."
                 if (location.pathname === ROUTES.ADMIN.SETTINGS) return "Manage client subscriptions, customization requests, and payment reports."
                 if (location.pathname === ROUTES.ADMIN.ANALYTICS) return "Manage financial records and statements."
                 if (location.pathname === ROUTES.ADMIN.PARTNERS) return "Manage partner accounts and sales."

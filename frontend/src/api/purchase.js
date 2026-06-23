@@ -30,3 +30,10 @@ export const createOrder = (payload) =>
  */
 export const verifyPayment = (payload) =>
   client.post('/public/verify-payment', payload).then((r) => r.data)
+
+/**
+ * Fetch available subcategories with their products
+ * GET /public/subcategories-with-products
+ */
+export const fetchSubcategoriesWithProducts = () =>
+  client.get('/public/subcategories-with-products').then((r) => r.data)

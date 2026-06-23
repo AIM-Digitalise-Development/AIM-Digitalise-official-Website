@@ -412,7 +412,7 @@ export default function EmployeeLeads() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/5">
         <div>
           <h1 className="text-2xl font-black text-white tracking-tight">Lead Management</h1>
-          <p className="text-xs text-gray-500 mt-1 font-semibold">Track client acquisitions, follow up on pipelines, and schedule sales activities.</p>
+          <p className="text-xs text-gray-500 mt-1 font-semibold">Track client acquisitions, and schedule sales activities.</p>
         </div>
         <button
           onClick={openCreateModal}
@@ -1029,7 +1029,7 @@ export default function EmployeeLeads() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Client Name */}
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Client Name *</label>
+                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Contact Person *</label>
                     <input
                       type="text"
                       required
@@ -1042,7 +1042,7 @@ export default function EmployeeLeads() {
 
                   {/* Client Phone */}
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Client Mobile *</label>
+                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Contact No*</label>
                     <input
                       type="text"
                       required
@@ -1079,7 +1079,7 @@ export default function EmployeeLeads() {
 
                   {/* Company Name */}
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Company Name</label>
+                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Company /Org. Name</label>
                     <input
                       type="text"
                       value={leadForm.company_name}
@@ -1102,7 +1102,7 @@ export default function EmployeeLeads() {
                   </div>
 
                   {/* Budget */}
-                  <div className="space-y-1">
+                  {/* <div className="space-y-1">
                     <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Pipeline Budget (INR)</label>
                     <input
                       type="number"
@@ -1111,11 +1111,11 @@ export default function EmployeeLeads() {
                       placeholder="e.g. 150000"
                       className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] font-mono font-bold"
                     />
-                  </div>
+                  </div> */}
 
                   {/* Close date */}
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Expected Close Date</label>
+                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Next Follow-up Date</label>
                     <input
                       type="date"
                       value={leadForm.expected_close_date}
@@ -1163,7 +1163,6 @@ export default function EmployeeLeads() {
                         onChange={(e) => setLeadForm({ ...leadForm, lead_status: e.target.value })}
                         className="w-full bg-white/3 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
                       >
-                        <option value="new" className="bg-[#13151f]">New</option>
                         <option value="contacted" className="bg-[#13151f]">Contacted</option>
                         <option value="qualified" className="bg-[#13151f]">Qualified</option>
                       </select>

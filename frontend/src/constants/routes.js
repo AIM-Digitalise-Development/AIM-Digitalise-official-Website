@@ -16,6 +16,7 @@ export const ROUTES = {
     DASHBOARD: '/admin',
     USERS: '/admin/users',
     SAAS_CLIENTS: '/admin/saas-clients',
+    PRODUCTS: '/admin/products',
     SETTINGS: '/admin/settings',
     ANALYTICS: '/admin/analytics',
     PARTNERS: '/admin/partners',

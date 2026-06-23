@@ -205,7 +205,7 @@ const subscriptionPlans = [
 ]
 
 const categories = [
-  { id: 'nexgn', label: 'NEXGN SaaS', color: 'green' },
+  { id: 'nexgn', label: 'SAAS BASED CLOUD', color: 'green' },
   { id: 'static', label: 'STATIC', color: 'sky' },
   { id: 'dynamic', label: 'DYNAMIC', color: 'teal' },
   { id: 'ecommerce', label: 'E-COMMERCE', color: 'orange' },
@@ -252,12 +252,29 @@ const MonthlySubscription = () => {
   const [apiError, setApiError] = useState('')
   const [successData, setSuccessData] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [customProcessingFee, setCustomProcessingFee] = useState(0)
+  const [customMonthlySubscription, setCustomMonthlySubscription] = useState(0)
 
   const nameInputRef = useRef(null)
 
   const activePlan = subscriptionPlans.find(plan => plan.id === activePlanId) || subscriptionPlans[0]
   const filteredPlans = subscriptionPlans.filter(plan => plan.category === activeCategory)
   const isInstitutePro = activePlan.id === 15
+
+  useEffect(() => {
+    if (activePlan) {
+      const fee = parseInt(activePlan.securityDeposit.replace(/[^\d]/g, ''), 10) || 0
+      const sub = activePlan.id === 15 ? 0 : (parseInt(activePlan.monthlySubscription.replace(/[^\d]/g, ''), 10) || 0)
+      setCustomProcessingFee(fee)
+      setCustomMonthlySubscription(sub)
+    }
+  }, [activePlanId])
+
+  useEffect(() => {
+    if (isInstitutePro) {
+      setCustomMonthlySubscription(10 * (parseInt(checkoutData.total_students, 10) || 0))
+    }
+  }, [checkoutData.total_students, isInstitutePro])
 
   // Fetch RM partners on mount
   useEffect(() => {
@@ -306,13 +323,6 @@ const MonthlySubscription = () => {
     setApiError('')
     setPaymentStep('processing')
 
-    // Build API payload
-    const processingFeeNum = parseInt(activePlan.securityDeposit.replace(/[^\d]/g, ''), 10) || 0
-    // For Institute Pro the monthly fee is calculated as 10 per student per month
-    const monthlySubscriptionNum = isInstitutePro
-      ? 10 * (parseInt(checkoutData.total_students, 10) || 0)
-      : parseInt(activePlan.monthlySubscription.replace(/[^\d]/g, ''), 10) || 0
-
     const payload = {
       client_name: checkoutData.client_name,
       contact_number: checkoutData.contact_number,
@@ -326,8 +336,8 @@ const MonthlySubscription = () => {
       product_id: activePlan.id,
       product_name: activePlan.name,
       product_category: activePlan.category,
-      processing_fee: processingFeeNum,
-      monthly_subscription: monthlySubscriptionNum,
+      processing_fee: customProcessingFee,
+      monthly_subscription: customMonthlySubscription,
     }
 
     if (isInstitutePro) {
@@ -1122,6 +1132,35 @@ const MonthlySubscription = () => {
                                       required
                                       placeholder="700001"
                                       className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                    />
+                                  </div>
+
+                                  {/* Custom Price Adjustments */}
+                                  <div className="space-y-1">
+                                    <label className="text-[9px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                      One-Time Setup Fee (₹) <span className="text-aim-gold">*</span>
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={customProcessingFee}
+                                      onChange={(e) => setCustomProcessingFee(Number(e.target.value))}
+                                      required
+                                      className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <label className="text-[9px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                      Monthly Subscription (₹) <span className="text-aim-gold">*</span>
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={customMonthlySubscription}
+                                      onChange={(e) => setCustomMonthlySubscription(Number(e.target.value))}
+                                      required
+                                      disabled={isInstitutePro}
+                                      className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold disabled:opacity-50"
                                     />
                                   </div>
 

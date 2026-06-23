@@ -205,7 +205,7 @@ const subscriptionPlans = [
 ]
 
 const categories = [
-  { id: 'nexgn', label: 'NEXGN SaaS', color: 'green' },
+  { id: 'nexgn', label: 'SaaS Based CLOUD', color: 'green' },
   { id: 'static', label: 'STATIC', color: 'sky' },
   { id: 'dynamic', label: 'DYNAMIC', color: 'teal' },
   { id: 'ecommerce', label: 'E-COMMERCE', color: 'orange' },
@@ -244,6 +244,8 @@ const SaasBasedSoftware = () => {
   const initialPlanId = parseInt(queryParams.get('plan'), 10) || 9
   const initialPlan = subscriptionPlans.find(p => p.id === initialPlanId) || subscriptionPlans.find(p => p.id === 9)
 
+  const [products, setProducts] = useState(subscriptionPlans)
+  const [loadingProducts, setLoadingProducts] = useState(true)
   const [activeCategory, setActiveCategory] = useState(initialPlan.category)
   const [activePlanId, setActivePlanId] = useState(initialPlan.id)
 
@@ -253,12 +255,82 @@ const SaasBasedSoftware = () => {
   const [apiError, setApiError] = useState('')
   const [successData, setSuccessData] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [customProcessingFee, setCustomProcessingFee] = useState(0)
+  const [customMonthlySubscription, setCustomMonthlySubscription] = useState(0)
 
   const nameInputRef = useRef(null)
 
-  const activePlan = subscriptionPlans.find(plan => plan.id === activePlanId) || subscriptionPlans[0]
-  const filteredPlans = subscriptionPlans.filter(plan => plan.category === activeCategory)
-  const isInstitutePro = activePlan.id === 15
+  const activePlan = products.find(plan => plan.id === activePlanId) || products[0]
+  const filteredPlans = products.filter(plan => plan.category === activeCategory)
+  const isInstitutePro = activePlan?.id === 15
+
+  // Fetch Subcategories and Products from backend
+  useEffect(() => {
+    setLoadingProducts(true)
+    purchaseApi.fetchSubcategoriesWithProducts()
+      .then(result => {
+        if (result.success && result.data?.length) {
+          const allProducts = []
+
+          const mapCategory = (categoryName, categoryId) => {
+            const name = (categoryName || '').toLowerCase()
+            const id = Number(categoryId)
+            if (name.includes('saas') || name.includes('nexgn') || id === 1) return 'nexgn'
+            if (name.includes('static') || id === 2) return 'static'
+            if (name.includes('dynamic') || id === 3) return 'dynamic'
+            if (name.includes('e-commerce') || name.includes('ecommerce') || id === 4) return 'ecommerce'
+            if (name.includes('mobile') || name.includes('android') || name.includes('ios') || id === 5) return 'mobile'
+            return 'nexgn'
+          }
+
+          const formatSecurityDeposit = (fee) => `₹${fee}/-`
+          const formatMonthlySubscription = (sub, perPerson) => {
+            if (perPerson === true || perPerson === 1) return `₹${sub}/-/student/month`
+            return `₹${sub}/-`
+          }
+
+          result.data.forEach(sub => {
+            if (sub.products && Array.isArray(sub.products)) {
+              sub.products.forEach(p => {
+                allProducts.push({
+                  ...p,
+                  category: mapCategory(p.category_name || sub.category_name, p.category_id || sub.category_id),
+                  categoryLabel: (p.category_name || sub.category_name || '').toUpperCase(),
+                  securityDeposit: formatSecurityDeposit(p.processing_fee),
+                  monthlySubscription: formatMonthlySubscription(p.monthly_subscription, p.per_person),
+                })
+              })
+            }
+          })
+
+          if (allProducts.length) {
+            setProducts(allProducts)
+            const queryParams = new URLSearchParams(window.location.search)
+            const paramId = parseInt(queryParams.get('plan'), 10)
+            const matched = allProducts.find(p => p.id === paramId) || allProducts.find(p => p.id === 9) || allProducts[0]
+            if (matched) {
+              setActivePlanId(matched.id)
+              setActiveCategory(matched.category)
+            }
+          }
+        }
+      })
+      .catch(err => console.error('Failed to load products from API:', err))
+      .finally(() => setLoadingProducts(false))
+  }, [])
+
+  useEffect(() => {
+    if (activePlan) {
+      setCustomProcessingFee(activePlan.processing_fee || 0)
+      setCustomMonthlySubscription(activePlan.id === 15 ? 0 : (activePlan.monthly_subscription || 0))
+    }
+  }, [activePlanId, activePlan])
+
+  useEffect(() => {
+    if (isInstitutePro && activePlan) {
+      setCustomMonthlySubscription((activePlan.monthly_subscription || 10) * (parseInt(checkoutData.total_students, 10) || 0))
+    }
+  }, [checkoutData.total_students, isInstitutePro, activePlan])
 
   useEffect(() => {
     purchaseApi.fetchPartners()
@@ -273,7 +345,7 @@ const SaasBasedSoftware = () => {
 
   const handleCategoryChange = (catId) => {
     setActiveCategory(catId)
-    const firstPlan = subscriptionPlans.find(plan => plan.category === catId)
+    const firstPlan = products.find(plan => plan.category === catId)
     if (firstPlan) setActivePlanId(firstPlan.id)
   }
 
@@ -304,11 +376,6 @@ const SaasBasedSoftware = () => {
     setApiError('')
     setPaymentStep('processing')
 
-    const processingFeeNum = parseInt(activePlan.securityDeposit.replace(/[^\d]/g, ''), 10) || 0
-    const monthlySubscriptionNum = isInstitutePro
-      ? 10 * (parseInt(checkoutData.total_students, 10) || 0)
-      : parseInt(activePlan.monthlySubscription.replace(/[^\d]/g, ''), 10) || 0
-
     const payload = {
       client_name: checkoutData.client_name,
       contact_number: checkoutData.contact_number,
@@ -321,8 +388,8 @@ const SaasBasedSoftware = () => {
       product_id: activePlan.id,
       product_name: activePlan.name,
       product_category: activePlan.category,
-      processing_fee: processingFeeNum,
-      monthly_subscription: monthlySubscriptionNum,
+      processing_fee: customProcessingFee,
+      monthly_subscription: customMonthlySubscription,
     }
 
     if (isInstitutePro) {
@@ -447,6 +514,11 @@ const SaasBasedSoftware = () => {
         <meta name="keywords" content="saas website, saas software, dynamic website price, saas software billing, android mobile app development, e-commerce website packages, India" />
         <link rel="canonical" href="https://aimdigitalise.com/saas-software" />
       </Helmet>
+      <div className="flex items-center justify-center py-[0]"> 
+             <img src={nexgnLogo} alt="NEXGN Logo" className="h-36 w-auto object-contain" />
+             
+      </div>
+
 
       <div className="relative min-h-screen text-aim-copy py-12 px-4 sm:px-6 lg:px-8 bg-grid-pattern transition-colors duration-300">
         
@@ -470,14 +542,7 @@ const SaasBasedSoftware = () => {
             </div>
 
             {/* Slogan Banner */}
-            <div className="w-full card-elevated p-4 rounded-xl max-w-4xl mx-auto transition-colors duration-300">
-              <h2 className="text-xs sm:text-sm md:text-base font-bold text-aim-copy tracking-wide uppercase">
-                INDIA'S 1st SAAS-BASED WEBSITE &amp; SOFTWARE PROVIDER WITH{' '}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-aim-gold via-aim-purple to-aim-gold font-extrabold">
-                  100% DATA SECURITY &amp; OWNERSHIP
-                </span>
-              </h2>
-            </div>
+            
           </div>
 
           {/* MAIN GRID BLOCK */}
@@ -1116,6 +1181,35 @@ const SaasBasedSoftware = () => {
                                       />
                                     </div>
                                   )}
+
+                                  {/* Custom Price Adjustments */}
+                                  <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                      One-Time Setup Fee (₹) <span className="text-aim-gold">*</span>
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={customProcessingFee}
+                                      onChange={(e) => setCustomProcessingFee(Number(e.target.value))}
+                                      required
+                                      className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                    />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                      Monthly Subscription (₹) <span className="text-aim-gold">*</span>
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={customMonthlySubscription}
+                                      onChange={(e) => setCustomMonthlySubscription(Number(e.target.value))}
+                                      required
+                                      disabled={isInstitutePro}
+                                      className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold disabled:opacity-50"
+                                    />
+                                  </div>
 
                                   {/* Select Relationship Manager */}
                                   <div className="space-y-1.5 sm:col-span-2">

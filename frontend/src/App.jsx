@@ -29,6 +29,7 @@ import GeneralLogin from './pages/website/GeneralLogin'
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminUsers from './pages/admin/Users'
 import AdminSaasClients from './pages/admin/SaasClients'
+import AdminProducts from './pages/admin/Products'
 import AdminSettings from './pages/admin/Settings'
 import AdminAnalytics from './pages/admin/Analytics'
 import AdminPartners from './pages/admin/Partners'
@@ -113,6 +114,7 @@ function App() {
             <Route index element={<AdminDashboard />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="saas-clients" element={<AdminSaasClients />} />
+            <Route path="products" element={<AdminProducts />} />
             <Route path="settings" element={<AdminSettings />} />
             <Route path="analytics" element={<AdminAnalytics />} />
             <Route path="partners" element={<AdminPartners />} />
