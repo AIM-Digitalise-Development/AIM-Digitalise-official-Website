@@ -102,11 +102,18 @@ const EmployeeDetailsDrawer = ({ employee, onClose }) => {
           <SectionBlock icon="💼" title="Employment">
             <DetailRow label="Department" value={employee.department?.name} />
             <DetailRow label="Designation" value={employee.designation?.name} />
+            <DetailRow label="Employment Type" value={
+              employee.employment_type === 'full_time' ? 'Full Time' :
+              employee.employment_type === 'part_time' ? 'Part Time' :
+              employee.employment_type === 'contractual' ? 'Contractual' :
+              employee.employment_type || '—'
+            } />
             <DetailRow label="Joining Date" value={formatDate(employee.joining_date)} />
             <DetailRow label="Confirmation" value={formatDate(employee.confirmation_date)} />
             <DetailRow label="Salary" value={employee.current_salary ? `₹${Number(employee.current_salary).toLocaleString('en-IN')}` : '—'} />
             <DetailRow label="Office Hours" value={`${employee.office_start_time || '09:00'} — ${employee.office_end_time || '18:00'}`} />
           </SectionBlock>
+
 
           {/* Previous Company */}
           {employee.last_company_name && (

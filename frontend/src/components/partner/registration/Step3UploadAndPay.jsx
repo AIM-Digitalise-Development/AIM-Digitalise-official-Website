@@ -26,7 +26,7 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
   const [signedFile, setSignedFile] = useState(null)
   const [fileError, setFileError] = useState('')
   const [currency, setCurrency] = useState('INR')
-  const [amount, setAmount] = useState(1000)
+  const [amount, setAmount] = useState(1)
   const [status, setStatus] = useState('') // progress message
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
