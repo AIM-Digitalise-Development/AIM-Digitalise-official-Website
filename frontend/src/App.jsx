@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { HelmetProvider } from 'react-helmet-async'
 import RootLayout from './layouts/RootLayout'
 import WebsiteLayout from './layouts/WebsiteLayout'
@@ -13,6 +13,7 @@ import EmployeeSupport from './pages/employee/Support'
 import EmployeeProfile from './pages/employee/Profile'
 import EmployeePunchIn from './pages/employee/PunchIn'
 import EmployeeLeads from './pages/employee/Leads'
+import EmployeeDemoSlots from './pages/employee/DemoSlots'
 import Home from './pages/website/Home'
 import About from './pages/website/About'
 import Contact from './pages/website/Contact'
@@ -31,6 +32,7 @@ import AdminUsers from './pages/admin/Users'
 import AdminSaasClients from './pages/admin/SaasClients'
 import AdminProducts from './pages/admin/Products'
 import AdminSettings from './pages/admin/Settings'
+import AdminSubscribedClients from './pages/admin/SubscribedClients'
 import AdminAnalytics from './pages/admin/Analytics'
 import AdminPartners from './pages/admin/Partners'
 import AdminSupport from './pages/admin/Support'
@@ -114,8 +116,9 @@ function App() {
             <Route index element={<AdminDashboard />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="saas-clients" element={<AdminSaasClients />} />
-            <Route path="products" element={<AdminProducts />} />
+            <Route path="products" element={<Navigate to="/admin/settings" replace />} />
             <Route path="settings" element={<AdminSettings />} />
+            <Route path="subscribed-clients" element={<AdminSubscribedClients />} />
             <Route path="analytics" element={<AdminAnalytics />} />
             <Route path="partners" element={<AdminPartners />} />
             <Route path="support" element={<AdminSupport />} />
@@ -140,6 +143,7 @@ function App() {
             <Route path="punch-in" element={<EmployeePunchIn />} />
             <Route path="profile" element={<EmployeeProfile />} />
             <Route path="leads" element={<EmployeeLeads />} />
+            <Route path="demo" element={<EmployeeDemoSlots />} />
           </Route>
 
           {/* ── Partner auth pages (standalone, no header/footer) ── */}

@@ -44,8 +44,7 @@ const AdminLayout = () => {
   const menuItems = [
     { route: ROUTES.ADMIN.DASHBOARD, label: 'Dashboard', icon: 'dashboard', color: '#10b981' },
     { route: ROUTES.ADMIN.SAAS_CLIENTS, label: 'SaaS Based Client', icon: 'clients', color: '#38b34a' },
-    { route: ROUTES.ADMIN.PRODUCTS, label: 'Products', icon: 'products', color: '#ff6600' },
-    { route: ROUTES.ADMIN.SETTINGS, label: 'Subscribed Client', icon: 'subscription', color: '#ef4444' },
+    { route: ROUTES.ADMIN.SUBSCRIBED_CLIENTS, label: 'Subscribed Client', icon: 'subscription', color: '#ef4444' },
     { route: ROUTES.ADMIN.USERS, label: 'General Client', icon: 'general_client', color: '#f97316' },
     { route: ROUTES.ADMIN.ANALYTICS, label: 'Accounts', icon: 'accounts', color: '#ec4899' },
     { route: ROUTES.ADMIN.EMPLOYEE, label: 'Employee', icon: 'employee', color: '#3b82f6' },
@@ -109,19 +108,18 @@ const AdminLayout = () => {
 
   return (
     <div className="h-screen w-screen bg-[#eaecf4] flex select-none overflow-hidden">
-      
+
       {/* Mobile backdrop */}
       {isSidebarOpen && (
-        <div 
-          onClick={() => setIsSidebarOpen(false)} 
+        <div
+          onClick={() => setIsSidebarOpen(false)}
           className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
         />
       )}
 
       {/* Sidebar — fixed height, no scroll on the aside itself */}
-      <aside className={`w-56 shrink-0 bg-[#b0b2ba] border-r border-slate-300/60 flex flex-col shadow-lg fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-full ${
-        isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
+      <aside className={`w-56 shrink-0 bg-[#b0b2ba] border-r border-slate-300/60 flex flex-col shadow-lg fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-full ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}>
 
         {/* ── STICKY TOP: Logo + ADMIN badge ── */}
         <div className="shrink-0 p-3 pb-2">
@@ -162,11 +160,10 @@ const AdminLayout = () => {
                     setIsSidebarOpen(false)
                   }
                 }}
-                className={`${commonClasses} ${
-                  isActive
+                className={`${commonClasses} ${isActive
                     ? 'bg-white border-slate-200 text-[#38b34a] shadow-slate-400/20 font-bold'
                     : 'bg-[#f3f4f6]/95 border-slate-200/30 text-slate-700 hover:border-slate-300 hover:bg-white transition-all font-semibold'
-                }`}
+                  }`}
               >
                 {/* Active navigation left border arc style */}
                 {isActive ? (
@@ -210,12 +207,12 @@ const AdminLayout = () => {
 
       {/* Main Content Area with Isolated Scroll */}
       <div className="flex-grow flex flex-col min-w-0 bg-[#f3f5fa] h-full overflow-hidden">
-        
+
         {/* Sticky Top Header Bar */}
         <header className="bg-white border-b border-slate-200/80 px-4 sm:px-6 py-4 flex items-center justify-between shadow-sm sticky top-0 z-10 shrink-0">
           <div className="flex items-center gap-2 sm:gap-3.5 min-w-0">
             {/* Hamburger button */}
-            <button 
+            <button
               onClick={() => setIsSidebarOpen(true)}
               className="p-2 hover:bg-slate-50 rounded-lg text-slate-500 cursor-pointer transition-colors active:scale-95 lg:hidden shrink-0"
             >
@@ -228,8 +225,9 @@ const AdminLayout = () => {
                 if (location.pathname === ROUTES.ADMIN.DASHBOARD) return "Welcome back! Here's your business overview for June 2026."
                 if (location.pathname === ROUTES.ADMIN.USERS) return "Manage your client accounts."
                 if (location.pathname === ROUTES.ADMIN.SAAS_CLIENTS) return "Manage SaaS clients and deliveries."
+                if (location.pathname === ROUTES.ADMIN.SUBSCRIBED_CLIENTS) return "Manage client subscriptions, customization requests, and payment reports."
                 if (location.pathname === ROUTES.ADMIN.PRODUCTS) return "Manage your products, categories, sub-categories, and discounts."
-                if (location.pathname === ROUTES.ADMIN.SETTINGS) return "Manage client subscriptions, customization requests, and payment reports."
+                if (location.pathname === ROUTES.ADMIN.SETTINGS) return "Manage your products, categories, sub-categories, and discounts."
                 if (location.pathname === ROUTES.ADMIN.ANALYTICS) return "Manage financial records and statements."
                 if (location.pathname === ROUTES.ADMIN.PARTNERS) return "Manage partner accounts and sales."
                 if (location.pathname === ROUTES.ADMIN.EMPLOYEE) return "Manage your employees, attendance, leave, and payroll."

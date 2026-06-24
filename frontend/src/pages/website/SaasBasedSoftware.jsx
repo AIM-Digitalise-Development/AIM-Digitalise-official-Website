@@ -514,20 +514,20 @@ const SaasBasedSoftware = () => {
         <meta name="keywords" content="saas website, saas software, dynamic website price, saas software billing, android mobile app development, e-commerce website packages, India" />
         <link rel="canonical" href="https://aimdigitalise.com/saas-software" />
       </Helmet>
-      <div className="flex items-center justify-center py-[0]"> 
-             <img src={nexgnLogo} alt="NEXGN Logo" className="h-36 w-auto object-contain" />
-             
+      <div className="flex items-center justify-center py-[0]">
+        <img src={nexgnLogo} alt="NEXGN Logo" className="h-36 w-auto object-contain" />
+
       </div>
 
 
-      <div className="relative min-h-screen text-aim-copy py-12 px-4 sm:px-6 lg:px-8 bg-grid-pattern transition-colors duration-300">
-        
+      <div className="relative min-h-screen text-aim-copy py-1 px-4 sm:px-6 lg:px-8 bg-grid-pattern transition-colors duration-300">
+
         {/* Ambient Halos */}
         <div className="absolute top-10 left-1/4 w-[400px] h-[400px] bg-aim-gold/5 dark:bg-aim-gold/10 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute bottom-20 right-1/4 w-[400px] h-[400px] bg-aim-purple/5 dark:bg-aim-purple/10 rounded-full blur-3xl pointer-events-none"></div>
 
         <div className="max-w-6xl mx-auto space-y-10 relative z-10">
-          
+
           {/* Header & Slogan Block */}
           <div className="text-center space-y-6">
             <div className="space-y-2">
@@ -542,12 +542,12 @@ const SaasBasedSoftware = () => {
             </div>
 
             {/* Slogan Banner */}
-            
+
           </div>
 
           {/* MAIN GRID BLOCK */}
           <div className="space-y-6">
-            
+
             {/* 1. Horizontal Category Nav Tabs */}
             <div className="flex flex-wrap justify-center gap-2 max-w-4xl mx-auto p-1.5 rounded-2xl card-elevated transition-colors duration-300">
               {categories.map((cat) => (
@@ -563,10 +563,10 @@ const SaasBasedSoftware = () => {
 
             {/* 2. Interactive Split Pane Layout */}
             <div className="grid lg:grid-cols-12 gap-6 items-start">
-              
+
               {/* LEFT COLUMN: FILTERED PLANS LIST + TRUST WIDGET (4 columns) */}
               <div className="lg:col-span-5 flex flex-col gap-5 justify-start">
-                
+
                 {/* Selector Card */}
                 <div className="card-elevated rounded-2xl p-4 sm:p-5 space-y-4 transition-colors duration-300">
                   <div className="flex justify-between items-center pb-3 border-b border-aim-border">
@@ -580,8 +580,8 @@ const SaasBasedSoftware = () => {
 
                   {/* NEXGN SaaS Logo Header shown only in SaaS tab */}
                   {activeCategory === 'nexgn' && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: -5 }} 
+                    <motion.div
+                      initial={{ opacity: 0, y: -5 }}
                       animate={{ opacity: 1, y: 0 }}
                       className="flex flex-col items-center py-2.5 px-3 bg-aim-navy-muted/10 rounded-xl border border-aim-border text-center select-none"
                     >
@@ -597,15 +597,13 @@ const SaasBasedSoftware = () => {
                       <button
                         key={plan.id}
                         onClick={() => handlePlanSelect(plan.id)}
-                        className={`w-full flex items-center gap-3.5 p-3.5 text-left rounded-xl border text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer ${
-                          activePlanId === plan.id
+                        className={`w-full flex items-center gap-3.5 p-3.5 text-left rounded-xl border text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer ${activePlanId === plan.id
                             ? getCategoryButtonActiveStyles(activeCategory)
                             : 'card-elevated text-aim-copy-muted hover:text-aim-gold hover:bg-aim-gold/5'
-                        }`}
+                          }`}
                       >
-                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 transition-colors ${
-                          getCategoryNumberStyles(activeCategory, activePlanId === plan.id)
-                        }`}>
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 transition-colors ${getCategoryNumberStyles(activeCategory, activePlanId === plan.id)
+                          }`}>
                           {plan.id}
                         </span>
                         <span className="line-clamp-2 leading-snug">{plan.name}</span>
@@ -665,10 +663,10 @@ const SaasBasedSoftware = () => {
 
                   <div className="pt-2 border-t border-aim-border flex justify-between items-center text-[11px] text-aim-copy-muted font-semibold">
                     <span>Need Custom Portals?</span>
-                    <a 
-                      href="https://wa.me/916290902922" 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
+                    <a
+                      href="https://wa.me/916290902922"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 transition flex items-center gap-1 font-bold"
                     >
                       <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
@@ -684,7 +682,7 @@ const SaasBasedSoftware = () => {
               {/* RIGHT COLUMN: DETAIL VIEWER PANEL (7 columns) */}
               <div className="lg:col-span-7">
                 <div className="card-elevated rounded-3xl overflow-hidden h-full flex flex-col justify-between transition-colors duration-300">
-                  
+
                   {/* Content area */}
                   <div className="p-6 sm:p-8 space-y-6 flex-grow">
                     <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-aim-border">
@@ -712,7 +710,7 @@ const SaasBasedSoftware = () => {
 
                     {/* Detail blocks */}
                     <div className="space-y-5 text-sm leading-relaxed">
-                      
+
                       {/* Description */}
                       <div className="space-y-1">
                         <h4 className="text-xs font-black text-aim-gold uppercase tracking-widest flex items-center gap-1.5">
@@ -767,7 +765,7 @@ const SaasBasedSoftware = () => {
                       >
                         Activate Your Plan
                       </Button>
-                      
+
                       <div className="flex gap-6 items-center">
                         <a
                           href="#"
@@ -935,7 +933,7 @@ const SaasBasedSoftware = () => {
                             </h3>
                             <p className="text-xs text-aim-copy-muted mt-0.5">
                               One-Time Setup Fee: <span className="font-black text-aim-gold">{activePlan.securityDeposit}</span>
-                              &nbsp;·&nbsp;Then {isInstitutePro 
+                              &nbsp;·&nbsp;Then {isInstitutePro
                                 ? `₹${(10 * (parseInt(checkoutData.total_students, 10) || 0)).toLocaleString('en-IN')}/mo (${checkoutData.total_students || 0} students)`
                                 : (activePlan.monthlySubscription.startsWith('₹') ? '' : '₹') + activePlan.monthlySubscription + (activePlan.monthlySubscription.includes('month') ? '' : '/mo')
                               }

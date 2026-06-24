@@ -41,7 +41,7 @@ const EMPTY_CATEGORY    = { name: '', description: '', is_active: true }
 const EMPTY_SUBCATEGORY = { name: '', category_id: '', description: '', is_active: true }
 const EMPTY_DISCOUNTS   = { monthly_discount: 0, quarterly_discount: 0, half_yearly_discount: 0, annual_discount: 0 }
 
-const AdminProducts = () => {
+const AdminProducts = ({ isEmbedded = false }) => {
   // ── Flash ─────────────────────────────────────────────────────────────────
   const [error,      setError]      = useState(null)
   const [successMsg, setSuccessMsg] = useState(null)
@@ -310,7 +310,9 @@ const AdminProducts = () => {
 
   return (
     <>
-      <Helmet><title>Products &amp; Pricing | Admin Panel</title></Helmet>
+      {!isEmbedded && (
+        <Helmet><title>Products &amp; Pricing | Admin Panel</title></Helmet>
+      )}
 
       {/* ══ PRODUCT MODAL ════════════════════════════════════════════════════════ */}
       {showProductModal && (
@@ -503,25 +505,27 @@ const AdminProducts = () => {
       {/* ══ PAGE BODY ═════════════════════════════════════════════════════════════ */}
       <div className="space-y-6 select-none text-slate-700 animate-fade-in">
         {/* Header */}
-        <div className="relative flex flex-col md:flex-row md:items-center justify-between pb-3 gap-3 min-h-[48px]">
-          <h1 className="text-3xl font-black text-[#1e3e6b] tracking-tight">Products &amp; Pricing</h1>
-          <div className="text-center md:absolute md:left-1/2 md:-translate-x-1/2">
-            <h2 className="text-lg font-extrabold text-[#1e3e6b]">AIM Digitalise pvt. ltd.</h2>
-            <p className="text-xs font-bold text-slate-500">Financial Year: 2026-2027</p>
+        {!isEmbedded && (
+          <div className="relative flex flex-col md:flex-row md:items-center justify-between pb-3 gap-3 min-h-[48px]">
+            <h1 className="text-3xl font-black text-[#1e3e6b] tracking-tight">Products &amp; Pricing</h1>
+            <div className="text-center md:absolute md:left-1/2 md:-translate-x-1/2">
+              <h2 className="text-lg font-extrabold text-[#1e3e6b]">AIM Digitalise pvt. ltd.</h2>
+              <p className="text-xs font-bold text-slate-500">Financial Year: 2026-2027</p>
+            </div>
+            <div className="w-40 flex justify-end">
+              <button onClick={() => { fetchProducts(); fetchCategories(); fetchSubCategories() }} disabled={productsLoading} className="px-4 py-2 border border-slate-200 hover:border-[#38b34a] hover:text-[#38b34a] bg-white rounded-xl text-xs font-bold disabled:opacity-50 cursor-pointer shadow-sm">
+                {productsLoading ? 'Loading...' : '↺ Refresh All'}
+              </button>
+            </div>
           </div>
-          <div className="w-40 flex justify-end">
-            <button onClick={() => { fetchProducts(); fetchCategories(); fetchSubCategories() }} disabled={productsLoading} className="px-4 py-2 border border-slate-200 hover:border-[#38b34a] hover:text-[#38b34a] bg-white rounded-xl text-xs font-bold disabled:opacity-50 cursor-pointer shadow-sm">
-              {productsLoading ? 'Loading...' : '↺ Refresh All'}
-            </button>
-          </div>
-        </div>
+        )}
 
         {/* Flash messages */}
         {error      && <div className="p-3 rounded-xl border border-red-400/20 bg-red-50 text-red-600 text-sm font-semibold flex items-center gap-2">⚠️ {error}</div>}
         {successMsg && <div className="p-3 rounded-xl border border-emerald-400/20 bg-emerald-50 text-emerald-700 text-sm font-semibold flex items-center gap-2">✅ {successMsg}</div>}
 
         {/* Main card */}
-        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-md p-6">
+        <div className={isEmbedded ? "" : "bg-white rounded-3xl border border-slate-200/80 shadow-md p-6"}>
           {/* Tabs */}
           <div className="flex flex-wrap items-center gap-1 border-b border-slate-200/60 pb-3 mb-6">
             {[

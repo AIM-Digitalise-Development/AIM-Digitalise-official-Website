@@ -27,6 +27,7 @@ export default function EmployeeLeads() {
   const [priorityFilter, setPriorityFilter] = useState('')
   const [followUpToday, setFollowUpToday] = useState(false)
   const [pendingFollowUp, setPendingFollowUp] = useState(false)
+  const [todayDemo, setTodayDemo] = useState(false)
   const [page, setPage] = useState(1)
 
   // Selection state for Bulk Actions
@@ -117,7 +118,8 @@ export default function EmployeeLeads() {
         status: statusFilter || undefined,
         priority: priorityFilter || undefined,
         follow_up_today: followUpToday || undefined,
-        pending_follow_up: pendingFollowUp || undefined
+        pending_follow_up: pendingFollowUp || undefined,
+        today_demo: todayDemo || undefined
       }
       const res = await getLeads(params)
       if (res.data?.success) {
@@ -133,7 +135,7 @@ export default function EmployeeLeads() {
 
   useEffect(() => {
     loadLeads()
-  }, [search, statusFilter, priorityFilter, followUpToday, pendingFollowUp, page])
+  }, [search, statusFilter, priorityFilter, followUpToday, pendingFollowUp, todayDemo, page])
 
   useEffect(() => {
     loadStats()
@@ -197,7 +199,7 @@ export default function EmployeeLeads() {
       notes: lead.notes || '',
       product_interest: lead.product_interest || 'Institute Pro',
       budget: lead.budget || '',
-      expected_close_date: lead.expected_close_date || ''
+      expected_close_date: lead.follow_up_date ? lead.follow_up_date.split(' ')[0] : (lead.expected_close_date || '')
     })
     setIsCreateEditOpen(true)
   }
@@ -206,11 +208,15 @@ export default function EmployeeLeads() {
     e.preventDefault()
     try {
       setSaving(true)
+      const payload = {
+        ...leadForm,
+        follow_up_date: leadForm.expected_close_date || null
+      }
       if (editingLead) {
-        await updateLead(editingLead.id, leadForm)
+        await updateLead(editingLead.id, payload)
         triggerSuccess('Lead updated successfully.')
       } else {
-        await createLead(leadForm)
+        await createLead(payload)
         triggerSuccess('Lead created successfully.')
       }
       setIsCreateEditOpen(false)
@@ -431,44 +437,102 @@ export default function EmployeeLeads() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-[#1a1d2b] to-[#1e2235] border border-white/5 p-4 rounded-2xl flex items-center justify-between">
+        {/* Today's Follow-up */}
+        <button
+          onClick={() => {
+            setFollowUpToday(!followUpToday)
+            setPendingFollowUp(false)
+            setTodayDemo(false)
+            if (statusFilter === 'converted') setStatusFilter('')
+            setPage(1)
+          }}
+          className={`bg-gradient-to-br from-[#1a1d2b] to-[#1e2235] p-4 rounded-2xl flex items-center justify-between transition-all duration-200 text-left border hover:scale-[1.02] active:scale-95 cursor-pointer ${
+            followUpToday
+              ? 'border-amber-500 shadow-lg shadow-amber-500/10 scale-[1.02]'
+              : 'border-white/5 hover:border-white/10'
+          }`}
+        >
           <div>
-            <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">Pipeline Total</p>
+            <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">Today's Follow-up</p>
             <p className="text-2xl font-black text-white mt-1 leading-none">
-              {statsLoading ? '...' : stats?.summary?.total_leads || 0}
+              {statsLoading ? '...' : stats?.follow_ups?.today || 0}
             </p>
           </div>
-          <span className="text-2xl">📋</span>
-        </div>
-        <div className="bg-gradient-to-br from-[#1a1d2b] to-[#1e2235] border border-white/5 p-4 rounded-2xl flex items-center justify-between">
+          <span className="text-2xl">📅</span>
+        </button>
+
+        {/* Pending Follow-up */}
+        <button
+          onClick={() => {
+            setPendingFollowUp(!pendingFollowUp)
+            setFollowUpToday(false)
+            setTodayDemo(false)
+            if (statusFilter === 'converted') setStatusFilter('')
+            setPage(1)
+          }}
+          className={`bg-gradient-to-br from-[#1a1d2b] to-[#1e2235] p-4 rounded-2xl flex items-center justify-between transition-all duration-200 text-left border hover:scale-[1.02] active:scale-95 cursor-pointer ${
+            pendingFollowUp
+              ? 'border-red-500 shadow-lg shadow-red-500/10 scale-[1.02]'
+              : 'border-white/5 hover:border-white/10'
+          }`}
+        >
           <div>
-            <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">Active Pipelines</p>
-            <p className="text-2xl font-black text-[#38b34a] mt-1 leading-none">
-              {statsLoading ? '...' : stats?.summary?.active_leads || 0}
+            <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">Pending Follow-up</p>
+            <p className="text-2xl font-black text-white mt-1 leading-none">
+              {statsLoading ? '...' : stats?.follow_ups?.pending || 0}
             </p>
           </div>
-          <span className="text-2xl">⚡</span>
-        </div>
-        <div className="bg-gradient-to-br from-[#1a1d2b] to-[#1e2235] border border-white/5 p-4 rounded-2xl flex items-center justify-between">
+          <span className="text-2xl">⚠️</span>
+        </button>
+
+        {/* Today's Demo */}
+        <button
+          onClick={() => {
+            setTodayDemo(!todayDemo)
+            setFollowUpToday(false)
+            setPendingFollowUp(false)
+            if (statusFilter === 'converted') setStatusFilter('')
+            setPage(1)
+          }}
+          className={`bg-gradient-to-br from-[#1a1d2b] to-[#1e2235] p-4 rounded-2xl flex items-center justify-between transition-all duration-200 text-left border hover:scale-[1.02] active:scale-95 cursor-pointer ${
+            todayDemo
+              ? 'border-cyan-400 shadow-lg shadow-cyan-400/10 scale-[1.02]'
+              : 'border-white/5 hover:border-white/10'
+          }`}
+        >
           <div>
-            <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">Converted Won</p>
-            <p className="text-2xl font-black text-cyan-400 mt-1 leading-none">
+            <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">Today's Demo</p>
+            <p className="text-2xl font-black text-white mt-1 leading-none">
+              {statsLoading ? '...' : stats?.demos?.today || 0}
+            </p>
+          </div>
+          <span className="text-2xl">🤝</span>
+        </button>
+
+        {/* Total Conversion */}
+        <button
+          onClick={() => {
+            setStatusFilter(statusFilter === 'converted' ? '' : 'converted')
+            setFollowUpToday(false)
+            setPendingFollowUp(false)
+            setTodayDemo(false)
+            setPage(1)
+          }}
+          className={`bg-gradient-to-br from-[#1a1d2b] to-[#1e2235] p-4 rounded-2xl flex items-center justify-between transition-all duration-200 text-left border hover:scale-[1.02] active:scale-95 cursor-pointer ${
+            statusFilter === 'converted'
+              ? 'border-green-500 shadow-lg shadow-green-500/10 scale-[1.02]'
+              : 'border-white/5 hover:border-white/10'
+          }`}
+        >
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">Total Conversion</p>
+            <p className="text-2xl font-black text-white mt-1 leading-none">
               {statsLoading ? '...' : stats?.summary?.converted_leads || 0}
             </p>
           </div>
           <span className="text-2xl">🏆</span>
-        </div>
-        <div className="bg-gradient-to-br from-[#1a1d2b] to-[#1e2235] border border-white/5 p-4 rounded-2xl flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">Conversion Rate</p>
-            <p className="text-2xl font-black text-yellow-400 mt-1 leading-none">
-              {statsLoading ? '...' : stats?.summary?.conversion_rate || '0%'}
-            </p>
-          </div>
-          <span className="text-2xl">🎯</span>
-        </div>
+        </button>
       </div>
-
       {/* Follow-up Reminders Alert Block */}
       {!statsLoading && (stats?.follow_ups?.today > 0 || stats?.follow_ups?.pending > 0) && (
         <div className="bg-[#1e2235]/40 border border-amber-500/20 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3">
@@ -476,7 +540,7 @@ export default function EmployeeLeads() {
             <span className="text-xl">⚠️</span>
             <div className="text-left">
               <h4 className="text-xs font-bold text-white">Daily Follow-up Reminders</h4>
-              <p className="text-[11px] text-gray-500 mt-0.5">
+              <p className="text-[11px] text-gray-550 mt-0.5">
                 You have <strong className="text-amber-400">{stats?.follow_ups?.today} follow-ups scheduled today</strong> and <strong className="text-red-400">{stats?.follow_ups?.pending} overdue pending action</strong>.
               </p>
             </div>
@@ -484,7 +548,7 @@ export default function EmployeeLeads() {
           <div className="flex gap-2">
             {stats?.follow_ups?.today > 0 && (
               <button
-                onClick={() => { setFollowUpToday(true); setPendingFollowUp(false); }}
+                onClick={() => { setFollowUpToday(true); setPendingFollowUp(false); setTodayDemo(false); if (statusFilter === 'converted') setStatusFilter(''); setPage(1); }}
                 className="px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 text-amber-400 font-bold rounded-lg text-[10px] transition-all cursor-pointer"
               >
                 Show Today's
@@ -492,8 +556,8 @@ export default function EmployeeLeads() {
             )}
             {stats?.follow_ups?.pending > 0 && (
               <button
-                onClick={() => { setPendingFollowUp(true); setFollowUpToday(false); }}
-                className="px-3 py-1.5 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-400 font-bold rounded-lg text-[10px] transition-all cursor-pointer"
+                onClick={() => { setPendingFollowUp(true); setFollowUpToday(false); setTodayDemo(false); if (statusFilter === 'converted') setStatusFilter(''); setPage(1); }}
+                className="px-3 py-1.5 bg-[#ef4444]/10 border border-[#ef4444]/20 hover:bg-[#ef4444]/20 text-[#ef4444] font-bold rounded-lg text-[10px] transition-all cursor-pointer"
               >
                 Show Pending Overdue
               </button>
@@ -547,9 +611,9 @@ export default function EmployeeLeads() {
           </select>
 
           {/* Quick flags toggles */}
-          {(followUpToday || pendingFollowUp) ? (
+          {(followUpToday || pendingFollowUp || todayDemo) ? (
             <button
-              onClick={() => { setFollowUpToday(false); setPendingFollowUp(false); }}
+              onClick={() => { setFollowUpToday(false); setPendingFollowUp(false); setTodayDemo(false); }}
               className="px-3.5 py-2.5 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-400 font-bold rounded-xl text-xs transition-colors cursor-pointer"
             >
               Clear Filter Flags ✕
@@ -653,7 +717,7 @@ export default function EmployeeLeads() {
                             onClick={() => setSelectedDrawerLead(lead)}
                             className="font-bold text-white text-xs hover:text-[#38b34a] transition-colors leading-none cursor-pointer block"
                           >
-                            {lead.client_name}
+                            {lead.company_name || 'Individual'}
                           </button>
                           <span className="text-[9px] font-bold text-cyan-400 font-mono tracking-wider block mt-1">{lead.lead_id}</span>
                           {lead.created_at && (
@@ -661,7 +725,9 @@ export default function EmployeeLeads() {
                               📅 {new Date(lead.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                             </span>
                           )}
-                          <span className="text-[10px] text-gray-400 font-semibold block mt-0.5">{lead.client_phone}</span>
+                          <span className="text-[10px] text-gray-400 font-semibold block mt-0.5">
+                            👤 {lead.client_name} {lead.client_phone ? `(${lead.client_phone})` : ''}
+                          </span>
                         </div>
                       </td>
 
@@ -1142,32 +1208,22 @@ export default function EmployeeLeads() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Lead Priority</label>
+                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Lead Status</label>
                     <select
-                      value={leadForm.lead_priority}
-                      onChange={(e) => setLeadForm({ ...leadForm, lead_priority: e.target.value })}
+                      value={leadForm.lead_status}
+                      onChange={(e) => setLeadForm({ ...leadForm, lead_status: e.target.value })}
                       className="w-full bg-white/3 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
                     >
-                      <option value="low" className="bg-[#13151f]">Low</option>
-                      <option value="medium" className="bg-[#13151f]">Medium</option>
-                      <option value="high" className="bg-[#13151f]">High</option>
-                      <option value="urgent" className="bg-[#13151f]">Urgent</option>
+                      <option value="new" className="bg-[#13151f]">New</option>
+                      <option value="contacted" className="bg-[#13151f]">Contacted</option>
+                      <option value="qualified" className="bg-[#13151f]">Qualified</option>
+                      <option value="proposal" className="bg-[#13151f]">Proposal</option>
+                      <option value="negotiation" className="bg-[#13151f]">Negotiation</option>
+                      <option value="converted" className="bg-[#13151f]">Converted</option>
+                      <option value="lost" className="bg-[#13151f]">Lost</option>
+                      <option value="junk" className="bg-[#13151f]">Junk</option>
                     </select>
                   </div>
-
-                  {!editingLead && (
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Initial Pipeline Status</label>
-                      <select
-                        value={leadForm.lead_status}
-                        onChange={(e) => setLeadForm({ ...leadForm, lead_status: e.target.value })}
-                        className="w-full bg-white/3 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
-                      >
-                        <option value="contacted" className="bg-[#13151f]">Contacted</option>
-                        <option value="qualified" className="bg-[#13151f]">Qualified</option>
-                      </select>
-                    </div>
-                  )}
 
                   {/* Addressing fields */}
                   <div className="sm:col-span-2 pt-2 border-t border-white/5">

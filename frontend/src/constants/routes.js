@@ -18,6 +18,7 @@ export const ROUTES = {
     SAAS_CLIENTS: '/admin/saas-clients',
     PRODUCTS: '/admin/products',
     SETTINGS: '/admin/settings',
+    SUBSCRIBED_CLIENTS: '/admin/subscribed-clients',
     ANALYTICS: '/admin/analytics',
     PARTNERS: '/admin/partners',
     SUPPORT: '/admin/support',
@@ -29,6 +30,7 @@ export const ROUTES = {
     TASKS: '/employee/tasks',
     TIMESHEET: '/employee/timesheet',
     SUPPORT: '/employee/support',
+    DEMO: '/employee/demo',
   },
   PARTNER: {
     DASHBOARD: '/partner',

@@ -34,6 +34,15 @@ const getLoggedInMockEmployee = () => {
 }
 
 if (typeof window !== 'undefined' && !window.__mockLeads) {
+  const getRelativeDateStr = (offsetDays) => {
+    const d = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000)
+    return d.toISOString().split('T')[0]
+  }
+
+  const todayStr = getRelativeDateStr(0)
+  const tomorrowStr = getRelativeDateStr(1)
+  const yesterdayStr = getRelativeDateStr(-1)
+
   window.__mockLeads = [
     {
       id: 1,
@@ -54,18 +63,21 @@ if (typeof window !== 'undefined' && !window.__mockLeads) {
       lead_priority: "high",
       assigned_to: null,
       assigned_by: null,
-      follow_up_date: "2026-06-23 10:00:00",
-      next_follow_up: "2026-06-23 10:00:00",
+      follow_up_date: `${todayStr} 10:00:00`,
+      next_follow_up: `${todayStr} 10:00:00`,
       notes: "Interested in our enterprise solution",
       remarks: null,
       product_interest: "Institute Pro",
       budget: "1000000.00",
-      expected_close_date: "2026-07-15",
+      expected_close_date: `${todayStr}`,
       conversion_date: null,
       converted_to_client_id: null,
       is_converted: false,
       is_active: true,
       lost_reason: null,
+      demo_status: "scheduled",
+      demo_slot: `${todayStr} 14:00:00`,
+      demo_link: "https://meet.google.com/abc-defg-hij",
       created_at: "2026-06-20T10:30:00.000000Z",
       updated_at: "2026-06-20T10:30:00.000000Z",
       employee: {
@@ -111,18 +123,21 @@ if (typeof window !== 'undefined' && !window.__mockLeads) {
       lead_priority: "urgent",
       assigned_to: null,
       assigned_by: null,
-      follow_up_date: "2026-06-25 10:00:00",
-      next_follow_up: "2026-06-25 10:00:00",
+      follow_up_date: `${tomorrowStr} 10:00:00`,
+      next_follow_up: `${tomorrowStr} 10:00:00`,
       notes: "Looking for custom LMS solution for their school",
       remarks: null,
       product_interest: "Custom Solution",
       budget: "2500000.00",
-      expected_close_date: "2026-08-30",
+      expected_close_date: `${tomorrowStr}`,
       conversion_date: null,
       converted_to_client_id: null,
       is_converted: false,
       is_active: true,
       lost_reason: null,
+      demo_status: "completed",
+      demo_slot: `${yesterdayStr} 11:00:00`,
+      demo_link: "https://meet.google.com/xyz-pdqr-abc",
       created_at: "2026-06-18T14:20:00.000000Z",
       updated_at: "2026-06-20T11:00:00.000000Z",
       employee: {
@@ -168,18 +183,20 @@ if (typeof window !== 'undefined' && !window.__mockLeads) {
       lead_priority: "medium",
       assigned_to: null,
       assigned_by: null,
-      follow_up_date: null,
-      next_follow_up: null,
+      follow_up_date: `${yesterdayStr} 16:30:00`,
+      next_follow_up: `${yesterdayStr} 16:30:00`,
       notes: "Follow up after initial call",
       remarks: null,
       product_interest: "ERP System",
       budget: "1500000.00",
-      expected_close_date: "2026-09-15",
+      expected_close_date: `${yesterdayStr}`,
       conversion_date: null,
       converted_to_client_id: null,
       is_converted: false,
       is_active: true,
       lost_reason: null,
+      demo_status: null,
+      demo_slot: null,
       created_at: "2026-06-19T09:15:00.000000Z",
       updated_at: "2026-06-19T09:15:00.000000Z",
       employee: {
@@ -188,6 +205,134 @@ if (typeof window !== 'undefined' && !window.__mockLeads) {
         full_name: "John Doe"
       },
       activities: []
+    },
+    {
+      id: 4,
+      lead_id: "LEAD2600004",
+      employee_id: 1,
+      client_name: "Delhi Public School",
+      client_email: "contact@dps.edu.in",
+      client_phone: "9876543214",
+      client_alternate_phone: null,
+      company_name: "Delhi Public School",
+      address: "Sector 12, Dwarka, Delhi",
+      city: "Delhi",
+      state: "Delhi",
+      pin_code: "110075",
+      country: "India",
+      lead_source: "Referral",
+      lead_status: "converted",
+      lead_priority: "medium",
+      assigned_to: null,
+      assigned_by: null,
+      follow_up_date: null,
+      next_follow_up: null,
+      notes: "Completed conversion and billing set up.",
+      remarks: null,
+      product_interest: "Institute Pro",
+      budget: "150000.00",
+      expected_close_date: `${yesterdayStr}`,
+      conversion_date: `${todayStr}T09:00:00.000000Z`,
+      converted_to_client_id: 4,
+      is_converted: true,
+      is_active: true,
+      lost_reason: null,
+      demo_status: "completed",
+      demo_slot: `${yesterdayStr} 15:00:00`,
+      demo_link: "https://meet.google.com/dps-demo",
+      created_at: "2026-06-10T11:00:00.000000Z",
+      updated_at: `${todayStr}T09:00:00.000000Z`,
+      employee: {
+        id: 1,
+        employee_id: "AIM260001",
+        full_name: "John Doe"
+      },
+      activities: [
+        {
+          id: 103,
+          lead_id: 4,
+          employee_id: 1,
+          activity_type: "meeting",
+          description: "Final agreement signature and payment review",
+          notes: "Agreement signed, setup complete.",
+          scheduled_date: null,
+          completed_at: `${todayStr}T09:00:00.000000Z`,
+          created_at: `${todayStr}T09:00:00.000000Z`,
+          employee: {
+            id: 1,
+            employee_id: "AIM260001",
+            full_name: "John Doe"
+          }
+        }
+      ]
+    }
+  ]
+}
+
+if (typeof window !== 'undefined' && !window.__mockDemoSlots) {
+  window.__mockDemoSlots = [
+    {
+      id: 1,
+      employee_id: 1,
+      demo_type: 'client',
+      title: 'School ERP Discovery & Demo',
+      timing_from: '10:00',
+      timing_to: '11:00',
+      meeting_link: 'https://meet.google.com/abc-defg-hij',
+      max_attendees: 5,
+      all_days: false,
+      monday: true,
+      tuesday: true,
+      wednesday: true,
+      thursday: true,
+      friday: true,
+      saturday: false,
+      sunday: false,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 2,
+      employee_id: 1,
+      demo_type: 'partner',
+      title: 'Nexgn Premium Partner Training',
+      timing_from: '14:30',
+      timing_to: '15:30',
+      meeting_link: 'https://meet.google.com/xyz-pdqr-abc',
+      max_attendees: 25,
+      all_days: true,
+      monday: true,
+      tuesday: true,
+      wednesday: true,
+      thursday: true,
+      friday: true,
+      saturday: true,
+      sunday: true,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 3,
+      employee_id: 1,
+      demo_type: 'client',
+      title: 'Evening LMS Walkthrough',
+      timing_from: '17:00',
+      timing_to: '18:00',
+      meeting_link: 'https://meet.google.com/dps-demo',
+      max_attendees: 10,
+      all_days: false,
+      monday: false,
+      tuesday: false,
+      wednesday: false,
+      thursday: false,
+      friday: false,
+      saturday: true,
+      sunday: true,
+      is_active: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }
   ]
 }
@@ -339,13 +484,14 @@ export const getMockResponse = (url, method, data = null) => {
       const medium = leadsList.filter(l => l.lead_priority === 'medium').length
       const low = leadsList.filter(l => l.lead_priority === 'low').length
 
-      const todayStr = '2026-06-22'
+      const todayStr = new Date().toISOString().split('T')[0]
       const followUpToday = leadsList.filter(l => l.follow_up_date && l.follow_up_date.startsWith(todayStr)).length
       const pendingFollowUp = leadsList.filter(l => {
         if (!l.follow_up_date) return false
         const dateStr = l.follow_up_date.split(' ')[0]
         return dateStr < todayStr && l.lead_status !== 'converted' && l.lead_status !== 'lost' && l.lead_status !== 'junk'
       }).length
+      const todayDemo = leadsList.filter(l => l.demo_slot && l.demo_slot.startsWith(todayStr)).length
 
       const allActivities = []
       leadsList.forEach(lead => {
@@ -390,6 +536,9 @@ export const getMockResponse = (url, method, data = null) => {
           follow_ups: {
             today: followUpToday,
             pending: pendingFollowUp
+          },
+          demos: {
+            today: todayDemo
           },
           recent_activities: allActivities.slice(0, 10)
         }
@@ -617,6 +766,8 @@ export const getMockResponse = (url, method, data = null) => {
 
       window.__mockLeads = leadsList.map(l => {
         if (l.id === leadId) {
+          const isStatusChanged = data.lead_status !== undefined && data.lead_status !== l.lead_status
+          const newStatus = data.lead_status !== undefined ? data.lead_status : l.lead_status
           const updatedLead = {
             ...l,
             client_name: data.client_name || l.client_name,
@@ -631,10 +782,30 @@ export const getMockResponse = (url, method, data = null) => {
             country: data.country || l.country,
             lead_source: data.lead_source || l.lead_source,
             lead_priority: data.lead_priority || l.lead_priority,
+            lead_status: newStatus,
+            is_converted: newStatus === 'converted' ? true : (data.lead_status !== undefined ? false : l.is_converted),
+            conversion_date: newStatus === 'converted' ? new Date().toISOString() : (data.lead_status !== undefined ? null : l.conversion_date),
             budget: data.budget !== undefined ? String(data.budget) : l.budget,
             expected_close_date: data.expected_close_date !== undefined ? data.expected_close_date : l.expected_close_date,
+            follow_up_date: data.follow_up_date !== undefined ? data.follow_up_date : (data.expected_close_date !== undefined ? data.expected_close_date : l.follow_up_date),
+            next_follow_up: data.follow_up_date !== undefined ? data.follow_up_date : (data.expected_close_date !== undefined ? data.expected_close_date : l.next_follow_up),
             notes: data.notes || l.notes,
             updated_at: new Date().toISOString()
+          }
+          if (isStatusChanged) {
+            if (!updatedLead.activities) updatedLead.activities = []
+            updatedLead.activities.unshift({
+              id: Math.floor(Math.random() * 100000),
+              lead_id: l.id,
+              employee_id: getLoggedInMockEmployee().id,
+              activity_type: 'note',
+              description: `Status updated to ${newStatus.toUpperCase()}`,
+              notes: `Lead status changed to ${newStatus} via lead edit.`,
+              scheduled_date: null,
+              completed_at: new Date().toISOString(),
+              created_at: new Date().toISOString(),
+              employee: getLoggedInMockEmployee()
+            })
           }
           updated = updatedLead
           return updatedLead
@@ -651,6 +822,7 @@ export const getMockResponse = (url, method, data = null) => {
             lead_id: updated.lead_id,
             client_name: updated.client_name,
             lead_priority: updated.lead_priority,
+            lead_status: updated.lead_status,
             budget: updated.budget,
             notes: updated.notes
           }
@@ -664,6 +836,7 @@ export const getMockResponse = (url, method, data = null) => {
     if (method === 'POST') {
       const newId = leadsList.length > 0 ? Math.max(...leadsList.map(l => l.id)) + 1 : 1
       const leadId = `LEAD26${String(newId).padStart(5, '0')}`
+      const followUp = data.follow_up_date || data.expected_close_date || null
       const newLead = {
         id: newId,
         lead_id: leadId,
@@ -683,8 +856,8 @@ export const getMockResponse = (url, method, data = null) => {
         lead_priority: data.lead_priority || 'medium',
         assigned_to: data.assigned_to || null,
         assigned_by: data.assigned_to ? getLoggedInMockEmployee().id : null,
-        follow_up_date: data.follow_up_date || null,
-        next_follow_up: data.follow_up_date || null,
+        follow_up_date: followUp,
+        next_follow_up: followUp,
         notes: data.notes || null,
         remarks: null,
         product_interest: data.product_interest || null,
@@ -722,6 +895,7 @@ export const getMockResponse = (url, method, data = null) => {
       const filterSearch = searchParams.get('search')?.toLowerCase()
       const followUpTodayFlag = searchParams.get('follow_up_today') === 'true'
       const pendingFollowUpFlag = searchParams.get('pending_follow_up') === 'true'
+      const todayDemoFlag = searchParams.get('today_demo') === 'true'
 
       let filtered = [...leadsList]
 
@@ -740,17 +914,19 @@ export const getMockResponse = (url, method, data = null) => {
           l.lead_id?.toLowerCase().includes(filterSearch)
         )
       }
+      const todayStr = new Date().toISOString().split('T')[0]
       if (followUpTodayFlag) {
-        const todayStr = '2026-06-22'
         filtered = filtered.filter(l => l.follow_up_date && l.follow_up_date.startsWith(todayStr))
       }
       if (pendingFollowUpFlag) {
-        const todayStr = '2026-06-22'
         filtered = filtered.filter(l => {
           if (!l.follow_up_date) return false
           const dateStr = l.follow_up_date.split(' ')[0]
           return dateStr < todayStr && l.lead_status !== 'converted' && l.lead_status !== 'lost' && l.lead_status !== 'junk'
         })
+      }
+      if (todayDemoFlag) {
+        filtered = filtered.filter(l => l.demo_slot && l.demo_slot.startsWith(todayStr))
       }
 
       return {
@@ -1133,6 +1309,176 @@ export const getMockResponse = (url, method, data = null) => {
           created_at: '2026-06-05'
         }
       ]
+    }
+  }
+
+  // 2.6 Employee Demo Slots Mocks
+  if (lowercaseUrl.includes('/employee/demo-slots')) {
+    const slotsList = window.__mockDemoSlots || []
+
+    // GET /employee/demo-slots/stats
+    if (lowercaseUrl.includes('/employee/demo-slots/stats')) {
+      const total = slotsList.length
+      const active = slotsList.filter(s => s.is_active).length
+      const partner = slotsList.filter(s => s.demo_type === 'partner').length
+      const client = slotsList.filter(s => s.demo_type === 'client').length
+      return {
+        success: true,
+        data: {
+          total_slots: total,
+          active_slots: active,
+          partner_slots: partner,
+          client_slots: client
+        }
+      }
+    }
+
+    // POST /employee/demo-slots/{id}/toggle-status
+    const toggleStatusMatch = lowercaseUrl.match(/\/employee\/demo-slots\/(\d+)\/toggle-status$/)
+    if (toggleStatusMatch && method === 'POST') {
+      const slotId = parseInt(toggleStatusMatch[1])
+      let message = ''
+      window.__mockDemoSlots = slotsList.map(s => {
+        if (s.id === slotId) {
+          const newStatus = !s.is_active
+          message = `Demo slot successfully ${newStatus ? 'activated' : 'deactivated'}`
+          return {
+            ...s,
+            is_active: newStatus,
+            updated_at: new Date().toISOString()
+          }
+        }
+        return s
+      })
+      return {
+        success: true,
+        message
+      }
+    }
+
+    // DELETE /employee/demo-slots/{id}
+    const deleteSlotMatch = lowercaseUrl.match(/\/employee\/demo-slots\/(\d+)$/)
+    if (deleteSlotMatch && method === 'DELETE') {
+      const slotId = parseInt(deleteSlotMatch[1])
+      window.__mockDemoSlots = slotsList.filter(s => s.id !== slotId)
+      return {
+        success: true,
+        message: 'Demo slot deleted successfully'
+      }
+    }
+
+    // PUT /employee/demo-slots/{id}
+    const updateSlotMatch = lowercaseUrl.match(/\/employee\/demo-slots\/(\d+)$/)
+    if (updateSlotMatch && method === 'PUT') {
+      const slotId = parseInt(updateSlotMatch[1])
+      let updated = null
+      window.__mockDemoSlots = slotsList.map(s => {
+        if (s.id === slotId) {
+          updated = {
+            ...s,
+            demo_type: data.demo_type || s.demo_type,
+            title: data.title || s.title,
+            timing_from: data.timing_from || s.timing_from,
+            timing_to: data.timing_to || s.timing_to,
+            meeting_link: data.meeting_link || s.meeting_link,
+            max_attendees: Number(data.max_attendees) || s.max_attendees,
+            all_days: data.all_days !== undefined ? data.all_days : s.all_days,
+            monday: data.monday !== undefined ? data.monday : s.monday,
+            tuesday: data.tuesday !== undefined ? data.tuesday : s.tuesday,
+            wednesday: data.wednesday !== undefined ? data.wednesday : s.wednesday,
+            thursday: data.thursday !== undefined ? data.thursday : s.thursday,
+            friday: data.friday !== undefined ? data.friday : s.friday,
+            saturday: data.saturday !== undefined ? data.saturday : s.saturday,
+            sunday: data.sunday !== undefined ? data.sunday : s.sunday,
+            updated_at: new Date().toISOString()
+          }
+          return updated
+        }
+        return s
+      })
+      return {
+        success: true,
+        message: 'Demo slot updated successfully',
+        data: updated
+      }
+    }
+
+    // POST /employee/demo-slots
+    if (method === 'POST') {
+      const newId = slotsList.length > 0 ? Math.max(...slotsList.map(s => s.id)) + 1 : 1
+      const newSlot = {
+        id: newId,
+        employee_id: getLoggedInMockEmployee().id,
+        demo_type: data.demo_type || 'client',
+        title: data.title || 'Untitled Demo Slot',
+        timing_from: data.timing_from || '09:00',
+        timing_to: data.timing_to || '17:00',
+        meeting_link: data.meeting_link || '',
+        max_attendees: Number(data.max_attendees) || 10,
+        all_days: data.all_days !== undefined ? data.all_days : false,
+        monday: data.monday !== undefined ? data.monday : false,
+        tuesday: data.tuesday !== undefined ? data.tuesday : false,
+        wednesday: data.wednesday !== undefined ? data.wednesday : false,
+        thursday: data.thursday !== undefined ? data.thursday : false,
+        friday: data.friday !== undefined ? data.friday : false,
+        saturday: data.saturday !== undefined ? data.saturday : false,
+        sunday: data.sunday !== undefined ? data.sunday : false,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+      slotsList.unshift(newSlot)
+      window.__mockDemoSlots = slotsList
+      return {
+        success: true,
+        message: 'Demo slot created successfully',
+        data: newSlot
+      }
+    }
+
+    // GET /employee/demo-slots (List with filters)
+    try {
+      const urlObj = new URL(url, 'https://dummy.com')
+      const searchParams = urlObj.searchParams
+      const filterDemoType = searchParams.get('demo_type')
+      const filterIsActive = searchParams.get('is_active')
+      const filterSearch = searchParams.get('search')?.toLowerCase()
+
+      let filtered = [...slotsList]
+      if (filterDemoType) {
+        filtered = filtered.filter(s => s.demo_type === filterDemoType)
+      }
+      if (filterIsActive) {
+        const activeBool = filterIsActive === 'true'
+        filtered = filtered.filter(s => s.is_active === activeBool)
+      }
+      if (filterSearch) {
+        filtered = filtered.filter(s => 
+          s.title?.toLowerCase().includes(filterSearch) ||
+          s.meeting_link?.toLowerCase().includes(filterSearch)
+        )
+      }
+
+      return {
+        success: true,
+        data: {
+          current_page: 1,
+          data: filtered,
+          total: filtered.length,
+          per_page: 20
+        }
+      }
+    } catch (e) {
+      console.error('Error filtering demo slots mock:', e)
+      return {
+        success: true,
+        data: {
+          current_page: 1,
+          data: slotsList,
+          total: slotsList.length,
+          per_page: 20
+        }
+      }
     }
   }
 
