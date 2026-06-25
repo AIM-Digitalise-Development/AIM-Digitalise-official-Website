@@ -24,3 +24,11 @@ export const deleteDemoSlot = (id) =>
 // Get Demo Slot Statistics - GET /employee/demo-slots/stats
 export const getDemoStats = () =>
   client.get('/employee/demo-slots/stats')
+
+// Get Available Demo Slots - GET /employee/demo-slots-available
+export const getAvailableDemoSlots = () =>
+  client.get('/employee/demo-slots-available')
+
+// Get Available Dates for Demo Slot - GET /employee/demo-slots/{id}/available-dates
+export const getAvailableDates = (slotId, params = {}) =>
+  client.get(`/employee/demo-slots/${slotId}/available-dates`, { params })

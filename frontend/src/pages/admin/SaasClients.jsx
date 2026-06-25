@@ -253,8 +253,8 @@ const AdminSaasClients = () => {
                           <tr key={c.id} className="hover:bg-slate-50/50">
                             <td className="px-5 py-4 font-mono font-bold text-slate-500">{c.client_id || '—'}</td>
                             <td className="px-5 py-4">
-                              <p className="font-bold text-slate-800 text-sm">{c.client_name || '—'}</p>
-                              <p className="text-[10px] text-slate-400">{c.email || ''}</p>
+                              <p className="font-bold text-slate-800 text-sm">{c.company_name || '—'}</p>
+                              <p className="text-[10px] text-slate-400">{c.client_name || ''}</p>
                             </td>
                             <td className="px-5 py-4 font-semibold text-slate-700">{c.product_name || '—'}</td>
                             <td className="px-5 py-4 text-slate-500">{c.partner_name || '—'}</td>

@@ -338,7 +338,9 @@ if (typeof window !== 'undefined' && !window.__mockDemoSlots) {
 }
 
 export const getMockResponse = (url, method, data = null) => {
+  method = (method || '').toUpperCase()
   const lowercaseUrl = url.toLowerCase()
+  if (!data) data = {}
 
   if (lowercaseUrl.includes('/public/rm-options')) {
     return {
@@ -1482,5 +1484,215 @@ export const getMockResponse = (url, method, data = null) => {
     }
   }
 
+  // 2.7 Categories, Subcategories, and Products Dropdown Mocks
+  if (lowercaseUrl.includes('/employee/categories')) {
+    return {
+      success: true,
+      data: [
+        { id: 1, name: 'SaaS Software' },
+        { id: 2, name: 'Digital Marketing' },
+        { id: 3, name: 'Web Development' }
+      ]
+    }
+  }
+
+  if (lowercaseUrl.includes('/employee/subcategories')) {
+    try {
+      const urlObj = new URL(url, 'https://dummy.com')
+      const catId = urlObj.searchParams.get('category_id')
+      const allSubs = [
+        { id: 11, category_id: 1, name: 'School Management ERP' },
+        { id: 12, category_id: 1, name: 'LMS Portal' },
+        { id: 21, category_id: 2, name: 'Social Media Management' },
+        { id: 22, category_id: 2, name: 'SEO & PPC Optimization' },
+        { id: 31, category_id: 3, name: 'Custom ERP Solutions' },
+        { id: 32, category_id: 3, name: 'E-commerce Platforms' }
+      ]
+      const filtered = catId ? allSubs.filter(s => s.category_id === Number(catId)) : allSubs
+      return {
+        success: true,
+        data: filtered
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  if (lowercaseUrl.includes('/employee/products-dropdown')) {
+    try {
+      const urlObj = new URL(url, 'https://dummy.com')
+      const subCatId = urlObj.searchParams.get('sub_category_id')
+      const catId = urlObj.searchParams.get('category_id')
+      const allProducts = [
+        { id: 101, sub_category_id: 11, category_id: 1, name: 'Institute Pro', processing_fee: 10000, monthly_subscription: 2500 },
+        { id: 102, sub_category_id: 11, category_id: 1, name: 'Institute Basic', processing_fee: 5000, monthly_subscription: 1500 },
+        { id: 103, sub_category_id: 12, category_id: 1, name: 'Nexgn LMS Basic', processing_fee: 6000, monthly_subscription: 2000 },
+        { id: 104, sub_category_id: 12, category_id: 1, name: 'Nexgn LMS Enterprise', processing_fee: 15000, monthly_subscription: 4000 },
+        { id: 201, sub_category_id: 21, category_id: 2, name: 'SMM Starter Pack', processing_fee: 2500, monthly_subscription: 5000 },
+        { id: 202, sub_category_id: 22, category_id: 2, name: 'SEO Growth Booster', processing_fee: 4000, monthly_subscription: 8000 },
+        { id: 301, sub_category_id: 31, category_id: 3, name: 'Enterprise CRM Customized', processing_fee: 25000, monthly_subscription: 12000 },
+        { id: 302, sub_category_id: 32, category_id: 3, name: 'Nexgn Shop Custom', processing_fee: 18000, monthly_subscription: 6000 }
+      ]
+      let filtered = [...allProducts]
+      if (subCatId) filtered = filtered.filter(p => p.sub_category_id === Number(subCatId))
+      if (catId) filtered = filtered.filter(p => p.category_id === Number(catId))
+      return {
+        success: true,
+        data: filtered
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  // 2.8 Demo Slot Available & Booking Mocks
+  if (lowercaseUrl.includes('/employee/demo-slots-available')) {
+    const slotsList = window.__mockDemoSlots || []
+    return {
+      success: true,
+      data: slotsList.filter(s => s.is_active)
+    }
+  }
+
+  const availDatesMatch = lowercaseUrl.match(/\/employee\/demo-slots\/(\d+)\/available-dates/)
+  if (availDatesMatch) {
+    const slotId = parseInt(availDatesMatch[1])
+    try {
+      const urlObj = new URL(url, 'https://dummy.com')
+      const startDateStr = urlObj.searchParams.get('start_date') || new Date().toISOString().split('T')[0]
+      const endDateStr = urlObj.searchParams.get('end_date') || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      
+      const slot = (window.__mockDemoSlots || []).find(s => s.id === slotId)
+      const dates = []
+      if (slot) {
+        const start = new Date(startDateStr)
+        const end = new Date(endDateStr)
+        
+        const dayMap = {
+          0: 'sunday',
+          1: 'monday',
+          2: 'tuesday',
+          3: 'wednesday',
+          4: 'thursday',
+          5: 'friday',
+          6: 'saturday'
+        }
+        
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          const dayOfWeek = d.getDay()
+          const dayKey = dayMap[dayOfWeek]
+          if (slot.all_days || slot[dayKey]) {
+            const dateString = d.toISOString().split('T')[0]
+            const bookedCount = (window.__mockLeads || []).filter(l => l.demo_slot && l.demo_slot.startsWith(dateString)).length
+            dates.push({
+              date: dateString,
+              available_attendees: Math.max(0, slot.max_attendees - bookedCount),
+              total_attendees: slot.max_attendees,
+              is_fully_booked: bookedCount >= slot.max_attendees
+            })
+          }
+        }
+      }
+      return {
+        success: true,
+        data: {
+          available_dates: dates
+        }
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const bookSlotMatch = lowercaseUrl.match(/\/employee\/leads\/(\d+)\/book-demo-slot/)
+  if (bookSlotMatch && method === 'POST') {
+    const leadId = parseInt(bookSlotMatch[1])
+    const { demo_slot_id, booking_date, notes } = data || {}
+    const slot = (window.__mockDemoSlots || []).find(s => s.id === Number(demo_slot_id))
+    
+    let updated = null
+    window.__mockLeads = (window.__mockLeads || []).map(l => {
+      if (l.id === leadId) {
+        updated = {
+          ...l,
+          demo_status: 'assigned',
+          demo_slot: `${booking_date} ${slot ? slot.timing_from : '10:00'}:00`,
+          demo_link: slot ? slot.meeting_link : 'https://meet.google.com/mock-demo',
+          booking_id: Math.floor(Math.random() * 100000),
+          updated_at: new Date().toISOString()
+        }
+        if (!updated.activities) updated.activities = []
+        updated.activities.unshift({
+          id: Math.floor(Math.random() * 100000),
+          lead_id: l.id,
+          employee_id: getLoggedInMockEmployee().id,
+          activity_type: 'meeting',
+          description: `Demo scheduled: ${slot ? slot.title : 'Discovery Session'}`,
+          notes: notes || 'Demo booked via employee portal calendar.',
+          scheduled_date: `${booking_date}T${slot ? slot.timing_from : '10:00'}:00.000Z`,
+          completed_at: null,
+          created_at: new Date().toISOString(),
+          employee: getLoggedInMockEmployee()
+        })
+        return updated
+      }
+      return l
+    })
+    
+    if (updated) {
+      return {
+        success: true,
+        message: 'Demo slot booked successfully',
+        data: updated
+      }
+    } else {
+      return { success: false, message: 'Lead not found' }
+    }
+  }
+
+  const cancelBookingMatch = lowercaseUrl.match(/\/employee\/bookings\/(\d+)\/cancel/)
+  if (cancelBookingMatch && method === 'POST') {
+    const bookingId = parseInt(cancelBookingMatch[1])
+    let updated = null
+    window.__mockLeads = (window.__mockLeads || []).map(l => {
+      if (l.booking_id === bookingId) {
+        updated = {
+          ...l,
+          demo_status: null,
+          demo_slot: null,
+          demo_link: null,
+          booking_id: null,
+          updated_at: new Date().toISOString()
+        }
+        if (!updated.activities) updated.activities = []
+        updated.activities.unshift({
+          id: Math.floor(Math.random() * 100000),
+          lead_id: l.id,
+          employee_id: getLoggedInMockEmployee().id,
+          activity_type: 'note',
+          description: 'Demo Booking Cancelled',
+          notes: 'Demo booking cancelled by employee.',
+          scheduled_date: null,
+          completed_at: null,
+          created_at: new Date().toISOString(),
+          employee: getLoggedInMockEmployee()
+        })
+        return updated
+      }
+      return l
+    })
+    
+    if (updated) {
+      return {
+        success: true,
+        message: 'Demo slot booking cancelled successfully',
+        data: updated
+      }
+    } else {
+      return { success: false, message: 'Booking not found' }
+    }
+  }
+
   return null
 }
+

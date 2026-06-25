@@ -44,3 +44,24 @@ export const deleteLead = (id) =>
 export const sendDemoEmail = (id, data) =>
   client.post(`/employee/leads/${id}/send-demo`, data)
 
+// Get Categories - GET /employee/categories
+export const getCategories = () =>
+  client.get('/employee/categories')
+
+// Get Subcategories - GET /employee/subcategories
+export const getSubcategories = (categoryId) =>
+  client.get('/employee/subcategories', { params: { category_id: categoryId } })
+
+// Get Products Dropdown - GET /employee/products-dropdown
+export const getProductsDropdown = (subCategoryId, categoryId) =>
+  client.get('/employee/products-dropdown', { params: { sub_category_id: subCategoryId, category_id: categoryId } })
+
+// Book Demo Slot - POST /employee/leads/{leadId}/book-demo-slot
+// Body: { demo_slot_id, booking_date, notes }
+export const bookDemoSlot = (leadId, data) =>
+  client.post(`/employee/leads/${leadId}/book-demo-slot`, data)
+
+// Cancel Booking - POST /employee/bookings/{bookingId}/cancel
+export const cancelBooking = (bookingId) =>
+  client.post(`/employee/bookings/${bookingId}/cancel`)
+

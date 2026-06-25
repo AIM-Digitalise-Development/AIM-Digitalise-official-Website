@@ -412,8 +412,8 @@ const AdminSubscribedClients = () => {
                           <tr key={sub.client_id} className="hover:bg-slate-50/50 transition-colors">
                             <td className="px-6 py-4 font-mono font-bold text-slate-500">{sub.client_id}</td>
                             <td className="px-6 py-4">
-                              <p className="font-bold text-slate-800 text-sm">{sub.client_name}</p>
-                              <p className="text-[10px] text-slate-400 font-medium">{sub.email || '—'}</p>
+                              <p className="font-bold text-slate-800 text-sm">{sub.company_name}</p>
+                              <p className="text-[10px] text-slate-400 font-medium">{sub.client_name || '—'}</p>
                             </td>
                             <td className="px-6 py-4">
                               <span className="px-2.5 py-1 rounded bg-[#e2e8f0] text-slate-700 font-bold text-[10px] uppercase">

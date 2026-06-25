@@ -9,8 +9,17 @@ import {
   addLeadActivity,
   bulkAssignLeads,
   deleteLead,
-  sendDemoEmail
+  sendDemoEmail,
+  getCategories,
+  getSubcategories,
+  getProductsDropdown,
+  bookDemoSlot,
+  cancelBooking
 } from '../../api/leads'
+import {
+  getAvailableDemoSlots,
+  getAvailableDates
+} from '../../api/demoSlots'
 
 export default function EmployeeLeads() {
   // Stats and Listing State
@@ -32,6 +41,24 @@ export default function EmployeeLeads() {
 
   // Selection state for Bulk Actions
   const [selectedLeadIds, setSelectedLeadIds] = useState([])
+
+  // Category/Subcategory/Product states
+  const [categories, setCategories] = useState([])
+  const [subcategories, setSubcategories] = useState([])
+  const [products, setProducts] = useState([])
+  const [availableDemoSlots, setAvailableDemoSlots] = useState([])
+  const [selectedCategoryId, setSelectedCategoryId] = useState('')
+  const [selectedSubCategoryId, setSelectedSubCategoryId] = useState('')
+
+  // Assign Demo Slot states
+  const [showAssignModal, setShowAssignModal] = useState(false)
+  const [selectedLeadForAssign, setSelectedLeadForAssign] = useState(null)
+  const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [bookingNotes, setBookingNotes] = useState('')
+  const [allSlotsData, setAllSlotsData] = useState({})
+  const [selectedSlotIdForBooking, setSelectedSlotIdForBooking] = useState(null)
+  const [showSlotBookingModal, setShowSlotBookingModal] = useState(false)
+  const [selectedDate, setSelectedDate] = useState('')
 
   // Modal / Drawer State
   const [isCreateEditOpen, setIsCreateEditOpen] = useState(false)
@@ -68,9 +95,14 @@ export default function EmployeeLeads() {
     lead_status: 'new',
     lead_priority: 'medium',
     notes: '',
-    product_interest: 'Institute Pro',
     budget: '',
-    expected_close_date: ''
+    expected_close_date: '',
+    category_id: '',
+    sub_category_id: '',
+    product_id: '',
+    product_name: '',
+    product_processing_fee: '',
+    product_monthly_subscription: ''
   })
 
   const [statusForm, setStatusForm] = useState({
@@ -133,13 +165,231 @@ export default function EmployeeLeads() {
     }
   }
 
+  const fetchCategories = async () => {
+    try {
+      const res = await getCategories()
+      if (res.data?.success) {
+        setCategories(res.data.data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch categories:', err)
+    }
+  }
+
+  const fetchSubcategories = async (categoryId) => {
+    try {
+      const res = await getSubcategories(categoryId)
+      if (res.data?.success) {
+        setSubcategories(res.data.data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch subcategories:', err)
+    }
+  }
+
+  const fetchProducts = async (subCategoryId, categoryId) => {
+    try {
+      const res = await getProductsDropdown(subCategoryId, categoryId)
+      if (res.data?.success) {
+        setProducts(res.data.data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch products:', err)
+    }
+  }
+
+  const fetchAvailableDemoSlots = async () => {
+    try {
+      const res = await getAvailableDemoSlots()
+      if (res.data?.success) {
+        setAvailableDemoSlots(res.data.data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch demo slots:', err)
+    }
+  }
+
+  const handleCategoryChange = (e) => {
+    const categoryId = e.target.value
+    setSelectedCategoryId(categoryId)
+    setLeadForm(prev => ({
+      ...prev,
+      category_id: categoryId,
+      sub_category_id: '',
+      product_id: '',
+      product_name: '',
+      product_processing_fee: '',
+      product_monthly_subscription: ''
+    }))
+    setSelectedSubCategoryId('')
+    if (categoryId) {
+      fetchSubcategories(categoryId)
+    } else {
+      setSubcategories([])
+      setProducts([])
+    }
+  }
+
+  const handleSubCategoryChange = (e) => {
+    const subCategoryId = e.target.value
+    setSelectedSubCategoryId(subCategoryId)
+    setLeadForm(prev => ({
+      ...prev,
+      sub_category_id: subCategoryId,
+      product_id: '',
+      product_name: '',
+      product_processing_fee: '',
+      product_monthly_subscription: ''
+    }))
+    if (subCategoryId) {
+      fetchProducts(subCategoryId, selectedCategoryId)
+    } else {
+      setProducts([])
+    }
+  }
+
+  const handleProductSelect = (e) => {
+    const productId = e.target.value
+    const selectedProduct = products.find(p => p.id == productId)
+    setLeadForm(prev => ({
+      ...prev,
+      product_id: productId,
+      product_name: selectedProduct?.name || '',
+      product_processing_fee: selectedProduct?.processing_fee || '',
+      product_monthly_subscription: selectedProduct?.monthly_subscription || ''
+    }))
+  }
+
+  const fetchAllSlotDataForMonth = async () => {
+    const startDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
+    const endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0)
+    const startDateStr = startDate.toISOString().split('T')[0]
+    const endDateStr = endDate.toISOString().split('T')[0]
+    const slotData = {}
+
+    if (availableDemoSlots.length === 0) {
+      setAllSlotsData({})
+      return
+    }
+
+    for (const slot of availableDemoSlots) {
+      try {
+        const res = await getAvailableDates(slot.id, { start_date: startDateStr, end_date: endDateStr })
+        if (res.data?.success) {
+          slotData[slot.id] = {
+            slot: slot,
+            availableDates: res.data.data?.available_dates || []
+          }
+        } else {
+          slotData[slot.id] = { slot, availableDates: [] }
+        }
+      } catch (err) {
+        console.error('Failed to fetch slot dates:', err)
+        slotData[slot.id] = { slot, availableDates: [] }
+      }
+    }
+    setAllSlotsData(slotData)
+  }
+
+  const handleBookSlot = async (slotId, date) => {
+    setSaving(true)
+    setError('')
+    try {
+      const payload = {
+        demo_slot_id: slotId,
+        booking_date: date,
+        notes: bookingNotes
+      }
+      const res = await bookDemoSlot(selectedLeadForAssign.id, payload)
+      if (res.data?.success) {
+        triggerSuccess('Demo slot booked successfully!')
+        loadLeads()
+        loadStats()
+        setShowAssignModal(false)
+        setShowSlotBookingModal(false)
+        setSelectedLeadForAssign(null)
+        setSelectedDate('')
+        setBookingNotes('')
+        setAllSlotsData({})
+        setSelectedSlotIdForBooking(null)
+      } else {
+        setError(res.data?.message || 'Failed to book demo slot')
+      }
+    } catch (err) {
+      console.error(err)
+      setError(err?.response?.data?.message || 'Failed to book demo slot: ' + err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleCancelBooking = async (bookingId) => {
+    if (!window.confirm('Cancel this demo booking?')) return
+    setSaving(true)
+    try {
+      const res = await cancelBooking(bookingId)
+      if (res.data?.success) {
+        triggerSuccess('Booking cancelled successfully!')
+        loadLeads()
+        loadStats()
+        if (showAssignModal) {
+          fetchAllSlotDataForMonth()
+        }
+      } else {
+        alert(res.data?.message || 'Failed to cancel booking')
+      }
+    } catch (err) {
+      console.error(err)
+      alert(err?.response?.data?.message || 'Failed to cancel booking: ' + err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const prevMonth = () => {
+    const newMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1)
+    setCurrentMonth(newMonth)
+  }
+
+  const nextMonth = () => {
+    const newMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1)
+    setCurrentMonth(newMonth)
+  }
+
+  const getSlotsForDate = (dateStr) => {
+    const slots = []
+    for (const [slotId, data] of Object.entries(allSlotsData)) {
+      if (!data || !data.availableDates) continue
+      const dateData = data.availableDates.find(d => d.date === dateStr)
+      if (dateData) {
+        slots.push({
+          ...data.slot,
+          available_attendees: dateData.available_attendees || 0,
+          total_attendees: dateData.total_attendees || 10,
+          is_fully_booked: dateData.is_fully_booked || false,
+          date: dateStr
+        })
+      }
+    }
+    return slots
+  }
+
   useEffect(() => {
     loadLeads()
   }, [search, statusFilter, priorityFilter, followUpToday, pendingFollowUp, todayDemo, page])
 
   useEffect(() => {
     loadStats()
+    fetchCategories()
+    fetchAvailableDemoSlots()
   }, [])
+
+  useEffect(() => {
+    if (availableDemoSlots.length > 0 && showAssignModal) {
+      fetchAllSlotDataForMonth()
+    }
+  }, [currentMonth, availableDemoSlots, showAssignModal])
+
 
   // Auto-sync Drawer Lead details if updated
   useEffect(() => {
@@ -173,10 +423,19 @@ export default function EmployeeLeads() {
       lead_status: 'new',
       lead_priority: 'medium',
       notes: '',
-      product_interest: 'Institute Pro',
       budget: '',
-      expected_close_date: ''
+      expected_close_date: '',
+      category_id: '',
+      sub_category_id: '',
+      product_id: '',
+      product_name: '',
+      product_processing_fee: '',
+      product_monthly_subscription: ''
     })
+    setSelectedCategoryId('')
+    setSelectedSubCategoryId('')
+    setSubcategories([])
+    setProducts([])
     setIsCreateEditOpen(true)
   }
 
@@ -197,12 +456,31 @@ export default function EmployeeLeads() {
       lead_status: lead.lead_status || 'new',
       lead_priority: lead.lead_priority || 'medium',
       notes: lead.notes || '',
-      product_interest: lead.product_interest || 'Institute Pro',
       budget: lead.budget || '',
-      expected_close_date: lead.follow_up_date ? lead.follow_up_date.split(' ')[0] : (lead.expected_close_date || '')
+      expected_close_date: lead.follow_up_date ? lead.follow_up_date.split(' ')[0] : (lead.expected_close_date || ''),
+      category_id: lead.category_id || '',
+      sub_category_id: lead.sub_category_id || '',
+      product_id: lead.product_id || '',
+      product_name: lead.product_name || '',
+      product_processing_fee: lead.product_processing_fee || '',
+      product_monthly_subscription: lead.product_monthly_subscription || ''
     })
+    if (lead.category_id) {
+      setSelectedCategoryId(lead.category_id)
+      fetchSubcategories(lead.category_id)
+      if (lead.sub_category_id) {
+        setSelectedSubCategoryId(lead.sub_category_id)
+        fetchProducts(lead.sub_category_id, lead.category_id)
+      }
+    } else {
+      setSelectedCategoryId('')
+      setSelectedSubCategoryId('')
+      setSubcategories([])
+      setProducts([])
+    }
     setIsCreateEditOpen(true)
   }
+
 
   const handleCreateEditSubmit = async (e) => {
     e.preventDefault()
@@ -668,8 +946,9 @@ export default function EmployeeLeads() {
                 </th>
                 <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left">Lead Details</th>
                 <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left">Pipeline Status</th>
-                <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left">Demo Status</th>
                 <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left">Next Follow-up</th>
+                                <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left">Demo Status</th>
+
                 <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
@@ -734,8 +1013,35 @@ export default function EmployeeLeads() {
                       {/* Pipeline Status — Product + Status badge */}
                       <td className="p-4">
                         <div className="text-left space-y-1">
-                          <span className="text-[10px] text-gray-400 font-bold block">{lead.product_interest || 'N/A'}</span>
+                          <span className="text-[10px] text-gray-400 font-bold block">{lead.product_name || lead.product_interest || 'N/A'}</span>
                           {getStatusBadge(lead.lead_status)}
+                        </div>
+                      </td>
+
+                      {/* Next Follow-up */}
+                      <td className="p-4">
+                        <div className="text-left space-y-0.5">
+                          {lead.lead_status === 'converted' || lead.is_converted ? (
+                            <>
+                              <span className="inline-flex text-[9px] font-black uppercase tracking-wider border rounded-md px-2 py-0.5 bg-green-400/10 text-green-400 border-green-400/25">Sold Out</span>
+                              {lead.budget && (
+                                <span className="text-[10px] text-emerald-400 font-bold block">₹{Number(lead.budget).toLocaleString()}</span>
+                              )}
+                              {lead.expected_close_date && (
+                                <span className="text-[9px] text-gray-400 font-semibold block">📅 {new Date(lead.expected_close_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                              )}
+                              {lead.invoice_no && (
+                                <span className="text-[9px] text-cyan-400 font-bold font-mono block">Inv: {lead.invoice_no}</span>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-xs font-semibold text-gray-300">{followUpText}</p>
+                              {lead.budget && (
+                                <span className="text-[10px] text-emerald-400 font-bold block">₹{Number(lead.budget).toLocaleString()}</span>
+                              )}
+                            </>
+                          )}
                         </div>
                       </td>
 
@@ -774,32 +1080,7 @@ export default function EmployeeLeads() {
                         </div>
                       </td>
 
-                      {/* Next Follow-up */}
-                      <td className="p-4">
-                        <div className="text-left space-y-0.5">
-                          {lead.lead_status === 'converted' || lead.is_converted ? (
-                            <>
-                              <span className="inline-flex text-[9px] font-black uppercase tracking-wider border rounded-md px-2 py-0.5 bg-green-400/10 text-green-400 border-green-400/25">Sold Out</span>
-                              {lead.budget && (
-                                <span className="text-[10px] text-emerald-400 font-bold block">₹{Number(lead.budget).toLocaleString()}</span>
-                              )}
-                              {lead.expected_close_date && (
-                                <span className="text-[9px] text-gray-400 font-semibold block">📅 {new Date(lead.expected_close_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                              )}
-                              {lead.invoice_no && (
-                                <span className="text-[9px] text-cyan-400 font-bold font-mono block">Inv: {lead.invoice_no}</span>
-                              )}
-                            </>
-                          ) : (
-                            <>
-                              <p className="text-xs font-semibold text-gray-300">{followUpText}</p>
-                              {lead.budget && (
-                                <span className="text-[10px] text-emerald-400 font-bold block">₹{Number(lead.budget).toLocaleString()}</span>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </td>
+                      
 
                       {/* Actions */}
                       <td className="p-4 text-right">
@@ -839,6 +1120,25 @@ export default function EmployeeLeads() {
                           >
                             ⏱️
                           </button>
+                          <button
+                            onClick={() => {
+                              setSelectedLeadForAssign(lead)
+                              setShowAssignModal(true)
+                            }}
+                            title="Assign/Book Demo Slot"
+                            className="p-1 text-gray-500 hover:text-green-450 hover:bg-white/5 rounded transition-all cursor-pointer"
+                          >
+                            🗓️
+                          </button>
+                          {lead.booking_id && (
+                            <button
+                              onClick={() => handleCancelBooking(lead.booking_id)}
+                              title="Cancel Demo Booking"
+                              className="p-1 text-gray-500 hover:text-red-400 hover:bg-white/5 rounded transition-all cursor-pointer"
+                            >
+                              🚫
+                            </button>
+                          )}
                           {!lead.is_converted && (
                             <button
                               onClick={() => handleDeleteLead(lead.id)}
@@ -956,15 +1256,28 @@ export default function EmployeeLeads() {
                       <p className="text-xs font-bold text-white mt-1">{selectedDrawerLead.company_name || 'Individual'}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Product Interest</p>
-                      <p className="text-xs font-bold text-cyan-400 mt-1">{selectedDrawerLead.product_interest || 'N/A'}</p>
+                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Product Name</p>
+                      <p className="text-xs font-bold text-cyan-400 mt-1">{selectedDrawerLead.product_name || selectedDrawerLead.product_interest || 'N/A'}</p>
                     </div>
+                    {selectedDrawerLead.product_processing_fee && (
+                      <div>
+                        <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Processing Fee</p>
+                        <p className="text-xs font-bold text-white mt-1 font-mono">₹{Number(selectedDrawerLead.product_processing_fee).toLocaleString()}</p>
+                      </div>
+                    )}
+                    {selectedDrawerLead.product_monthly_subscription && (
+                      <div>
+                        <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Monthly Subscription</p>
+                        <p className="text-xs font-bold text-white mt-1 font-mono">₹{Number(selectedDrawerLead.product_monthly_subscription).toLocaleString()}</p>
+                      </div>
+                    )}
                     <div>
                       <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Budget Size</p>
                       <p className="text-xs font-bold text-[#38b34a] mt-1 font-mono">
                         {selectedDrawerLead.budget ? `₹${Number(selectedDrawerLead.budget).toLocaleString()}` : 'N/A'}
                       </p>
                     </div>
+
                     <div>
                       <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Expected Close Date</p>
                       <p className="text-xs font-bold text-white mt-1">{selectedDrawerLead.expected_close_date || 'N/A'}</p>
@@ -1156,16 +1469,78 @@ export default function EmployeeLeads() {
                   </div>
 
                   {/* Product Interest */}
+                  {/* Category Selection */}
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Product Interest</label>
+                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Category *</label>
+                    <select
+                      value={leadForm.category_id}
+                      onChange={handleCategoryChange}
+                      required
+                      className="w-full bg-white/3 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
+                    >
+                      <option value="" className="bg-[#13151f]">Select Category</option>
+                      {categories.map(cat => (
+                        <option key={cat.id} value={cat.id} className="bg-[#13151f]">{cat.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Sub-Category Selection */}
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Sub-Category *</label>
+                    <select
+                      value={leadForm.sub_category_id}
+                      onChange={handleSubCategoryChange}
+                      required
+                      className="w-full bg-white/3 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
+                    >
+                      <option value="" className="bg-[#13151f]">Select Sub-Category</option>
+                      {subcategories.map(sub => (
+                        <option key={sub.id} value={sub.id} className="bg-[#13151f]">{sub.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Product Selection */}
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Product *</label>
+                    <select
+                      value={leadForm.product_id}
+                      onChange={handleProductSelect}
+                      required
+                      className="w-full bg-[#1a1d2b] border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
+                    >
+                      <option value="" className="bg-[#13151f]">Select Product</option>
+                      {products.map(prod => (
+                        <option key={prod.id} value={prod.id} className="bg-[#13151f]">{prod.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Processing Fee */}
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Processing Fee (INR)</label>
                     <input
-                      type="text"
-                      value={leadForm.product_interest}
-                      onChange={(e) => setLeadForm({ ...leadForm, product_interest: e.target.value })}
-                      placeholder="e.g. Institute Pro, ERP, Web Design"
-                      className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] font-semibold"
+                      type="number"
+                      value={leadForm.product_processing_fee}
+                      onChange={(e) => setLeadForm(prev => ({ ...prev, product_processing_fee: e.target.value }))}
+                      placeholder="Processing Fee"
+                      className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] font-mono font-bold"
                     />
                   </div>
+
+                  {/* Monthly Subscription */}
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Monthly Subscription (INR)</label>
+                    <input
+                      type="number"
+                      value={leadForm.product_monthly_subscription}
+                      onChange={(e) => setLeadForm(prev => ({ ...prev, product_monthly_subscription: e.target.value }))}
+                      placeholder="Monthly Subscription"
+                      className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] font-mono font-bold"
+                    />
+                  </div>
+
 
                   {/* Budget */}
                   {/* <div className="space-y-1">
@@ -1756,6 +2131,250 @@ export default function EmployeeLeads() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* ─────────────────────── MODAL: ASSIGN DEMO SLOT CALENDAR ─────────────────────── */}
+      <AnimatePresence>
+        {showAssignModal && selectedLeadForAssign && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                setShowAssignModal(false)
+                setSelectedLeadForAssign(null)
+                setSelectedDate('')
+              }}
+              className="absolute inset-0 bg-black cursor-pointer"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-2xl max-h-[90vh] flex flex-col justify-between rounded-3xl overflow-hidden shadow-2xl z-10"
+              style={{ background: '#13151f', border: '1px solid rgba(255,255,255,0.08)' }}
+            >
+              {/* Header */}
+              <div className="px-6 py-5 flex items-center justify-between" style={{ background: '#1a1d2b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div>
+                  <h3 className="text-base font-black text-white">🗓️ Book Demo Slot</h3>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">
+                    Assign a recurring walkthrough to {selectedLeadForAssign.client_name}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowAssignModal(false)
+                    setSelectedLeadForAssign(null)
+                    setSelectedDate('')
+                  }}
+                  className="text-gray-550 hover:text-white text-sm cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Scrollable body */}
+              <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 text-left">
+                {/* 1. Slot Selector Dropdown */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block">
+                    Choose Available Demo Slot Configuration
+                  </label>
+                  {availableDemoSlots.length === 0 ? (
+                    <div className="p-3.5 rounded-xl border border-yellow-500/20 bg-yellow-500/10 text-yellow-400 text-xs font-semibold">
+                      ⚠️ No demo slots are currently configured. Please define active slots in the Demo Slots Registry first.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-2">
+                      <p className="text-[11px] text-gray-400 font-semibold mb-1">
+                        Active slots will display below on their recurring schedule:
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Interactive Monthly Calendar */}
+                <div className="bg-[#1a1d2b] p-5 rounded-2xl border border-white/5 space-y-4">
+                  {/* Calendar Header Navigation */}
+                  <div className="flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={prevMonth}
+                      className="p-2 hover:bg-white/5 rounded-xl text-white transition-colors cursor-pointer text-xs font-black"
+                    >
+                      ◀ Prev Month
+                    </button>
+                    <span className="text-xs font-black text-white uppercase tracking-wider">
+                      {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={nextMonth}
+                      className="p-2 hover:bg-white/5 rounded-xl text-white transition-colors cursor-pointer text-xs font-black"
+                    >
+                      Next Month ▶
+                    </button>
+                  </div>
+
+                  {/* Calendar Grid */}
+                  <div className="grid grid-cols-7 gap-2.5 text-center">
+                    {/* Weekday headers */}
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                      <span key={day} className="text-[10px] font-black text-gray-655 uppercase tracking-wider">
+                        {day}
+                      </span>
+                    ))}
+
+                    {/* Cells */}
+                    {(() => {
+                      const year = currentMonth.getFullYear()
+                      const month = currentMonth.getMonth()
+                      const firstDayIndex = new Date(year, month, 1).getDay()
+                      const totalDays = new Date(year, month + 1, 0).getDate()
+                      
+                      const cells = []
+                      // Empty cells for alignment
+                      for (let i = 0; i < firstDayIndex; i++) {
+                        cells.push(<div key={`empty-${i}`} />)
+                      }
+                      
+                      // Month day cells
+                      for (let d = 1; d <= totalDays; d++) {
+                        const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+                        const daySlots = getSlotsForDate(dateString)
+                        const hasAvailability = daySlots.length > 0
+                        const isSelected = selectedDate === dateString
+                        
+                        cells.push(
+                          <button
+                            key={d}
+                            type="button"
+                            onClick={() => {
+                              if (hasAvailability) {
+                                setSelectedDate(dateString)
+                                setSelectedSlotIdForBooking(null)
+                              }
+                            }}
+                            className={`h-11 rounded-xl flex flex-col items-center justify-between py-1.5 transition-all text-xs font-bold border ${
+                              isSelected
+                                ? 'bg-cyan-500/20 border-cyan-400 text-white shadow-md shadow-cyan-500/10'
+                                : hasAvailability
+                                ? 'bg-[#38b34a]/8 border-[#38b34a]/20 hover:border-[#38b34a] hover:bg-[#38b34a]/12 text-white cursor-pointer'
+                                : 'bg-white/1 border-white/2 text-gray-600 cursor-not-allowed'
+                            }`}
+                          >
+                            <span>{d}</span>
+                            {hasAvailability && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#38b34a] animate-pulse" />
+                            )}
+                          </button>
+                        )
+                      }
+                      return cells
+                    })()}
+                  </div>
+                </div>
+
+                {/* 3. Slot Listing for Selected Date */}
+                {selectedDate && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-[#1a1d2b] p-5 rounded-2xl border border-white/5 space-y-4"
+                  >
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-cyan-400">
+                      Available Demos on {new Date(selectedDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </h4>
+                    
+                    <div className="space-y-2.5">
+                      {getSlotsForDate(selectedDate).map(slot => (
+                        <div
+                          key={slot.id}
+                          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border border-white/5 hover:border-white/10 bg-[#13151f] transition-all"
+                        >
+                          <div className="text-left">
+                            <h5 className="text-xs font-bold text-white">{slot.title}</h5>
+                            <p className="text-[10px] text-gray-500 font-bold mt-1">
+                              🕐 {slot.timing_from} - {slot.timing_to} | {slot.demo_type.toUpperCase()} DEMO
+                            </p>
+                            <p className="text-[10px] text-gray-550 mt-0.5">
+                              👥 Spots Left: <span className={slot.available_attendees > 0 ? 'text-[#38b34a] font-bold' : 'text-red-400 font-bold'}>
+                                {slot.available_attendees} / {slot.total_attendees}
+                              </span>
+                            </p>
+                          </div>
+                          
+                          {selectedSlotIdForBooking === slot.id ? (
+                            <div className="w-full sm:w-auto flex flex-col gap-2 mt-2 sm:mt-0">
+                              <input
+                                type="text"
+                                placeholder="Booking notes/requests..."
+                                value={bookingNotes}
+                                onChange={(e) => setBookingNotes(e.target.value)}
+                                className="px-3 py-1.5 rounded-lg text-xs bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400"
+                              />
+                              <div className="flex gap-2 justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedSlotIdForBooking(null)}
+                                  className="px-2.5 py-1 text-[10px] font-bold border border-white/10 hover:border-white/20 text-gray-400 rounded-lg cursor-pointer"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleBookSlot(slot.id, selectedDate)}
+                                  disabled={saving}
+                                  className="px-3 py-1 text-[10px] font-bold bg-cyan-400 text-black rounded-lg cursor-pointer hover:bg-cyan-300"
+                                >
+                                  {saving ? 'Booking...' : 'Confirm'}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={slot.is_fully_booked || slot.available_attendees === 0}
+                              onClick={() => {
+                                setSelectedSlotIdForBooking(slot.id)
+                                setBookingNotes('')
+                              }}
+                              className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                slot.is_fully_booked || slot.available_attendees === 0
+                                  ? 'bg-red-500/10 text-red-400 border border-red-500/20 cursor-not-allowed'
+                                  : 'bg-gradient-to-r from-[#38b34a] to-cyan-550 text-black hover:opacity-95 shadow active:scale-95'
+                              }`}
+                            >
+                              {slot.is_fully_booked || slot.available_attendees === 0 ? 'Full' : 'Reserve Spot'}
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 flex items-center justify-end shrink-0" style={{ background: '#1a1d2b', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAssignModal(false)
+                    setSelectedLeadForAssign(null)
+                    setSelectedDate('')
+                  }}
+                  className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-xs font-bold text-white rounded-xl transition-colors cursor-pointer"
+                >
+                  Close Calendar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
+
