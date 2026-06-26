@@ -45,7 +45,7 @@ const PartnerLoginForm = () => {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
         <div className="p-3 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 text-xs font-semibold text-center">
           {error}
@@ -55,24 +55,17 @@ const PartnerLoginForm = () => {
       {/* Partner ID or Email */}
       <div>
         <label className="block text-xs font-semibold text-aim-copy-muted uppercase tracking-wider mb-1.5">
-          Partner ID 
+          Partner ID
         </label>
-        <div className="relative">
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-aim-copy-muted">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          </span>
-          <input
-            type="text"
-            value={login}
-            onChange={(e) => setLogin(e.target.value)}
-            placeholder="PIDIN1234 "
-            className={`${inputCls} pl-10`}
-            autoFocus
-            required
-          />
-        </div>
+        <input
+          type="text"
+          value={login}
+          onChange={(e) => setLogin(e.target.value)}
+          placeholder="ENTER YOUR PARTNER ID OR EMAIL"
+          className={inputCls}
+          autoFocus
+          required
+        />
       </div>
 
       {/* Password */}
@@ -81,17 +74,12 @@ const PartnerLoginForm = () => {
           Password
         </label>
         <div className="relative">
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-aim-copy-muted">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </span>
           <input
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
-            className={`${inputCls} pl-10 pr-10`}
+            className={`${inputCls} pr-10`}
             required
           />
           <button
@@ -113,32 +101,44 @@ const PartnerLoginForm = () => {
         </div>
       </div>
 
-      {/* Submit */}
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-aim-gold to-aim-gold-light text-aim-navy font-black text-sm tracking-wide shadow-lg shadow-aim-gold/20 hover:shadow-aim-gold/40 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
-      >
-        {loading ? (
-          <span className="flex items-center justify-center gap-2">
-            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-            </svg>
-            Signing In...
-          </span>
-        ) : (
-          'Sign In to Partner Portal'
-        )}
-      </button>
+      {/* Checkbox and Forgot Password */}
+      <div className="flex items-center justify-between text-xs pt-1">
+        <label className="flex items-center gap-2 cursor-pointer text-aim-copy-muted hover:text-white transition-colors">
+          <input
+            type="checkbox"
+            className="rounded border-white/10 bg-white/5 text-aim-gold focus:ring-0 focus:ring-offset-0"
+          />
+          Stay logged in
+        </label>
+        <a
+          href="#forgot"
+          onClick={(e) => {
+            e.preventDefault()
+            alert('Please contact support at support@aimdigitalise.com to reset your password.')
+          }}
+          className="text-rose-500 font-bold hover:underline"
+        >
+          Forgot password?
+        </a>
+      </div>
 
-      {/* Register link */}
-      <p className="text-center text-xs text-aim-copy-muted">
-        New partner?{' '}
-        <Link to={ROUTES.PARTNER.REGISTER} className="text-aim-gold hover:text-aim-gold-light font-semibold transition-colors">
-          Register here →
-        </Link>
+      {/* Policy Agreement Disclaimer */}
+      <p className="text-[11px] text-aim-copy-muted leading-relaxed text-center pt-2">
+        By continuing, you agree to AIM Digitalise's{' '}
+        <span className="font-bold text-orange-500 cursor-pointer hover:underline">Terms of Use</span> and{' '}
+        <span className="font-bold text-orange-500 cursor-pointer hover:underline">Privacy Policy</span>.
       </p>
+
+      {/* Log In Button (Centered) */}
+      <div className="flex justify-center pt-3">
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-32 py-2.5 rounded-lg bg-gradient-to-r from-orange-500 to-fuchsia-600 hover:from-orange-600 hover:to-fuchsia-700 text-white font-black text-sm tracking-wide shadow-md transition-all duration-200 active:scale-95 cursor-pointer disabled:opacity-60"
+        >
+          {loading ? 'Logging in...' : 'Log in'}
+        </button>
+      </div>
     </form>
   )
 }

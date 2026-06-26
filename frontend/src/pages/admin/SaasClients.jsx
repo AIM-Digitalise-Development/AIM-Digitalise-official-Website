@@ -7,6 +7,7 @@ import {
   activateSubscription,
   deactivateSubscription,
 } from '../../api/admin/partners'
+import { isSaasClient } from '../../utils/subscription'
 
 // ─── Shared style helpers ─────────────────────────────────────────────────────
 const inputCls = 'w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 transition-all bg-white disabled:bg-slate-50 disabled:text-slate-400'
@@ -14,55 +15,56 @@ const inputCls = 'w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const AdminSaasClients = () => {
   // ── Flash ─────────────────────────────────────────────────────────────────
-  const [error,      setError]      = useState(null)
+  const [error, setError] = useState(null)
   const [successMsg, setSuccessMsg] = useState(null)
   const flashSuccess = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(null), 3500) }
-  const flashError   = (msg) => { setError(msg);      setTimeout(() => setError(null),      4000) }
+  const flashError = (msg) => { setError(msg); setTimeout(() => setError(null), 4000) }
 
   // ── Active Tab ─────────────────────────────────────────────────────────────
   const [activePageTab, setActivePageTab] = useState('show_clients')
 
   // ── CLIENTS ────────────────────────────────────────────────────────────────
-  const [clients,        setClients]        = useState([])
-  const [summary,        setSummary]        = useState(null)
+  const [clients, setClients] = useState([])
+  const [summary, setSummary] = useState(null)
   const [clientsLoading, setClientsLoading] = useState(true)
-  const [clientSearch,   setClientSearch]   = useState('')
+  const [clientSearch, setClientSearch] = useState('')
 
   const fetchClients = async () => {
     setClientsLoading(true); setError(null)
     try {
       const res = await getAdminClients()
       if (res.data?.success) {
-        const all      = Array.isArray(res.data.data?.all_clients) ? res.data.data.all_clients : []
-        const filtered = all.filter(c => c.product_category === 'nexgn')
+        const all = Array.isArray(res.data.data?.all_clients) ? res.data.data.all_clients : []
+        const filtered = all.filter(c => isSaasClient(c))
         setClients(filtered)
         setSummary({
-          total_clients:  filtered.length,
+          total_clients: filtered.length,
           active_clients: filtered.filter(c => c.is_active).length,
-          total_revenue:  filtered.reduce((acc, c) => acc + (Number(c.processing_fee) || 0), 0),
+          total_revenue: filtered.reduce((acc, c) => acc + (Number(c.processing_fee) || 0), 0),
         })
       } else { setError(res.data?.message || 'Failed to fetch clients') }
     } catch (err) { setError(err.message) }
     finally { setClientsLoading(false) }
   }
 
+
   useEffect(() => { fetchClients() }, [])
 
   const filteredClients = clients.filter(c => {
     const q = clientSearch.toLowerCase()
     return (
-      (c.client_name  || '').toLowerCase().includes(q) ||
-      (c.email        || '').toLowerCase().includes(q) ||
-      (c.client_id    || '').toString().includes(q) ||
+      (c.client_name || '').toLowerCase().includes(q) ||
+      (c.email || '').toLowerCase().includes(q) ||
+      (c.client_id || '').toString().includes(q) ||
       (c.product_name || '').toLowerCase().includes(q) ||
       (c.partner_name || '').toLowerCase().includes(q)
     )
   })
 
   // ── DELIVERY MODAL ─────────────────────────────────────────────────────────
-  const [deliveryModal,  setDeliveryModal]  = useState(false)
+  const [deliveryModal, setDeliveryModal] = useState(false)
   const [deliveryClient, setDeliveryClient] = useState(null)
-  const [deliveryDays,   setDeliveryDays]   = useState('')
+  const [deliveryDays, setDeliveryDays] = useState('')
   const [deliverySaving, setDeliverySaving] = useState(false)
 
   const openDeliveryModal = (client) => {
@@ -87,10 +89,10 @@ const AdminSaasClients = () => {
   }, [activePageTab])
 
   // ── SUBSCRIPTIONS ──────────────────────────────────────────────────────────
-  const [subscriptions,        setSubscriptions]        = useState([])
+  const [subscriptions, setSubscriptions] = useState([])
   const [subscriptionsLoading, setSubscriptionsLoading] = useState(false)
-  const [subSearch,            setSubSearch]            = useState('')
-  const [togglingSubId,        setTogglingSubId]        = useState(null)
+  const [subSearch, setSubSearch] = useState('')
+  const [togglingSubId, setTogglingSubId] = useState(null)
 
   const fetchSubscriptions = async () => {
     setSubscriptionsLoading(true)
@@ -162,13 +164,13 @@ const AdminSaasClients = () => {
             <p className="text-xs font-bold text-slate-500">Financial Year: 2026-2027</p>
           </div>
           <div className="w-40 flex justify-end">
-            {activePageTab === 'show_clients'   && <button onClick={fetchClients}       disabled={clientsLoading}       className="px-4 py-2 border border-slate-200 hover:border-[#38b34a] hover:text-[#38b34a] bg-white rounded-xl text-xs font-bold disabled:opacity-50 cursor-pointer shadow-sm">{clientsLoading ? 'Loading...' : '↺ Refresh'}</button>}
-            {activePageTab === 'subscriptions'  && <button onClick={fetchSubscriptions} disabled={subscriptionsLoading} className="px-4 py-2 border border-slate-200 hover:border-blue-400 hover:text-blue-600 bg-white rounded-xl text-xs font-bold disabled:opacity-50 cursor-pointer shadow-sm">{subscriptionsLoading ? 'Loading...' : '↺ Refresh'}</button>}
+            {activePageTab === 'show_clients' && <button onClick={fetchClients} disabled={clientsLoading} className="px-4 py-2 border border-slate-200 hover:border-[#38b34a] hover:text-[#38b34a] bg-white rounded-xl text-xs font-bold disabled:opacity-50 cursor-pointer shadow-sm">{clientsLoading ? 'Loading...' : '↺ Refresh'}</button>}
+            {activePageTab === 'subscriptions' && <button onClick={fetchSubscriptions} disabled={subscriptionsLoading} className="px-4 py-2 border border-slate-200 hover:border-blue-400 hover:text-blue-600 bg-white rounded-xl text-xs font-bold disabled:opacity-50 cursor-pointer shadow-sm">{subscriptionsLoading ? 'Loading...' : '↺ Refresh'}</button>}
           </div>
         </div>
 
         {/* Flash messages */}
-        {error      && <div className="p-3 rounded-xl border border-red-400/20 bg-red-50 text-red-600 text-sm font-semibold flex items-center gap-2">⚠️ {error}</div>}
+        {error && <div className="p-3 rounded-xl border border-red-400/20 bg-red-50 text-red-600 text-sm font-semibold flex items-center gap-2">⚠️ {error}</div>}
         {successMsg && <div className="p-3 rounded-xl border border-emerald-400/20 bg-emerald-50 text-emerald-700 text-sm font-semibold flex items-center gap-2">✅ {successMsg}</div>}
 
         {/* Main card */}
@@ -177,22 +179,21 @@ const AdminSaasClients = () => {
           {/* Tabs */}
           <div className="flex flex-wrap items-center gap-1 border-b border-slate-200/60 pb-3 mb-6">
             {[
-              { id: 'show_clients',   label: 'Client List'       },
-              { id: 'subscriptions',  label: 'Subscriptions'     },
-              { id: 'follow_up',      label: 'Follow Up'         },
-              { id: 'customization',  label: 'Customization'     },
-              { id: 'renewal',        label: 'Next Renewal'      },
-              { id: 'due_payment',    label: 'Due Payment'       },
-              { id: 'payment_report', label: 'Payment Report'    },
+              { id: 'show_clients', label: 'Client List' },
+              { id: 'subscriptions', label: 'Subscriptions' },
+              { id: 'follow_up', label: 'Follow Up' },
+              { id: 'customization', label: 'Customization' },
+              { id: 'renewal', label: 'Next Renewal' },
+              { id: 'due_payment', label: 'Due Payment' },
+              { id: 'payment_report', label: 'Payment Report' },
             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActivePageTab(tab.id)}
-                className={`px-5 py-2.5 rounded-t-xl text-xs font-bold transition-all cursor-pointer border-t-2 ${
-                  activePageTab === tab.id
+                className={`px-5 py-2.5 rounded-t-xl text-xs font-bold transition-all cursor-pointer border-t-2 ${activePageTab === tab.id
                     ? 'bg-white border-[#ef4444] text-[#ef4444] -mb-[13px] z-10'
                     : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
-                }`}
+                  }`}
               >
                 {tab.label}
               </button>
@@ -265,9 +266,8 @@ const AdminSaasClients = () => {
                               {c.delivery_after != null ? `${c.delivery_after} Days` : '—'}
                             </td>
                             <td className="px-5 py-4 text-center">
-                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${
-                                c.is_active ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-rose-100 text-rose-800 border-rose-200'
-                              }`}>
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${c.is_active ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-rose-100 text-rose-800 border-rose-200'
+                                }`}>
                                 {c.is_active ? 'Active' : 'Inactive'}
                               </span>
                             </td>
@@ -300,32 +300,32 @@ const AdminSaasClients = () => {
                 <input type="text" value={subSearch} onChange={e => setSubSearch(e.target.value)} placeholder="Search by client, product, or billing cycle..." className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 transition-all" />
               </div>
               {subscriptionsLoading ? <div className="text-center py-12 font-bold text-slate-400"><span className="inline-block animate-spin mr-2">🔄</span>Loading...</div>
-              : filteredSubs.length === 0 ? <div className="text-center py-12 text-slate-400"><span className="text-4xl block">🔁</span><p className="font-bold mt-2">No subscriptions found</p></div>
-              : (
-                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead><tr className="border-b border-slate-200 bg-slate-50 text-slate-400 font-bold uppercase tracking-wider">
-                        <th className="px-5 py-4">Client</th><th className="px-5 py-4">Product</th><th className="px-5 py-4 text-center">Billing Cycle</th><th className="px-5 py-4 text-right">Amount</th><th className="px-5 py-4 text-center">Start</th><th className="px-5 py-4 text-center">End</th><th className="px-5 py-4 text-center">Status</th><th className="px-5 py-4 text-center">Toggle</th>
-                      </tr></thead>
-                      <tbody className="divide-y divide-slate-100 text-slate-700">
-                        {filteredSubs.map(sub => (
-                          <tr key={sub.id} className="hover:bg-slate-50/50">
-                            <td className="px-5 py-4"><p className="font-bold text-slate-800 text-sm">{sub.client_name || '—'}</p><p className="text-[10px] text-slate-400">{sub.client_email || ''}</p></td>
-                            <td className="px-5 py-4 font-semibold text-slate-700">{sub.product_name || '—'}</td>
-                            <td className="px-5 py-4 text-center"><span className="px-2.5 py-1 rounded-full bg-teal-100 text-teal-800 border border-teal-200 text-[10px] font-black uppercase">{sub.billing_cycle || '—'}</span></td>
-                            <td className="px-5 py-4 text-right font-black text-slate-800">₹{Number(sub.amount || 0).toLocaleString('en-IN')}</td>
-                            <td className="px-5 py-4 text-center text-slate-500">{sub.start_date ? new Date(sub.start_date).toLocaleDateString('en-IN') : '—'}</td>
-                            <td className="px-5 py-4 text-center text-slate-500">{sub.end_date ? new Date(sub.end_date).toLocaleDateString('en-IN') : '—'}</td>
-                            <td className="px-5 py-4 text-center"><span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${sub.is_active ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-rose-100 text-rose-800 border-rose-200'}`}>{sub.is_active ? 'Active' : 'Inactive'}</span></td>
-                            <td className="px-5 py-4 text-center"><button onClick={() => toggleSubscription(sub)} disabled={togglingSubId === sub.id} className={`px-3 py-1.5 rounded-xl font-bold text-[10px] cursor-pointer disabled:opacity-50 border transition-all hover:scale-105 active:scale-95 shadow-sm ${sub.is_active ? 'bg-rose-50 hover:bg-rose-100 text-rose-600 border-rose-200/60' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border-emerald-200/60'}`}>{togglingSubId === sub.id ? '...' : sub.is_active ? '⏸️ Deactivate' : '▶️ Activate'}</button></td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
+                : filteredSubs.length === 0 ? <div className="text-center py-12 text-slate-400"><span className="text-4xl block">🔁</span><p className="font-bold mt-2">No subscriptions found</p></div>
+                  : (
+                    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead><tr className="border-b border-slate-200 bg-slate-50 text-slate-400 font-bold uppercase tracking-wider">
+                            <th className="px-5 py-4">Client</th><th className="px-5 py-4">Product</th><th className="px-5 py-4 text-center">Billing Cycle</th><th className="px-5 py-4 text-right">Amount</th><th className="px-5 py-4 text-center">Start</th><th className="px-5 py-4 text-center">End</th><th className="px-5 py-4 text-center">Status</th><th className="px-5 py-4 text-center">Toggle</th>
+                          </tr></thead>
+                          <tbody className="divide-y divide-slate-100 text-slate-700">
+                            {filteredSubs.map(sub => (
+                              <tr key={sub.id} className="hover:bg-slate-50/50">
+                                <td className="px-5 py-4"><p className="font-bold text-slate-800 text-sm">{sub.client_name || '—'}</p><p className="text-[10px] text-slate-400">{sub.client_email || ''}</p></td>
+                                <td className="px-5 py-4 font-semibold text-slate-700">{sub.product_name || '—'}</td>
+                                <td className="px-5 py-4 text-center"><span className="px-2.5 py-1 rounded-full bg-teal-100 text-teal-800 border border-teal-200 text-[10px] font-black uppercase">{sub.billing_cycle || '—'}</span></td>
+                                <td className="px-5 py-4 text-right font-black text-slate-800">₹{Number(sub.amount || 0).toLocaleString('en-IN')}</td>
+                                <td className="px-5 py-4 text-center text-slate-500">{sub.start_date ? new Date(sub.start_date).toLocaleDateString('en-IN') : '—'}</td>
+                                <td className="px-5 py-4 text-center text-slate-500">{sub.end_date ? new Date(sub.end_date).toLocaleDateString('en-IN') : '—'}</td>
+                                <td className="px-5 py-4 text-center"><span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${sub.is_active ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-rose-100 text-rose-800 border-rose-200'}`}>{sub.is_active ? 'Active' : 'Inactive'}</span></td>
+                                <td className="px-5 py-4 text-center"><button onClick={() => toggleSubscription(sub)} disabled={togglingSubId === sub.id} className={`px-3 py-1.5 rounded-xl font-bold text-[10px] cursor-pointer disabled:opacity-50 border transition-all hover:scale-105 active:scale-95 shadow-sm ${sub.is_active ? 'bg-rose-50 hover:bg-rose-100 text-rose-600 border-rose-200/60' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border-emerald-200/60'}`}>{togglingSubId === sub.id ? '...' : sub.is_active ? '⏸️ Deactivate' : '▶️ Activate'}</button></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
             </div>
           )}
 

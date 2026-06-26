@@ -294,8 +294,8 @@ const SaasBasedSoftware = () => {
               sub.products.forEach(p => {
                 allProducts.push({
                   ...p,
-                  category: mapCategory(p.category_name || sub.category_name, p.category_id || sub.category_id),
-                  categoryLabel: (p.category_name || sub.category_name || '').toUpperCase(),
+                  category: mapCategory(p.sub_category_name || sub.name, p.sub_category_id || sub.id),
+                  categoryLabel: (p.sub_category_name || sub.name || '').toUpperCase(),
                   securityDeposit: formatSecurityDeposit(p.processing_fee),
                   monthlySubscription: formatMonthlySubscription(p.monthly_subscription, p.per_person),
                 })

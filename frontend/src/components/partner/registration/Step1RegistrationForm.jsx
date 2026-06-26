@@ -75,7 +75,7 @@ const Step1RegistrationForm = ({ onSuccess }) => {
       partner_name: form.partner_name || 'Simulated Partner',
       organization_name: form.organization_name || 'Simulated Organization',
       registration_status: 'pending',
-    })
+    }, form)
   }
 
   const handleSubmit = async (e) => {
@@ -104,7 +104,7 @@ const Step1RegistrationForm = ({ onSuccess }) => {
       Object.entries(files).forEach(([k, v]) => { if (v) fd.append(k, v) })
       const res = await registerPartner(fd)
       if (res.data?.success) {
-        onSuccess(res.data.data)
+        onSuccess(res.data.data, form)
       } else {
         setError(res.data?.message || 'Registration failed. Please try again.')
       }

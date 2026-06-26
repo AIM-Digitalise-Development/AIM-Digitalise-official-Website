@@ -1,10 +1,120 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import PartnerLoginForm from '../../components/partner/auth/PartnerLoginForm'
+import AgreementDoc from '../../components/partner/registration/AgreementDoc'
 import { ROUTES } from '../../constants/routes'
 import plogo from '../../assets/images/plogo.jpeg'
+import logo from '../../assets/images/logo.png'
 
 const PartnerLogin = () => {
+  const navigate = useNavigate()
+  const [completePartnerId, setCompletePartnerId] = useState('')
+  const [completeError, setCompleteError] = useState('')
+  const [generatingPdf, setGeneratingPdf] = useState(false)
+  const [pdfError, setPdfError] = useState('')
+
+  const loadPdfLibraries = () => {
+    return new Promise((resolve, reject) => {
+      if (window.html2canvas && window.jspdf) {
+        resolve({ html2canvas: window.html2canvas, jspdf: window.jspdf })
+        return
+      }
+
+      const loadScript = (src, checkGlobal) => {
+        return new Promise((res, rej) => {
+          if (window[checkGlobal]) {
+            res()
+            return
+          }
+          const existing = document.querySelector(`script[src*="${src.split('/').pop()}"]`)
+          if (existing) {
+            existing.onload = () => res()
+            existing.onerror = () => rej(new Error(`Failed to load ${src}`))
+            return
+          }
+          const script = document.createElement('script')
+          script.src = src
+          script.onload = () => res()
+          script.onerror = () => rej(new Error(`Failed to load ${src}`))
+          document.body.appendChild(script)
+        })
+      }
+
+      Promise.all([
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', 'jspdf'),
+        loadScript('https://cdn.jsdelivr.net/npm/html2canvas-pro@latest/dist/html2canvas.min.js', 'html2canvas')
+      ])
+        .then(() => resolve({ html2canvas: window.html2canvas, jspdf: window.jspdf }))
+        .catch(reject)
+    })
+  }
+
+  const handleDownloadBlank = async () => {
+    setGeneratingPdf(true)
+    setPdfError('')
+    try {
+      const { html2canvas, jspdf } = await loadPdfLibraries()
+      if (!html2canvas || !jspdf) {
+        throw new Error('Could not load the PDF libraries. Please check your network connection.')
+      }
+
+      const jsPDF = jspdf.jsPDF || window.jsPDF
+      if (!jsPDF) {
+        throw new Error('PDF generator engine not found.')
+      }
+
+      const element = document.getElementById('blank-agreement-container')
+      if (!element) {
+        throw new Error('Agreement template not found')
+      }
+
+      const pages = element.querySelectorAll('.agreement-page')
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      })
+
+      for (let i = 0; i < pages.length; i++) {
+        const pageEl = pages[i]
+        const canvas = await html2canvas(pageEl, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff'
+        })
+        
+        const imgData = canvas.toDataURL('image/jpeg', 0.95)
+        if (i > 0) pdf.addPage()
+        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST')
+      }
+
+      pdf.save('AIM_Blank_Partner_Agreement.pdf')
+    } catch (err) {
+      console.error('Blank PDF generation failed:', err)
+      setPdfError('Failed to generate agreement PDF. Please try again.')
+    } finally {
+      setGeneratingPdf(false)
+    }
+  }
+
+  const handleCompleteSubmit = (e) => {
+    e.preventDefault()
+    if (!completePartnerId) {
+      setCompleteError('Please enter your Partner ID.')
+      return
+    }
+
+    // Direct redirect to registration page, forcing Step 3 (Signed Contract Upload & Payment)
+    navigate(ROUTES.PARTNER.REGISTER, {
+      state: {
+        resumePartnerId: completePartnerId.trim().toUpperCase(),
+        resumeStep: 3
+      }
+    })
+  }
+
   return (
     <>
       <Helmet>
@@ -43,37 +153,128 @@ const PartnerLogin = () => {
           </div>
         </header>
 
-        {/* Main */}
-        <main className="relative z-10 flex-1 flex items-center justify-center px-4 py-16">
-          <div className="w-full max-w-md">
-            {/* Card */}
-            <div className="relative rounded-3xl border border-white/10 bg-aim-navy-card/75 backdrop-blur-2xl p-8 sm:p-10 shadow-2xl shadow-black/80 transition-all duration-300">
-              {/* Internal Ambient glows */}
-              <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-aim-gold/15 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-48 h-48 bg-aim-purple/15 rounded-full blur-3xl pointer-events-none" />
+        {/* Hidden Blank Agreement for Client-side Downloading */}
+        <div style={{ position: 'absolute', left: '0', top: '0', width: '210mm', height: '0', overflow: 'hidden', opacity: 0, pointerEvents: 'none', zIndex: -9999 }}>
+          <div id="blank-agreement-container">
+            <AgreementDoc partnerData={{}} forPdf={true} />
+          </div>
+        </div>
 
-              {/* Header */}
-              <div className="relative z-10 text-center mb-8">
-                {/* Partner badge */}
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-aim-gold/10 border border-aim-gold/20 mb-5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-aim-gold animate-pulse" />
-                  <span className="text-aim-gold text-[10px] font-black uppercase tracking-widest">Partner Portal</span>
+        {/* Main Grid Card Layout */}
+        <main className="relative z-10 flex-1 flex items-center justify-center px-4 py-12">
+          <div className="w-full max-w-5xl">
+            <div className="relative rounded-3xl border border-white/10 bg-aim-navy-card/85 backdrop-blur-2xl shadow-2xl shadow-black/90 overflow-hidden transition-all duration-300">
+              
+              <div className="grid grid-cols-1 md:grid-cols-12">
+                {/* Left Column (Login Form) */}
+                <div className="col-span-12 md:col-span-6 p-6 sm:p-10 flex flex-col justify-center bg-aim-navy-card/95">
+                  <div className="flex justify-center mb-4 shrink-0">
+                    <img src={logo} alt="AIM Digitalise" className="h-14 sm:h-16 w-auto object-contain" />
+                  </div>
+                  
+                  <h2 className="text-center text-lg sm:text-xl font-black text-white tracking-tight leading-none mb-1">
+                    New Partner Registration
+                  </h2>
+                  <p className="text-center text-[11px] text-aim-copy-muted mb-6">
+                    Don't have an account? <Link to={ROUTES.PARTNER.REGISTER} className="text-rose-500 hover:text-rose-400 font-bold transition-colors">Join Us</Link>
+                  </p>
+
+                  <PartnerLoginForm />
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-black text-white mb-2 tracking-tight">Welcome Back</h1>
-                <p className="text-xs text-aim-copy-muted leading-relaxed">
-                  Sign in to manage your earnings, client orders, and payout schedules.
-                </p>
+
+                {/* Right Column (Associate Partner Benefits & Step 3 Resumer Form) */}
+                <div className="col-span-12 md:col-span-6 p-6 sm:p-10 bg-gradient-to-br from-aim-gold/20 via-aim-purple/35 to-aim-navy-card/90 flex flex-col justify-between border-t md:border-t-0 md:border-l border-white/10">
+                  <div className="space-y-4">
+                    <h2 className="text-center text-base sm:text-lg font-black text-aim-gold tracking-wide italic">
+                      "Associate Partner"
+                    </h2>
+
+                    <div>
+                      <h3 className="text-xs font-black uppercase tracking-wider text-slate-100 mb-1.5">
+                        Opportunities:
+                      </h3>
+                      <ul className="list-disc pl-4 space-y-1 text-[10.5px] text-slate-300 leading-normal font-medium font-sans">
+                        <li>AIM Digitalise offers customized digital solution, SEO-friendly, fully responsive websites and custom software on a monthly rental model for all segment of businesses.</li>
+                        <li>Lifetime commission facilities: A 10% monthly commission is awarded for first 12 months per onboarded client, then 5% for Lifetime, as long as the deal exists. Extra rewards for top-performing partners.</li>
+                        <li>The partner is only responsible for sales and customer retention, excluding development, deployment, implementation, debugging, technical support, updates, and renewals.</li>
+                        <li>You will be awarded with our Authorized Partner certificate.</li>
+                        <li>You will be also promoted as our Authorized Partner on our official website getting you more reachability from our end.</li>
+                      </ul>
+                    </div>
+
+                    <div className="flex items-center gap-3 py-2 px-3.5 rounded-xl border border-aim-gold/25 bg-aim-gold/10">
+                      <span className="text-[10.5px] font-bold text-aim-gold">Download Agreement:</span>
+                      <button
+                        onClick={handleDownloadBlank}
+                        disabled={generatingPdf}
+                        className="p-1.5 rounded-lg bg-aim-gold text-aim-navy hover:scale-105 active:scale-95 transition-all shadow-md shrink-0 cursor-pointer disabled:opacity-50"
+                        title="Download Blank Agreement"
+                      >
+                        {generatingPdf ? (
+                          <span className="w-3.5 h-3.5 block border-2 border-aim-navy border-t-transparent animate-spin rounded-full" />
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                        )}
+                      </button>
+                      {pdfError && <span className="text-[9px] text-red-400 font-semibold">{pdfError}</span>}
+                    </div>
+
+                    <div>
+                      <h3 className="text-xs font-black uppercase tracking-wider text-slate-100 mb-1.5">
+                        Partner Eligibility Criteria:
+                      </h3>
+                      <ul className="list-disc pl-4 space-y-1 text-[10.5px] text-slate-300 leading-normal font-medium font-sans">
+                        <li>Operate an active business unit.</li>
+                        <li>Minimum 3 years of proven B2B sales experience.</li>
+                        <li>Refundable security deposit: ₹5,000 (Domestic, previously ₹25,000).</li>
+                        <li>Refundable security deposit: $500 (International, Previously $1,000).</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-white/10 pt-4 mt-4">
+                    <form onSubmit={handleCompleteSubmit} className="space-y-2.5">
+                      <h3 className="text-xs font-black text-white uppercase tracking-wider leading-none">
+                        Complete your registration.
+                      </h3>
+                      <p className="text-[10px] text-slate-300 leading-tight">
+                        If you did not complete the signup process after Step 1, enter your Partner ID below to resume and proceed to the upload &amp; payment page.
+                      </p>
+
+                      <div className="flex flex-col sm:flex-row gap-2 mt-1">
+                        <input
+                          type="text"
+                          value={completePartnerId}
+                          onChange={(e) => setCompletePartnerId(e.target.value)}
+                          placeholder="ENTER YOUR PARTNER ID"
+                          className="flex-1 bg-aim-navy-light/60 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-aim-gold font-sans tracking-wide"
+                          required
+                        />
+
+                        <button
+                          type="submit"
+                          className="sm:w-32 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs tracking-wider uppercase transition-colors shadow-md shadow-blue-900/20 active:scale-[0.99] cursor-pointer"
+                        >
+                          Submit
+                        </button>
+                      </div>
+
+                      {completeError && (
+                        <p className="text-[10px] text-red-400 font-semibold mt-1">{completeError}</p>
+                      )}
+                    </form>
+                  </div>
+                </div>
+
               </div>
 
-              {/* Form */}
-              <div className="relative z-10">
-                <PartnerLoginForm />
-              </div>
             </div>
 
             {/* Footer note */}
             <p className="text-center text-xs text-aim-copy-muted mt-8">
-              Having trouble?质量{' '}
+              Having trouble?{' '}
               <a href="mailto:support@aimdigitalise.com" className="text-aim-gold hover:text-aim-gold-light transition-colors font-bold underline underline-offset-4">
                 Contact Technical Support
               </a>

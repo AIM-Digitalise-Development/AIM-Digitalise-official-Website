@@ -2,20 +2,20 @@
  * Parses and returns the plan end date/expiration date from client profile or product data.
  */
 export const getPlanEndDate = (displayUser, activeProduct) => {
-  const dateStr = 
-    displayUser?.valid_to || 
-    displayUser?.valid_until || 
-    displayUser?.plan_end_date || 
-    displayUser?.expiry_date || 
+  const dateStr =
+    displayUser?.valid_to ||
+    displayUser?.valid_until ||
+    displayUser?.plan_end_date ||
+    displayUser?.expiry_date ||
     displayUser?.renewalDueDate ||
-    activeProduct?.valid_to || 
-    activeProduct?.valid_until || 
-    activeProduct?.plan_end_date || 
+    activeProduct?.valid_to ||
+    activeProduct?.valid_until ||
+    activeProduct?.plan_end_date ||
     activeProduct?.expiry_date ||
     activeProduct?.renewalDueDate
-  
+
   if (dateStr) return new Date(dateStr)
-  
+
   // Fallback: 1 month after activated_at if payment is paid
   const activated = displayUser?.activated_at || activeProduct?.activated_at
   const status = displayUser?.payment_status || activeProduct?.payment_status || ''
@@ -40,7 +40,7 @@ export const checkSubscriptionStatus = (profileData, productData) => {
   currentDate.setHours(0, 0, 0, 0)
 
   const planEndDate = getPlanEndDate(displayUser, activeProduct)
-  
+
   let isPlanActive = false
   let daysRemaining = 0
   let canPay = true
@@ -79,3 +79,14 @@ export const checkSubscriptionStatus = (profileData, productData) => {
     isPaid
   }
 }
+
+/**
+ * Checks if a client is a SaaS-based client (NEXGN products) rather than a subscribed client.
+ */
+export const isSaasClient = (client) => {
+  if (!client) return false
+  const nameLower = (client.product_name || '').toLowerCase()
+  const category = (client.product_category || '').toLowerCase()
+  return nameLower.includes('nexgn') || category === 'nexgn'
+}
+

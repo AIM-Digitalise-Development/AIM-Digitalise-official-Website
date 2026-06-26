@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useSearchParams } from 'react-router-dom'
 import { getAdminClients } from '../../api/admin/partners'
+import { isSaasClient } from '../../utils/subscription'
 
 const AdminSubscribedClients = () => {
   const [productFilter, setProductFilter] = useState('All')
@@ -28,7 +29,6 @@ const AdminSubscribedClients = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [summary, setSummary] = useState({
-    saas_clients: 0,
     total_clients: 0,
     active_subscriptions: 0,
     total_revenue: 0
@@ -42,17 +42,15 @@ const AdminSubscribedClients = () => {
       if (res.data?.success) {
         const all = res.data.data.all_clients || []
         // Filter out nexgn (SaaS Based Clients)
-        const filtered = all.filter(c => c.product_category !== 'nexgn')
+        const filtered = all.filter(c => !isSaasClient(c))
         setClients(filtered)
 
-        // Calculate summary metrics
-        const saas = all.filter(c => c.product_category === 'nexgn').length
-        const total = all.length
-        const active = all.filter(c => c.is_active).length
-        const revenue = all.reduce((acc, c) => acc + (Number(c.processing_fee) || 0), 0)
+        // Calculate summary metrics (subscribed clients only)
+        const total = filtered.length
+        const active = filtered.filter(c => c.is_active).length
+        const revenue = filtered.reduce((acc, c) => acc + (Number(c.processing_fee) || 0), 0)
 
         setSummary({
-          saas_clients: saas,
           total_clients: total,
           active_subscriptions: active,
           total_revenue: revenue
@@ -227,8 +225,8 @@ const AdminSubscribedClients = () => {
             <button
               onClick={() => handleTabChange('client_list')}
               className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${activeTab === 'client_list'
-                  ? 'bg-white border-[#ef4444] text-[#ef4444] -mb-[13px] z-10'
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
+                ? 'bg-white border-[#ef4444] text-[#ef4444] -mb-[13px] z-10'
+                : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
                 }`}
             >
               Client List
@@ -236,8 +234,8 @@ const AdminSubscribedClients = () => {
             <button
               onClick={() => handleTabChange('customization')}
               className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${activeTab === 'customization'
-                  ? 'bg-white border-[#ef4444] text-[#ef4444] -mb-[13px] z-10'
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
+                ? 'bg-white border-[#ef4444] text-[#ef4444] -mb-[13px] z-10'
+                : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
                 }`}
             >
               Customization
@@ -245,8 +243,8 @@ const AdminSubscribedClients = () => {
             <button
               onClick={() => handleTabChange('due_payment')}
               className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${activeTab === 'due_payment'
-                  ? 'bg-white border-[#ef4444] text-[#ef4444] -mb-[13px] z-10'
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
+                ? 'bg-white border-[#ef4444] text-[#ef4444] -mb-[13px] z-10'
+                : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
                 }`}
             >
               Due Payment
@@ -254,8 +252,8 @@ const AdminSubscribedClients = () => {
             <button
               onClick={() => handleTabChange('payment_report')}
               className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${activeTab === 'payment_report'
-                  ? 'bg-white border-[#ef4444] text-[#ef4444] -mb-[13px] z-10'
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
+                ? 'bg-white border-[#ef4444] text-[#ef4444] -mb-[13px] z-10'
+                : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
                 }`}
             >
               Payment Report
@@ -263,8 +261,8 @@ const AdminSubscribedClients = () => {
             <button
               onClick={() => handleTabChange('next_renewal')}
               className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${activeTab === 'next_renewal'
-                  ? 'bg-white border-[#ef4444] text-[#ef4444] -mb-[13px] z-10'
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
+                ? 'bg-white border-[#ef4444] text-[#ef4444] -mb-[13px] z-10'
+                : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
                 }`}
             >
               Next Renewal
@@ -283,31 +281,12 @@ const AdminSubscribedClients = () => {
               )}
 
               {/* Stats Cards Section */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                {/* Card 1: SaaS Based Client */}
-                <div className="group bg-gradient-to-br from-white to-blue-50/20 rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-300 flex items-center justify-between overflow-hidden relative animate-slide-up">
-                  <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-blue-500/5 rounded-full blur-xl group-hover:scale-125 transition-all duration-500"></div>
-                  <div>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-sans">SaaS Based Clients</span>
-                    <span className="text-3xl font-black text-slate-800 mt-1.5 block tracking-tight">
-                      {loading ? (
-                        <span className="inline-block animate-pulse">...</span>
-                      ) : (
-                        summary.saas_clients
-                      )}
-                    </span>
-                    <span className="text-[10px] font-bold text-blue-500 mt-1 block">Active NEXGN suite</span>
-                  </div>
-                  <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center text-xl font-bold border border-blue-100 group-hover:scale-110 group-hover:bg-blue-500 group-hover:text-white transition-all duration-300 shadow-sm">
-                    🚀
-                  </div>
-                </div>
-
-                {/* Card 2: Total Client */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                {/* Card 1: Total Client */}
                 <div className="group bg-gradient-to-br from-white to-indigo-50/20 rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-300 flex items-center justify-between overflow-hidden relative animate-slide-up [animation-delay:100ms]">
                   <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-indigo-500/5 rounded-full blur-xl group-hover:scale-125 transition-all duration-500"></div>
                   <div>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-sans">Total Clients</span>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-sans">Total Subscribed Clients</span>
                     <span className="text-3xl font-black text-slate-800 mt-1.5 block tracking-tight">
                       {loading ? (
                         <span className="inline-block animate-pulse">...</span>
@@ -315,14 +294,14 @@ const AdminSubscribedClients = () => {
                         summary.total_clients
                       )}
                     </span>
-                    <span className="text-[10px] font-bold text-indigo-500 mt-1 block">SaaS + Custom portfolios</span>
+                    <span className="text-[10px] font-bold text-indigo-500 mt-1 block">Custom portfolios</span>
                   </div>
                   <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-500 flex items-center justify-center text-xl font-bold border border-indigo-100 group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white transition-all duration-300 shadow-sm">
                     👥
                   </div>
                 </div>
 
-                {/* Card 3: Active Subscriptions */}
+                {/* Card 2: Active Subscriptions */}
                 <div className="group bg-gradient-to-br from-white to-emerald-50/20 rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all duration-300 flex items-center justify-between overflow-hidden relative animate-slide-up [animation-delay:200ms]">
                   <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-emerald-500/5 rounded-full blur-xl group-hover:scale-125 transition-all duration-500"></div>
                   <div>
@@ -343,7 +322,7 @@ const AdminSubscribedClients = () => {
                   </div>
                 </div>
 
-                {/* Card 4: Total Revenue */}
+                {/* Card 3: Total Revenue */}
                 <div className="group bg-gradient-to-br from-white to-amber-50/20 rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md hover:border-amber-200 transition-all duration-300 flex items-center justify-between overflow-hidden relative animate-slide-up [animation-delay:300ms]">
                   <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-amber-500/5 rounded-full blur-xl group-hover:scale-125 transition-all duration-500"></div>
                   <div>
@@ -362,6 +341,7 @@ const AdminSubscribedClients = () => {
                   </div>
                 </div>
               </div>
+
 
               {/* Table Subtitle Bar */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -430,8 +410,8 @@ const AdminSubscribedClients = () => {
                             <td className="px-6 py-4 font-medium text-slate-500">{getEndDate(sub.created_at)}</td>
                             <td className="px-6 py-4 text-center">
                               <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border tracking-wider ${sub.is_active
-                                  ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                                  : 'bg-rose-100 text-rose-800 border-rose-200'
+                                ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                : 'bg-rose-100 text-rose-800 border-rose-200'
                                 }`}>
                                 {sub.is_active ? 'ACTIVE' : 'INACTIVE'}
                               </span>
