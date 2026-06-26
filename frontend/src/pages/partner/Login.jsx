@@ -13,6 +13,7 @@ const PartnerLogin = () => {
   const [completeError, setCompleteError] = useState('')
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [pdfError, setPdfError] = useState('')
+  const [showPreviewModal, setShowPreviewModal] = useState(false)
 
   const loadPdfLibraries = () => {
     return new Promise((resolve, reject) => {
@@ -122,7 +123,7 @@ const PartnerLogin = () => {
         <meta name="description" content="Sign in to the AIM Digitalise Partner Portal to manage your earnings, orders, and payouts." />
       </Helmet>
 
-      <div className="min-h-screen bg-aim-navy flex flex-col relative overflow-hidden">
+      <div className="min-h-screen bg-aim-navy flex flex-col relative overflow-hidden font-sans">
         {/* Background decorations with image & glows */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
           <div 
@@ -164,20 +165,22 @@ const PartnerLogin = () => {
         <main className="relative z-10 flex-1 flex items-center justify-center px-4 py-12">
           <div className="w-full max-w-5xl">
             <div className="relative rounded-3xl border border-white/10 bg-aim-navy-card/85 backdrop-blur-2xl shadow-2xl shadow-black/90 overflow-hidden transition-all duration-300">
-              
-              <div className="grid grid-cols-1 md:grid-cols-12">
+              <div className="grid grid-cols-1 md:grid-cols-12 font-sans">
                 {/* Left Column (Login Form) */}
                 <div className="col-span-12 md:col-span-6 p-6 sm:p-10 flex flex-col justify-center bg-aim-navy-card/95">
-                  <div className="flex justify-center mb-4 shrink-0">
+                              {/* <div style={{color:'white'}} className="grid grid-cols-1 md:grid-cols-12 font-sans p-4">Partner Portal</div> */}
+
+                  <div className="flex justify-center mb-8 shrink-0">
                     <img src={logo} alt="AIM Digitalise" className="h-14 sm:h-16 w-auto object-contain" />
                   </div>
                   
-                  <h2 className="text-center text-lg sm:text-xl font-black text-white tracking-tight leading-none mb-1">
-                    New Partner Registration
+                  <h2 
+                    className="text-center font-black text-white tracking-tight mb-1"
+                    style={{ fontSize: 'var(--text-3xl)', lineHeight: 'var(--tw-leading, var(--text-3xl--line-height))' }}
+                  >
+                    Welcome Back Partner  
                   </h2>
-                  <p className="text-center text-[11px] text-aim-copy-muted mb-6">
-                    Don't have an account? <Link to={ROUTES.PARTNER.REGISTER} className="text-rose-500 hover:text-rose-400 font-bold transition-colors">Join Us</Link>
-                  </p>
+                 
 
                   <PartnerLoginForm />
                 </div>
@@ -189,49 +192,65 @@ const PartnerLogin = () => {
                       "Associate Partner"
                     </h2>
 
-                    <div>
-                      <h3 className="text-xs font-black uppercase tracking-wider text-slate-100 mb-1.5">
-                        Opportunities:
-                      </h3>
-                      <ul className="list-disc pl-4 space-y-1 text-[10.5px] text-slate-300 leading-normal font-medium font-sans">
-                        <li>AIM Digitalise offers customized digital solution, SEO-friendly, fully responsive websites and custom software on a monthly rental model for all segment of businesses.</li>
-                        <li>Lifetime commission facilities: A 10% monthly commission is awarded for first 12 months per onboarded client, then 5% for Lifetime, as long as the deal exists. Extra rewards for top-performing partners.</li>
-                        <li>The partner is only responsible for sales and customer retention, excluding development, deployment, implementation, debugging, technical support, updates, and renewals.</li>
-                        <li>You will be awarded with our Authorized Partner certificate.</li>
-                        <li>You will be also promoted as our Authorized Partner on our official website getting you more reachability from our end.</li>
-                      </ul>
+                    {/* Wrapper card box for lists */}
+                    <div className="rounded-2xl border border-white/5 bg-aim-navy-light/45 p-5 space-y-4 shadow-inner">
+                      <div>
+                        <h3 className="text-xs font-black uppercase tracking-wider text-aim-gold mb-1.5">
+                          Opportunities:
+                        </h3>
+                        <ul className="list-disc pl-4 space-y-1.5 text-[10.5px] text-slate-300 leading-normal font-medium font-sans">
+                          <li>AIM Digitalise offers customized digital solution, SEO-friendly, fully responsive websites and custom software on a monthly rental model for all segment of businesses.</li>
+                          <li>Lifetime commission facilities: A 10% monthly commission is awarded for first 12 months per onboarded client, then 5% for Lifetime, as long as the deal exists. Extra rewards for top-performing partners.</li>
+                          <li>The partner is only responsible for sales and customer retention, excluding development, deployment, implementation, debugging, technical support, updates, and renewals.</li>
+                          <li>You will be awarded with our Authorized Partner certificate.</li>
+                          <li>You will be also promoted as our Authorized Partner on our official website getting you more reachability from our end.</li>
+                        </ul>
+                      </div>
+
+                      <div className="border-t border-white/5 pt-3">
+                        <h3 className="text-xs font-black uppercase tracking-wider text-aim-gold mb-1.5">
+                          Partner Eligibility Criteria:
+                        </h3>
+                        <ul className="list-disc pl-4 space-y-1 text-[10.5px] text-slate-300 leading-normal font-medium font-sans">
+                          <li>Operate an active business unit.</li>
+                          <li>Minimum 3 years of proven B2B sales experience.</li>
+                          <li>Refundable security deposit: ₹5,000 (Domestic, previously ₹25,000).</li>
+                          <li>Refundable security deposit: $500 (International, Previously $1,000).</li>
+                        </ul>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-3 py-2 px-3.5 rounded-xl border border-aim-gold/25 bg-aim-gold/10">
-                      <span className="text-[10.5px] font-bold text-aim-gold">Download Agreement:</span>
+                    {/* View and Download Action Buttons Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                       <button
+                        type="button"
+                        onClick={() => setShowPreviewModal(true)}
+                        className="py-2.5 rounded-xl border border-aim-gold/50 bg-aim-navy-light text-aim-gold font-bold text-xs tracking-wide hover:bg-aim-gold/5 hover:border-aim-gold hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        View Agreement
+                      </button>
+
+                      <button
+                        type="button"
                         onClick={handleDownloadBlank}
                         disabled={generatingPdf}
-                        className="p-1.5 rounded-lg bg-aim-gold text-aim-navy hover:scale-105 active:scale-95 transition-all shadow-md shrink-0 cursor-pointer disabled:opacity-50"
-                        title="Download Blank Agreement"
+                        className="py-2.5 rounded-xl border border-aim-gold/50 bg-aim-gold/15 text-aim-gold font-bold text-xs tracking-wide hover:bg-aim-gold/25 hover:border-aim-gold hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                       >
                         {generatingPdf ? (
-                          <span className="w-3.5 h-3.5 block border-2 border-aim-navy border-t-transparent animate-spin rounded-full" />
+                          <span className="w-3.5 h-3.5 border-2 border-aim-gold border-t-transparent animate-spin rounded-full" />
                         ) : (
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                           </svg>
                         )}
+                        Download Agreement
                       </button>
-                      {pdfError && <span className="text-[9px] text-red-400 font-semibold">{pdfError}</span>}
                     </div>
-
-                    <div>
-                      <h3 className="text-xs font-black uppercase tracking-wider text-slate-100 mb-1.5">
-                        Partner Eligibility Criteria:
-                      </h3>
-                      <ul className="list-disc pl-4 space-y-1 text-[10.5px] text-slate-300 leading-normal font-medium font-sans">
-                        <li>Operate an active business unit.</li>
-                        <li>Minimum 3 years of proven B2B sales experience.</li>
-                        <li>Refundable security deposit: ₹5,000 (Domestic, previously ₹25,000).</li>
-                        <li>Refundable security deposit: $500 (International, Previously $1,000).</li>
-                      </ul>
-                    </div>
+                    {pdfError && <p className="text-center text-[10px] text-red-400 font-semibold">{pdfError}</p>}
                   </div>
 
                   <div className="border-t border-white/10 pt-4 mt-4">
@@ -239,7 +258,7 @@ const PartnerLogin = () => {
                       <h3 className="text-xs font-black text-white uppercase tracking-wider leading-none">
                         Complete your registration.
                       </h3>
-                      <p className="text-[10px] text-slate-300 leading-tight">
+                      <p className="text-[10px] text-slate-300 leading-tight font-medium">
                         If you did not complete the signup process after Step 1, enter your Partner ID below to resume and proceed to the upload &amp; payment page.
                       </p>
 
@@ -282,6 +301,49 @@ const PartnerLogin = () => {
           </div>
         </main>
       </div>
+
+      {/* --- BLANK AGREEMENT PREVIEW MODAL OVERLAY --- */}
+      {showPreviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-4xl rounded-2xl border border-white/10 bg-aim-navy-card/95 p-6 shadow-2xl z-10 flex flex-col max-h-[85vh] text-white">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-white/10 shrink-0">
+              <div>
+                <h3 className="text-base font-black text-white font-sans">Blank Agreement Document Preview</h3>
+                <p className="text-[10px] text-aim-copy-muted mt-0.5 font-sans">Previewing the empty Partnership Agreement contract template</p>
+              </div>
+              <button 
+                onClick={() => setShowPreviewModal(false)} 
+                className="text-aim-copy-muted hover:text-white p-1 text-xl font-bold cursor-pointer transition-colors"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-grow my-4 overflow-y-auto max-h-[60vh] rounded-xl border border-white/10 bg-slate-950 p-2 scrollbar-thin scrollbar-thumb-white/10">
+              <AgreementDoc partnerData={{}} forPdf={false} />
+            </div>
+
+            {/* Footer */}
+            <div className="pt-4 border-t border-white/10 flex justify-end gap-3 shrink-0">
+              <button
+                onClick={handleDownloadBlank}
+                disabled={generatingPdf}
+                className="px-5 py-2.5 rounded-xl bg-aim-gold text-aim-navy font-black text-xs hover:bg-aim-gold-light hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md disabled:opacity-50"
+              >
+                {generatingPdf ? 'Generating PDF...' : 'Download Agreement'}
+              </button>
+              <button
+                onClick={() => setShowPreviewModal(false)}
+                className="px-5 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 text-xs text-aim-copy-muted hover:text-white transition-colors cursor-pointer"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

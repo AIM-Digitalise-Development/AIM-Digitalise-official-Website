@@ -129,16 +129,21 @@ const PartnerLoginForm = () => {
         <span className="font-bold text-orange-500 cursor-pointer hover:underline">Privacy Policy</span>.
       </p>
 
-      {/* Log In Button (Centered) */}
+
+      {/* Log In Button (Centered with Gold theme) */}
       <div className="flex justify-center pt-3">
         <button
           type="submit"
           disabled={loading}
-          className="w-32 py-2.5 rounded-lg bg-gradient-to-r from-orange-500 to-fuchsia-600 hover:from-orange-600 hover:to-fuchsia-700 text-white font-black text-sm tracking-wide shadow-md transition-all duration-200 active:scale-95 cursor-pointer disabled:opacity-60"
+          className="w-32 py-2.5 rounded-lg bg-gradient-to-r from-aim-gold to-aim-gold-light hover:from-aim-gold-light hover:to-aim-gold text-aim-navy font-black text-sm tracking-wide shadow-md transition-all duration-200 active:scale-95 cursor-pointer disabled:opacity-60"
         >
           {loading ? 'Logging in...' : 'Log in'}
         </button>
+         
       </div>
+      <p className="text-center text-[11px] text-aim-copy-muted mb-6">
+                    Don't have an account? <Link to={ROUTES.PARTNER.REGISTER} className="text-rose-500 hover:text-rose-400 font-bold transition-colors">Register Now</Link>
+                  </p>
     </form>
   )
 }

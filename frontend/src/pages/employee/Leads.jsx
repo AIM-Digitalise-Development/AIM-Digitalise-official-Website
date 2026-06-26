@@ -70,6 +70,15 @@ export default function EmployeeLeads() {
   const [isBulkAssignOpen, setIsBulkAssignOpen] = useState(false)
   const [selectedDrawerLead, setSelectedDrawerLead] = useState(null) // Slide-over detail drawer
 
+  // Follow-up Modal State
+  const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false)
+  const [followUpLead, setFollowUpLead] = useState(null)
+  const [followUpForm, setFollowUpForm] = useState({
+    next_date: '',
+    status: 'new',
+    remark: ''
+  })
+
   // Mail Modal State
   const [isMailModalOpen, setIsMailModalOpen] = useState(false)
   const [mailLead, setMailLead] = useState(null)
@@ -399,6 +408,14 @@ export default function EmployeeLeads() {
     }
   }, [leads])
 
+  // Auto-sync Follow-up Lead details if updated
+  useEffect(() => {
+    if (followUpLead) {
+      const updated = leads.find(l => l.id === followUpLead.id)
+      if (updated) setFollowUpLead(updated)
+    }
+  }, [leads])
+
   // Helper trigger alerts
   const triggerSuccess = (msg) => {
     setSuccessMsg(msg)
@@ -603,6 +620,81 @@ export default function EmployeeLeads() {
     } catch (err) {
       console.error(err)
       alert(err?.response?.data?.message || 'Failed to delete lead.')
+    }
+  }
+
+  const getLatestRemark = (lead) => {
+    if (lead.activities && lead.activities.length > 0) {
+      const sorted = [...lead.activities].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      return sorted[0].notes || sorted[0].description || 'No remark details'
+    }
+    return lead.notes || 'No remarks logged'
+  }
+
+  const openFollowUpModal = (lead) => {
+    setFollowUpLead(lead)
+    setFollowUpForm({
+      next_date: lead.follow_up_date ? lead.follow_up_date.split(' ')[0] : (lead.expected_close_date ? lead.expected_close_date.split(' ')[0] : ''),
+      status: lead.lead_status || 'new',
+      remark: ''
+    })
+    setIsFollowUpModalOpen(true)
+  }
+
+  const handleFollowUpSubmit = async (e) => {
+    e.preventDefault()
+    if (!followUpForm.next_date) {
+      alert('Next follow-up date is required.')
+      return
+    }
+    setSaving(true)
+    setError('')
+    try {
+      const leadPayload = {
+        client_name: followUpLead.client_name || '',
+        client_email: followUpLead.client_email || '',
+        client_phone: followUpLead.client_phone || '',
+        client_alternate_phone: followUpLead.client_alternate_phone || '',
+        company_name: followUpLead.company_name || '',
+        address: followUpLead.address || '',
+        city: followUpLead.city || '',
+        state: followUpLead.state || '',
+        pin_code: followUpLead.pin_code || '',
+        country: followUpLead.country || 'India',
+        lead_source: followUpLead.lead_source || 'Website',
+        lead_status: followUpForm.status,
+        lead_priority: followUpLead.lead_priority || 'medium',
+        notes: followUpLead.notes || '',
+        budget: followUpLead.budget || '',
+        expected_close_date: followUpForm.next_date,
+        follow_up_date: followUpForm.next_date,
+        category_id: followUpLead.category_id || '',
+        sub_category_id: followUpLead.sub_category_id || '',
+        product_id: followUpLead.product_id || '',
+        product_name: followUpLead.product_name || '',
+        product_processing_fee: followUpLead.product_processing_fee || '',
+        product_monthly_subscription: followUpLead.product_monthly_subscription || ''
+      }
+      
+      await updateLead(followUpLead.id, leadPayload)
+
+      const activityPayload = {
+        activity_type: 'follow_up',
+        description: `Follow-up status: ${followUpForm.status}`,
+        notes: followUpForm.remark || 'No remark provided.',
+        scheduled_date: followUpForm.next_date
+      }
+      await addLeadActivity(followUpLead.id, activityPayload)
+
+      triggerSuccess('Follow-up updated and activity logged successfully.')
+      setIsFollowUpModalOpen(false)
+      loadLeads()
+      loadStats()
+    } catch (err) {
+      console.error(err)
+      alert(err?.response?.data?.message || 'Failed to update follow-up details.')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -1020,28 +1112,19 @@ export default function EmployeeLeads() {
 
                       {/* Next Follow-up */}
                       <td className="p-4">
-                        <div className="text-left space-y-0.5">
-                          {lead.lead_status === 'converted' || lead.is_converted ? (
-                            <>
-                              <span className="inline-flex text-[9px] font-black uppercase tracking-wider border rounded-md px-2 py-0.5 bg-green-400/10 text-green-400 border-green-400/25">Sold Out</span>
-                              {lead.budget && (
-                                <span className="text-[10px] text-emerald-400 font-bold block">₹{Number(lead.budget).toLocaleString()}</span>
-                              )}
-                              {lead.expected_close_date && (
-                                <span className="text-[9px] text-gray-400 font-semibold block">📅 {new Date(lead.expected_close_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                              )}
-                              {lead.invoice_no && (
-                                <span className="text-[9px] text-cyan-400 font-bold font-mono block">Inv: {lead.invoice_no}</span>
-                              )}
-                            </>
-                          ) : (
-                            <>
-                              <p className="text-xs font-semibold text-gray-300">{followUpText}</p>
-                              {lead.budget && (
-                                <span className="text-[10px] text-emerald-400 font-bold block">₹{Number(lead.budget).toLocaleString()}</span>
-                              )}
-                            </>
-                          )}
+                        <div className="text-left space-y-1.5">
+                          <button
+                            onClick={() => openFollowUpModal(lead)}
+                            className="text-xs font-bold text-cyan-400 hover:text-cyan-300 underline cursor-pointer focus:outline-none block"
+                          >
+                            📅 {lead.follow_up_date
+                              ? new Date(lead.follow_up_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                              : 'Set Date'}
+                          </button>
+                          <div className="block">{getStatusBadge(lead.lead_status)}</div>
+                          <span className="text-[11px] text-gray-400 italic truncate block max-w-[180px] font-semibold" title={getLatestRemark(lead)}>
+                            "{getLatestRemark(lead)}"
+                          </span>
                         </div>
                       </td>
 
@@ -1099,13 +1182,7 @@ export default function EmployeeLeads() {
                           >
                             ✏️
                           </button>
-                          <button
-                            onClick={() => openStatusModal(lead)}
-                            title="Change status"
-                            className="p-1 text-gray-500 hover:text-[#38b34a] hover:bg-white/5 rounded transition-all cursor-pointer"
-                          >
-                            🔄
-                          </button>
+                          
                           <button
                             onClick={() => openMailModal(lead)}
                             title="Send School Software Demo"
@@ -1113,13 +1190,7 @@ export default function EmployeeLeads() {
                           >
                             ✉️
                           </button>
-                          <button
-                            onClick={() => openActivityModal(lead)}
-                            title="Log Activity"
-                            className="p-1 text-gray-500 hover:text-cyan-400 hover:bg-white/5 rounded transition-all cursor-pointer"
-                          >
-                            ⏱️
-                          </button>
+                          
                           <button
                             onClick={() => {
                               setSelectedLeadForAssign(lead)
@@ -1783,105 +1854,7 @@ export default function EmployeeLeads() {
       </AnimatePresence>
 
       {/* ─────────────────────── MODAL: LOG ACTIVITY ─────────────────────── */}
-      <AnimatePresence>
-        {isActivityModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsActivityModalOpen(false)}
-              className="absolute inset-0 bg-black cursor-pointer"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-md rounded-3xl overflow-hidden shadow-2xl flex flex-col justify-between"
-              style={{ background: '#13151f', border: '1px solid rgba(255,255,255,0.08)' }}
-            >
-              {/* Header */}
-              <div className="px-6 py-5 flex items-center justify-between" style={{ background: '#1a1d2b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                <div>
-                  <h3 className="text-base font-black text-white">Log Engagement Activity</h3>
-                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">{activityLead?.client_name}</p>
-                </div>
-                <button onClick={() => setIsActivityModalOpen(false)} className="text-gray-550 hover:text-white text-sm cursor-pointer">✕</button>
-              </div>
-
-              {/* Form */}
-              <form onSubmit={handleActivitySubmit} className="p-6 space-y-4 text-left">
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Activity Type *</label>
-                  <select
-                    value={activityForm.activity_type}
-                    onChange={(e) => setActivityForm({ ...activityForm, activity_type: e.target.value })}
-                    className="w-full bg-white/3 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
-                  >
-                    <option value="call" className="bg-[#13151f]">📞 Phone Call</option>
-                    <option value="email" className="bg-[#13151f]">✉️ Email Sent</option>
-                    <option value="meeting" className="bg-[#13151f]">🤝 Face-to-Face Meeting</option>
-                    <option value="follow_up" className="bg-[#13151f]">📅 Follow-up Action</option>
-                    <option value="note" className="bg-[#13151f]">📝 Internal CRM Note</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Activity Title *</label>
-                  <input
-                    type="text"
-                    required
-                    value={activityForm.description}
-                    onChange={(e) => setActivityForm({ ...activityForm, description: e.target.value })}
-                    placeholder="e.g. Discovery Call with Director"
-                    className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] font-bold"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Scheduled Date / Time</label>
-                  <input
-                    type="datetime-local"
-                    value={activityForm.scheduled_date}
-                    onChange={(e) => setActivityForm({ ...activityForm, scheduled_date: e.target.value })}
-                    className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] font-mono [color-scheme:dark]"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Activity Notes / Detail</label>
-                  <textarea
-                    value={activityForm.notes}
-                    onChange={(e) => setActivityForm({ ...activityForm, notes: e.target.value })}
-                    placeholder="Log conversation summary, next steps, feedback..."
-                    rows="3"
-                    className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] leading-relaxed"
-                  />
-                </div>
-              </form>
-
-              {/* Actions */}
-              <div className="px-6 py-4 flex items-center justify-end gap-3 shrink-0" style={{ background: '#1a1d2b', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                <button
-                  type="button"
-                  onClick={() => setIsActivityModalOpen(false)}
-                  disabled={saving}
-                  className="px-4 py-2.5 border border-white/10 hover:border-white/20 text-xs font-bold text-gray-400 hover:text-white rounded-xl transition-all cursor-pointer disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleActivitySubmit}
-                  disabled={saving}
-                  className="px-5 py-2.5 bg-[#38b34a] text-black hover:bg-[#38b34a]/85 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer disabled:opacity-50"
-                >
-                  {saving ? 'Logging...' : 'Log Activity'}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+   
 
       {/* ─────────────────────── MODAL: BULK REASSIGN ─────────────────────── */}
       <AnimatePresence>
@@ -2368,6 +2341,205 @@ export default function EmployeeLeads() {
                   className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-xs font-bold text-white rounded-xl transition-colors cursor-pointer"
                 >
                   Close Calendar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ─────────────────────── MODAL: FOLLOW-UP DETAILS & SCHEDULER ─────────────────────── */}
+      <AnimatePresence>
+        {isFollowUpModalOpen && followUpLead && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsFollowUpModalOpen(false)}
+              className="absolute inset-0 bg-black cursor-pointer"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl flex flex-col justify-between max-h-[90vh] z-10"
+              style={{ background: '#13151f', border: '1px solid rgba(255,255,255,0.08)' }}
+            >
+              {/* Header */}
+              <div className="px-6 py-5 flex items-center justify-between shadow-md shrink-0" style={{ background: '#1a1d2b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div>
+                  <h3 className="text-base font-black text-white">Follow-up</h3>
+                  <p className="text-[10px] text-gray-550 font-bold uppercase tracking-wider mt-0.5">Manage schedule and history for {followUpLead.client_name}</p>
+                </div>
+                <button onClick={() => setIsFollowUpModalOpen(false)} className="text-gray-550 hover:text-white text-sm cursor-pointer">✕</button>
+              </div>
+
+              {/* Scrollable Form body */}
+              <form onSubmit={handleFollowUpSubmit} className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+                {/* 1. Client details card */}
+                <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 space-y-4">
+                  <div className="flex items-center gap-2 border-b border-white/5 pb-2.5">
+                    <span className="text-base">🏢</span>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-white">Client Information</h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div className="space-y-3.5 text-left">
+                      <div>
+                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Company / Client Name</span>
+                        <span className="text-white font-semibold text-[13px] block mt-0.5">{followUpLead.company_name || 'Individual'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Contact Person</span>
+                        <span className="text-white font-semibold block mt-0.5">👤 {followUpLead.client_name || 'N/A'}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-3.5 text-left">
+                      <div>
+                        <span className="text-[10px] text-gray-550 font-bold uppercase tracking-wider block">Address</span>
+                        <span className="text-gray-300 block mt-0.5 leading-relaxed">
+                          📍 {followUpLead.address || ''} {followUpLead.city || ''} {followUpLead.state || ''} {followUpLead.pin_code || ''}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <span className="text-[10px] text-gray-550 font-bold uppercase tracking-wider block">Contact No:</span>
+                          <span className="text-white font-semibold block mt-0.5 select-text">📞 {followUpLead.client_phone || 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-gray-550 font-bold uppercase tracking-wider block">E-Mail ID:</span>
+                          <span className="text-white font-semibold block mt-0.5 select-text truncate" title={followUpLead.client_email}>
+                            ✉️ {followUpLead.client_email || 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Scheduling Form Fields */}
+                <div className="bg-gradient-to-r from-white/[0.01] to-white/[0.03] border border-white/5 rounded-2xl p-5 space-y-4">
+                  <div className="flex items-center gap-2 border-b border-white/5 pb-2.5">
+                    <span className="text-base">📅</span>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-[#38b34a]">Schedule Next Action</h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div className="space-y-1 text-left">
+                      <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Next Follow-up Date *</label>
+                      <div className="relative mt-1">
+                        <input
+                          type="date"
+                          required
+                          value={followUpForm.next_date}
+                          onChange={(e) => setFollowUpForm({ ...followUpForm, next_date: e.target.value })}
+                          className="w-full bg-[#161922] border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] focus:ring-1 focus:ring-[#38b34a]/30 font-bold [color-scheme:dark] transition-all"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1 text-left">
+                      <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Update Lead Status *</label>
+                      <select
+                        value={followUpForm.status}
+                        onChange={(e) => setFollowUpForm({ ...followUpForm, status: e.target.value })}
+                        className="w-full bg-[#161922] border border-white/5 rounded-xl px-3.5 py-2.5 mt-1 text-xs text-white focus:outline-none focus:border-[#38b34a] focus:ring-1 focus:ring-[#38b34a]/30 cursor-pointer font-bold transition-all"
+                      >
+                        <option value="new" className="bg-[#13151f]">New</option>
+                        <option value="contacted" className="bg-[#13151f]">Contacted</option>
+                        <option value="qualified" className="bg-[#13151f]">Qualified</option>
+                        <option value="proposal" className="bg-[#13151f]">Proposal</option>
+                        <option value="negotiation" className="bg-[#13151f]">Negotiation</option>
+                        <option value="converted" className="bg-[#13151f]">Converted</option>
+                        <option value="lost" className="bg-[#13151f]">Lost</option>
+                        <option value="junk" className="bg-[#13151f]">Junk</option>
+                      </select>
+                    </div>
+                    <div className="md:col-span-2 space-y-1 text-left">
+                      <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Remark / Notes</label>
+                      <textarea
+                        value={followUpForm.remark}
+                        onChange={(e) => setFollowUpForm({ ...followUpForm, remark: e.target.value })}
+                        placeholder="Log details of the conversation or set goals for the next touchpoint..."
+                        rows="2.5"
+                        className="w-full bg-[#161922] border border-white/5 rounded-xl px-3.5 py-2.5 mt-1 text-xs text-white focus:outline-none focus:border-[#38b34a] focus:ring-1 focus:ring-[#38b34a]/30 leading-relaxed resize-none transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Submit button aligned to right of the card block */}
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="px-6 py-2.5 bg-gradient-to-r from-[#38b34a] to-emerald-500 text-black hover:opacity-90 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg active:scale-95 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {saving ? 'Submitting...' : '💾 Save Follow-up'}
+                  </button>
+                </div>
+
+                {/* 3. History Log */}
+                <div className="space-y-3 text-left pt-4 border-t border-white/5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">📜</span>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-cyan-400">Activity & Follow-up History</h4>
+                  </div>
+                  <div className="border border-white/5 rounded-2xl overflow-hidden max-h-[200px] overflow-y-auto bg-white/[0.01]">
+                    <table className="w-full border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-[#161922] text-gray-550 font-bold border-b border-white/5 text-[9px] uppercase tracking-wider">
+                          <th className="p-3 text-center w-16 border-r border-white/5">SL No</th>
+                          <th className="p-3 text-left border-r border-white/5">Date</th>
+                          <th className="p-3 text-left border-r border-white/5">Next Follow-up Date</th>
+                          <th className="p-3 text-left border-r border-white/5">Action Details</th>
+                          <th className="p-3 text-left">Notes / Remarks</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {(() => {
+                          const sortedActivities = followUpLead.activities
+                            ? [...followUpLead.activities].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+                            : []
+                          
+                          if (sortedActivities.length === 0) {
+                            return (
+                              <tr>
+                                <td colSpan="5" className="p-6 text-center text-gray-550 italic font-semibold">
+                                  No follow-up history logged yet.
+                                </td>
+                              </tr>
+                            )
+                          }
+
+                          return sortedActivities.map((act, index) => {
+                            const dateStr = new Date(act.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                            const nextDateStr = act.scheduled_date
+                              ? new Date(act.scheduled_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                              : '—'
+                            return (
+                              <tr key={act.id} className="hover:bg-white/[0.02] transition-colors">
+                                <td className="p-3 text-center font-mono border-r border-white/5 text-gray-500">{index + 1}</td>
+                                <td className="p-3 border-r border-white/5 text-white font-semibold">{dateStr}</td>
+                                <td className="p-3 border-r border-white/5 text-amber-400 font-semibold">{nextDateStr}</td>
+                                <td className="p-3 border-r border-white/5 text-cyan-400 font-bold capitalize">{act.description || act.activity_type}</td>
+                                <td className="p-3 text-gray-300 leading-normal max-w-xs truncate" title={act.notes}>{act.notes || '—'}</td>
+                              </tr>
+                            )
+                          })
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </form>
+
+              {/* Footer */}
+              <div className="px-6 py-4 flex items-center justify-end gap-3 shrink-0" style={{ background: '#1a1d2b', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsFollowUpModalOpen(false)}
+                  className="px-4 py-2.5 border border-white/10 hover:border-white/20 hover:bg-white/5 text-xs font-bold text-gray-400 hover:text-white rounded-xl transition-all cursor-pointer"
+                >
+                  Close
                 </button>
               </div>
             </motion.div>
