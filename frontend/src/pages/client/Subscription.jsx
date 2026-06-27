@@ -12,7 +12,6 @@ import { checkSubscriptionStatus } from '../../utils/subscription'
 import StudentCountCard from '../../components/client/subscription/StudentCountCard'
 import PaymentCyclesCard from '../../components/client/subscription/PaymentCyclesCard'
 import PaymentSummaryCard from '../../components/client/subscription/PaymentSummaryCard'
-
 const ClientSubscription = () => {
   const { clientToken, isClientAuthenticated, profileData, productData, clientLogout } = useClientAuthStore()
   
