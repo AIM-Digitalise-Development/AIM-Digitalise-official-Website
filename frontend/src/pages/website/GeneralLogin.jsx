@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { useAuth } from '../../hooks/useAuth'
 import { adminLogin, getAdminProfile } from '../../api/adminAuth'
-import { login as employeeLoginApi } from '../../api/auth'
+import { employeeLogin } from '../../api/employee'
 import { getErrorMessage } from '../../utils/errors'
 import Input from '../../components/ui/Input'
 import Button from '../../components/ui/Button'
@@ -67,13 +67,24 @@ export default function GeneralLogin() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!email || !email.includes('@')) {
-      setError('Please enter a valid email.')
-      return
-    }
-    if (!password) {
-      setError('Please enter your password.')
-      return
+    if (activeRole === 'admin') {
+      if (!email || !email.includes('@')) {
+        setError('Please enter a valid email.')
+        return
+      }
+      if (!password) {
+        setError('Please enter your password.')
+        return
+      }
+    } else {
+      if (!email) {
+        setError('Please enter your Employee ID.')
+        return
+      }
+      if (!password) {
+        setError('Please enter your Date of Birth.')
+        return
+      }
     }
 
     try {
@@ -117,24 +128,27 @@ export default function GeneralLogin() {
         login(adminUser, token)
         navigate(ROUTES.ADMIN.DASHBOARD)
       } else {
-        const res = await employeeLoginApi(email, password)
+        const res = await employeeLogin(email, password)
         const token =
+          res?.data?.data?.token ||
+          res?.data?.token ||
           res?.data?.access_token ||
           res?.data?.accessToken ||
-          res?.data?.token ||
           res?.data?.data?.access_token ||
           res?.data?.data?.accessToken ||
           ''
 
-        const userData =
-          res?.data?.user ||
-          res?.data?.data?.user ||
-          { role: 'employee' }
+        const employeeData = res?.data?.data?.employee || res?.data?.employee
 
         if (!token) {
           setError('Login succeeded but token was not returned.')
           setIsSubmitting(false)
           return
+        }
+
+        const userData = {
+          ...employeeData,
+          role: 'employee',
         }
 
         login(userData, token)
@@ -253,48 +267,96 @@ export default function GeneralLogin() {
                   </div>
                 )}
 
-                <div className="space-y-1.5 text-left">
-                  <label className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest block">
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-aim-copy-muted">
-                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.206" />
-                      </svg>
-                    </span>
-                    <input
-                      type="email"
-                      placeholder="name@aimdigitalise.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      autoFocus
-                      className="w-full bg-aim-navy/40 border border-white/10 rounded-xl pl-11 pr-4 py-3.5 text-sm text-white placeholder-aim-copy-muted focus:outline-none focus:border-aim-gold/50 focus:ring-1 focus:ring-aim-gold/25 transition-all shadow-inner"
-                    />
-                  </div>
-                </div>
+                {activeRole === 'employee' ? (
+                  <>
+                    <div className="space-y-1.5 text-left">
+                      <label className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest block">
+                        Employee ID
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-aim-copy-muted">
+                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2H5z" />
+                          </svg>
+                        </span>
+                        <input
+                          type="text"
+                          placeholder="e.g. AIM260001"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required
+                          autoFocus
+                          className="w-full bg-aim-navy/40 border border-white/10 rounded-xl pl-11 pr-4 py-3.5 text-sm text-white placeholder-aim-copy-muted focus:outline-none focus:border-aim-gold/50 focus:ring-1 focus:ring-aim-gold/25 transition-all shadow-inner"
+                        />
+                      </div>
+                    </div>
 
-                <div className="space-y-1.5 text-left">
-                  <label className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest block">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-aim-copy-muted">
-                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                      </svg>
-                    </span>
-                    <input
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      className="w-full bg-aim-navy/40 border border-white/10 rounded-xl pl-11 pr-4 py-3.5 text-sm text-white placeholder-aim-copy-muted focus:outline-none focus:border-aim-gold/50 focus:ring-1 focus:ring-aim-gold/25 transition-all shadow-inner"
-                    />
-                  </div>
-                </div>
+                    <div className="space-y-1.5 text-left">
+                      <label className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest block">
+                        Date of Birth
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-aim-copy-muted">
+                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5z" />
+                          </svg>
+                        </span>
+                        <input
+                          type="date"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                          className="w-full bg-aim-navy/40 border border-white/10 rounded-xl pl-11 pr-4 py-3.5 text-sm text-white placeholder-aim-copy-muted focus:outline-none focus:border-aim-gold/50 focus:ring-1 focus:ring-aim-gold/25 transition-all shadow-inner [color-scheme:dark]"
+                        />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-1.5 text-left">
+                      <label className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest block">
+                        Email Address
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-aim-copy-muted">
+                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.206" />
+                          </svg>
+                        </span>
+                        <input
+                          type="email"
+                          placeholder="name@aimdigitalise.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required
+                          autoFocus
+                          className="w-full bg-aim-navy/40 border border-white/10 rounded-xl pl-11 pr-4 py-3.5 text-sm text-white placeholder-aim-copy-muted focus:outline-none focus:border-aim-gold/50 focus:ring-1 focus:ring-aim-gold/25 transition-all shadow-inner"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 text-left">
+                      <label className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest block">
+                        Password
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-aim-copy-muted">
+                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                          </svg>
+                        </span>
+                        <input
+                          type="password"
+                          placeholder="••••••••"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                          className="w-full bg-aim-navy/40 border border-white/10 rounded-xl pl-11 pr-4 py-3.5 text-sm text-white placeholder-aim-copy-muted focus:outline-none focus:border-aim-gold/50 focus:ring-1 focus:ring-aim-gold/25 transition-all shadow-inner"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 <div className="pt-3">
                   <Button

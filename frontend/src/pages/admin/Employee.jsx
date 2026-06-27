@@ -1,18 +1,14 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Helmet } from 'react-helmet-async'
+import * as employeeApi from '../../api/admin/employee'
+import DepartmentModal from '../../components/admin/employee/DepartmentModal'
+import DesignationModal from '../../components/admin/employee/DesignationModal'
+import EmployeeModal from '../../components/admin/employee/EmployeeModal'
+import EmployeeDetailsDrawer from '../../components/admin/employee/EmployeeDetailsDrawer'
 
-const DUMMY_EMPLOYEES = [
-  { id: 1, emp_id: 'EMP-2026-001', name: 'Rohan Verma', email: 'rohan.v@aimdigitalise.com', phone: '+91 98765 43210', department: 'IT / Development', role: 'Software Engineer', joining_date: '2024-03-15', salary: 45000, is_active: true },
-  { id: 2, emp_id: 'EMP-2026-002', name: 'Priya Singh', email: 'priya.s@aimdigitalise.com', phone: '+91 91234 56789', department: 'HR & Operations', role: 'Senior HR Specialist', joining_date: '2023-08-10', salary: 38000, is_active: true },
-  { id: 3, emp_id: 'EMP-2026-003', name: 'Aman Gupta', email: 'aman.g@aimdigitalise.com', phone: '+91 87654 32109', department: 'Digital Marketing', role: 'SEO Team Lead', joining_date: '2025-01-05', salary: 32000, is_active: true },
-  { id: 4, emp_id: 'EMP-2026-004', name: 'Neha Sharma', email: 'neha.s@aimdigitalise.com', phone: '+91 76543 21098', department: 'UI/UX Design', role: 'Creative Director', joining_date: '2024-11-20', salary: 42000, is_active: true },
-  { id: 5, emp_id: 'EMP-2026-005', name: 'Vikram Malhotra', email: 'vikram.m@aimdigitalise.com', phone: '+91 65432 10987', department: 'Finance & Accounts', role: 'Accounts Manager', joining_date: '2022-05-12', salary: 50000, is_active: true },
-]
-
-const DUMMY_LEFTOUT_EMPLOYEES = [
-  { id: 101, emp_id: 'EMP-2024-098', name: 'Sunil Kumar', email: 'sunil.k@gmail.com', department: 'IT / Development', role: 'Frontend Intern', exit_date: '2026-04-30', reason: 'Higher Studies', ff_status: 'Settled' },
-  { id: 102, emp_id: 'EMP-2023-042', name: 'Aarav Shah', email: 'aarav.shah@yahoo.com', department: 'Digital Marketing', role: 'Content Writer', exit_date: '2026-02-15', reason: 'Better Opportunities', ff_status: 'Processing' },
-]
+// ═══════════════════════════════════════════════════════════════════════════════
+// Demo data preserved for tabs without API endpoints (Leave, Attendance, Payslip)
+// ═══════════════════════════════════════════════════════════════════════════════
 
 const DUMMY_LEAVES = [
   { id: 201, emp_id: 'EMP-2026-001', name: 'Rohan Verma', type: 'Casual Leave', dates: '12 Jun 2026 to 14 Jun 2026', days: 3, reason: 'Family function at home town', status: 'Pending' },
@@ -28,166 +24,294 @@ const DUMMY_ATTENDANCE = [
   { emp_id: 'EMP-2026-005', name: 'Vikram Malhotra', date: '2026-06-09', clock_in: '—', clock_out: '—', status: 'On Leave', hours: 0 },
 ]
 
+const DUMMY_EMPLOYEES_FOR_PAYSLIP = [
+  { id: 1, emp_id: 'EMP-2026-001', name: 'Rohan Verma', department: 'IT / Development', role: 'Software Engineer', joining_date: '2024-03-15', salary: 45000 },
+  { id: 2, emp_id: 'EMP-2026-002', name: 'Priya Singh', department: 'HR & Operations', role: 'Senior HR Specialist', joining_date: '2023-08-10', salary: 38000 },
+  { id: 3, emp_id: 'EMP-2026-003', name: 'Aman Gupta', department: 'Digital Marketing', role: 'SEO Team Lead', joining_date: '2025-01-05', salary: 32000 },
+  { id: 4, emp_id: 'EMP-2026-004', name: 'Neha Sharma', department: 'UI/UX Design', role: 'Creative Director', joining_date: '2024-11-20', salary: 42000 },
+  { id: 5, emp_id: 'EMP-2026-005', name: 'Vikram Malhotra', department: 'Finance & Accounts', role: 'Accounts Manager', joining_date: '2022-05-12', salary: 50000 },
+]
+
+// ═══════════════════════════════════════════════════════════════════════════════
+
 const AdminEmployee = () => {
-  const [activePageTab, setActivePageTab] = useState('show_employee')
-  
-  // Interactive lists states
-  const [employees, setEmployees] = useState(DUMMY_EMPLOYEES)
-  const [leftouts, setLeftouts] = useState(DUMMY_LEFTOUT_EMPLOYEES)
-  const [leaves, setLeaves] = useState(DUMMY_LEAVES)
-  const [attendance, setAttendance] = useState(DUMMY_ATTENDANCE)
-  
-  // Forms & Selections states
-  const [search, setSearch] = useState('')
-  const [successMsg, setSuccessMsg] = useState('')
-  
-  // New employee form state
-  const [newEmp, setNewEmp] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    role: '',
-    department: 'IT / Development',
-    joining_date: '',
-    salary: '',
+  const [activePageTab, setActivePageTab] = useState('emp_dashboard')
+
+  // API-driven data
+  const [departments, setDepartments] = useState([])
+  const [designations, setDesignations] = useState([])
+  const [employees, setEmployees] = useState([])
+  const [employeeStats, setEmployeeStats] = useState(null)
+
+  // UI states
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+
+  // Modal states
+  const [showDeptModal, setShowDeptModal] = useState(false)
+  const [editingDept, setEditingDept] = useState(null)
+  const [showDesigModal, setShowDesigModal] = useState(false)
+  const [editingDesig, setEditingDesig] = useState(null)
+  const [showEmpModal, setShowEmpModal] = useState(false)
+  const [editingEmp, setEditingEmp] = useState(null)
+  const [viewingEmp, setViewingEmp] = useState(null)
+
+  // Employee filters
+  const [filters, setFilters] = useState({
+    search: '',
+    department_id: '',
+    designation_id: '',
+    employment_status: '',
   })
 
-  // Payslip generator states
-  const [selectedEmpId, setSelectedEmpId] = useState(DUMMY_EMPLOYEES[0]?.emp_id || '')
+  // Demo data states (preserved)
+  const [leaves, setLeaves] = useState(DUMMY_LEAVES)
+  const [attendance, setAttendance] = useState(DUMMY_ATTENDANCE)
+
+  // Payslip states (preserved)
+  const [selectedEmpId, setSelectedEmpId] = useState(DUMMY_EMPLOYEES_FOR_PAYSLIP[0]?.emp_id || '')
   const [payslipMonth, setPayslipMonth] = useState('June')
   const [payslipYear, setPayslipYear] = useState('2026')
   const [lopDays, setLopDays] = useState(0)
   const [generatedPayslip, setGeneratedPayslip] = useState(null)
 
-  // Filter active employees
-  const filteredEmployees = employees.filter((emp) => {
-    return (
-      emp.name.toLowerCase().includes(search.toLowerCase()) ||
-      emp.email.toLowerCase().includes(search.toLowerCase()) ||
-      emp.emp_id.toLowerCase().includes(search.toLowerCase()) ||
-      emp.department.toLowerCase().includes(search.toLowerCase()) ||
-      emp.role.toLowerCase().includes(search.toLowerCase())
-    )
-  })
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DATA FETCHING
+  // ═══════════════════════════════════════════════════════════════════════════
 
-  // Handle Add Employee Form Submit
-  const handleAddEmployee = (e) => {
-    e.preventDefault()
-    if (!newEmp.name || !newEmp.email || !newEmp.role || !newEmp.salary) return
-
-    const nextId = employees.length + leftouts.length + 1
-    const padId = String(nextId).padStart(3, '0')
-    const empObj = {
-      id: Date.now(),
-      emp_id: `EMP-2026-${padId}`,
-      name: newEmp.name,
-      email: newEmp.email,
-      phone: newEmp.phone || '+91 XXXXX XXXXX',
-      department: newEmp.department,
-      role: newEmp.role,
-      joining_date: newEmp.joining_date || new Date().toISOString().split('T')[0],
-      salary: Number(newEmp.salary),
-      is_active: true,
+  const loadDepartments = useCallback(async () => {
+    try {
+      const res = await employeeApi.fetchDepartments()
+      setDepartments(res.data || [])
+    } catch (err) {
+      console.error('Departments fetch error:', err)
     }
+  }, [])
 
-    setEmployees([empObj, ...employees])
-    
-    // Add default attendance entry for today
-    const newAtt = {
-      emp_id: empObj.emp_id,
-      name: empObj.name,
-      date: new Date().toISOString().split('T')[0],
-      clock_in: '—',
-      clock_out: '—',
-      status: 'Absent',
-      hours: 0,
+  const loadDesignations = useCallback(async () => {
+    try {
+      const res = await employeeApi.fetchDesignations()
+      setDesignations(res.data || [])
+    } catch (err) {
+      console.error('Designations fetch error:', err)
     }
-    setAttendance([newAtt, ...attendance])
+  }, [])
 
-    setSuccessMsg(`Employee ${newEmp.name} added successfully with ID: ${empObj.emp_id}!`)
-    setNewEmp({
-      name: '',
-      email: '',
-      phone: '',
-      role: '',
-      department: 'IT / Development',
-      joining_date: '',
-      salary: '',
-    })
+  const loadEmployees = useCallback(async (overrideFilters) => {
+    try {
+      const res = await employeeApi.fetchEmployees(overrideFilters || filters)
+      setEmployees(res.data?.data || res.data || [])
+    } catch (err) {
+      console.error('Employees fetch error:', err)
+    }
+  }, [filters])
 
-    setTimeout(() => setSuccessMsg(''), 5000)
-    // Switch to show employee tab to see the change
-    setActivePageTab('show_employee')
-  }
+  const loadEmployeeStats = useCallback(async () => {
+    try {
+      const res = await employeeApi.fetchEmployeeStats()
+      setEmployeeStats(res.data || null)
+    } catch (err) {
+      console.error('Employee stats fetch error:', err)
+    }
+  }, [])
 
-  // Handle Deactivate / Leftout Action
-  const handleDeactivateEmployee = (emp) => {
-    if (window.confirm(`Are you sure you want to terminate/deactivate ${emp.name}?`)) {
-      setEmployees(employees.filter(e => e.id !== emp.id))
-      const leftObj = {
-        id: emp.id,
-        emp_id: emp.emp_id,
-        name: emp.name,
-        email: emp.email,
-        department: emp.department,
-        role: emp.role,
-        exit_date: new Date().toISOString().split('T')[0],
-        reason: 'Resigned / Released',
-        ff_status: 'Processing'
+  // Initial data load
+  useEffect(() => {
+    loadDepartments()
+    loadDesignations()
+    loadEmployees()
+    loadEmployeeStats()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-dismiss messages
+  useEffect(() => {
+    if (success) {
+      const t = setTimeout(() => setSuccess(''), 5000)
+      return () => clearTimeout(t)
+    }
+  }, [success])
+
+  useEffect(() => {
+    if (error) {
+      const t = setTimeout(() => setError(''), 8000)
+      return () => clearTimeout(t)
+    }
+  }, [error])
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DEPARTMENT CRUD
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const handleSaveDepartment = async (formData) => {
+    setLoading(true)
+    setError('')
+    try {
+      if (editingDept) {
+        await employeeApi.updateDepartment(editingDept.id, formData)
+        setSuccess('Department updated successfully!')
+      } else {
+        await employeeApi.createDepartment(formData)
+        setSuccess('Department created successfully!')
       }
-      setLeftouts([leftObj, ...leftouts])
-      setAttendance(attendance.filter(a => a.emp_id !== emp.emp_id))
+      setShowDeptModal(false)
+      setEditingDept(null)
+      loadDepartments()
+      loadDesignations()
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to save department')
+    } finally {
+      setLoading(false)
     }
   }
 
-  // Handle Leave Status Update
+  const handleDeleteDepartment = async (id) => {
+    if (!window.confirm('Delete this department? This will also delete all associated designations.')) return
+    setLoading(true)
+    try {
+      await employeeApi.deleteDepartment(id)
+      setSuccess('Department deleted!')
+      loadDepartments()
+      loadDesignations()
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to delete department')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DESIGNATION CRUD
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const handleSaveDesignation = async (formData) => {
+    setLoading(true)
+    setError('')
+    try {
+      if (editingDesig) {
+        await employeeApi.updateDesignation(editingDesig.id, formData)
+        setSuccess('Designation updated successfully!')
+      } else {
+        await employeeApi.createDesignation(formData)
+        setSuccess('Designation created successfully!')
+      }
+      setShowDesigModal(false)
+      setEditingDesig(null)
+      loadDesignations()
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to save designation')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteDesignation = async (id) => {
+    if (!window.confirm('Delete this designation?')) return
+    setLoading(true)
+    try {
+      await employeeApi.deleteDesignation(id)
+      setSuccess('Designation deleted!')
+      loadDesignations()
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to delete designation')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EMPLOYEE CRUD
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const handleSaveEmployee = async (formData) => {
+    setLoading(true)
+    setError('')
+    setSuccess('')
+    try {
+      if (editingEmp) {
+        await employeeApi.updateEmployee(editingEmp.id, formData)
+        setSuccess('Employee updated successfully!')
+      } else {
+        const res = await employeeApi.createEmployee(formData)
+        setSuccess(`Employee created! ID: ${res.data?.employee_id || ''}`)
+      }
+      setShowEmpModal(false)
+      setEditingEmp(null)
+      loadEmployees()
+      loadEmployeeStats()
+    } catch (err) {
+      const errData = err.response?.data
+      if (errData?.errors) {
+        const msgs = Object.values(errData.errors).flat().join('\n')
+        setError(`Validation failed:\n${msgs}`)
+      } else {
+        setError(errData?.message || err.message || 'Failed to save employee')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteEmployee = async (id) => {
+    if (!window.confirm('Delete this employee?')) return
+    setLoading(true)
+    try {
+      await employeeApi.deleteEmployee(id)
+      setSuccess('Employee deleted!')
+      loadEmployees()
+      loadEmployeeStats()
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to delete employee')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleViewEmployee = async (id) => {
+    try {
+      const res = await employeeApi.fetchEmployeeById(id)
+      setViewingEmp(res.data || null)
+    } catch (err) {
+      setError('Failed to fetch employee details')
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PRESERVED DEMO HANDLERS (Leave, Attendance, Payslip)
+  // ═══════════════════════════════════════════════════════════════════════════
+
   const handleLeaveAction = (id, newStatus) => {
     setLeaves(leaves.map(req => req.id === id ? { ...req, status: newStatus } : req))
   }
 
-  // Handle Attendance Change
   const handleAttendanceChange = (empId, newStatus) => {
     let clockIn = '—'
     let clockOut = '—'
     let hours = 0
-
-    if (newStatus === 'Present') {
-      clockIn = '09:00 AM'
-      clockOut = '06:00 PM'
-      hours = 9.0
-    } else if (newStatus === 'Late') {
-      clockIn = '09:45 AM'
-      clockOut = '06:00 PM'
-      hours = 8.25
-    }
-
+    if (newStatus === 'Present') { clockIn = '09:00 AM'; clockOut = '06:00 PM'; hours = 9.0 }
+    else if (newStatus === 'Late') { clockIn = '09:45 AM'; clockOut = '06:00 PM'; hours = 8.25 }
     setAttendance(attendance.map(a => a.emp_id === empId ? { ...a, status: newStatus, clock_in: clockIn, clock_out: clockOut, hours } : a))
   }
 
-  // Generate Payslip Calculation
   const handleGeneratePayslip = () => {
-    const emp = employees.find(e => e.emp_id === selectedEmpId)
+    const emp = DUMMY_EMPLOYEES_FOR_PAYSLIP.find(e => e.emp_id === selectedEmpId)
     if (!emp) return
 
     const basic = Math.round(emp.salary * 0.50)
     const hra = Math.round(emp.salary * 0.25)
     const allowance = Math.round(emp.salary * 0.15)
     const special = emp.salary - (basic + hra + allowance)
-    
     const totalDays = 30
     const payableDays = Math.max(0, totalDays - Number(lopDays))
     const lopDeduction = Math.round((emp.salary / totalDays) * Number(lopDays))
-
     const pf = Math.min(1800, Math.round(basic * 0.12))
     const pt = emp.salary > 20000 ? 200 : 0
     const totalDeductions = pf + pt + lopDeduction
     const netPay = emp.salary - totalDeductions
 
     const netPayInWords = (num) => {
-      // Basic translation for demo presentation
       const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen ']
       const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
-      
       if ((num = num.toString()).length > 9) return 'overflow'
       let n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/)
       if (!n) return ''
@@ -213,6 +337,24 @@ const AdminEmployee = () => {
     })
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // HELPERS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const getStatusStyle = (status) => {
+    const map = {
+      active: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+      inactive: 'bg-rose-100 text-rose-800 border-rose-200',
+      terminated: 'bg-amber-100 text-amber-800 border-amber-200',
+      resigned: 'bg-amber-100 text-amber-800 border-amber-200',
+    }
+    return map[status] || map.active
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════════════════════
+
   return (
     <>
       <Helmet>
@@ -224,7 +366,7 @@ const AdminEmployee = () => {
         <div className="relative flex flex-col md:flex-row md:items-center justify-between pb-3 gap-3 min-h-[48px]">
           <div>
             <h1 className="text-3xl font-black text-[#1e3e6b] tracking-tight">Employee Management</h1>
-            <p className="text-xs text-slate-400 font-bold mt-1">Configure staff directory, leave status, attendance and generate pay records</p>
+            <p className="text-xs text-slate-400 font-bold mt-1">Departments, designations, employee records, attendance and payroll</p>
           </div>
 
           <div className="text-center md:absolute md:left-1/2 md:-translate-x-1/2 mt-1 md:mt-0">
@@ -234,27 +376,35 @@ const AdminEmployee = () => {
 
           <div className="w-48 flex justify-end">
             <span className="px-4 py-2 border border-slate-200 bg-white rounded-xl text-xs font-bold text-[#38b34a] shadow-sm">
-              🟢 Live Demo Data
+              🟢 Live API
             </span>
           </div>
         </div>
 
         {/* System Messages */}
-        {successMsg && (
-          <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-50 text-emerald-700 text-sm font-bold flex items-center justify-between shadow-sm animate-pulse">
-            <span className="flex items-center gap-2">✅ {successMsg}</span>
+        {success && (
+          <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-50 text-emerald-700 text-sm font-bold flex items-center justify-between shadow-sm">
+            <span className="flex items-center gap-2">✅ {success}</span>
+            <button onClick={() => setSuccess('')} className="text-emerald-400 hover:text-emerald-600 cursor-pointer text-lg">×</button>
+          </div>
+        )}
+        {error && (
+          <div className="p-4 rounded-xl border border-rose-500/20 bg-rose-50 text-rose-700 text-sm font-bold flex items-center justify-between shadow-sm whitespace-pre-line">
+            <span className="flex items-center gap-2">❌ {error}</span>
+            <button onClick={() => setError('')} className="text-rose-400 hover:text-rose-600 cursor-pointer text-lg">×</button>
           </div>
         )}
 
         {/* Main Workspace Card */}
         <div className="bg-white rounded-3xl border border-slate-200/80 shadow-md p-6">
-          
+
           {/* Tabs Navigation Row */}
           <div className="flex flex-wrap items-center gap-1 border-b border-slate-200/60 pb-3 mb-6">
             {[
-              { id: 'show_employee', label: 'Show Employees' },
-              { id: 'add_employee', label: 'Add Employee' },
-              { id: 'leftout_employee', label: 'Leftout Employees' },
+              { id: 'emp_dashboard', label: 'Dashboard' },
+              { id: 'departments', label: 'Departments' },
+              { id: 'designations', label: 'Designations' },
+              { id: 'show_employee', label: 'Employees' },
               { id: 'employee_leave', label: 'Leave Requests' },
               { id: 'employee_attendance', label: 'Attendance Roster' },
               { id: 'payslip', label: 'Generate Payslip' },
@@ -273,38 +423,254 @@ const AdminEmployee = () => {
             ))}
           </div>
 
-          {/* TAB 1: Show Employee list */}
-          {activePageTab === 'show_employee' && (
+          {/* ═══════════ TAB: Dashboard ═══════════ */}
+          {activePageTab === 'emp_dashboard' && (
             <div className="space-y-6">
-              {/* Top Stats Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total Employees</span>
+                    <span className="text-3xl font-black text-slate-800 mt-1.5 block">{employeeStats?.summary?.total_employees || 0}</span>
+                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500 text-lg border border-blue-100">👥</div>
+                </div>
                 <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
                   <div>
                     <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Active Employees</span>
-                    <span className="text-3xl font-black text-slate-800 mt-1.5 block">{employees.length}</span>
+                    <span className="text-3xl font-black text-emerald-600 mt-1.5 block">{employeeStats?.summary?.active_employees || 0}</span>
+                    <span className="text-[10px] text-slate-400 font-bold">{employeeStats?.summary?.active_percentage || 0}% of total</span>
                   </div>
-                  <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500 text-lg border border-blue-100">💻</div>
+                  <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-500 text-lg border border-emerald-100">✅</div>
+                </div>
+                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Inactive</span>
+                    <span className="text-3xl font-black text-rose-600 mt-1.5 block">{employeeStats?.summary?.inactive_employees || 0}</span>
+                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-rose-50 flex items-center justify-center text-rose-500 text-lg border border-rose-100">⛔</div>
                 </div>
                 <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
                   <div>
                     <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Departments</span>
-                    <span className="text-3xl font-black text-purple-500 mt-1.5 block">5</span>
+                    <span className="text-3xl font-black text-purple-600 mt-1.5 block">{departments.length}</span>
                   </div>
                   <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center text-purple-500 text-lg border border-purple-100">🏢</div>
                 </div>
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Monthly Payroll</span>
-                    <span className="text-3xl font-black text-[#ff6600] mt-1.5 block">
-                      ₹{employees.reduce((acc, curr) => acc + curr.salary, 0).toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                  <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center text-orange-500 text-lg border border-orange-100">💰</div>
-                </div>
               </div>
 
-              {/* Search Bar */}
-              <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm flex flex-col md:flex-row gap-4 items-center">
+              {/* Department-wise Distribution */}
+              {employeeStats?.by_department?.length > 0 && (
+                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+                  <h3 className="text-sm font-black text-[#1e3e6b] mb-4">Employees by Department</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                    {employeeStats.by_department.map(dept => (
+                      <div key={dept.id} className="p-3 bg-slate-50 rounded-xl border-l-4 border-blue-500">
+                        <div className="text-xl font-black text-slate-800">{dept.employees_count}</div>
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{dept.name}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recent Joiners */}
+              {employeeStats?.recent_joinees?.length > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden">
+                  <div className="px-6 py-4 border-b border-slate-100">
+                    <h3 className="text-sm font-black text-[#1e3e6b]">Recent Joiners</h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50 text-slate-400 font-bold uppercase tracking-wider">
+                          <th className="px-6 py-3">Employee ID</th>
+                          <th className="px-6 py-3">Name</th>
+                          <th className="px-6 py-3">Department</th>
+                          <th className="px-6 py-3">Designation</th>
+                          <th className="px-6 py-3">Joining Date</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700 font-semibold">
+                        {employeeStats.recent_joinees.map(emp => (
+                          <tr key={emp.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-6 py-3 font-mono font-bold text-slate-500">{emp.employee_id}</td>
+                            <td className="px-6 py-3 font-bold text-slate-800">{emp.first_name} {emp.last_name}</td>
+                            <td className="px-6 py-3">{emp.department?.name || '—'}</td>
+                            <td className="px-6 py-3">{emp.designation?.name || '—'}</td>
+                            <td className="px-6 py-3">{new Date(emp.joining_date).toLocaleDateString('en-IN')}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Empty state */}
+              {!employeeStats && (
+                <div className="text-center py-16 text-slate-400">
+                  <span className="text-4xl block">📊</span>
+                  <p className="font-bold mt-3">Loading dashboard data...</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ═══════════ TAB: Departments ═══════════ */}
+          {activePageTab === 'departments' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-black text-slate-800">Departments ({departments.length})</h3>
+                  <p className="text-xs text-slate-400 font-medium mt-1">Organizational departments for employee classification</p>
+                </div>
+                <button
+                  onClick={() => { setEditingDept(null); setShowDeptModal(true) }}
+                  className="px-5 py-2.5 bg-[#38b34a] hover:bg-[#2e9e3e] text-white font-bold rounded-xl shadow-md text-xs uppercase tracking-wider cursor-pointer transition-all flex items-center gap-1.5"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                  Add Department
+                </button>
+              </div>
+
+              {departments.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {departments.map(dept => (
+                    <div key={dept.id} className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h4 className="font-black text-slate-800 text-sm">{dept.name}</h4>
+                          <p className="text-[10px] text-slate-400 font-mono font-bold mt-0.5">Code: {dept.code || '—'}</p>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                          dept.is_active ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-rose-100 text-rose-800 border-rose-200'
+                        }`}>
+                          {dept.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                      {dept.description && <p className="text-xs text-slate-500 font-medium mb-3 line-clamp-2">{dept.description}</p>}
+                      <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                        <span className="text-[10px] font-bold text-slate-400">
+                          👥 {dept.employees_count || 0} Employees
+                        </span>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => { setEditingDept(dept); setShowDeptModal(true) }}
+                            className="px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 rounded-lg font-bold text-[10px] cursor-pointer transition-all"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteDepartment(dept.id)}
+                            className="px-3 py-1.5 bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100 rounded-lg font-bold text-[10px] cursor-pointer transition-all"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-16 text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl">
+                  <span className="text-4xl block">🏢</span>
+                  <p className="font-bold mt-3">No departments yet. Create your first department to get started.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ═══════════ TAB: Designations ═══════════ */}
+          {activePageTab === 'designations' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-black text-slate-800">Designations ({designations.length})</h3>
+                  <p className="text-xs text-slate-400 font-medium mt-1">Role titles assigned under departments</p>
+                </div>
+                <button
+                  onClick={() => { setEditingDesig(null); setShowDesigModal(true) }}
+                  className="px-5 py-2.5 bg-[#38b34a] hover:bg-[#2e9e3e] text-white font-bold rounded-xl shadow-md text-xs uppercase tracking-wider cursor-pointer transition-all flex items-center gap-1.5"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                  Add Designation
+                </button>
+              </div>
+
+              {designations.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {designations.map(desig => (
+                    <div key={desig.id} className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h4 className="font-black text-slate-800 text-sm">{desig.name}</h4>
+                          <p className="text-[10px] text-slate-400 font-mono font-bold mt-0.5">Code: {desig.code || '—'}</p>
+                          <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 text-[9px] font-bold uppercase tracking-wide inline-block mt-1">
+                            {desig.department?.name || '—'}
+                          </span>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                          desig.is_active ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-rose-100 text-rose-800 border-rose-200'
+                        }`}>
+                          {desig.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                      {desig.description && <p className="text-xs text-slate-500 font-medium mb-3 line-clamp-2">{desig.description}</p>}
+                      <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                        <span className="text-[10px] font-bold text-slate-400">
+                          👥 {desig.employees_count || 0} Employees
+                        </span>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              setEditingDesig(desig)
+                              setShowDesigModal(true)
+                            }}
+                            className="px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 rounded-lg font-bold text-[10px] cursor-pointer transition-all"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteDesignation(desig.id)}
+                            className="px-3 py-1.5 bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100 rounded-lg font-bold text-[10px] cursor-pointer transition-all"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-16 text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl">
+                  <span className="text-4xl block">🏷️</span>
+                  <p className="font-bold mt-3">No designations yet. Create departments first, then add designations.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ═══════════ TAB: Show Employees ═══════════ */}
+          {activePageTab === 'show_employee' && (
+            <div className="space-y-6">
+              {/* Top bar */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-black text-slate-800">Employees ({employees.length})</h3>
+                  <p className="text-xs text-slate-400 font-medium mt-1">All employee records with CRUD operations</p>
+                </div>
+                <button
+                  onClick={() => { setEditingEmp(null); setShowEmpModal(true) }}
+                  className="px-5 py-2.5 bg-[#38b34a] hover:bg-[#2e9e3e] text-white font-bold rounded-xl shadow-md text-xs uppercase tracking-wider cursor-pointer transition-all flex items-center gap-1.5"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                  Add Employee
+                </button>
+              </div>
+
+              {/* Filters */}
+              <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm flex flex-col md:flex-row gap-3 items-center">
                 <div className="relative flex-grow w-full">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -313,15 +679,48 @@ const AdminEmployee = () => {
                   </span>
                   <input
                     type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search by Employee ID, name, email, department, or role..."
+                    value={filters.search}
+                    onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                    placeholder="Search by name, ID, email..."
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 transition-all font-sans"
                   />
                 </div>
+                <select
+                  value={filters.department_id}
+                  onChange={(e) => setFilters({ ...filters, department_id: e.target.value })}
+                  className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#38b34a] font-sans min-w-[140px]"
+                >
+                  <option value="">All Departments</option>
+                  {departments.map(dept => <option key={dept.id} value={dept.id}>{dept.name}</option>)}
+                </select>
+                <select
+                  value={filters.designation_id}
+                  onChange={(e) => setFilters({ ...filters, designation_id: e.target.value })}
+                  className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#38b34a] font-sans min-w-[140px]"
+                >
+                  <option value="">All Designations</option>
+                  {designations.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+                <select
+                  value={filters.employment_status}
+                  onChange={(e) => setFilters({ ...filters, employment_status: e.target.value })}
+                  className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#38b34a] font-sans min-w-[120px]"
+                >
+                  <option value="">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="terminated">Terminated</option>
+                  <option value="resigned">Resigned</option>
+                </select>
+                <button
+                  onClick={() => loadEmployees()}
+                  className="px-5 py-2.5 bg-[#1e3e6b] hover:bg-[#152e52] text-white font-bold rounded-xl text-xs uppercase tracking-wider cursor-pointer transition-all shrink-0"
+                >
+                  Apply
+                </button>
               </div>
 
-              {/* Table wrapper */}
+              {/* Employee Table */}
               <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs">
@@ -331,41 +730,59 @@ const AdminEmployee = () => {
                         <th className="px-6 py-4">Name & Contact</th>
                         <th className="px-6 py-4">Department & Role</th>
                         <th className="px-6 py-4">Joining Date</th>
-                        <th className="px-6 py-4 text-right">Gross Salary (Monthly)</th>
+                        <th className="px-6 py-4 text-right">Salary</th>
                         <th className="px-6 py-4 text-center">Status</th>
-                        <th className="px-6 py-4 text-center">Action</th>
+                        <th className="px-6 py-4 text-center">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700 font-semibold">
-                      {filteredEmployees.length > 0 ? (
-                        filteredEmployees.map((emp) => (
+                      {employees.length > 0 ? (
+                        employees.map((emp) => (
                           <tr key={emp.id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-6 py-4 font-mono font-bold text-slate-500">{emp.emp_id}</td>
+                            <td className="px-6 py-4 font-mono font-bold text-slate-500">{emp.employee_id || `#${emp.id}`}</td>
                             <td className="px-6 py-4">
-                              <p className="font-bold text-slate-800 text-sm">{emp.name}</p>
+                              <p className="font-bold text-slate-800 text-sm">{emp.first_name} {emp.last_name}</p>
                               <p className="text-[10px] text-slate-400 font-medium">{emp.email}</p>
                               <p className="text-[10px] text-slate-400 font-medium">{emp.phone}</p>
                             </td>
                             <td className="px-6 py-4">
                               <span className="px-2.5 py-1 rounded bg-blue-50 text-blue-600 border border-blue-100 text-[10px] font-bold uppercase tracking-wide block w-fit mb-1">
-                                {emp.department}
+                                {emp.department?.name || '—'}
                               </span>
-                              <p className="text-slate-500 font-bold text-xs">{emp.role}</p>
+                              <p className="text-slate-500 font-bold text-xs">{emp.designation?.name || '—'}</p>
                             </td>
-                            <td className="px-6 py-4 text-slate-500">{new Date(emp.joining_date).toLocaleDateString('en-IN')}</td>
-                            <td className="px-6 py-4 text-right font-black text-slate-800 text-sm">₹{emp.salary.toLocaleString('en-IN')}</td>
+                            <td className="px-6 py-4 text-slate-500">
+                              {emp.joining_date ? new Date(emp.joining_date).toLocaleDateString('en-IN') : '—'}
+                            </td>
+                            <td className="px-6 py-4 text-right font-black text-slate-800 text-sm">
+                              {emp.current_salary ? `₹${Number(emp.current_salary).toLocaleString('en-IN')}` : '—'}
+                            </td>
                             <td className="px-6 py-4 text-center">
-                              <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase border tracking-wider bg-emerald-100 text-emerald-800 border-emerald-200">
-                                Active
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border tracking-wider ${getStatusStyle(emp.employment_status)}`}>
+                                {emp.employment_status || 'Active'}
                               </span>
                             </td>
                             <td className="px-6 py-4 text-center">
-                              <button
-                                onClick={() => handleDeactivateEmployee(emp)}
-                                className="px-3 py-1.5 bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100 rounded-lg font-bold transition-all text-[11px] cursor-pointer"
-                              >
-                                Release / Exit
-                              </button>
+                              <div className="flex gap-1.5 justify-center">
+                                <button
+                                  onClick={() => handleViewEmployee(emp.id)}
+                                  className="px-2.5 py-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg font-bold text-[10px] cursor-pointer transition-all"
+                                >
+                                  View
+                                </button>
+                                <button
+                                  onClick={() => { setEditingEmp(emp); setShowEmpModal(true) }}
+                                  className="px-2.5 py-1.5 bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 rounded-lg font-bold text-[10px] cursor-pointer transition-all"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteEmployee(emp.id)}
+                                  className="px-2.5 py-1.5 bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100 rounded-lg font-bold text-[10px] cursor-pointer transition-all"
+                                >
+                                  Delete
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -373,7 +790,7 @@ const AdminEmployee = () => {
                         <tr>
                           <td colSpan="7" className="text-center py-12 text-slate-400">
                             <span className="text-3xl block">👥</span>
-                            <p className="font-bold mt-2">No active employees found matching search</p>
+                            <p className="font-bold mt-2">No employees found. Add your first employee or adjust filters.</p>
                           </td>
                         </tr>
                       )}
@@ -384,177 +801,7 @@ const AdminEmployee = () => {
             </div>
           )}
 
-          {/* TAB 2: Add Employee */}
-          {activePageTab === 'add_employee' && (
-            <div className="max-w-2xl mx-auto space-y-6">
-              <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
-                <h3 className="text-lg font-black text-slate-800">Add New Employee Profile</h3>
-                <span className="text-xs text-slate-400 font-medium">Create user record in corporate registry</span>
-              </div>
-
-              <form onSubmit={handleAddEmployee} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Employee Name *</label>
-                    <input
-                      type="text"
-                      required
-                      value={newEmp.name}
-                      onChange={e => setNewEmp({...newEmp, name: e.target.value})}
-                      placeholder="e.g. Rahul Sharma"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#38b34a] font-sans"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Corporate Email *</label>
-                    <input
-                      type="email"
-                      required
-                      value={newEmp.email}
-                      onChange={e => setNewEmp({...newEmp, email: e.target.value})}
-                      placeholder="e.g. rahul.s@aimdigitalise.com"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#38b34a] font-sans"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Phone Number</label>
-                    <input
-                      type="text"
-                      value={newEmp.phone}
-                      onChange={e => setNewEmp({...newEmp, phone: e.target.value})}
-                      placeholder="e.g. +91 99887 76655"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#38b34a] font-sans"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Designation Role *</label>
-                    <input
-                      type="text"
-                      required
-                      value={newEmp.role}
-                      onChange={e => setNewEmp({...newEmp, role: e.target.value})}
-                      placeholder="e.g. Frontend Developer"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#38b34a] font-sans"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Department</label>
-                    <select
-                      value={newEmp.department}
-                      onChange={e => setNewEmp({...newEmp, department: e.target.value})}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#38b34a] font-sans"
-                    >
-                      <option value="IT / Development">IT / Development</option>
-                      <option value="HR & Operations">HR & Operations</option>
-                      <option value="Digital Marketing">Digital Marketing</option>
-                      <option value="UI/UX Design">UI/UX Design</option>
-                      <option value="Finance & Accounts">Finance & Accounts</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Joining Date</label>
-                    <input
-                      type="date"
-                      value={newEmp.joining_date}
-                      onChange={e => setNewEmp({...newEmp, joining_date: e.target.value})}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#38b34a] font-sans"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Gross Salary (Monthly) *</label>
-                    <input
-                      type="number"
-                      required
-                      value={newEmp.salary}
-                      onChange={e => setNewEmp({...newEmp, salary: e.target.value})}
-                      placeholder="INR Amount (e.g. 40000)"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#38b34a] font-sans"
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-4 flex justify-end">
-                  <button
-                    type="submit"
-                    className="px-6 py-3 bg-[#38b34a] hover:bg-[#2e9e3e] text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all text-xs uppercase cursor-pointer"
-                  >
-                    Submit Record
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {/* TAB 3: Leftout Employees */}
-          {activePageTab === 'leftout_employee' && (
-            <div className="space-y-6">
-              <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-bold text-slate-800">Exit registry / Former Employees</h3>
-                  <p className="text-xs text-slate-400 font-medium mt-1">Staff members who resigned, completed tenure, or exited the company</p>
-                </div>
-                <span className="text-xs bg-slate-100 border border-slate-200 px-3 py-1 rounded-full text-slate-500 font-bold">
-                  Exited Staff: {leftouts.length}
-                </span>
-              </div>
-
-              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="border-b border-slate-200 bg-slate-50 text-slate-400 font-bold uppercase tracking-wider">
-                        <th className="px-6 py-4">Emp ID</th>
-                        <th className="px-6 py-4">Name</th>
-                        <th className="px-6 py-4">Exit Department & Role</th>
-                        <th className="px-6 py-4">Exit Date</th>
-                        <th className="px-6 py-4">Reason for Leaving</th>
-                        <th className="px-6 py-4 text-center">F&F Settlement</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-slate-700 font-semibold">
-                      {leftouts.length > 0 ? (
-                        leftouts.map((emp) => (
-                          <tr key={emp.id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-6 py-4 font-mono font-bold text-slate-400">{emp.emp_id}</td>
-                            <td className="px-6 py-4 text-sm font-bold text-slate-800">{emp.name}</td>
-                            <td className="px-6 py-4">
-                              <p className="text-slate-600 font-bold">{emp.role}</p>
-                              <p className="text-[10px] text-slate-400 font-medium">{emp.department}</p>
-                            </td>
-                            <td className="px-6 py-4 text-slate-500">{new Date(emp.exit_date).toLocaleDateString('en-IN')}</td>
-                            <td className="px-6 py-4 text-slate-600 font-medium italic">"{emp.reason}"</td>
-                            <td className="px-6 py-4 text-center">
-                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                                emp.ff_status === 'Settled'
-                                  ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                                  : 'bg-amber-100 text-amber-800 border-amber-200'
-                              }`}>
-                                {emp.ff_status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="6" className="text-center py-12 text-slate-400">
-                            <p className="font-bold">No former employees recorded in exit registry</p>
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 4: Leave Requests */}
+          {/* ═══════════ TAB: Leave Requests (Demo Data — Preserved) ═══════════ */}
           {activePageTab === 'employee_leave' && (
             <div className="space-y-6">
               {/* Leave request status widgets */}
@@ -667,7 +914,7 @@ const AdminEmployee = () => {
             </div>
           )}
 
-          {/* TAB 5: Attendance Roster */}
+          {/* ═══════════ TAB: Attendance Roster (Demo Data — Preserved) ═══════════ */}
           {activePageTab === 'employee_attendance' && (
             <div className="space-y-6">
               <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
@@ -740,7 +987,7 @@ const AdminEmployee = () => {
             </div>
           )}
 
-          {/* TAB 6: Generate Payslip */}
+          {/* ═══════════ TAB: Generate Payslip (Demo Data — Preserved) ═══════════ */}
           {activePageTab === 'payslip' && (
             <div className="space-y-6">
               {/* Payslip Config form */}
@@ -761,7 +1008,7 @@ const AdminEmployee = () => {
                       onChange={e => setSelectedEmpId(e.target.value)}
                       className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#38b34a] font-sans font-bold text-slate-700"
                     >
-                      {employees.map(emp => (
+                      {DUMMY_EMPLOYEES_FOR_PAYSLIP.map(emp => (
                         <option key={emp.emp_id} value={emp.emp_id}>
                           {emp.name} ({emp.emp_id})
                         </option>
@@ -858,53 +1105,26 @@ const AdminEmployee = () => {
 
                   {/* Calculations Table */}
                   <div className="grid grid-cols-2 border border-slate-300 mt-4 text-xs font-semibold">
-                    
                     {/* Column 1: Earnings */}
                     <div className="border-r border-slate-300">
                       <div className="bg-slate-50 border-b border-slate-300 px-4 py-2 font-black uppercase text-slate-500 tracking-wider">Earnings</div>
                       <div className="divide-y divide-slate-100 px-4 py-2 space-y-2 text-slate-700">
-                        <div className="flex justify-between py-1">
-                          <span>Basic Salary</span>
-                          <span>₹{generatedPayslip.earnings.basic.toLocaleString('en-IN')}</span>
-                        </div>
-                        <div className="flex justify-between py-1">
-                          <span>House Rent Allowance (HRA)</span>
-                          <span>₹{generatedPayslip.earnings.hra.toLocaleString('en-IN')}</span>
-                        </div>
-                        <div className="flex justify-between py-1">
-                          <span>Conveyance Allowance</span>
-                          <span>₹{generatedPayslip.earnings.allowance.toLocaleString('en-IN')}</span>
-                        </div>
-                        <div className="flex justify-between py-1">
-                          <span>Special Allowance</span>
-                          <span>₹{generatedPayslip.earnings.special.toLocaleString('en-IN')}</span>
-                        </div>
+                        <div className="flex justify-between py-1"><span>Basic Salary</span><span>₹{generatedPayslip.earnings.basic.toLocaleString('en-IN')}</span></div>
+                        <div className="flex justify-between py-1"><span>House Rent Allowance (HRA)</span><span>₹{generatedPayslip.earnings.hra.toLocaleString('en-IN')}</span></div>
+                        <div className="flex justify-between py-1"><span>Conveyance Allowance</span><span>₹{generatedPayslip.earnings.allowance.toLocaleString('en-IN')}</span></div>
+                        <div className="flex justify-between py-1"><span>Special Allowance</span><span>₹{generatedPayslip.earnings.special.toLocaleString('en-IN')}</span></div>
                       </div>
                     </div>
-
                     {/* Column 2: Deductions */}
                     <div>
                       <div className="bg-slate-50 border-b border-slate-300 px-4 py-2 font-black uppercase text-slate-500 tracking-wider">Deductions</div>
                       <div className="divide-y divide-slate-100 px-4 py-2 space-y-2 text-slate-700">
-                        <div className="flex justify-between py-1">
-                          <span>Provident Fund (PF)</span>
-                          <span>₹{generatedPayslip.deductions.pf.toLocaleString('en-IN')}</span>
-                        </div>
-                        <div className="flex justify-between py-1">
-                          <span>Professional Tax (PT)</span>
-                          <span>₹{generatedPayslip.deductions.pt.toLocaleString('en-IN')}</span>
-                        </div>
-                        <div className="flex justify-between py-1 text-rose-600">
-                          <span>LOP Deductions</span>
-                          <span>₹{generatedPayslip.deductions.lopDeduction.toLocaleString('en-IN')}</span>
-                        </div>
-                        <div className="flex justify-between py-1 text-slate-400">
-                          <span>Other / TDS</span>
-                          <span>₹0</span>
-                        </div>
+                        <div className="flex justify-between py-1"><span>Provident Fund (PF)</span><span>₹{generatedPayslip.deductions.pf.toLocaleString('en-IN')}</span></div>
+                        <div className="flex justify-between py-1"><span>Professional Tax (PT)</span><span>₹{generatedPayslip.deductions.pt.toLocaleString('en-IN')}</span></div>
+                        <div className="flex justify-between py-1 text-rose-600"><span>LOP Deductions</span><span>₹{generatedPayslip.deductions.lopDeduction.toLocaleString('en-IN')}</span></div>
+                        <div className="flex justify-between py-1 text-slate-400"><span>Other / TDS</span><span>₹0</span></div>
                       </div>
                     </div>
-
                   </div>
 
                   {/* Summary Totals Row */}
@@ -961,6 +1181,52 @@ const AdminEmployee = () => {
 
         </div>
       </div>
+
+      {/* ═══════════ MODALS & DRAWERS ═══════════ */}
+
+      {/* Department Modal */}
+      {showDeptModal && (
+        <DepartmentModal
+          isOpen={showDeptModal}
+          onClose={() => { setShowDeptModal(false); setEditingDept(null) }}
+          onSave={handleSaveDepartment}
+          editingDepartment={editingDept}
+          loading={loading}
+        />
+      )}
+
+      {/* Designation Modal */}
+      {showDesigModal && (
+        <DesignationModal
+          isOpen={showDesigModal}
+          onClose={() => { setShowDesigModal(false); setEditingDesig(null) }}
+          onSave={handleSaveDesignation}
+          editingDesignation={editingDesig}
+          departments={departments}
+          loading={loading}
+        />
+      )}
+
+      {/* Employee Modal */}
+      {showEmpModal && (
+        <EmployeeModal
+          isOpen={showEmpModal}
+          onClose={() => { setShowEmpModal(false); setEditingEmp(null) }}
+          onSave={handleSaveEmployee}
+          editingEmployee={editingEmp}
+          departments={departments}
+          designations={designations}
+          loading={loading}
+        />
+      )}
+
+      {/* Employee Details Drawer */}
+      {viewingEmp && (
+        <EmployeeDetailsDrawer
+          employee={viewingEmp}
+          onClose={() => setViewingEmp(null)}
+        />
+      )}
     </>
   )
 }

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { registerPartner } from '../../../api/partner'
+import { useState, useEffect } from 'react'
+import { registerPartner, fetchRMOptions } from '../../../api/partner'
 
 const INDIA_STATES = [
   'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat',
@@ -23,17 +23,49 @@ const inputCls =
 
 const Step1RegistrationForm = ({ onSuccess }) => {
   const [form, setForm] = useState({
-    organization_name: '', rm_name: '', partner_name: '', contact_no: '',
+    organization_name: '', rm_type: '', rm_id: '', partner_name: '', contact_no: '',
     email: '', address_line1: '', address_line2: '', district: '',
     pin_code: '', state: '', country: 'India',
     password: '', password_confirmation: '',
   })
   const [files, setFiles] = useState({ pan_card: null, id_proof: null, organization_proof: null })
+  const [rmOptions, setRmOptions] = useState([])
+  const [loadingRmOptions, setLoadingRmOptions] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [isOffline, setIsOffline] = useState(false)
 
-  const handleChange = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }))
+  useEffect(() => {
+    const loadRM = async () => {
+      setLoadingRmOptions(true)
+      try {
+        const res = await fetchRMOptions()
+        if (res.data?.success) {
+          setRmOptions(res.data.data || [])
+        }
+      } catch (err) {
+        console.error('Failed to load RM options:', err)
+      } finally {
+        setLoadingRmOptions(false)
+      }
+    }
+    loadRM()
+  }, [])
+
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    if (name === 'rm_selection') {
+      if (!value) {
+        setForm((p) => ({ ...p, rm_id: '', rm_type: '' }))
+      } else {
+        const [type, id] = value.split('-')
+        setForm((p) => ({ ...p, rm_type: type, rm_id: id }))
+      }
+    } else {
+      setForm((p) => ({ ...p, [name]: value }))
+    }
+  }
+
   const handleFile = (e) => setFiles((p) => ({ ...p, [e.target.name]: e.target.files[0] || null }))
 
   const handleSimulateSuccess = () => {
@@ -43,11 +75,16 @@ const Step1RegistrationForm = ({ onSuccess }) => {
       partner_name: form.partner_name || 'Simulated Partner',
       organization_name: form.organization_name || 'Simulated Organization',
       registration_status: 'pending',
-    })
+    }, form)
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!form.rm_id || !form.rm_type) {
+      setError('Please select a Relationship Manager.')
+      setIsOffline(false)
+      return
+    }
     if (form.password !== form.password_confirmation) {
       setError('Passwords do not match.')
       setIsOffline(false)
@@ -67,7 +104,7 @@ const Step1RegistrationForm = ({ onSuccess }) => {
       Object.entries(files).forEach(([k, v]) => { if (v) fd.append(k, v) })
       const res = await registerPartner(fd)
       if (res.data?.success) {
-        onSuccess(res.data.data)
+        onSuccess(res.data.data, form)
       } else {
         setError(res.data?.message || 'Registration failed. Please try again.')
       }
@@ -131,8 +168,33 @@ const Step1RegistrationForm = ({ onSuccess }) => {
         <FieldGroup label="Organization Name" required>
           <input name="organization_name" value={form.organization_name} onChange={handleChange} required placeholder="AIM Pvt. Ltd." className={inputCls} />
         </FieldGroup>
-        <FieldGroup label="RM Name" required>
-          <input name="rm_name" value={form.rm_name} onChange={handleChange} required placeholder="Relationship Manager" className={inputCls} />
+        <FieldGroup label="Relationship Manager (RM)" required>
+          <select
+            name="rm_selection"
+            value={form.rm_type && form.rm_id ? `${form.rm_type}-${form.rm_id}` : ''}
+            onChange={handleChange}
+            required
+            disabled={loadingRmOptions}
+            className={`${inputCls} bg-aim-navy`}
+          >
+            <option value="" className="bg-aim-navy text-aim-copy-muted">
+              {loadingRmOptions ? 'Loading RM options...' : 'Select RM *'}
+            </option>
+            {rmOptions.map((option) => (
+              <option key={`${option.type}-${option.id}`} value={`${option.type}-${option.id}`} className="bg-aim-navy text-white">
+                {option.type === 'admin' ? '👑 ' : '🤝 '}
+                {option.name} {option.partner_id ? `(${option.partner_id})` : ''}
+              </option>
+            ))}
+          </select>
+          {rmOptions.length === 0 && !loadingRmOptions && (
+            <p className="text-aim-gold text-[10px] mt-1 font-bold">No Super Admins or Master/Premium partners available.</p>
+          )}
+          {rmOptions.length > 0 && (
+            <p className="text-slate-400 text-[9px] mt-1 font-bold">
+              👑 Super Admin | 🤝 Master/Premium Partner
+            </p>
+          )}
         </FieldGroup>
       </div>
 
@@ -170,8 +232,8 @@ const Step1RegistrationForm = ({ onSuccess }) => {
         </FieldGroup>
         <FieldGroup label="State" required>
           <select name="state" value={form.state} onChange={handleChange} required className={inputCls}>
-            <option value="" className="bg-aim-navy">Select State</option>
-            {INDIA_STATES.map((s) => <option key={s} value={s} className="bg-aim-navy">{s}</option>)}
+            <option value="" className="bg-aim-navy text-aim-copy-muted">Select State</option>
+            {INDIA_STATES.map((s) => <option key={s} value={s} className="bg-aim-navy text-white">{s}</option>)}
           </select>
         </FieldGroup>
       </div>

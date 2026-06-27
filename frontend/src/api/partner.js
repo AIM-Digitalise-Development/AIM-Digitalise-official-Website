@@ -73,6 +73,10 @@ const partnerFetch = async (method, path, body = null, isFormData = false) => {
   }
 }
 
+// ─── Fetch RM Options ───────────────────────────────────────────────────────
+export const fetchRMOptions = () =>
+  partnerFetch('GET', '/public/rm-options')
+
 // ─── Step 1: Register partner ──────────────────────────────────────────────
 // formData: FormData with all fields + file uploads
 export const registerPartner = (formData) =>

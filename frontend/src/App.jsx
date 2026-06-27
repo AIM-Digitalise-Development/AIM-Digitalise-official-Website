@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { HelmetProvider } from 'react-helmet-async'
 import RootLayout from './layouts/RootLayout'
 import WebsiteLayout from './layouts/WebsiteLayout'
@@ -9,6 +9,11 @@ import EmployeeLayout from './layouts/EmployeeLayout'
 import EmployeeDashboard from './pages/employee/Dashboard'
 import EmployeeTasks from './pages/employee/Tasks'
 import EmployeeTimesheet from './pages/employee/Timesheet'
+import EmployeeSupport from './pages/employee/Support'
+import EmployeeProfile from './pages/employee/Profile'
+import EmployeePunchIn from './pages/employee/PunchIn'
+import EmployeeLeads from './pages/employee/Leads'
+import EmployeeDemoSlots from './pages/employee/DemoSlots'
 import Home from './pages/website/Home'
 import About from './pages/website/About'
 import Contact from './pages/website/Contact'
@@ -25,7 +30,9 @@ import GeneralLogin from './pages/website/GeneralLogin'
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminUsers from './pages/admin/Users'
 import AdminSaasClients from './pages/admin/SaasClients'
+import AdminProducts from './pages/admin/Products'
 import AdminSettings from './pages/admin/Settings'
+import AdminSubscribedClients from './pages/admin/SubscribedClients'
 import AdminAnalytics from './pages/admin/Analytics'
 import AdminPartners from './pages/admin/Partners'
 import AdminSupport from './pages/admin/Support'
@@ -45,6 +52,9 @@ import ClientLogin from './pages/client/Login'
 import ClientProducts from './pages/client/Products'
 import ClientProfile from './pages/client/Profile'
 import ClientSubscription from './pages/client/Subscription'
+import ClientSupport from './pages/client/Support'
+import ClientCustomization from './pages/client/Customization'
+import ClientAddonServices from './pages/client/AddonServices'
 import DemoPortal from './pages/demo/DemoPortal'
 import DemoDashboard from './pages/demo/DemoDashboard'
 import DemoEmployeePunchIn from './pages/demo/DemoEmployeePunchIn'
@@ -106,7 +116,9 @@ function App() {
             <Route index element={<AdminDashboard />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="saas-clients" element={<AdminSaasClients />} />
+            <Route path="products" element={<Navigate to="/admin/settings" replace />} />
             <Route path="settings" element={<AdminSettings />} />
+            <Route path="subscribed-clients" element={<AdminSubscribedClients />} />
             <Route path="analytics" element={<AdminAnalytics />} />
             <Route path="partners" element={<AdminPartners />} />
             <Route path="support" element={<AdminSupport />} />
@@ -117,8 +129,21 @@ function App() {
           {/* ── Employee portal (authenticated shell with sidebar) ── */}
           <Route path={ROUTES.EMPLOYEE.DASHBOARD} element={<EmployeeLayout />}>
             <Route index element={<EmployeeDashboard />} />
-            <Route path="tasks" element={<EmployeeTasks />} />
-            <Route path="timesheet" element={<EmployeeTimesheet />} />
+            <Route path="saas-clients" element={<DemoSaasClients />} />
+            <Route path="subscription" element={<DemoComingSoon title="Subscribed Clients" icon="💳" />} />
+            <Route path="users" element={<DemoComingSoon title="General Clients" icon="👥" />} />
+            <Route path="accounts" element={<DemoComingSoon title="Accounts" icon="💰" />} />
+            <Route path="employee" element={<EmployeeProfile />} />
+            <Route path="projects" element={<DemoComingSoon title="Projects" icon="📁" />} />
+            <Route path="compliance" element={<DemoComingSoon title="Compliance" icon="🛡️" />} />
+            <Route path="partners" element={<DemoComingSoon title="Partner Network" icon="🤝" />} />
+            <Route path="reports" element={<DemoComingSoon title="Reports" icon="📊" />} />
+            <Route path="support" element={<EmployeeSupport />} />
+            <Route path="settings" element={<DemoComingSoon title="Settings" icon="⚙️" />} />
+            <Route path="punch-in" element={<EmployeePunchIn />} />
+            <Route path="profile" element={<EmployeeProfile />} />
+            <Route path="leads" element={<EmployeeLeads />} />
+            <Route path="demo" element={<EmployeeDemoSlots />} />
           </Route>
 
           {/* ── Partner auth pages (standalone, no header/footer) ── */}
@@ -146,6 +171,9 @@ function App() {
             <Route index element={<ClientProducts />} />
             <Route path="profile" element={<ClientProfile />} />
             <Route path="subscription" element={<ClientSubscription />} />
+            <Route path="support" element={<ClientSupport />} />
+            <Route path="customization" element={<ClientCustomization />} />
+            <Route path="addon-services" element={<ClientAddonServices />} />
           </Route>
 
           {/* ── Demo Portal (no auth required, dark admin-style with demo data) ── */}
@@ -160,7 +188,7 @@ function App() {
             <Route path="compliance" element={<DemoComingSoon title="Compliance" icon="🛡️" />} />
             <Route path="partners" element={<DemoComingSoon title="Partner Network" icon="🤝" />} />
             <Route path="reports" element={<DemoComingSoon title="Reports" icon="📊" />} />
-            <Route path="support" element={<DemoComingSoon title="Support" icon="💬" />} />
+            <Route path="support" element={<EmployeeSupport />} />
             <Route path="settings" element={<DemoComingSoon title="Settings" icon="⚙️" />} />
             <Route path="punch-in" element={<DemoEmployeePunchIn />} />
           </Route>

@@ -249,10 +249,9 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
             </label>
             <input
               type="number"
-              min={1}
               value={amount}
-              onChange={(e) => setAmount(Number(e.target.value))}
-              className={inputCls}
+              readOnly
+              className={`${inputCls} opacity-60 cursor-not-allowed`}
             />
           </div>
         </div>

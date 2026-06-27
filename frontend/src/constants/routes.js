@@ -16,7 +16,9 @@ export const ROUTES = {
     DASHBOARD: '/admin',
     USERS: '/admin/users',
     SAAS_CLIENTS: '/admin/saas-clients',
+    PRODUCTS: '/admin/products',
     SETTINGS: '/admin/settings',
+    SUBSCRIBED_CLIENTS: '/admin/subscribed-clients',
     ANALYTICS: '/admin/analytics',
     PARTNERS: '/admin/partners',
     SUPPORT: '/admin/support',
@@ -27,6 +29,8 @@ export const ROUTES = {
     DASHBOARD: '/employee',
     TASKS: '/employee/tasks',
     TIMESHEET: '/employee/timesheet',
+    SUPPORT: '/employee/support',
+    DEMO: '/employee/demo',
   },
   PARTNER: {
     DASHBOARD: '/partner',
@@ -49,6 +53,9 @@ export const ROUTES = {
     PORTAL: '/client/portal',
     PROFILE: '/client/portal/profile',
     SUBSCRIPTION: '/client/portal/subscription',
+    SUPPORT: '/client/portal/support',
+    CUSTOMIZATION: '/client/portal/customization',
+    ADDON_SERVICES: '/client/portal/addon-services',
   },
   AUTH: {
     LOGIN: '/login',

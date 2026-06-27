@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import StepIndicator from '../../components/partner/registration/StepIndicator'
 import Step1RegistrationForm from '../../components/partner/registration/Step1RegistrationForm'
@@ -16,10 +16,22 @@ const STEP_TITLES = [
 ]
 
 const PartnerRegister = () => {
+  const location = useLocation()
   const [step, setStep] = useState(1)
   const [partnerData, setPartnerData] = useState(null)   // from step 1 API
+  const [step1FormValues, setStep1FormValues] = useState(null) // from step 1 inputs
   const [verifyData, setVerifyData] = useState(null)     // from step 3 API
   const [formEmail, setFormEmail] = useState('')
+
+  useEffect(() => {
+    if (location.state?.resumePartnerId) {
+      setPartnerData({
+        partner_id: location.state.resumePartnerId,
+        registration_status: 'pending'
+      })
+      setStep(location.state.resumeStep || 3)
+    }
+  }, [location])
 
   useEffect(() => {
     // Prevent page-level scrolling
@@ -35,8 +47,9 @@ const PartnerRegister = () => {
   const currentTitle = STEP_TITLES.find((t) => t.step === step) || STEP_TITLES[0]
   const isSuccess = step === 4
 
-  const handleStep1Success = (data) => {
+  const handleStep1Success = (data, formValues) => {
     setPartnerData(data)
+    setStep1FormValues(formValues)
     setFormEmail(data?.email || '')
     setStep(2)
   }
@@ -124,6 +137,7 @@ const PartnerRegister = () => {
                   {step === 2 && (
                     <Step2DownloadAgreement
                       partnerData={partnerData}
+                      step1FormValues={step1FormValues}
                       onContinue={() => setStep(3)}
                       onBack={() => setStep(1)}
                     />

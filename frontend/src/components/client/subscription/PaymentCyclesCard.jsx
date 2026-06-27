@@ -1,5 +1,13 @@
 import { motion } from 'framer-motion'
 
+const cycleOrder = ['annual', 'half_yearly', 'quarterly', 'monthly']
+const cycleDisplayNames = {
+  'annual': 'Annual',
+  'half_yearly': 'Half Yearly',
+  'quarterly': 'Quarterly',
+  'monthly': 'Monthly'
+}
+
 const PaymentCyclesCard = ({ paymentCycles, selectedCycle, onCycleChange }) => {
   if (!paymentCycles || !paymentCycles.cycles) return null
 
@@ -14,7 +22,9 @@ const PaymentCyclesCard = ({ paymentCycles, selectedCycle, onCycleChange }) => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {Object.entries(paymentCycles.cycles).map(([cycle, data]) => {
+          {cycleOrder.map((cycle) => {
+            const data = paymentCycles.cycles[cycle]
+            if (!data) return null
             const isSelected = selectedCycle === cycle
 
             return (
@@ -30,10 +40,10 @@ const PaymentCyclesCard = ({ paymentCycles, selectedCycle, onCycleChange }) => {
                 }}
               >
                 <div className="space-y-2">
-                  <h4 className={`text-[13px] font-bold capitalize ${isSelected ? '' : 'text-gray-700'}`}
+                  <h4 className={`text-[13px] font-bold ${isSelected ? '' : 'text-gray-700'}`}
                     style={isSelected ? { color: '#1a6b54' } : {}}
                   >
-                    {cycle} {data.multiplier > 1 && `(${data.multiplier} mo)`}
+                    {cycleDisplayNames[cycle] || cycle} {data.multiplier > 1 && `(${data.multiplier} mo)`}
                   </h4>
                   
                   {data.discount > 0 ? (

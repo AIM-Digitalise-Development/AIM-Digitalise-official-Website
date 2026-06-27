@@ -6,6 +6,7 @@ import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import { purchaseApi } from '../../api'
 import { ROUTES } from '../../constants/routes'
+import nexgnLogo from '../../assets/images/nexgnlogo.png'
 
 // Complete detailed plan information for all 16 plans
 const subscriptionPlans = [
@@ -204,7 +205,7 @@ const subscriptionPlans = [
 ]
 
 const categories = [
-  { id: 'nexgn', label: 'NEXGN SaaS', color: 'green' },
+  { id: 'nexgn', label: 'SaaS Based CLOUD', color: 'green' },
   { id: 'static', label: 'STATIC', color: 'sky' },
   { id: 'dynamic', label: 'DYNAMIC', color: 'teal' },
   { id: 'ecommerce', label: 'E-COMMERCE', color: 'orange' },
@@ -243,6 +244,8 @@ const SaasBasedSoftware = () => {
   const initialPlanId = parseInt(queryParams.get('plan'), 10) || 9
   const initialPlan = subscriptionPlans.find(p => p.id === initialPlanId) || subscriptionPlans.find(p => p.id === 9)
 
+  const [products, setProducts] = useState(subscriptionPlans)
+  const [loadingProducts, setLoadingProducts] = useState(true)
   const [activeCategory, setActiveCategory] = useState(initialPlan.category)
   const [activePlanId, setActivePlanId] = useState(initialPlan.id)
 
@@ -252,12 +255,82 @@ const SaasBasedSoftware = () => {
   const [apiError, setApiError] = useState('')
   const [successData, setSuccessData] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [customProcessingFee, setCustomProcessingFee] = useState(0)
+  const [customMonthlySubscription, setCustomMonthlySubscription] = useState(0)
 
   const nameInputRef = useRef(null)
 
-  const activePlan = subscriptionPlans.find(plan => plan.id === activePlanId) || subscriptionPlans[0]
-  const filteredPlans = subscriptionPlans.filter(plan => plan.category === activeCategory)
-  const isInstitutePro = activePlan.id === 15
+  const activePlan = products.find(plan => plan.id === activePlanId) || products[0]
+  const filteredPlans = products.filter(plan => plan.category === activeCategory)
+  const isInstitutePro = activePlan?.id === 15
+
+  // Fetch Subcategories and Products from backend
+  useEffect(() => {
+    setLoadingProducts(true)
+    purchaseApi.fetchSubcategoriesWithProducts()
+      .then(result => {
+        if (result.success && result.data?.length) {
+          const allProducts = []
+
+          const mapCategory = (categoryName, categoryId) => {
+            const name = (categoryName || '').toLowerCase()
+            const id = Number(categoryId)
+            if (name.includes('saas') || name.includes('nexgn') || id === 1) return 'nexgn'
+            if (name.includes('static') || id === 2) return 'static'
+            if (name.includes('dynamic') || id === 3) return 'dynamic'
+            if (name.includes('e-commerce') || name.includes('ecommerce') || id === 4) return 'ecommerce'
+            if (name.includes('mobile') || name.includes('android') || name.includes('ios') || id === 5) return 'mobile'
+            return 'nexgn'
+          }
+
+          const formatSecurityDeposit = (fee) => `₹${fee}/-`
+          const formatMonthlySubscription = (sub, perPerson) => {
+            if (perPerson === true || perPerson === 1) return `₹${sub}/-/student/month`
+            return `₹${sub}/-`
+          }
+
+          result.data.forEach(sub => {
+            if (sub.products && Array.isArray(sub.products)) {
+              sub.products.forEach(p => {
+                allProducts.push({
+                  ...p,
+                  category: mapCategory(p.sub_category_name || sub.name, p.sub_category_id || sub.id),
+                  categoryLabel: (p.sub_category_name || sub.name || '').toUpperCase(),
+                  securityDeposit: formatSecurityDeposit(p.processing_fee),
+                  monthlySubscription: formatMonthlySubscription(p.monthly_subscription, p.per_person),
+                })
+              })
+            }
+          })
+
+          if (allProducts.length) {
+            setProducts(allProducts)
+            const queryParams = new URLSearchParams(window.location.search)
+            const paramId = parseInt(queryParams.get('plan'), 10)
+            const matched = allProducts.find(p => p.id === paramId) || allProducts.find(p => p.id === 9) || allProducts[0]
+            if (matched) {
+              setActivePlanId(matched.id)
+              setActiveCategory(matched.category)
+            }
+          }
+        }
+      })
+      .catch(err => console.error('Failed to load products from API:', err))
+      .finally(() => setLoadingProducts(false))
+  }, [])
+
+  useEffect(() => {
+    if (activePlan) {
+      setCustomProcessingFee(activePlan.processing_fee || 0)
+      setCustomMonthlySubscription(activePlan.id === 15 ? 0 : (activePlan.monthly_subscription || 0))
+    }
+  }, [activePlanId, activePlan])
+
+  useEffect(() => {
+    if (isInstitutePro && activePlan) {
+      setCustomMonthlySubscription((activePlan.monthly_subscription || 10) * (parseInt(checkoutData.total_students, 10) || 0))
+    }
+  }, [checkoutData.total_students, isInstitutePro, activePlan])
 
   useEffect(() => {
     purchaseApi.fetchPartners()
@@ -272,7 +345,7 @@ const SaasBasedSoftware = () => {
 
   const handleCategoryChange = (catId) => {
     setActiveCategory(catId)
-    const firstPlan = subscriptionPlans.find(plan => plan.category === catId)
+    const firstPlan = products.find(plan => plan.category === catId)
     if (firstPlan) setActivePlanId(firstPlan.id)
   }
 
@@ -303,11 +376,6 @@ const SaasBasedSoftware = () => {
     setApiError('')
     setPaymentStep('processing')
 
-    const processingFeeNum = parseInt(activePlan.securityDeposit.replace(/[^\d]/g, ''), 10) || 0
-    const monthlySubscriptionNum = isInstitutePro
-      ? 10 * (parseInt(checkoutData.total_students, 10) || 0)
-      : parseInt(activePlan.monthlySubscription.replace(/[^\d]/g, ''), 10) || 0
-
     const payload = {
       client_name: checkoutData.client_name,
       contact_number: checkoutData.contact_number,
@@ -320,8 +388,8 @@ const SaasBasedSoftware = () => {
       product_id: activePlan.id,
       product_name: activePlan.name,
       product_category: activePlan.category,
-      processing_fee: processingFeeNum,
-      monthly_subscription: monthlySubscriptionNum,
+      processing_fee: customProcessingFee,
+      monthly_subscription: customMonthlySubscription,
     }
 
     if (isInstitutePro) {
@@ -446,15 +514,20 @@ const SaasBasedSoftware = () => {
         <meta name="keywords" content="saas website, saas software, dynamic website price, saas software billing, android mobile app development, e-commerce website packages, India" />
         <link rel="canonical" href="https://aimdigitalise.com/saas-software" />
       </Helmet>
+      <div className="flex items-center justify-center py-[0]">
+        <img src={nexgnLogo} alt="NEXGN Logo" className="h-36 w-auto object-contain" />
 
-      <div className="relative min-h-screen text-aim-copy py-12 px-4 sm:px-6 lg:px-8 bg-grid-pattern transition-colors duration-300">
-        
+      </div>
+
+
+      <div className="relative min-h-screen text-aim-copy py-1 px-4 sm:px-6 lg:px-8 bg-grid-pattern transition-colors duration-300">
+
         {/* Ambient Halos */}
         <div className="absolute top-10 left-1/4 w-[400px] h-[400px] bg-aim-gold/5 dark:bg-aim-gold/10 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute bottom-20 right-1/4 w-[400px] h-[400px] bg-aim-purple/5 dark:bg-aim-purple/10 rounded-full blur-3xl pointer-events-none"></div>
 
         <div className="max-w-6xl mx-auto space-y-10 relative z-10">
-          
+
           {/* Header & Slogan Block */}
           <div className="text-center space-y-6">
             <div className="space-y-2">
@@ -469,19 +542,12 @@ const SaasBasedSoftware = () => {
             </div>
 
             {/* Slogan Banner */}
-            <div className="w-full card-elevated p-4 rounded-xl max-w-4xl mx-auto transition-colors duration-300">
-              <h2 className="text-xs sm:text-sm md:text-base font-bold text-aim-copy tracking-wide uppercase">
-                INDIA'S 1st SAAS-BASED WEBSITE &amp; SOFTWARE PROVIDER WITH{' '}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-aim-gold via-aim-purple to-aim-gold font-extrabold">
-                  100% DATA SECURITY &amp; OWNERSHIP
-                </span>
-              </h2>
-            </div>
+
           </div>
 
           {/* MAIN GRID BLOCK */}
           <div className="space-y-6">
-            
+
             {/* 1. Horizontal Category Nav Tabs */}
             <div className="flex flex-wrap justify-center gap-2 max-w-4xl mx-auto p-1.5 rounded-2xl card-elevated transition-colors duration-300">
               {categories.map((cat) => (
@@ -497,10 +563,10 @@ const SaasBasedSoftware = () => {
 
             {/* 2. Interactive Split Pane Layout */}
             <div className="grid lg:grid-cols-12 gap-6 items-start">
-              
+
               {/* LEFT COLUMN: FILTERED PLANS LIST + TRUST WIDGET (4 columns) */}
               <div className="lg:col-span-5 flex flex-col gap-5 justify-start">
-                
+
                 {/* Selector Card */}
                 <div className="card-elevated rounded-2xl p-4 sm:p-5 space-y-4 transition-colors duration-300">
                   <div className="flex justify-between items-center pb-3 border-b border-aim-border">
@@ -514,14 +580,12 @@ const SaasBasedSoftware = () => {
 
                   {/* NEXGN SaaS Logo Header shown only in SaaS tab */}
                   {activeCategory === 'nexgn' && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: -5 }} 
+                    <motion.div
+                      initial={{ opacity: 0, y: -5 }}
                       animate={{ opacity: 1, y: 0 }}
                       className="flex flex-col items-center py-2.5 px-3 bg-aim-navy-muted/10 rounded-xl border border-aim-border text-center select-none"
                     >
-                      <span className="text-lg font-black tracking-tight text-aim-copy">
-                        NEX<span className="text-aim-gold">G</span>N
-                      </span>
+                      <img src={nexgnLogo} alt="NEXGN Logo" className="h-16 w-auto object-contain" />
                       <p className="text-[8px] font-bold text-aim-gold uppercase tracking-widest mt-0.5">
                         Solutions Changing to Next Generation
                       </p>
@@ -533,15 +597,13 @@ const SaasBasedSoftware = () => {
                       <button
                         key={plan.id}
                         onClick={() => handlePlanSelect(plan.id)}
-                        className={`w-full flex items-center gap-3.5 p-3.5 text-left rounded-xl border text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer ${
-                          activePlanId === plan.id
+                        className={`w-full flex items-center gap-3.5 p-3.5 text-left rounded-xl border text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer ${activePlanId === plan.id
                             ? getCategoryButtonActiveStyles(activeCategory)
                             : 'card-elevated text-aim-copy-muted hover:text-aim-gold hover:bg-aim-gold/5'
-                        }`}
+                          }`}
                       >
-                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 transition-colors ${
-                          getCategoryNumberStyles(activeCategory, activePlanId === plan.id)
-                        }`}>
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 transition-colors ${getCategoryNumberStyles(activeCategory, activePlanId === plan.id)
+                          }`}>
                           {plan.id}
                         </span>
                         <span className="line-clamp-2 leading-snug">{plan.name}</span>
@@ -568,7 +630,7 @@ const SaasBasedSoftware = () => {
                       </div>
                       <div>
                         <h5 className="text-xs font-bold text-aim-copy">100% Code &amp; IP Ownership</h5>
-                        <p className="text-[11px] text-aim-copy-muted leading-normal mt-0.5">Your source code, layout designs, and user databases belong completely to you upon contract terms completion.</p>
+                        <p className="text-[11px] text-aim-copy-muted leading-normal mt-0.5">Product source code, layout designs, and user databases belong completely to AIM Digitalise pvt. ltd.</p>
                       </div>
                     </div>
 
@@ -581,7 +643,7 @@ const SaasBasedSoftware = () => {
                       </div>
                       <div>
                         <h5 className="text-xs font-bold text-aim-copy">Zero Locked Contracts</h5>
-                        <p className="text-[11px] text-aim-copy-muted leading-normal mt-0.5">Scale packages up or down, pause ongoing development modules, or cancel subscriptions on a simple monthly cycle.</p>
+                        <p className="text-[11px] text-aim-copy-muted leading-normal mt-0.5">Scale packages up or down, pause ongoing development modules, or cancel subscriptions on a simple monthly/quartarlt/half-yearly/yearly cycle.</p>
                       </div>
                     </div>
 
@@ -601,10 +663,10 @@ const SaasBasedSoftware = () => {
 
                   <div className="pt-2 border-t border-aim-border flex justify-between items-center text-[11px] text-aim-copy-muted font-semibold">
                     <span>Need Custom Portals?</span>
-                    <a 
-                      href="https://wa.me/916290902922" 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
+                    <a
+                      href="https://wa.me/916290902922"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 transition flex items-center gap-1 font-bold"
                     >
                       <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
@@ -620,7 +682,7 @@ const SaasBasedSoftware = () => {
               {/* RIGHT COLUMN: DETAIL VIEWER PANEL (7 columns) */}
               <div className="lg:col-span-7">
                 <div className="card-elevated rounded-3xl overflow-hidden h-full flex flex-col justify-between transition-colors duration-300">
-                  
+
                   {/* Content area */}
                   <div className="p-6 sm:p-8 space-y-6 flex-grow">
                     <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-aim-border">
@@ -648,7 +710,7 @@ const SaasBasedSoftware = () => {
 
                     {/* Detail blocks */}
                     <div className="space-y-5 text-sm leading-relaxed">
-                      
+
                       {/* Description */}
                       <div className="space-y-1">
                         <h4 className="text-xs font-black text-aim-gold uppercase tracking-widest flex items-center gap-1.5">
@@ -703,7 +765,7 @@ const SaasBasedSoftware = () => {
                       >
                         Activate Your Plan
                       </Button>
-                      
+
                       <div className="flex gap-6 items-center">
                         <a
                           href="#"
@@ -871,7 +933,7 @@ const SaasBasedSoftware = () => {
                             </h3>
                             <p className="text-xs text-aim-copy-muted mt-0.5">
                               One-Time Setup Fee: <span className="font-black text-aim-gold">{activePlan.securityDeposit}</span>
-                              &nbsp;·&nbsp;Then {isInstitutePro 
+                              &nbsp;·&nbsp;Then {isInstitutePro
                                 ? `₹${(10 * (parseInt(checkoutData.total_students, 10) || 0)).toLocaleString('en-IN')}/mo (${checkoutData.total_students || 0} students)`
                                 : (activePlan.monthlySubscription.startsWith('₹') ? '' : '₹') + activePlan.monthlySubscription + (activePlan.monthlySubscription.includes('month') ? '' : '/mo')
                               }
@@ -1117,6 +1179,35 @@ const SaasBasedSoftware = () => {
                                       />
                                     </div>
                                   )}
+
+                                  {/* Custom Price Adjustments */}
+                                  <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                      One-Time Setup Fee (₹) <span className="text-aim-gold">*</span>
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={customProcessingFee}
+                                      onChange={(e) => setCustomProcessingFee(Number(e.target.value))}
+                                      required
+                                      className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                    />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                      Monthly Subscription (₹) <span className="text-aim-gold">*</span>
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={customMonthlySubscription}
+                                      onChange={(e) => setCustomMonthlySubscription(Number(e.target.value))}
+                                      required
+                                      disabled={isInstitutePro}
+                                      className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold disabled:opacity-50"
+                                    />
+                                  </div>
 
                                   {/* Select Relationship Manager */}
                                   <div className="space-y-1.5 sm:col-span-2">

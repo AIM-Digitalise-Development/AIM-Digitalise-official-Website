@@ -64,14 +64,92 @@ export const updateClientDelivery = (id, deliveryAfterDays) =>
   adminFetch('PUT', `/admin/clients/${id}/delivery`, { delivery_after: deliveryAfterDays })
 
 // ─── Products ─────────────────────────────────────────────────────────────────
-// GET /api/admin/products
-export const getAdminProducts = () =>
-  adminFetch('GET', '/admin/products')
+// GET /api/admin/products?active=&category_id=&sub_category_id=&search=
+export const getAdminProducts = (filters = {}) => {
+  const params = new URLSearchParams()
+  if (filters.active !== undefined && filters.active !== '') params.append('active', filters.active)
+  if (filters.category_id) params.append('category_id', filters.category_id)
+  if (filters.sub_category_id) params.append('sub_category_id', filters.sub_category_id)
+  if (filters.search) params.append('search', filters.search)
+  const qs = params.toString()
+  return adminFetch('GET', `/admin/products${qs ? '?' + qs : ''}`)
+}
 
 // PUT /api/admin/products/{id}/discounts
 // body: { monthly_discount, quarterly_discount, half_yearly_discount, annual_discount }
 export const updateProductDiscounts = (id, discounts) =>
   adminFetch('PUT', `/admin/products/${id}/discounts`, discounts)
+
+// POST /api/admin/products  — body: { name, category_id, sub_category_id, processing_fee, monthly_subscription, per_person, description, ... }
+export const createAdminProduct = (data) =>
+  adminFetch('POST', '/admin/products', data)
+
+// PUT /api/admin/products/{id}
+export const updateAdminProduct = (id, data) =>
+  adminFetch('PUT', `/admin/products/${id}`, data)
+
+// POST /api/admin/products/{id}/toggle-status
+export const toggleProductStatus = (id) =>
+  adminFetch('POST', `/admin/products/${id}/toggle-status`)
+
+// DELETE /api/admin/products/{id}
+export const deleteAdminProduct = (id) =>
+  adminFetch('DELETE', `/admin/products/${id}`)
+
+// ─── Product Categories ───────────────────────────────────────────────────────
+// GET /api/admin/product-categories
+export const getAdminProductCategories = () =>
+  adminFetch('GET', '/admin/product-categories')
+
+// POST /api/admin/product-categories  — body: { name, description, is_active }
+export const createProductCategory = (data) =>
+  adminFetch('POST', '/admin/product-categories', data)
+
+// PUT /api/admin/product-categories/{id}
+export const updateProductCategory = (id, data) =>
+  adminFetch('PUT', `/admin/product-categories/${id}`, data)
+
+// POST /api/admin/product-categories/{id}/toggle-status
+export const toggleCategoryStatus = (id) =>
+  adminFetch('POST', `/admin/product-categories/${id}/toggle-status`)
+
+// DELETE /api/admin/product-categories/{id}
+export const deleteProductCategory = (id) =>
+  adminFetch('DELETE', `/admin/product-categories/${id}`)
+
+// ─── Sub-Categories ───────────────────────────────────────────────────────────
+// GET /api/admin/sub-categories
+export const getAdminSubCategories = () =>
+  adminFetch('GET', '/admin/sub-categories')
+
+// POST /api/admin/sub-categories  — body: { name, category_id, description, is_active }
+export const createSubCategory = (data) =>
+  adminFetch('POST', '/admin/sub-categories', data)
+
+// PUT /api/admin/sub-categories/{id}
+export const updateSubCategory = (id, data) =>
+  adminFetch('PUT', `/admin/sub-categories/${id}`, data)
+
+// POST /api/admin/sub-categories/{id}/toggle-status
+export const toggleSubCategoryStatus = (id) =>
+  adminFetch('POST', `/admin/sub-categories/${id}/toggle-status`)
+
+// DELETE /api/admin/sub-categories/{id}
+export const deleteSubCategory = (id) =>
+  adminFetch('DELETE', `/admin/sub-categories/${id}`)
+
+// ─── Subscriptions ────────────────────────────────────────────────────────────
+// GET /api/admin/subscriptions
+export const getAdminSubscriptions = () =>
+  adminFetch('GET', '/admin/subscriptions')
+
+// POST /api/admin/subscriptions/{id}/activate
+export const activateSubscription = (id) =>
+  adminFetch('POST', `/admin/subscriptions/${id}/activate`)
+
+// POST /api/admin/subscriptions/{id}/deactivate
+export const deactivateSubscription = (id) =>
+  adminFetch('POST', `/admin/subscriptions/${id}/deactivate`)
 
 // ─── Hierarchy & Ranks ────────────────────────────────────────────────────────
 // GET /api/admin/partners-hierarchy
@@ -85,3 +163,12 @@ export const setPartnerRank = (id, rank) =>
 // POST /api/admin/partners/subordinate/set
 export const setPartnerSubordinate = (subordinate_id, parent_id) =>
   adminFetch('POST', '/admin/partners/subordinate/set', { subordinate_id, parent_id })
+
+// ─── Commission Settings ──────────────────────────────────────────────────────
+// GET /api/admin/commission-settings
+export const getCommissionSettings = () =>
+  adminFetch('GET', '/admin/commission-settings')
+
+// POST /api/admin/commission-settings  — body: { rules: [...] }
+export const updateCommissionSettings = (payload) =>
+  adminFetch('POST', '/admin/commission-settings', payload)

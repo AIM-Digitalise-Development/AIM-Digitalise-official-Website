@@ -7,7 +7,9 @@ import {
   getAdminPartnerDocuments,
   getPartnersHierarchy,
   setPartnerRank,
-  setPartnerSubordinate
+  setPartnerSubordinate,
+  getCommissionSettings,
+  updateCommissionSettings
 } from '../../api/admin/partners'
 
 const AdminPartners = () => {
@@ -34,6 +36,19 @@ const AdminPartners = () => {
   const [rankLevels, setRankLevels] = useState({})
   const [hierarchyRules, setHierarchyRules] = useState({})
   const [selectedPartnerForRank, setSelectedPartnerForRank] = useState(null)
+
+  // Commission Settings states
+  const [commissionSettings, setCommissionSettings] = useState(null)
+  const [commissionRules, setCommissionRules] = useState([])
+  const [showCommissionModal, setShowCommissionModal] = useState(false)
+  const [commissionForm, setCommissionForm] = useState({
+    selling_rank: '',
+    receiver_rank: '',
+    commission_percentage: 0
+  })
+  const [commissionAuditLog, setCommissionAuditLog] = useState([])
+  const [commissionRulesSummary, setCommissionRulesSummary] = useState({})
+  const [savingCommission, setSavingCommission] = useState(false)
 
   // Filters
   const [search, setSearch] = useState('')
@@ -112,6 +127,117 @@ const AdminPartners = () => {
       }
     } catch (err) {
       console.error('Hierarchy fetch error:', err)
+    }
+  }
+
+  const fetchCommissionSettings = async () => {
+    try {
+      const res = await getCommissionSettings()
+      if (res.data?.success) {
+        setCommissionSettings(res.data.data)
+        setCommissionRulesSummary(res.data.data.commission_rules_summary || {})
+        setCommissionAuditLog(res.data.data.audit_log || [])
+        
+        // Convert rules to array for editing
+        const rulesArray = []
+        const rules = res.data.data.rules || {}
+        Object.keys(rules).forEach(sellingRank => {
+          Object.keys(rules[sellingRank]).forEach(receiverRank => {
+            if (rules[sellingRank][receiverRank].is_active) {
+              rulesArray.push({
+                selling_rank: sellingRank,
+                receiver_rank: receiverRank,
+                commission_percentage: rules[sellingRank][receiverRank].commission_percentage,
+                rule_id: rules[sellingRank][receiverRank].rule_id,
+                description: rules[sellingRank][receiverRank].description
+              })
+            }
+          })
+        })
+        setCommissionRules(rulesArray)
+      }
+    } catch (err) {
+      console.error('Commission settings fetch error:', err)
+    }
+  }
+
+  const handleEditCommission = (sellingRank, receiverRank) => {
+    const rules = commissionSettings?.rules || {}
+    const rule = rules[sellingRank]?.[receiverRank] || {}
+    
+    setCommissionForm({
+      selling_rank: sellingRank,
+      receiver_rank: receiverRank,
+      commission_percentage: rule.commission_percentage || 0,
+      rule_id: rule.rule_id || null
+    })
+    setShowCommissionModal(true)
+  }
+  
+  const handleSaveCommission = async () => {
+    if (!commissionForm.selling_rank || !commissionForm.receiver_rank) {
+      alert('Please select both ranks')
+      return
+    }
+    
+    setSavingCommission(true)
+    try {
+      const payload = {
+        rules: [{
+          selling_rank: commissionForm.selling_rank,
+          receiver_rank: commissionForm.receiver_rank,
+          commission_percentage: parseFloat(commissionForm.commission_percentage)
+        }]
+      }
+      
+      const res = await updateCommissionSettings(payload)
+      if (res.data?.success) {
+        alert('Commission settings updated successfully!')
+        await fetchCommissionSettings()
+        setShowCommissionModal(false)
+        setCommissionForm({
+          selling_rank: '',
+          receiver_rank: '',
+          commission_percentage: 0
+        })
+      } else {
+        alert(res.data?.message || 'Failed to update commission settings')
+      }
+    } catch (err) {
+      alert('Failed to update: ' + err.message)
+    } finally {
+      setSavingCommission(false)
+    }
+  }
+  
+  const handleResetCommission = async () => {
+    if (!window.confirm('Reset all commission settings to default values?')) return
+    
+    setSavingCommission(true)
+    try {
+      const defaultRules = [
+        { selling_rank: 'associate', receiver_rank: 'associate', commission_percentage: 10 },
+        { selling_rank: 'associate', receiver_rank: 'master', commission_percentage: 5 },
+        { selling_rank: 'associate', receiver_rank: 'premium', commission_percentage: 3 },
+        { selling_rank: 'master', receiver_rank: 'associate', commission_percentage: 0 },
+        { selling_rank: 'master', receiver_rank: 'master', commission_percentage: 12 },
+        { selling_rank: 'master', receiver_rank: 'premium', commission_percentage: 6 },
+        { selling_rank: 'premium', receiver_rank: 'associate', commission_percentage: 0 },
+        { selling_rank: 'premium', receiver_rank: 'master', commission_percentage: 0 },
+        { selling_rank: 'premium', receiver_rank: 'premium', commission_percentage: 18 }
+      ]
+      
+      const res = await updateCommissionSettings({ rules: defaultRules })
+      if (res.data?.success) {
+        alert('Commission settings reset to default values!')
+        await fetchCommissionSettings()
+      } else {
+        alert(res.data?.message || 'Failed to reset commission settings')
+      }
+    } catch (err) {
+      alert('Failed to reset: ' + err.message)
+    } finally {
+      setSavingCommission(false)
     }
   }
 
@@ -203,6 +329,7 @@ const AdminPartners = () => {
   useEffect(() => {
     fetchPartners()
     fetchHierarchy()
+    fetchCommissionSettings()
   }, [])
 
   // Approve partner — POST /api/admin/partners/{id}/approve
@@ -609,13 +736,133 @@ const AdminPartners = () => {
           )}
 
           {/* Inactive Tab Placeholders */}
-          {activeTab !== 'show_partner' && activeTab !== 'hierarchy' && (
+          {activeTab !== 'show_partner' && activeTab !== 'hierarchy' && activeTab !== 'partner_commission' && (
             <div className="flex flex-col items-center justify-center py-16 text-center space-y-3.5">
               <span className="text-4xl">🤝</span>
               <h4 className="text-base font-bold text-slate-800 capitalize">{activeTab.replace('partner_', 'Partner ')} Records</h4>
               <p className="text-xs text-slate-400 font-medium max-w-sm leading-relaxed font-sans">
                 Partner sales statistics, commission ratios, reports logs, and payout balances will be displayed here.
               </p>
+            </div>
+          )}
+
+          {/* Tab 3 Content: Partner Commission */}
+          {activeTab === 'partner_commission' && (
+            <div className="space-y-6">
+              {/* Header section with Reset/Edit actions */}
+              <div className="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-slate-100">
+                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                  <span>💰 Partner Commission Rules Matrix</span>
+                  <span className="text-[10px] font-normal text-slate-400">
+                    (Manage split commission percentages between referring and receiving partner ranks)
+                  </span>
+                </h3>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleResetCommission}
+                    className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+                  >
+                    Reset to Defaults
+                  </button>
+                </div>
+              </div>
+
+              {/* Commission Matrix Table */}
+              <div className="bg-slate-50/50 rounded-2xl border border-slate-200/60 p-6">
+                <div className="overflow-x-auto bg-white rounded-2xl border border-slate-200/80 shadow-sm">
+                  <table className="w-full border-collapse text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50 text-slate-400 font-bold uppercase tracking-wider">
+                        <th className="px-6 py-4">Selling Partner ↓ / Receiver Rank ➔</th>
+                        <th className="px-6 py-4 text-center">Associate</th>
+                        <th className="px-6 py-4 text-center">Master</th>
+                        <th className="px-6 py-4 text-center">Premium</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                      {['associate', 'master', 'premium'].map((sellingRank) => {
+                        const labelMap = { associate: 'Associate', master: 'Master', premium: 'Premium' }
+                        const colorMap = {
+                          associate: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+                          master: 'bg-blue-50 text-blue-800 border-blue-200',
+                          premium: 'bg-amber-50 text-amber-800 border-amber-200'
+                        }
+                        return (
+                          <tr key={sellingRank} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-6 py-4 font-bold text-slate-800 bg-slate-50/40">
+                              <span className={`px-2 py-0.5 rounded border text-[10px] font-black uppercase tracking-wider ${colorMap[sellingRank]}`}>
+                                {labelMap[sellingRank]}
+                              </span>
+                            </td>
+                            {['associate', 'master', 'premium'].map((receiverRank) => {
+                              const rules = commissionSettings?.rules || {}
+                              const rule = rules[sellingRank]?.[receiverRank] || {}
+                              const percentage = rule.commission_percentage || 0
+                              const isActive = rule.is_active || false
+
+                              return (
+                                <td key={`${sellingRank}-${receiverRank}`} className="px-6 py-4 text-center font-medium">
+                                  <div className="flex flex-col items-center gap-1.5">
+                                    <span className={`text-base font-black ${isActive ? 'text-slate-800' : 'text-slate-300'}`}>
+                                      {percentage}%
+                                    </span>
+                                    <button
+                                      onClick={() => handleEditCommission(sellingRank, receiverRank)}
+                                      className="px-2 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 hover:border-blue-200 rounded font-black text-[9px] transition cursor-pointer"
+                                    >
+                                      Edit
+                                    </button>
+                                  </div>
+                                </td>
+                              )
+                            })}
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Commission Audit Log List */}
+              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md p-5 space-y-4">
+                <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <span>📜 Commission Audit History Log ({commissionAuditLog.length})</span>
+                </h4>
+                {commissionAuditLog.length > 0 ? (
+                  <div className="overflow-x-auto rounded-xl border border-slate-100">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50 text-slate-400 font-bold uppercase tracking-wider">
+                          <th className="px-5 py-3">User</th>
+                          <th className="px-5 py-3">Action</th>
+                          <th className="px-5 py-3">Details</th>
+                          <th className="px-5 py-3">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-600">
+                        {commissionAuditLog.map((log) => (
+                          <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-5 py-3 font-semibold text-slate-700">{log.user_name || log.admin_name || 'Admin'}</td>
+                            <td className="px-5 py-3">
+                              <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-600 font-bold text-[9px] uppercase tracking-wider">
+                                {log.action || 'UPDATE'}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3 font-medium text-slate-500">{log.details || log.description}</td>
+                            <td className="px-5 py-3 font-mono text-slate-400">
+                              {new Date(log.created_at).toLocaleDateString('en-IN')} {new Date(log.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic">No audit history recorded yet.</p>
+                )}
+              </div>
             </div>
           )}
 
@@ -1103,6 +1350,52 @@ const AdminPartners = () => {
                 </button>
                 <button
                   onClick={() => setShowSubordinateModal(false)}
+                  className="px-4 py-2 border border-slate-200 text-slate-500 rounded-xl text-xs font-bold hover:bg-slate-50 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Commission Modal */}
+        {showCommissionModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowCommissionModal(false)} />
+            <div className="relative w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl z-10 space-y-4 animate-fade-in">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h4 className="text-sm font-black text-slate-800">Edit Commission Rate</h4>
+                <button onClick={() => setShowCommissionModal(false)} className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">
+                  ✕
+                </button>
+              </div>
+              <div className="text-xs space-y-1 bg-slate-50 p-3 rounded-xl border border-slate-100 font-semibold text-slate-500">
+                <p>Selling Partner: <strong className="text-slate-800 capitalize">{commissionForm.selling_rank}</strong></p>
+                <p>Receiving Partner: <strong className="text-slate-800 capitalize">{commissionForm.receiver_rank}</strong></p>
+              </div>
+              <div className="space-y-1">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">Commission Percentage (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={commissionForm.commission_percentage}
+                  onChange={(e) => setCommissionForm(prev => ({ ...prev, commission_percentage: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-[#38b34a] focus:ring-1 focus:ring-[#38b34a]/10"
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={handleSaveCommission}
+                  disabled={savingCommission}
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-50"
+                >
+                  {savingCommission ? 'Saving...' : 'Save Rate'}
+                </button>
+                <button
+                  onClick={() => setShowCommissionModal(false)}
                   className="px-4 py-2 border border-slate-200 text-slate-500 rounded-xl text-xs font-bold hover:bg-slate-50 transition cursor-pointer"
                 >
                   Cancel

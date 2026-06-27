@@ -102,7 +102,9 @@ src/components/admin/users/UserTable.jsx (Display component)
 | `products.js` | Product operations | `client.js` | `useProductsQuery.js` |
 | `analytics.js` | Dashboard stats | `client.js` | `useAnalyticsQuery.js` |
 | `partner.js` | Partner-specific endpoints | `client.js` | Partner pages |
+| `leads.js` | Lead management CRUD and bulk assignment operations | `client.js` | Leads page component |
 | `index.js` | Re-exports all modules | All api files | Any file needing API access |
+
 
 **Relationship Example:**
 ```javascript

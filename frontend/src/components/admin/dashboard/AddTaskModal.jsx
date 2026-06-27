@@ -5,6 +5,15 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
   const [priority, setPriority] = useState('Medium')
   const [status, setStatus] = useState('Pending')
   const [dueDate, setDueDate] = useState('')
+  const [assignee, setAssignee] = useState('Unassigned')
+
+  const employeeList = [
+    'Rohan Verma',
+    'Priya Singh',
+    'Aman Gupta',
+    'Neha Sharma',
+    'Vikram Malhotra'
+  ]
 
   if (!isOpen) return null
 
@@ -18,13 +27,15 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
       task: task.trim(),
       priority,
       status,
-      dueDate: dueDate || 'Today'
+      dueDate: dueDate || 'Today',
+      assignee
     })
     // Reset form
     setTask('')
     setPriority('Medium')
     setStatus('Pending')
     setDueDate('')
+    setAssignee('Unassigned')
     onClose()
   }
 
@@ -97,6 +108,20 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
                 onChange={(e) => setDueDate(e.target.value)}
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">Assign To Employee</label>
+              <select
+                value={assignee}
+                onChange={(e) => setAssignee(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500 cursor-pointer font-bold"
+              >
+                <option value="Unassigned">Unassigned</option>
+                {employeeList.map(emp => (
+                  <option key={emp} value={emp}>{emp}</option>
+                ))}
+              </select>
             </div>
           </div>
 

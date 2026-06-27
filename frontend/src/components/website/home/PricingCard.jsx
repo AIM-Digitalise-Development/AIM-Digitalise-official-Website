@@ -8,22 +8,59 @@ import { ROUTES } from '../../../constants/routes'
 const subscriptionModels = {
   websites: [
     {
-      name: 'Static Informative Website',
+      name: 'Static & Dynamic Website',
       badge: 'Static Plan',
-      price: '₹2,000',
-      priceSuffix: ' Setup + ₹999/mo',
+      price: '₹1,000',
+      priceSuffix: ' Setup + ₹599/mo',
       description: 'Ideal for small businesses seeking an elegant, fast, and secure corporate brochure page.',
       features: [
         'Up to 5 Pages Corporate Look',
         'Clean, fast static layouts',
         'Assigned Relationship Manager',
-        'Free ESS Software (1 year)',
+
         '100% Data Security & Ownership'
       ],
       ctaText: 'Activate Plan',
       recommended: false
     },
+
     {
+      name: 'E-Commerce Single Seller',
+      badge: 'Online Shop',
+      price: '₹5,000',
+      priceSuffix: ' Setup + ₹2,499/mo',
+      description: 'Full single seller marketplace solution with catalog management and automated invoicing systems.',
+      features: [
+        'Razorpay, Paytm & Stripe payment setup',
+        'Digital catalog & inventory dashboard',
+        'Order tracking & auto invoices',
+
+        '100% Data Security & Ownership'
+      ],
+      ctaText: 'Activate Plan',
+      recommended: false
+    },
+     {
+      name: 'Mobile App',
+      badge: 'Mobile Plan',
+      price: '₹7,999',
+      priceSuffix: ' Setup + ₹7,999/mo',
+      description: 'Ideal for small businesses seeking an elegant, fast, and secure corporate brochure page.',
+      features: [
+        'Android App',
+        'Custom feature on demand',
+        'Assigned Relationship Manager',
+
+        '100% Data Security & Ownership'
+      ],
+      ctaText: 'Activate Plan',
+      recommended: false
+    }
+
+    
+  ],
+  software: [
+       {
       name: 'NEXGN Institute Pro',
       badge: 'Educational ERP',
       price: '₹1,000',
@@ -40,70 +77,38 @@ const subscriptionModels = {
       recommended: true
     },
     {
-      name: 'E-Commerce Single Seller',
-      badge: 'Online Shop',
-      price: '₹5,000',
-      priceSuffix: ' Setup + ₹2,499/mo',
-      description: 'Full single seller marketplace solution with catalog management and automated invoicing systems.',
-      features: [
-        'Razorpay, Paytm & Stripe payment setup',
-        'Digital catalog & inventory dashboard',
-        'Order tracking & auto invoices',
-        'Free ESS Software (1 year)',
-        '100% Data Security & Ownership'
-      ],
-      ctaText: 'Activate Plan',
-      recommended: false
-    }
-  ],
-  software: [
-    {
       name: 'NEXGN Accounts & Billing',
       badge: 'Financials',
-      price: '₹2,000',
-      priceSuffix: ' Setup + ₹799/mo',
+      price: '₹1,099',
+      priceSuffix: ' Setup + ₹1,099/mo',
       description: 'Quick GST-compliant invoicing, purchase orders, expense tracking, and customer ledgers on a secure cloud.',
       features: [
         'GST-Compliant Invoicing templates',
         'Expense tracking & customer ledger sheets',
         'Auto billing reminders (SMS/WhatsApp)',
-        'Free ESS Software (1 year)',
+
         '100% Data Security & Ownership'
       ],
       ctaText: 'Activate Plan',
       recommended: false
     },
+     
+   
     {
-      name: 'NEXGN ERP Pro',
-      badge: 'All-In-One Workspace',
-      price: '₹1,000',
-      priceSuffix: ' Setup + ₹10/mo/student',
+  name: 'NEXGN ERP Pro',
+      badge: 'AIO Workspace',
+      price: '₹3,299',
+      priceSuffix: ' Setup + ₹3,299',
       description: 'Fully integrated HRMS, inventory, purchase order logs, sales pipelines, and customer relationship manager.',
       features: [
         'Integrated HRMS + Inventory + CRM',
         'Sales pipeline & target tracking widgets',
         'Custom print templates for PO/Quotes',
-        'Free ESS Software (1 year)',
+
         '100% Data Security & Ownership'
       ],
       ctaText: 'Activate Plan',
       recommended: true
-    },
-    {
-      name: 'NEXGN Hotel & Hospital Pro',
-      badge: 'Industry Custom',
-      price: '₹4,000',
-      priceSuffix: ' Setup + ₹1,499/mo',
-      description: 'Dedicated software workflows for hotel property reservation or clinical EMR, doctor scheduler and pharmacy stock.',
-      features: [
-        'Clinical EMR, appointments & OPD bills',
-        'Hotel booking calendar & housekeeping logs',
-        'Integrated Restaurant/Pharmacy POS',
-        'Free ESS Software (1 year)',
-        '100% Data Security & Ownership'
-      ],
-      ctaText: 'Activate Plan',
-      recommended: false
     }
   ]
 }
@@ -148,32 +153,31 @@ const PricingCard = () => {
           {/* Tier Switcher */}
           <div className="flex justify-center mt-10">
             <div className="bg-aim-navy-light/60 border border-white/10 p-1 rounded-xl flex gap-1">
+             <button
+                onClick={() => setTier('software')}
+                className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${tier === 'software'
+                    ? 'bg-aim-gold text-aim-navy shadow-md'
+                    : 'text-aim-copy-muted hover:text-white'
+                  }`}
+              >
+                SaaS Based Service  
+              </button>
               <button
                 onClick={() => setTier('websites')}
-                className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
-                  tier === 'websites'
+                className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${tier === 'websites'
                     ? 'bg-aim-gold text-aim-navy shadow-md'
                     : 'text-aim-copy-muted hover:text-white'
-                }`}
+                  }`}
               >
-                SaaS Website Plans
+                Subcription Based web/App
               </button>
-              <button
-                onClick={() => setTier('software')}
-                className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
-                  tier === 'software'
-                    ? 'bg-aim-gold text-aim-navy shadow-md'
-                    : 'text-aim-copy-muted hover:text-white'
-                }`}
-              >
-                SaaS Software Solutions
-              </button>
+              
             </div>
           </div>
         </div>
 
         {/* Pricing Cards Grid */}
-        <motion.div 
+        <motion.div
           className="grid md:grid-cols-3 gap-8 items-stretch"
           variants={containerVariants}
           initial="hidden"
@@ -185,9 +189,8 @@ const PricingCard = () => {
             <motion.div key={model.name} variants={itemVariants} className="flex">
               <Card
                 padding="lg"
-                className={`flex flex-col justify-between w-full relative ${
-                  model.recommended ? 'border-2 border-aim-gold/60 shadow-2xl shadow-aim-gold/15' : ''
-                }`}
+                className={`flex flex-col justify-between w-full relative ${model.recommended ? 'border-2 border-aim-gold/60 shadow-2xl shadow-aim-gold/15' : ''
+                  }`}
               >
                 {model.recommended && (
                   <div className="absolute -top-3.5 left-1/2 transform -translate-x-1/2">

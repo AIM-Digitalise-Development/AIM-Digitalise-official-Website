@@ -7,4 +7,6 @@ export * as analyticsApi from './analytics'
 export * as partnerApi from './partner'
 export * as purchaseApi from './purchase'
 export * as clientPortalApi from './clientPortal'
+export * as leadsApi from './leads'
+
 

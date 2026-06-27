@@ -18,14 +18,7 @@ const projects = [
     description: 'Developed the high-performance modern official company website featuring full responsive layouts, automated billing integration, and customer dashboards.',
     techs: ['React', 'Vite', 'Tailwind CSS', 'Framer Motion', 'Node.js']
   },
-  {
-    title: 'E-Commerce Marketplace Platform',
-    category: 'Web',
-    client: 'ShopStar Global',
-    image: 'https://images.unsplash.com/photo-1563013544-824ae1d704d3?auto=format&fit=crop&w=800&q=80',
-    description: 'An enterprise-grade e-commerce application equipped with multi-vendor support, inventory management, and stripe payment gateway integration.',
-    techs: ['Next.js', 'Redux Toolkit', 'PostgreSQL', 'Stripe API', 'Tailwind CSS']
-  },
+ 
   // Graphics
   {
     title: 'SaaS Platform Rebranding & UI Kit',
@@ -96,11 +89,100 @@ const projects = [
   }
 ]
 
+const portfolioImages = import.meta.glob(
+  '../../assets/images/portfolio/*.{png,jpg,jpeg,svg,webp,WEBP,PNG,JPG,JPEG}',
+  { eager: true, import: 'default' }
+)
+
+const softwareList = [
+  { name: 'Aim Educares', cat: 'Software Development', tech: ['React', 'Node.js', 'PostgreSQL', 'Docker'], desc: 'Complete school management ERP with student trackers, automated fee payment collection, attendance logs, and online marksheets.' },
+  { name: 'Chosmic', cat: 'Graphics', tech: ['Figma', 'Adobe Illustrator', 'UI/UX Design'], desc: 'Brand identity, modern vector logos, visual guidelines, and interactive UI component prototypes.' },
+  { name: 'Hotel Vinayek', cat: 'Web', tech: ['React', 'Vite', 'Tailwind CSS', 'Firebase'], desc: 'Premium responsive website featuring real-time room availability, online booking, and restaurant menu integration.' },
+  { name: 'Gram Panchayat', cat: 'Software Development', tech: ['C# .NET', 'SQL Server', 'React'], desc: 'Custom local governance portal facilitating citizen certificates, scheme application trackers, and public grievance logs.' },
+  { name: 'Anandamoyee Ananda Niwas', cat: 'Web', tech: ['React', 'Tailwind CSS', 'Framer Motion'], desc: 'Elegantly designed promotional website and digital portal showcasing premium elder care facilities.' },
+  { name: 'Bengal Fire Preservation', cat: 'Web', tech: ['React', 'Vite', 'Tailwind CSS'], desc: 'Industrial business site featuring custom compliance forms, safety service catalogs, and emergency inquiry forms.' },
+  { name: 'Cooltronics Service Center', cat: 'Software Development', tech: ['Node.js', 'Express', 'MongoDB', 'React'], desc: 'Advanced repair tracking software managing appliance service records, technician assignments, and billing.' },
+  { name: 'Fourclips Magma', cat: 'Graphics', tech: ['Illustrator', 'Photoshop', 'Brand Guide'], desc: 'Visual strategy, custom illustrations, banner designs, and high-impact social media campaign graphics.' },
+  { name: 'INDIBIZZ', cat: 'Digital Marketing', tech: ['Meta Ads', 'Google Ads', 'SEO Campaign'], desc: 'Comprehensive digital marketing campaign boosting platform reach, vendor acquisitions, and monthly conversion metrics.' },
+  { name: 'Legal Taxation', cat: 'Software Development', tech: ['React', 'Python', 'FastAPI', 'PostgreSQL'], desc: 'Advanced corporate tax calculator and tracking dashboard assisting corporate compliance audits.' },
+  { name: 'Logixtime Automation', cat: 'Software Development', tech: ['Python', 'Django', 'PostgreSQL', 'Docker'], desc: 'Industrial process monitoring system integrating time-series data pipelines and real-time dashboard widgets.' },
+  { name: 'Sasmal Consultancy', cat: 'Web', tech: ['React', 'Vite', 'Tailwind CSS'], desc: 'Sleek portfolio and scheduling platform for corporate consultation and financial advisory firms.' },
+  { name: 'Shyamnagar X-Ray Clinic', cat: 'Software Development', tech: ['React', 'Node.js', 'MongoDB', 'WebRTC'], desc: 'Diagnostic clinic scheduler, automated SMS report dispatch system, and electronic medical record repository.' },
+  { name: 'Spectrum Petromac Pvt. Ltd.', cat: 'Web', tech: ['React', 'Tailwind CSS', 'Vite'], desc: 'Corporate website for energy sector solutions, including industrial oil distribution catalogues and quote tools.' },
+  { name: 'Sparsh', cat: 'Mobile Application', tech: ['React Native', 'Redux', 'Node.js'], desc: 'A dedicated social impact and mobile NGO platform facilitating donor contributions and program updates.' },
+  { name: 'Star Cooling Service Center', cat: 'Web', tech: ['React', 'Vite', 'Tailwind CSS'], desc: 'Responsive site featuring repair appointment booker, service warranty tracker, and dynamic client support.' },
+  { name: 'Sujata Mishra Legal Firm', cat: 'Web', tech: ['React', 'Vite', 'Tailwind CSS'], desc: 'Professional legal advisory website showcasing case records, practitioner bios, and contact modules.' },
+  { name: 'Dr Tushar Kanti', cat: 'Software Development', tech: ['React', 'Node.js', 'MongoDB'], desc: 'Healthcare patient scheduler, digital prescription writer, and clinic queue management system.' },
+  { name: 'ESBEE Road', cat: 'Software Development', tech: ['React', 'Node.js', 'PostgreSQL'], desc: 'Logistics delivery routing software optimizing cargo load distributions and tracking transit schedules.' },
+  { name: 'Subhoma Foods', cat: 'Web', tech: ['React', 'Tailwind CSS', 'Vite'], desc: 'E-commerce platform for packaged food items integrated with local delivery networks and payment gateways.' },
+  { name: 'Momo Chicken', cat: 'Web', tech: ['React', 'Tailwind CSS', 'Firebase'], desc: 'Interactive food ordering portal for restaurant chains featuring dynamic cart checkout and order tracking.' },
+  { name: 'Blue Birds Machinery', cat: 'Web', tech: ['React', 'Vite', 'Tailwind CSS'], desc: 'Industrial equipment manufacturing display website showcasing product lines and query intakes.' },
+  { name: 'Nesha Mukti Kendra', cat: 'Web', tech: ['React', 'Tailwind CSS', 'Framer Motion'], desc: 'Clean, compassionate website for rehabilitation centers offering counseling schedulers and support resources.' },
+  { name: 'Banzara Restaurant', cat: 'Web', tech: ['React', 'Tailwind CSS', 'Firebase'], desc: 'Premium culinary website featuring restaurant booking, online menus, and special event booking.' },
+  { name: 'Diamond Pest Control', cat: 'Web', tech: ['React', 'Tailwind CSS', 'Vite'], desc: 'Service inquiry site featuring service package builders, scheduling tools, and instant quotes.' },
+  { name: 'Arati', cat: 'Graphics', tech: ['Figma', 'Illustrator', 'UI Design'], desc: 'Custom print collateral, brochure layouts, packaging design, and brand identity elements.' },
+  { name: 'Printopia World', cat: 'Graphics', tech: ['Photoshop', 'Illustrator', 'Graphic Design'], desc: 'Creative layouts for print media, customized packaging vectors, and brand identity kits.' },
+  { name: 'Atlas', cat: 'Software Development', tech: ['React', 'Node.js', 'PostgreSQL'], desc: 'Project planning tracker featuring task assignments, gantt charts, and team velocity dashboards.' },
+  { name: 'H N Infotech', cat: 'Software Development', tech: ['C# .NET', 'SQL Server', 'React'], desc: 'Enterprise IT infrastructure monitoring portal with automated error logging and ticketing integration.' },
+  { name: 'Fundage', cat: 'Digital Marketing', tech: ['Google Analytics', 'SEO Strategy', 'SEM'], desc: 'High-converting search engine marketing campaign that decreased customer acquisition cost by 40%.' },
+  { name: 'Shiv Shivam Pharma', cat: 'Software Development', tech: ['React', 'Node.js', 'MongoDB'], desc: 'Pharmacy inventory and stock control engine managing expiration dates and batch distribution logs.' },
+  { name: 'CA Baksi & Co.', cat: 'Web', tech: ['React', 'Tailwind CSS', 'Vite'], desc: 'Corporate charter audit and accounting advisory portal with secure document submission vaults.' },
+  { name: 'Head Zone', cat: 'Graphics', tech: ['Figma', 'Illustrator', 'UI/UX Design'], desc: 'Creative branding strategy, visual identity guides, typography schemes, and marketing collateral.' },
+  { name: 'BMS Construction', cat: 'Web', tech: ['React', 'Tailwind CSS', 'Framer Motion'], desc: 'Architectural portfolio website showing ongoing project renders, engineering credentials, and contact logs.' },
+  { name: 'Dawn Investments', cat: 'Web', tech: ['React', 'Tailwind CSS', 'Vite'], desc: 'Mutual funds and financial asset portfolio planner with calculator widgets and interactive rates.' },
+  { name: 'Nortech', cat: 'Software Development', tech: ['React', 'Node.js', 'MongoDB'], desc: 'Local network activity manager displaying connected devices, packet feeds, and port safety guidelines.' },
+  { name: 'AEC Infrastructure', cat: 'Web', tech: ['React', 'Tailwind CSS', 'Vite'], desc: 'Heavy engineering infrastructure portfolio showcasing road construction projects and machinery fleets.' },
+  { name: 'SEBA', cat: 'Software Development', tech: ['React', 'Node.js', 'PostgreSQL'], desc: 'Academic board registration platform managing student databases, board applications, and audit reports.' },
+  { name: 'Samadhan Consulting', cat: 'Web', tech: ['React', 'Tailwind CSS', 'Vite'], desc: 'Corporate legal compliance firm website featuring case evaluations and consultation bookings.' },
+  { name: 'Samadhan Recruitment', cat: 'Software Development', tech: ['React', 'Node.js', 'MongoDB'], desc: 'Automated HR recruitment engine filtering applicant resumes, managing interview pipes, and release letters.' },
+  { name: 'TWPS', cat: 'Software Development', tech: ['React', 'Node.js', 'PostgreSQL'], desc: 'Municipal water distribution monitoring portal tracking tank levels, pipe flows, and quality logs.' },
+  { name: 'Hi Killing Pest Control', cat: 'Web', tech: ['React', 'Tailwind CSS', 'Vite'], desc: 'Local booking platform featuring insect identification guides, package options, and direct scheduling.' },
+  { name: 'Golden Times', cat: 'Web', tech: ['React', 'Tailwind CSS', 'Framer Motion'], desc: 'Luxury event organizer website showcasing venue partnerships, decor portfolios, and scheduling engines.' },
+  { name: 'EKVA', cat: 'Web', tech: ['React', 'Tailwind CSS', 'Vite'], desc: 'Corporate site showcasing sustainable energy initiatives, project metrics, and investment pipelines.' },
+  { name: 'Bengal TVS', cat: 'Web', tech: ['React', 'Tailwind CSS', 'Firebase'], desc: 'Automobile dealership showcase page facilitating test-drive bookings and virtual showrooms.' },
+  { name: 'Krishna Plywood', cat: 'Web', tech: ['React', 'Tailwind CSS', 'Vite'], desc: 'Interior manufacturing catalogue website demonstrating custom plywood textures and query forms.' },
+  { name: 'Rajrani Travels', cat: 'Web', tech: ['React', 'Tailwind CSS', 'Vite'], desc: 'Online tour guide booking, package scheduler, and vehicle hire reservation system.' },
+  { name: 'Future Vision', cat: 'Digital Marketing', tech: ['Social Media Ads', 'SMM', 'Brand Strategy'], desc: 'Targeted social media marketing and brand positioning campaign resulting in 150k+ organic impressions.' },
+  { name: 'PPL MRI Parts', cat: 'Software Development', tech: ['React', 'Node.js', 'MongoDB'], desc: 'Specialized inventory database manager for medical scanning machinery replacement parts.' },
+  { name: 'Gowardhan Dairy', cat: 'Software Development', tech: ['React', 'Node.js', 'PostgreSQL'], desc: 'Dairy distribution tracking software managing daily production milk levels, routes, and billing ledger logs.' },
+  { name: 'Astrologer', cat: 'Digital Marketing', tech: ['Local SEO', 'Google Business Profile', 'SMM'], desc: 'Search engine optimization campaign boosting organic local traffic by 200% for spiritual consulting.' },
+  { name: 'Banerjee Diagnostic', cat: 'Software Development', tech: ['React', 'Node.js', 'MongoDB'], desc: 'Diagnostic laboratory patient reports management portal with secure PDF delivery systems.' },
+  { name: 'Sunrise Diagnostic', cat: 'Software Development', tech: ['React', 'Node.js', 'PostgreSQL'], desc: 'Pathology sample booking scheduler, laboratory workflow manager, and billing registers.' },
+  { name: 'MobileLaptopFix.Com', cat: 'Web', tech: ['React', 'Tailwind CSS', 'Firebase'], desc: 'Electronic repairs portal showcasing services, pricing estimator widgets, and tracking tools.' }
+]
+
+const dynamicProjects = Object.entries(portfolioImages).map(([path, url]) => {
+  const filename = path.split('/').pop().replace(/\.[^/.]+$/, "")
+  
+  const match = filename.match(/\d+/)
+  const num = match ? parseInt(match[0], 10) : 0
+  
+  const software = (num > 0 && num <= softwareList.length) ? softwareList[num - 1] : null
+  
+  let title = software ? software.name : `AIM Project ${filename}`
+  if (filename.includes('(2)') || filename.includes('alt')) {
+    title += ' - Alternative Design'
+  } else if (filename === 'template-48') {
+    title += ' - Alternative Design'
+  }
+  
+  return {
+    title,
+    category: software ? software.cat : 'Web',
+    client: software ? software.name : 'Partner Brand',
+    image: url,
+    description: software ? software.desc : 'Premium responsive custom design solution tailored for client needs.',
+    techs: software ? software.tech : ['React', 'Tailwind CSS', 'UI/UX']
+  }
+})
+
+const allProjects = [...projects, ...dynamicProjects]
+
 const Portfolio = () => {
   const [filter, setFilter] = useState('Web')
   const openAppointmentModal = useUIStore((state) => state.openAppointmentModal)
 
-  const filteredProjects = projects.filter(p => p.category === filter)
+  const filteredProjects = allProjects.filter(p => p.category === filter)
 
   return (
     <>
@@ -167,7 +249,7 @@ const Portfolio = () => {
               <AnimatePresence mode="popLayout">
                 {filteredProjects.map((proj) => (
                   <motion.div
-                    key={proj.title}
+                    key={`${proj.title}-${proj.image}`}
                     layout
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}

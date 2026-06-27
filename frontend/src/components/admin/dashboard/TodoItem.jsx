@@ -10,7 +10,7 @@ const priorityStyles = {
     Low: 'bg-blue-50 text-blue-600 border border-blue-100',
 }
 
-const TodoItem = ({ id, task, status, priority, onToggle, onDelete }) => (
+const TodoItem = ({ id, task, status, priority, assignee, onToggle, onDelete }) => (
     <div className="px-5 py-3.5 flex items-center justify-between hover:bg-slate-50/60 transition-colors group border-b border-slate-100 last:border-b-0">
         <label className="inline-flex items-center gap-3.5 text-sm cursor-pointer select-none flex-1">
             <input
@@ -27,6 +27,11 @@ const TodoItem = ({ id, task, status, priority, onToggle, onDelete }) => (
         </label>
         
         <div className="flex items-center gap-2.5">
+            {assignee && assignee !== 'Unassigned' && (
+                <span className="text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 rounded-full px-2.5 py-0.5">
+                    👤 {assignee}
+                </span>
+            )}
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusStyles[status] || 'bg-slate-100 text-slate-600'}`}>
                 {status}
             </span>

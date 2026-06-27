@@ -15,6 +15,8 @@ import PaymentCollectionDetailsModal from '../../components/admin/dashboard/Paym
 import DuePaymentInvoicesModal from '../../components/admin/dashboard/DuePaymentInvoicesModal'
 import AddTaskModal from '../../components/admin/dashboard/AddTaskModal'
 
+import { useTaskStore } from '../../store/taskStore'
+
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -23,12 +25,7 @@ const AdminDashboard = () => {
   // Modal state: 'clientGain' | 'schoolsList' | 'studentsList' | 'undeliveredClients' | 'paymentDetails' | 'dueInvoices' | 'addTask' | null
   const [activeModal, setActiveModal] = useState(null)
 
-  // Interactive local checklist state
-  const [todos, setTodos] = useState([
-    { id: 1, task: 'Follow up with GREENWOOD for subscription AMC signature', status: 'Pending', priority: 'High' },
-    { id: 2, task: 'Complete custom offline node backup verification for Bright Minds', status: 'Overdue', priority: 'Medium' },
-    { id: 3, task: 'Publish updated play store app for St. Xavier High School', status: 'Completed', priority: 'Low' },
-  ])
+  const { tasks, addTask, updateTaskStatus, deleteTask } = useTaskStore()
 
   const fetchDashboardStats = async () => {
     setLoading(true)
@@ -91,25 +88,25 @@ const AdminDashboard = () => {
 
   // Task Actions
   const handleAddTask = (taskData) => {
-    const newTodo = {
-      id: Date.now(),
-      ...taskData
-    }
-    setTodos((prev) => [newTodo, ...prev])
+    addTask({
+      task: taskData.task,
+      priority: taskData.priority,
+      status: taskData.status,
+      dueDate: taskData.dueDate,
+      assignee: taskData.assignee || 'Unassigned',
+      createdBy: 'Admin'
+    })
   }
 
   const handleToggleTask = (id) => {
-    setTodos((prev) =>
-      prev.map((t) =>
-        t.id === id
-          ? { ...t, status: t.status === 'Completed' ? 'Pending' : 'Completed' }
-          : t
-      )
-    )
+    const task = tasks.find((t) => t.id === id)
+    if (task) {
+      updateTaskStatus(id, task.status === 'Completed' ? 'Pending' : 'Completed')
+    }
   }
 
   const handleDeleteTask = (id) => {
-    setTodos((prev) => prev.filter((t) => t.id !== id))
+    deleteTask(id)
   }
 
   return (
@@ -267,7 +264,7 @@ const AdminDashboard = () => {
 
       {/* Todo Checklist */}
       <TodoList 
-        todos={todos} 
+        todos={tasks} 
         onAddTask={() => setActiveModal('addTask')}
         onToggleTask={handleToggleTask}
         onDeleteTask={handleDeleteTask}

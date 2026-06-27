@@ -12,8 +12,8 @@ const stats = [
 const specialties = [
   {
     num: '01',
-    title: 'AIM-Digitalise: A Digital-First Partner',
-    desc: 'Your digital future starts now. AIM-Digitalise is a full-spectrum IT partner creating web, mobile, and digital experiences that drive real business results. From strategy to launch and beyond, we help you grow with technology that works as hard as you do.',
+    title: 'Best Performance Award',
+    desc: 'Recognized for outstanding contributions and business excellence.',
     icon: (
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
     ),          
@@ -21,24 +21,24 @@ const specialties = [
   },
   {
     num: '02',
-    title: 'Premium Quality',
-    desc: 'Rigorous standards on every deliverable — no compromises.',
+    title: 'RECURRING INCOME',
+    desc: 'We create new income streams for our clients through the services we offer.',
     icon: (
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
     ),
   },
   {
     num: '03',
-    title: 'Custom Web Development',
-    desc: 'Tailored solutions that turn visitors into loyal customers.',
+    title: 'Extra Monetory Benefits',
+    desc: 'We build long-term value through steady revenue growth.',
     icon: (
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
     ),
   },
   {
     num: '04',
-    title: 'Transparency',
-    desc: 'Clear pricing, honest timelines, and proactive communication.',
+    title: 'Competion Reward',
+    desc: 'We help you stay ahead of competitors with continuous improvements and innovation.',
     icon: (
       <>
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -48,16 +48,16 @@ const specialties = [
   },
   {
     num: '05',
-    title: 'Creative Experts',
-    desc: 'Design and content teams ahead of every digital trend.',
+    title: 'Scope of Foreign Trip',
+    desc: 'We provide opportunities for overseas exposure and professional development.',
     icon: (
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
     ),
   },
   {
     num: '06',
-    title: 'Grow Your Business',
-    desc: 'SEO, ads, and funnels engineered for scalable revenue.',
+    title: 'Best Performance Award',
+    desc: 'Recognized for outstanding contributions and business excellence.',
     icon: (
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
     ),
@@ -218,12 +218,13 @@ const SpecialtiesSection = () => {
             </div>
 
             {/* Highlights in the gap next to the main details */}
-            <div className="flex flex-wrap items-center gap-3 p-4 rounded-2xl bg-aim-navy-light/40 mt-10">
-              <span className="text-[10px] font-black text-aim-gold uppercase tracking-widest block mr-1">Core Benefits:</span>
+            <div className="flex flex-wrap items-left gap-3 p-4 rounded-2xl bg-aim-navy-light/40 ml-25">
+               <span className="text-[12px] font-black text-aim-gold uppercase tracking-widest block mr-40 p-4 ml-45 gap-[-60px]">Core Benefits:</span>
               {[
                 { word: 'RECURRING INCOME', color: 'from-aim-gold to-aim-gold-light text-aim-navy' },
-                { word: 'ENTERTENMENT', color: 'from-aim-purple to-aim-purple/80 text-white border border-aim-purple/20' },
-                { word: 'RECOGNISATION', color: 'from-aim-gold to-aim-gold-light text-aim-navy' },
+                { word: 'RECOGNISATION', color: 'from-aim-purple to-aim-purple/80 text-white border border-aim-purple/20'  },
+                                { word: 'INTERNATIONAL TOUR', color: 'from-aim-gold to-aim-gold-light text-aim-navy' },
+
               ].map((item, idx) => (
                 <span
                   key={idx}

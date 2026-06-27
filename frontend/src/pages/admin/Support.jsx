@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Helmet } from 'react-helmet-async'
+import { useSupportStore } from '../../store/supportStore'
 
 const AdminSupport = () => {
   const [activeTab, setActiveTab] = useState('active_tickets')
@@ -7,81 +8,22 @@ const AdminSupport = () => {
   const [severityFilter, setSeverityFilter] = useState('All')
   const [categoryFilter, setCategoryFilter] = useState('All')
 
-  // Detailed tickets list matching the screenshots exactly
-  const [tickets, setTickets] = useState([
-    { 
-      id: 'TK-7051', 
-      client: 'Sunrise Academy', 
-      product: 'School MS', 
-      subject: 'Student marks report showing incorrect grand total', 
-      category: 'Bug', 
-      severity: 'High', 
-      dateLogged: '19 May 2025, 10:30 AM', 
-      status: 'OPEN', 
-      description: 'The report card generator is miscalculating the grand total by adding grace marks twice. Need immediate hotfix as report cards are being issued this week.' 
-    },
-    { 
-      id: 'TK-7052', 
-      client: 'Blue Hill Institute', 
-      product: 'College Portal', 
-      subject: 'SSL handshake failed on custom domain integration', 
-      category: 'Setup', 
-      severity: 'Medium', 
-      dateLogged: '18 May 2025, 02:15 PM', 
-      status: 'IN PROGRESS', 
-      description: 'Configured CNAME pointing to our portal servers but HTTPS throws SSL_ERROR_BAD_CERT_DOMAIN. Cloudflare proxy is active.' 
-    },
-    { 
-      id: 'TK-7053', 
-      client: 'Apex Retailers', 
-      product: 'GST Billing Tool', 
-      subject: 'Invoice PDF fails to download with 500 error', 
-      category: 'Billing', 
-      severity: 'High', 
-      dateLogged: '19 May 2025, 11:00 AM', 
-      status: 'OPEN', 
-      description: 'The PDF generation times out after 30 seconds and returns a 500 server error for invoices containing more than 50 items.' 
-    },
-    { 
-      id: 'TK-7054', 
-      client: 'Nova Tech Solutions', 
-      product: 'CRM Enterprise', 
-      subject: 'API webhook rate limits and retry thresholds', 
-      category: 'Inquiry', 
-      severity: 'Low', 
-      dateLogged: '15 May 2025, 04:30 PM', 
-      status: 'IN PROGRESS', 
-      description: 'Need clarification on the rate limiting policy for webhooks. Currently getting 429 status codes during peak traffic.' 
-    },
-    { 
-      id: 'TK-7055', 
-      client: 'Greenfield School', 
-      product: 'School MS', 
-      subject: 'SMS Gateway DLT Template approval sync', 
-      category: 'Setup', 
-      severity: 'Medium', 
-      dateLogged: '17 May 2025, 01:20 PM', 
-      status: 'RESOLVED', 
-      description: 'DLT template registration approved but sms-gateway still reports template unverified. Sync required.' 
-    },
-    { 
-      id: 'TK-7056', 
-      client: 'City Mart Group', 
-      product: 'E-Commerce Hub', 
-      subject: 'Integrate local delivery partner API endpoint', 
-      category: 'Customization', 
-      severity: 'High', 
-      dateLogged: '12 May 2025, 09:10 AM', 
-      status: 'RESOLVED', 
-      description: 'Need to add customized webhook listener for shadowfax delivery agent tracking events.' 
-    }
-  ])
+  const {
+    tickets,
+    ticketReplies,
+    auditLogs,
+    addTicket,
+    addReply,
+    resolveTicket,
+    assignTicket
+  } = useSupportStore()
 
   // Form states
   const [newClientName, setNewClientName] = useState('')
   const [newProduct, setNewProduct] = useState('')
   const [newCategory, setNewCategory] = useState('')
   const [newSeverity, setNewSeverity] = useState('Low')
+  const [newAssignee, setNewAssignee] = useState('Unassigned')
   const [newSubject, setNewSubject] = useState('')
   const [newDescription, setNewDescription] = useState('')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -89,13 +31,21 @@ const AdminSupport = () => {
   // Interactive Reply states
   const [replyText, setReplyText] = useState('')
   const [activeReplyId, setActiveReplyId] = useState(null)
-  const [ticketReplies, setTicketReplies] = useState({})
 
   // Audit Logs modal state
   const [selectedLogsTicket, setSelectedLogsTicket] = useState(null)
 
   // FAQ Accordion state
   const [openFaqIdx, setOpenFaqIdx] = useState(null)
+
+  // List of active employees for assignment
+  const employeeList = [
+    'Rohan Verma',
+    'Priya Singh',
+    'Aman Gupta',
+    'Neha Sharma',
+    'Vikram Malhotra'
+  ]
 
   // Base counts from screenshots offset dynamically by current array edits
   const totalTicketsCount = 32 + tickets.length
@@ -104,22 +54,17 @@ const AdminSupport = () => {
   const resolvedTicketsCount = 18 + tickets.filter(t => t.status === 'RESOLVED').length
 
   const handleResolveTicket = (id) => {
-    setTickets(prev =>
-      prev.map(t => t.id === id ? { ...t, status: 'RESOLVED' } : t)
-    )
+    resolveTicket(id)
     alert(`Ticket ${id} marked as RESOLVED.`)
   }
 
   const handleSendReply = (ticketId) => {
     if (!replyText.trim()) return
-    setTicketReplies(prev => ({
-      ...prev,
-      [ticketId]: [...(prev[ticketId] || []), {
-        sender: 'Admin',
-        text: replyText,
-        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-      }]
-    }))
+    addReply(ticketId, {
+      sender: 'Admin',
+      text: replyText,
+      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+    })
     setReplyText('')
     setActiveReplyId(null)
     alert('Reply sent successfully!')
@@ -138,6 +83,7 @@ const AdminSupport = () => {
       subject: newSubject,
       category: newCategory,
       severity: newSeverity,
+      assignee: newAssignee,
       dateLogged: new Date().toLocaleDateString('en-GB', {
         day: '2-digit',
         month: 'short',
@@ -146,12 +92,13 @@ const AdminSupport = () => {
       status: 'OPEN',
       description: newDescription
     }
-    setTickets([createdTicket, ...tickets])
+    addTicket(createdTicket)
     // Reset fields
     setNewClientName('')
     setNewProduct('')
     setNewCategory('')
     setNewSeverity('Low')
+    setNewAssignee('Unassigned')
     setNewSubject('')
     setNewDescription('')
     
@@ -446,9 +393,22 @@ const AdminSupport = () => {
                         <h4 className="text-sm font-extrabold text-[#1e3e6b] leading-snug">
                           [{t.product}] {t.subject}
                         </h4>
-                        <p className="text-[10px] text-slate-400 font-semibold mt-1 flex items-center gap-3">
+                        <p className="text-[10px] text-slate-400 font-semibold mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
                           <span>👤 Client: <strong>{t.client}</strong></span>
                           <span>📁 Category: <strong>{t.category}</strong></span>
+                          <span className="flex items-center gap-1">
+                            👤 Assign To:
+                            <select
+                              value={t.assignee || 'Unassigned'}
+                              onChange={(e) => assignTicket(t.id, e.target.value)}
+                              className="bg-white border border-slate-200 rounded px-1.5 py-0.5 text-[10px] font-bold text-slate-700 focus:outline-none cursor-pointer"
+                            >
+                              <option value="Unassigned">Unassigned</option>
+                              {employeeList.map(emp => (
+                                <option key={emp} value={emp}>{emp}</option>
+                              ))}
+                            </select>
+                          </span>
                         </p>
                       </div>
 
@@ -573,9 +533,22 @@ const AdminSupport = () => {
                         <h4 className="text-sm font-extrabold text-[#1e3e6b] leading-snug">
                           [{t.product}] {t.subject}
                         </h4>
-                        <p className="text-[10px] text-slate-400 font-semibold mt-1 flex items-center gap-3">
+                        <p className="text-[10px] text-slate-400 font-semibold mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
                           <span>👤 Client: <strong>{t.client}</strong></span>
                           <span>📁 Category: <strong>{t.category}</strong></span>
+                          <span className="flex items-center gap-1">
+                            👤 Assign To:
+                            <select
+                              value={t.assignee || 'Unassigned'}
+                              onChange={(e) => assignTicket(t.id, e.target.value)}
+                              className="bg-white border border-slate-200 rounded px-1.5 py-0.5 text-[10px] font-bold text-slate-700 focus:outline-none cursor-pointer"
+                            >
+                              <option value="Unassigned">Unassigned</option>
+                              {employeeList.map(emp => (
+                                <option key={emp} value={emp}>{emp}</option>
+                              ))}
+                            </select>
+                          </span>
                         </p>
                       </div>
 
@@ -672,6 +645,7 @@ const AdminSupport = () => {
                         <th className="px-5 py-4">Subject</th>
                         <th className="px-5 py-4">Category</th>
                         <th className="px-5 py-4">Severity</th>
+                        <th className="px-5 py-4">Assignee</th>
                         <th className="px-5 py-4">Date Logged</th>
                         <th className="px-5 py-4 text-center">Status</th>
                         <th className="px-5 py-4 text-center">Action</th>
@@ -700,6 +674,18 @@ const AdminSupport = () => {
                               }`}>
                                 {t.severity}
                               </span>
+                            </td>
+                            <td className="px-5 py-4 font-semibold text-slate-600">
+                              <select
+                                value={t.assignee || 'Unassigned'}
+                                onChange={(e) => assignTicket(t.id, e.target.value)}
+                                className="bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-[10px] font-bold text-slate-700 focus:outline-none cursor-pointer"
+                              >
+                                <option value="Unassigned">Unassigned</option>
+                                {employeeList.map(emp => (
+                                  <option key={emp} value={emp}>{emp}</option>
+                                ))}
+                              </select>
                             </td>
                             <td className="px-5 py-4 font-medium text-slate-400 font-sans">{t.dateLogged.split(',')[0]}</td>
                             <td className="px-5 py-4 text-center">
@@ -882,27 +868,40 @@ const AdminSupport = () => {
               </button>
             </div>
             
-            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1 text-xs">
-              <div className="border-l-2 border-emerald-500 pl-3 py-0.5">
-                <p className="font-bold text-slate-800">Ticket Created</p>
-                <p className="text-[10px] text-slate-400 font-medium">{selectedLogsTicket.dateLogged}</p>
-                <p className="text-slate-500 mt-1 leading-relaxed">System recorded ticket submission from Relationship Manager.</p>
-              </div>
-              
-              {selectedLogsTicket.status !== 'OPEN' && (
-                <div className="border-l-2 border-amber-500 pl-3 py-0.5">
-                  <p className="font-bold text-slate-800">Status Changed to In Progress</p>
-                  <p className="text-[10px] text-slate-400 font-medium">19 May 2025, 02:00 PM</p>
-                  <p className="text-slate-500 mt-1 leading-relaxed">Assigned to Technical Desk Engineer.</p>
-                </div>
-              )}
-              
-              {selectedLogsTicket.status === 'RESOLVED' && (
-                <div className="border-l-2 border-green-500 pl-3 py-0.5">
-                  <p className="font-bold text-slate-800">Status Changed to Resolved</p>
-                  <p className="text-[10px] text-slate-400 font-medium">20 May 2025, 11:30 AM</p>
-                  <p className="text-slate-500 mt-1 leading-relaxed">Issue resolved by technical desk. Resolution confirmed by client.</p>
-                </div>
+            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1 text-xs font-sans">
+              {auditLogs[selectedLogsTicket.id] && auditLogs[selectedLogsTicket.id].length > 0 ? (
+                auditLogs[selectedLogsTicket.id].map((log, idx) => (
+                  <div key={idx} className={`border-l-2 pl-3 py-0.5 ${
+                    log.action.includes('Created') ? 'border-emerald-500' :
+                    log.action.includes('Resolved') ? 'border-emerald-600' : 'border-amber-500'
+                  }`}>
+                    <p className="font-bold text-slate-800">{log.action}</p>
+                    <p className="text-[10px] text-slate-400 font-medium">{log.date}</p>
+                    <p className="text-slate-500 mt-1 leading-relaxed">{log.description}</p>
+                  </div>
+                ))
+              ) : (
+                <>
+                  <div className="border-l-2 border-emerald-500 pl-3 py-0.5">
+                    <p className="font-bold text-slate-800">Ticket Created</p>
+                    <p className="text-[10px] text-slate-400 font-medium">{selectedLogsTicket.dateLogged}</p>
+                    <p className="text-slate-500 mt-1 leading-relaxed">System recorded ticket submission from Relationship Manager.</p>
+                  </div>
+                  {selectedLogsTicket.status !== 'OPEN' && (
+                    <div className="border-l-2 border-amber-500 pl-3 py-0.5">
+                      <p className="font-bold text-slate-800">Status Changed to In Progress</p>
+                      <p className="text-[10px] text-slate-400 font-medium">19 May 2025, 02:00 PM</p>
+                      <p className="text-slate-500 mt-1 leading-relaxed">Assigned to Technical Desk Engineer.</p>
+                    </div>
+                  )}
+                  {selectedLogsTicket.status === 'RESOLVED' && (
+                    <div className="border-l-2 border-green-500 pl-3 py-0.5">
+                      <p className="font-bold text-slate-800">Status Changed to Resolved</p>
+                      <p className="text-[10px] text-slate-400 font-medium">20 May 2025, 11:30 AM</p>
+                      <p className="text-slate-500 mt-1 leading-relaxed">Issue resolved by technical desk. Resolution confirmed by client.</p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
             
@@ -1007,6 +1006,21 @@ const AdminSupport = () => {
                     <option value="Medium">Medium</option>
                     <option value="High">High</option>
                     <option value="Critical">Critical</option>
+                  </select>
+                </div>
+
+                {/* Assign To Developer / Employee */}
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Assign To Developer / Employee</label>
+                  <select
+                    value={newAssignee}
+                    onChange={(e) => setNewAssignee(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-blue-500 cursor-pointer"
+                  >
+                    <option value="Unassigned">Unassigned</option>
+                    {employeeList.map(emp => (
+                      <option key={emp} value={emp}>{emp}</option>
+                    ))}
                   </select>
                 </div>
               </div>
