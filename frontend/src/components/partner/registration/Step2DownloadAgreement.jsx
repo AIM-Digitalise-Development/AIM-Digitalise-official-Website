@@ -23,6 +23,9 @@ const Step2DownloadAgreement = ({ partnerData, step1FormValues, onContinue, onBa
     setGeneratingPdf(true)
     setPdfError('')
     try {
+      // Allow DOM rendering of the wrapper (changing display from none to block)
+      await new Promise(resolve => setTimeout(resolve, 300))
+
       const html2pdf = window.html2pdf
       if (!html2pdf) {
         throw new Error('The PDF engine is still loading. Please try again in a few seconds.')
@@ -61,13 +64,12 @@ const Step2DownloadAgreement = ({ partnerData, step1FormValues, onContinue, onBa
       {/* Invisible but properly rendered container for PDF generation */}
       <div
         style={{
-          position: 'absolute',
+          display: generatingPdf ? 'block' : 'none',
+          position: 'fixed',
           left: '0',
           top: '0',
           width: '210mm',
-          height: '0',
-          overflow: 'hidden',
-          opacity: 0,
+          height: 'auto',
           pointerEvents: 'none',
           zIndex: -9999
         }}

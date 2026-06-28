@@ -27,8 +27,10 @@ const PartnerRegister = () => {
     if (location.state?.resumePartnerId) {
       setPartnerData({
         partner_id: location.state.resumePartnerId,
+        email: location.state.resumeEmail,
         registration_status: 'pending'
       })
+      setFormEmail(location.state.resumeEmail || '')
       setStep(location.state.resumeStep || 3)
     }
   }, [location])

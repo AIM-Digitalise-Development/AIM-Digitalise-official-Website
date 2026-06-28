@@ -20,7 +20,9 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
     breakAfter: 'page',
     boxShadow: forPdf ? 'none' : '0 25px 50px -12px rgb(0 0 0 / 0.25)',
     marginBottom: forPdf ? '0' : '1.5rem',
-    position: 'relative'
+    position: 'relative',
+    backgroundColor: '#ffffff',
+    color: '#1e293b'
   })
 
   // Partner details
@@ -73,8 +75,13 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
     >
       <div 
         id={forPdf ? "agreement-pdf-container" : "agreement-doc-container"} 
-        className="mx-auto w-[210mm] text-slate-800 text-[10.5px] leading-relaxed select-text font-sans"
-        style={forPdf ? { width: '210mm', margin: '0' } : {}}
+        className="mx-auto w-[210mm] text-slate-800 text-[10.5px] leading-relaxed select-text font-sans bg-white text-slate-800"
+        style={{
+          width: '210mm',
+          margin: forPdf ? '0' : 'auto',
+          backgroundColor: '#ffffff',
+          color: '#1e293b'
+        }}
       >
         
         {/* PAGE 1 */}
@@ -475,12 +482,33 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
               <div className="grid grid-cols-2 gap-8 text-[10px]">
                 <div className="space-y-2">
                   <p className="font-bold text-slate-950">For AIM Digitalise Pvt. Ltd.</p>
-                  <p className="pt-2">Authorized Signatory</p>
-                  <p>Name: _________________________</p>
-                  <p>Designation: ___________________</p>
-                  <p>Signature: _____________________</p>
-                  <p>Date: _________________________</p>
-                  <p>Seal: _________________________</p>
+                  <p className="pt-1 text-[9px] text-slate-500">Authorized Signatory</p>
+                  <p className="flex items-center gap-1">
+                    <span>Name:</span>
+                    <span className="font-bold text-slate-900 underline">Sabyasachi Pal</span>
+                  </p>
+                  <p className="flex items-center gap-1">
+                    <span>Designation:</span>
+                    <span className="font-medium text-slate-800 underline">Managing Director</span>
+                  </p>
+                  <div className="flex items-center gap-1 py-1">
+                    <span>Signature:</span>
+                    <div className="inline-flex items-center justify-center border border-indigo-100 rounded px-2 py-0.5 bg-indigo-50/50 select-none">
+                      <span style={{ fontFamily: "'Brush Script MT', cursive, sans-serif", fontSize: '13px', color: '#1e3a8a', letterSpacing: '0.5px' }}>Sabyasachi Pal</span>
+                    </div>
+                  </div>
+                  <p className="flex items-center gap-1">
+                    <span>Date:</span>
+                    <span className="font-semibold text-slate-800 underline">{fullDateStr}</span>
+                  </p>
+                  <div className="flex items-start gap-2 pt-1">
+                    <span className="mt-2.5">Seal:</span>
+                    <div className="inline-flex flex-col items-center justify-center border-2 border-indigo-700/60 rounded-full w-[54px] h-[54px] p-0.5 text-center bg-indigo-50/20 select-none shadow-sm">
+                      <span className="text-[5.5px] font-black uppercase text-indigo-700 leading-none tracking-tight">AIM DIGITALISE</span>
+                      <span className="text-[4.5px] text-indigo-600/80 leading-none font-bold">PVT. LTD.</span>
+                      <span className="text-[4.5px] text-indigo-500 leading-none font-black mt-0.5">KOLKATA</span>
+                    </div>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <p className="font-bold text-slate-950">Partner’ Organization</p>
@@ -498,8 +526,16 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
               <div className="grid grid-cols-2 gap-8 pt-6 text-[10px] border-t border-dashed border-slate-200 mt-6">
                 <div>
                   <p className="font-bold text-slate-950">Witness 1</p>
-                  <p className="mt-4">Name: _________________________</p>
-                  <p className="mt-1">Signature: _____________________</p>
+                  <p className="mt-3 flex items-center gap-1">
+                    <span>Name:</span>
+                    <span className="font-bold text-slate-900 underline">Shyamal Dutta</span>
+                  </p>
+                  <div className="mt-1 flex items-center gap-1">
+                    <span>Signature:</span>
+                    <div className="inline-flex items-center justify-center border border-indigo-100 rounded px-2 py-0.5 bg-indigo-50/50 select-none">
+                      <span style={{ fontFamily: "'Brush Script MT', cursive, sans-serif", fontSize: '13px', color: '#1e3a8a', letterSpacing: '0.5px' }}>Shyamal Dutta</span>
+                    </div>
+                  </div>
                 </div>
                 <div>
                   <p className="font-bold text-slate-950">Witness 2</p>

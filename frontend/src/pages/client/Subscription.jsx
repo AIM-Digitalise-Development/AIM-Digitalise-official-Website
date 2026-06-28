@@ -15,17 +15,12 @@ import ClientPageHeader from '../../components/client/ClientPageHeader'
 import StudentCountCard from '../../components/client/subscription/StudentCountCard'
 import PaymentCyclesCard from '../../components/client/subscription/PaymentCyclesCard'
 import PaymentSummaryCard from '../../components/client/subscription/PaymentSummaryCard'
-<<<<<<< HEAD
-=======
-
 const cycleDisplayNames = {
   'annual': 'Annual',
   'half_yearly': 'Half Yearly',
   'quarterly': 'Quarterly',
   'monthly': 'Monthly'
 }
-
->>>>>>> 3f41c52d85f8e96905b5b2b85bf594b4445f0a26
 const ClientSubscription = () => {
   const { clientToken, isClientAuthenticated, profileData, productData, clientLogout } = useClientAuthStore()
   

@@ -10,91 +10,73 @@ import logo from '../../assets/images/logo.png'
 const PartnerLogin = () => {
   const navigate = useNavigate()
   const [completePartnerId, setCompletePartnerId] = useState('')
+  const [completeEmail, setCompleteEmail] = useState('')
   const [completeError, setCompleteError] = useState('')
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [pdfError, setPdfError] = useState('')
   const [showPreviewModal, setShowPreviewModal] = useState(false)
 
-  const loadPdfLibraries = () => {
-    return new Promise((resolve, reject) => {
-      if (window.html2canvas && window.jspdf) {
-        resolve({ html2canvas: window.html2canvas, jspdf: window.jspdf })
-        return
-      }
-
-      const loadScript = (src, checkGlobal) => {
-        return new Promise((res, rej) => {
-          if (window[checkGlobal]) {
-            res()
-            return
-          }
-          const existing = document.querySelector(`script[src*="${src.split('/').pop()}"]`)
-          if (existing) {
-            existing.onload = () => res()
-            existing.onerror = () => rej(new Error(`Failed to load ${src}`))
-            return
-          }
-          const script = document.createElement('script')
-          script.src = src
-          script.onload = () => res()
-          script.onerror = () => rej(new Error(`Failed to load ${src}`))
-          document.body.appendChild(script)
-        })
-      }
-
-      Promise.all([
-        loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', 'jspdf'),
-        loadScript('https://cdn.jsdelivr.net/npm/html2canvas-pro@latest/dist/html2canvas.min.js', 'html2canvas')
-      ])
-        .then(() => resolve({ html2canvas: window.html2canvas, jspdf: window.jspdf }))
-        .catch(reject)
-    })
+  const activeRole = 'partner'
+  const header = {
+    label: 'Welcome Back',
+    description: 'Sign in to the AIM Digitalise Partner Portal to manage your earnings, orders, and payouts.'
   }
 
   const handleDownloadBlank = async () => {
     setGeneratingPdf(true)
     setPdfError('')
     try {
-      const { html2canvas, jspdf } = await loadPdfLibraries()
-      if (!html2canvas || !jspdf) {
-        throw new Error('Could not load the PDF libraries. Please check your network connection.')
+      // Allow DOM rendering of the wrapper (changing display from none to block)
+      await new Promise(resolve => setTimeout(resolve, 300))
+
+      let html2pdf = window.html2pdf
+      if (!html2pdf) {
+        const response = await fetch('/html2pdf.bundle.min.js');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch PDF engine script: ${response.status} ${response.statusText}`);
+        }
+        const scriptText = 'var self = window; ' + (await response.text());
+        const fn = new Function(scriptText);
+        fn.call(window);
+        html2pdf = window.html2pdf;
       }
 
-      const jsPDF = jspdf.jsPDF || window.jsPDF
-      if (!jsPDF) {
-        throw new Error('PDF generator engine not found.')
+      if (!html2pdf) {
+        throw new Error('The PDF engine is still loading. Please try again in a few seconds.')
       }
 
-      const element = document.getElementById('blank-agreement-container')
+      // Target the print-optimized container inside the hidden wrapper
+      const element = document.getElementById('agreement-pdf-container')
       if (!element) {
         throw new Error('Agreement template not found')
       }
 
-      const pages = element.querySelectorAll('.agreement-page')
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      })
+      console.log('PDF TARGET ELEMENT DIAGNOSTICS:', {
+        id: element.id,
+        offsetWidth: element.offsetWidth,
+        offsetHeight: element.offsetHeight,
+        clientWidth: element.clientWidth,
+        clientHeight: element.clientHeight,
+        innerHTMLLength: element.innerHTML ? element.innerHTML.length : 0
+      });
 
-      for (let i = 0; i < pages.length; i++) {
-        const pageEl = pages[i]
-        const canvas = await html2canvas(pageEl, {
+      const opt = {
+        margin: 0,
+        filename: 'AIM_Blank_Partner_Agreement.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: {
           scale: 2,
           useCORS: true,
-          logging: false,
-          backgroundColor: '#ffffff'
-        })
-        
-        const imgData = canvas.toDataURL('image/jpeg', 0.95)
-        if (i > 0) pdf.addPage()
-        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST')
+          logging: true
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
       }
 
-      pdf.save('AIM_Blank_Partner_Agreement.pdf')
+      await html2pdf().from(element).set(opt).save()
     } catch (err) {
       console.error('Blank PDF generation failed:', err)
-      setPdfError('Failed to generate agreement PDF. Please try again.')
+      setPdfError(err.message || 'Failed to generate agreement PDF. Please try again.')
     } finally {
       setGeneratingPdf(false)
     }
@@ -106,11 +88,16 @@ const PartnerLogin = () => {
       setCompleteError('Please enter your Partner ID.')
       return
     }
+    if (!completeEmail) {
+      setCompleteError('Please enter your Email Address.')
+      return
+    }
 
     // Direct redirect to registration page, forcing Step 3 (Signed Contract Upload & Payment)
     navigate(ROUTES.PARTNER.REGISTER, {
       state: {
         resumePartnerId: completePartnerId.trim().toUpperCase(),
+        resumeEmail: completeEmail.trim().toLowerCase(),
         resumeStep: 3
       }
     })
@@ -155,7 +142,16 @@ const PartnerLogin = () => {
         </header>
 
         {/* Hidden Blank Agreement for Client-side Downloading */}
-        <div style={{ position: 'absolute', left: '0', top: '0', width: '210mm', height: '0', overflow: 'hidden', opacity: 0, pointerEvents: 'none', zIndex: -9999 }}>
+        <div style={{
+          display: generatingPdf ? 'block' : 'none',
+          position: 'fixed',
+          left: '0',
+          top: '0',
+          width: '210mm',
+          height: 'auto',
+          pointerEvents: 'none',
+          zIndex: -9999
+        }}>
           <div id="blank-agreement-container">
             <AgreementDoc partnerData={{}} forPdf={true} />
           </div>
@@ -168,18 +164,34 @@ const PartnerLogin = () => {
               <div className="grid grid-cols-1 md:grid-cols-12 font-sans">
                 {/* Left Column (Login Form) */}
                 <div className="col-span-12 md:col-span-6 p-6 sm:p-10 flex flex-col justify-center bg-aim-navy-card/95">
+                           <div className="relative z-10 text-center mb-8">
+                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 ${
+                  activeRole === 'partner' 
+                    ? 'bg-aim-purple/15 border border-aim-purple/30 text-aim-purple-light' 
+                    : 'bg-aim-gold/15 border border-aim-gold/30 text-aim-gold'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${activeRole === 'partner' ? 'bg-aim-purple' : 'bg-aim-gold'} animate-ping`} />
+                  {activeRole} PORTAL
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-none mb-3">
+                  {header.label}
+                </h1>
+                <p className="text-xs text-aim-copy-muted leading-relaxed max-w-[290px] mx-auto">
+                  {header.description}
+                </p>
+              </div>
                               {/* <div style={{color:'white'}} className="grid grid-cols-1 md:grid-cols-12 font-sans p-4">Partner Portal</div> */}
 
                   <div className="flex justify-center mb-8 shrink-0">
                     <img src={logo} alt="AIM Digitalise" className="h-14 sm:h-16 w-auto object-contain" />
                   </div>
                   
-                  <h2 
+                  {/* <h2 
                     className="text-center font-black text-white tracking-tight mb-1"
                     style={{ fontSize: 'var(--text-3xl)', lineHeight: 'var(--tw-leading, var(--text-3xl--line-height))' }}
                   >
                     Welcome Back Partner  
-                  </h2>
+                  </h2> */}
                  
 
                   <PartnerLoginForm />
@@ -262,19 +274,28 @@ const PartnerLogin = () => {
                         If you did not complete the signup process after Step 1, enter your Partner ID below to resume and proceed to the upload &amp; payment page.
                       </p>
 
-                      <div className="flex flex-col sm:flex-row gap-2 mt-1">
+                      <div className="flex flex-col gap-2.5 mt-1">
                         <input
                           type="text"
                           value={completePartnerId}
                           onChange={(e) => setCompletePartnerId(e.target.value)}
                           placeholder="ENTER YOUR PARTNER ID"
-                          className="flex-1 bg-aim-navy-light/60 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-aim-gold font-sans tracking-wide"
+                          className="w-full bg-aim-navy-light/60 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-aim-gold font-sans tracking-wide"
+                          required
+                        />
+
+                        <input
+                          type="email"
+                          value={completeEmail}
+                          onChange={(e) => setCompleteEmail(e.target.value)}
+                          placeholder="ENTER YOUR EMAIL ADDRESS"
+                          className="w-full bg-aim-navy-light/60 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-aim-gold font-sans"
                           required
                         />
 
                         <button
                           type="submit"
-                          className="sm:w-32 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs tracking-wider uppercase transition-colors shadow-md shadow-blue-900/20 active:scale-[0.99] cursor-pointer"
+                          className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs tracking-wider uppercase transition-colors shadow-md shadow-blue-900/20 active:scale-[0.99] cursor-pointer"
                         >
                           Submit
                         </button>
