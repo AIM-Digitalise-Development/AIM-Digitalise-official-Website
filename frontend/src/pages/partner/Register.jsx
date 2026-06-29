@@ -146,7 +146,7 @@ const PartnerRegister = () => {
                 <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-48 h-48 bg-aim-purple/8 rounded-full blur-2xl pointer-events-none" />
 
                 {/* Header */}
-                <div className="relative z-10 mb-3 shrink-0">
+                <div className="relative z-10 mb-3 shrink-0 flex flex-col items-center text-center">
                   <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-aim-gold/10 border border-aim-gold/20 mb-1.5">
                     <span className="w-1 h-1 rounded-full bg-aim-gold animate-pulse" />
                     <span className="text-aim-gold text-[9px] font-black uppercase tracking-widest">Become a Partner</span>
