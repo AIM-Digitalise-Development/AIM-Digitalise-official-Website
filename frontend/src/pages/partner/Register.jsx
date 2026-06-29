@@ -137,7 +137,7 @@ const PartnerRegister = () => {
             {isSuccess ? (
               <div className="relative rounded-3xl border border-white/10 bg-aim-navy-card/75 backdrop-blur-2xl p-8 shadow-2xl shadow-black/85 flex flex-col overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                 <div className="absolute top-0 right-0 -mr-12 -mt-12 w-48 h-48 bg-aim-gold/8 rounded-full blur-2xl pointer-events-none" />
-                <RegistrationSuccess partnerData={partnerData} verifyData={verifyData} />
+                <RegistrationSuccess partnerData={partnerData} verifyData={verifyData} step1FormValues={step1FormValues} />
               </div>
             ) : (
               <div className="relative rounded-3xl border border-white/10 bg-aim-navy-card/75 backdrop-blur-2xl p-4 sm:p-6 shadow-2xl shadow-black/85 flex flex-col overflow-hidden max-h-[calc(100vh-60px)]">

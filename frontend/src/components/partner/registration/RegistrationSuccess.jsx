@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom'
 import { ROUTES } from '../../../constants/routes'
 
-const RegistrationSuccess = ({ partnerData, verifyData }) => {
-  const token = verifyData?.token || ''
-  const partner = verifyData?.partner || {}
+const RegistrationSuccess = ({ partnerData, verifyData, step1FormValues }) => {
+  const token = verifyData?.data?.token || verifyData?.token || ''
+  const partner = verifyData?.data?.partner || verifyData?.partner || {}
 
   return (
     <div className="text-center space-y-6">
@@ -28,10 +28,10 @@ const RegistrationSuccess = ({ partnerData, verifyData }) => {
         <p className="text-[10px] font-black uppercase tracking-widest text-aim-copy-muted">Account Details</p>
         <div className="space-y-2 text-sm">
           {[
-            { label: 'Partner ID', value: partnerData?.partner_id || partner?.partner_id || '—' },
-            { label: 'Name', value: partner?.name || partnerData?.partner_name || '—' },
-            { label: 'Email', value: partner?.email || partnerData?.email || '—' },
-            { label: 'Organization', value: partner?.organization || partnerData?.organization_name || '—' },
+            { label: 'Partner ID', value: partnerData?.partner_id || partner?.partner_id || partner?.id || '—' },
+            { label: 'Name', value: partner?.partner_name || partner?.name || partnerData?.partner_name || step1FormValues?.partner_name || '—' },
+            { label: 'Email', value: partner?.email || partnerData?.email || step1FormValues?.email || '—' },
+            { label: 'Organization', value: partner?.organization_name || partner?.organization || partnerData?.organization_name || step1FormValues?.organization_name || '—' },
             { label: 'Account Status', value: 'Pending Admin Activation' },
           ].map(({ label, value }) => (
             <div key={label} className="flex items-center justify-between">
