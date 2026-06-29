@@ -9,19 +9,6 @@ const CURRENCIES = [
   { code: 'AED', symbol: 'د.إ', name: 'UAE Dirham' },
 ]
 
-const inputCls =
-  'w-full bg-aim-navy-light border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-aim-copy-muted focus:outline-none focus:border-aim-gold/60 focus:ring-1 focus:ring-aim-gold/30 transition-all'
-
-const loadRazorpay = () =>
-  new Promise((resolve, reject) => {
-    if (window.Razorpay) { resolve(true); return }
-    const s = document.createElement('script')
-    s.src = 'https://checkout.razorpay.com/v1/checkout.js'
-    s.onload = () => resolve(true)
-    s.onerror = () => reject(new Error('Failed to load Razorpay'))
-    document.body.appendChild(s)
-  })
-
 const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
   const [signedFile, setSignedFile] = useState(null)
   const [fileError, setFileError] = useState('')
@@ -210,19 +197,19 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
   const selectedCurrency = CURRENCIES.find((c) => c.code === currency) || CURRENCIES[0]
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {error && (
-        <div className="p-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 text-xs font-medium space-y-3">
+        <div className="p-3 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 text-xs font-semibold space-y-2">
           <p>{error}</p>
           {isOffline && (
-            <div className="pt-3 border-t border-red-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <span className="text-aim-copy-muted text-[11px] leading-relaxed">
-                Your local backend is offline. You can simulate a successful agreement upload and payment registration instead.
+            <div className="pt-2 border-t border-red-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <span className="text-aim-copy-muted text-[10px] leading-tight">
+                Your local backend is offline. You can simulate success instead.
               </span>
               <button
                 type="button"
                 onClick={handleSimulatePayment}
-                className="shrink-0 px-3 py-1.5 rounded-lg bg-aim-gold text-aim-navy font-bold text-[11px] hover:bg-aim-gold-light transition cursor-pointer"
+                className="shrink-0 px-2.5 py-1 rounded-lg bg-aim-gold text-aim-navy font-bold text-[10px] hover:bg-aim-gold-light transition cursor-pointer"
               >
                 Simulate Success
               </button>
@@ -231,7 +218,7 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
         </div>
       )}
       {status && (
-        <div className="p-3 rounded-xl border border-aim-gold/20 bg-aim-gold/10 text-aim-gold text-xs font-semibold flex items-center gap-2">
+        <div className="p-2.5 rounded-xl border border-aim-gold/20 bg-aim-gold/10 text-aim-gold text-xs font-semibold flex items-center gap-2">
           <svg className="w-4 h-4 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
@@ -240,146 +227,170 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
         </div>
       )}
 
-      {/* ══════════════════════════════════════════════════════════════════════ */}
-      {/* Step 3a: Upload Signed Agreement                                     */}
-      {/* ══════════════════════════════════════════════════════════════════════ */}
-      <div className={`rounded-2xl border-2 p-5 space-y-3 transition-all ${
-        agreementUploaded
-          ? 'border-emerald-500/40 bg-emerald-500/5'
-          : 'border-white/10 bg-aim-navy-light/30'
-      }`}>
-        <div className="flex items-center gap-2">
-          {agreementUploaded ? (
-            <svg className="w-5 h-5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          ) : (
-            <svg className="w-5 h-5 text-aim-gold/70 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-            </svg>
-          )}
-          <p className="text-xs font-black uppercase tracking-widest text-aim-copy-muted">
-            {agreementUploaded ? '✅ Signed Agreement Uploaded' : 'Upload Signed Agreement'}
-            {!agreementUploaded && <span className="text-aim-gold ml-1">*</span>}
-          </p>
-        </div>
+      {/* Grid container to split modal in middle: Left = Upload Signed Agreement, Right = Payment Details */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+        
+        {/* Left Column: Upload Signed Agreement */}
+        <div className={`col-span-12 md:col-span-6 rounded-2xl border-2 p-4 flex flex-col justify-between transition-all ${
+          agreementUploaded
+            ? 'border-emerald-500/40 bg-emerald-500/5'
+            : 'border-white/10 bg-aim-navy-light/30'
+        }`}>
+          <div>
+            <div className="flex items-center gap-1.5 pb-1.5 border-b border-white/5 mb-3">
+              {agreementUploaded ? (
+                <svg className="w-4 h-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4 text-aim-gold/70 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+              )}
+              <p className="text-[10px] font-black uppercase tracking-widest text-aim-copy-muted">
+                {agreementUploaded ? '✅ Signed Contract Uploaded' : 'Upload Signed Agreement'}
+                {!agreementUploaded && <span className="text-aim-gold ml-0.5">*</span>}
+              </p>
+            </div>
 
-        {!agreementUploaded ? (
-          <>
-            <label className={`flex items-center gap-3 cursor-pointer rounded-xl border-2 border-dashed px-4 py-5 transition-all ${signedFile
-                ? 'border-aim-gold/60 bg-aim-gold/5'
-                : 'border-white/10 hover:border-aim-gold/30 hover:bg-white/5'
-              }`}>
-              <svg className="w-6 h-6 text-aim-gold/70 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-              </svg>
-              <div className="flex-1 min-w-0">
-                {signedFile ? (
-                  <>
-                    <p className="text-white text-sm font-semibold truncate">{signedFile.name}</p>
-                    <p className="text-aim-copy-muted text-xs">{(signedFile.size / 1024).toFixed(1)} KB</p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-aim-copy-muted text-sm">Click to upload signed agreement</p>
-                    <p className="text-aim-copy-muted text-xs mt-0.5">PDF, JPG, PNG — max 5 MB</p>
-                  </>
-                )}
-              </div>
-              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleFileChange} className="hidden" />
-            </label>
-            {fileError && <p className="mt-1.5 text-red-400 text-xs">{fileError}</p>}
-
-            <button
-              type="button"
-              onClick={handleUploadAgreement}
-              disabled={uploadLoading || !signedFile}
-              className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm tracking-wide shadow-md shadow-blue-900/20 active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            >
-              {uploadLoading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+            {!agreementUploaded ? (
+              <div className="space-y-2">
+                <label className={`flex items-center gap-3 cursor-pointer rounded-xl border-2 border-dashed px-3 py-4.5 transition-all ${
+                  signedFile
+                    ? 'border-aim-gold/60 bg-aim-gold/5'
+                    : 'border-white/10 hover:border-aim-gold/30 hover:bg-white/5'
+                  }`}>
+                  <svg className="w-5 h-5 text-aim-gold/70 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                   </svg>
-                  Uploading Agreement...
-                </span>
-              ) : 'Upload Signed Agreement'}
-            </button>
-          </>
+                  <div className="flex-1 min-w-0">
+                    {signedFile ? (
+                      <>
+                        <p className="text-white text-xs font-semibold truncate">{signedFile.name}</p>
+                        <p className="text-aim-copy-muted text-[10px]">{(signedFile.size / 1024).toFixed(1)} KB</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-aim-copy-muted text-xs">Click to select file</p>
+                        <p className="text-aim-copy-muted text-[9px] mt-0.5">PDF, JPG, PNG (max 5MB)</p>
+                      </>
+                    )}
+                  </div>
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleFileChange} className="hidden" disabled={uploadLoading} />
+                </label>
+                {fileError && <p className="text-red-400 text-[10px] font-semibold">{fileError}</p>}
+              </div>
+            ) : (
+              <div className="py-6 text-center">
+                <p className="text-emerald-400 text-xs font-semibold leading-relaxed">
+                  Signed contract has been successfully uploaded! Complete payment details on the right side to proceed.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Column: Payment Details */}
+        <div className={`col-span-12 md:col-span-6 rounded-2xl border border-white/10 bg-aim-navy-light/60 p-4 flex flex-col justify-between transition-all ${
+          agreementUploaded ? 'opacity-100' : 'opacity-50 pointer-events-none'
+        }`}>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-aim-copy-muted pb-1.5 border-b border-white/5 mb-3">
+              Payment Details
+            </p>
+            
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[10px] font-semibold text-aim-copy-muted uppercase tracking-wider mb-1">Currency</label>
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="w-full bg-aim-navy border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-aim-copy-muted focus:outline-none focus:border-aim-gold/60 focus:ring-1 focus:ring-aim-gold/30 transition-all"
+                  disabled={loading}
+                >
+                  {CURRENCIES.map((c) => (
+                    <option key={c.code} value={c.code} className="bg-aim-navy text-xs">
+                      {c.symbol} {c.name} ({c.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-[10px] font-semibold text-aim-copy-muted uppercase tracking-wider mb-1">
+                  Amount ({selectedCurrency.symbol})
+                </label>
+                <input
+                  type="number"
+                  value={amount}
+                  readOnly
+                  className="w-full bg-aim-navy border border-white/10 rounded-xl px-3 py-2 text-xs text-white/70 placeholder-aim-copy-muted focus:outline-none focus:border-aim-gold/60 focus:ring-1 focus:ring-aim-gold/30 transition-all opacity-60 cursor-not-allowed"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between py-2.5 border-t border-white/10 mt-4 shrink-0">
+            <span className="text-xs text-aim-copy-muted">Registration Fee</span>
+            <span className="text-base font-black text-aim-gold">
+              {selectedCurrency.symbol} {amount.toLocaleString()} {currency}
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Down section: unified actions */}
+      <div className="space-y-2 pt-2">
+        {!agreementUploaded ? (
+          <button
+            type="button"
+            onClick={handleUploadAgreement}
+            disabled={uploadLoading || !signedFile}
+            className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm tracking-wide shadow-md shadow-blue-900/20 active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center"
+          >
+            {uploadLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="w-4 h-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+                Uploading Signed Agreement...
+              </span>
+            ) : (
+              'Upload Signed Agreement'
+            )}
+          </button>
         ) : (
-          <p className="text-emerald-400 text-xs font-medium">
-            Your signed agreement has been uploaded. You can now proceed with payment.
-          </p>
+          <button
+            type="button"
+            onClick={handlePayment}
+            disabled={loading}
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-aim-gold to-aim-gold-light text-aim-navy font-black text-sm tracking-wide shadow-lg shadow-aim-gold/20 hover:shadow-aim-gold/40 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100 flex items-center justify-center"
+          >
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="w-4 h-4 animate-spin text-aim-navy" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+                Processing Fee...
+              </span>
+            ) : (
+              `Pay ${selectedCurrency.symbol}${amount.toLocaleString()} ${currency} & Complete Registration`
+            )}
+          </button>
         )}
+
+        <button
+          type="button"
+          onClick={onBack}
+          disabled={loading || uploadLoading}
+          className="w-full py-2 rounded-xl border border-white/10 text-aim-copy-muted text-xs hover:text-white hover:border-white/20 transition-all disabled:opacity-40 cursor-pointer"
+        >
+          ← Back
+        </button>
       </div>
-
-      {/* ══════════════════════════════════════════════════════════════════════ */}
-      {/* Step 3b: Payment Details                                             */}
-      {/* ══════════════════════════════════════════════════════════════════════ */}
-      <div className={`rounded-2xl border border-white/10 bg-aim-navy-light/60 p-5 space-y-4 transition-opacity ${
-        agreementUploaded ? 'opacity-100' : 'opacity-40 pointer-events-none'
-      }`}>
-        <p className="text-xs font-black uppercase tracking-widest text-aim-copy-muted">Payment Details</p>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-semibold text-aim-copy-muted mb-1.5">Currency</label>
-            <select
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-              className={inputCls}
-            >
-              {CURRENCIES.map((c) => (
-                <option key={c.code} value={c.code} className="bg-aim-navy">
-                  {c.symbol} {c.name} ({c.code})
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-aim-copy-muted mb-1.5">
-              Amount ({selectedCurrency.symbol})
-            </label>
-            <input
-              type="number"
-              value={amount}
-              readOnly
-              className={`${inputCls} opacity-60 cursor-not-allowed`}
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between py-3 border-t border-white/10">
-          <span className="text-sm text-aim-copy-muted">Registration Fee</span>
-          <span className="text-xl font-black text-aim-gold">
-            {selectedCurrency.symbol} {amount.toLocaleString()} {currency}
-          </span>
-        </div>
-      </div>
-
-      {/* Submit */}
-      <button
-        type="button"
-        onClick={handlePayment}
-        disabled={loading || !agreementUploaded}
-        className="w-full py-4 rounded-xl bg-gradient-to-r from-aim-gold to-aim-gold-light text-aim-navy font-black text-sm tracking-wide shadow-lg shadow-aim-gold/20 hover:shadow-aim-gold/40 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
-      >
-        {loading
-          ? 'Processing...'
-          : !agreementUploaded
-            ? 'Upload Agreement First'
-            : `Pay ${selectedCurrency.symbol}${amount.toLocaleString()} ${currency}`}
-      </button>
-
-      <button
-        type="button"
-        onClick={onBack}
-        disabled={loading}
-        className="w-full py-2.5 rounded-xl border border-white/10 text-aim-copy-muted text-sm hover:text-white hover:border-white/20 transition-all disabled:opacity-40"
-      >
-        ← Back
-      </button>
     </div>
   )
 }
