@@ -79,6 +79,7 @@ const ClientLayout = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
 
   // Guard routing
   useEffect(() => {
@@ -116,6 +117,36 @@ const ClientLayout = () => {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden select-none" style={{ fontFamily: "'Inter', 'Segoe UI', sans-serif", background: '#f5f6fa' }}>
+      {/* Logout Confirmation Modal */}
+      {isLogoutModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-xs p-6 text-center text-slate-800">
+            <div className="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-4 border border-red-100 text-2xl">
+              🚪
+            </div>
+            <h3 className="text-base font-black text-slate-800 mb-2">Sign Out</h3>
+            <p className="text-xs text-slate-500 mb-6">Do you want to sign out?</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setIsLogoutModalOpen(false)}
+                className="flex-grow py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer transition-colors"
+              >
+                No
+              </button>
+              <button
+                onClick={() => {
+                  setIsLogoutModalOpen(false)
+                  handleLogout()
+                }}
+                className="flex-grow py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer transition-all active:scale-[0.98]"
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Mobile Backdrop */}
       {isSidebarOpen && (
         <div 
@@ -200,7 +231,7 @@ const ClientLayout = () => {
             <img src={logoImg} alt="AIM Logo" className="max-h-8 object-contain" />
           </Link>
           <button
-            onClick={handleLogout}
+            onClick={() => setIsLogoutModalOpen(true)}
             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all duration-150 cursor-pointer"
           >
             <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>

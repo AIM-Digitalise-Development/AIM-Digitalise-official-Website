@@ -64,6 +64,7 @@ const EmployeeLayout = () => {
   const location = useLocation()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [now, setNow] = useState(new Date())
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
 
   // Force dark mode active on html container
   useEffect(() => {
@@ -126,6 +127,36 @@ const EmployeeLayout = () => {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden" style={{ fontFamily: "'Inter','Segoe UI',sans-serif", background: '#0f1117' }}>
+      {/* Logout Confirmation Modal */}
+      {isLogoutModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-[#13151f] rounded-3xl border border-white/10 shadow-2xl w-full max-w-xs p-6 text-center">
+            <div className="w-12 h-12 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto mb-4 border border-red-500/20 text-2xl">
+              🚪
+            </div>
+            <h3 className="text-base font-black text-white mb-2">Sign Out</h3>
+            <p className="text-xs text-gray-400 mb-6">Do you want to sign out?</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setIsLogoutModalOpen(false)}
+                className="flex-1 py-2.5 rounded-xl border border-white/10 text-xs font-bold text-gray-300 hover:bg-white/5 cursor-pointer transition-colors"
+              >
+                No
+              </button>
+              <button
+                onClick={() => {
+                  setIsLogoutModalOpen(false)
+                  handleLogout()
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer transition-all active:scale-[0.98]"
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Mobile Backdrop */}
       {isSidebarOpen && (
         <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px] lg:hidden" />
@@ -200,7 +231,7 @@ const EmployeeLayout = () => {
           </Link>
           
           <button
-            onClick={handleLogout}
+            onClick={() => setIsLogoutModalOpen(true)}
             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[12.5px] font-medium text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"
           >
             <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>

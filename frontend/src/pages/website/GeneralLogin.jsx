@@ -41,16 +41,16 @@ export default function GeneralLogin() {
     }
   }, [searchParams])
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated and the authenticated role matches the active tab
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && role === activeRole) {
       if (role === 'admin') {
         navigate(ROUTES.ADMIN.DASHBOARD, { replace: true })
       } else {
         navigate(ROUTES.EMPLOYEE.DASHBOARD, { replace: true })
       }
     }
-  }, [isAuthenticated, role, navigate])
+  }, [isAuthenticated, role, activeRole, navigate])
 
   useEffect(() => {
     // Prevent page-level scrolling

@@ -5,7 +5,7 @@ import { usePartnerAuthStore } from '../../../store/partnerAuthStore'
 import { ROUTES } from '../../../constants/routes'
 
 const inputCls =
-  'w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-aim-copy-muted focus:outline-none focus:border-aim-gold/60 focus:ring-1 focus:ring-aim-gold/30 transition-all'
+  'w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white placeholder-aim-copy-muted focus:outline-none focus:border-aim-gold/60 focus:ring-1 focus:ring-aim-gold/30 transition-all'
 
 const PartnerLoginForm = () => {
   const navigate = useNavigate()
@@ -45,7 +45,7 @@ const PartnerLoginForm = () => {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-2.5">
       {error && (
         <div className="p-3 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 text-xs font-semibold text-center">
           {error}
@@ -54,7 +54,7 @@ const PartnerLoginForm = () => {
 
       {/* Partner ID or Email */}
       <div>
-        <label className="block text-xs font-semibold text-aim-copy-muted uppercase tracking-wider mb-1.5">
+        <label className="block text-xs font-semibold text-aim-copy-muted uppercase tracking-wider mb-1">
           Partner ID
         </label>
         <input
@@ -70,7 +70,7 @@ const PartnerLoginForm = () => {
 
       {/* Password */}
       <div>
-        <label className="block text-xs font-semibold text-aim-copy-muted uppercase tracking-wider mb-1.5">
+        <label className="block text-xs font-semibold text-aim-copy-muted uppercase tracking-wider mb-1">
           Password
         </label>
         <div className="relative">
@@ -131,17 +131,17 @@ const PartnerLoginForm = () => {
 
 
       {/* Log In Button (Centered with Gold theme) */}
-      <div className="flex justify-center pt-3">
+      <div className="flex justify-center pt-2">
         <button
           type="submit"
           disabled={loading}
-          className="w-32 py-2.5 rounded-lg bg-gradient-to-r from-aim-gold to-aim-gold-light hover:from-aim-gold-light hover:to-aim-gold text-aim-navy font-black text-sm tracking-wide shadow-md transition-all duration-200 active:scale-95 cursor-pointer disabled:opacity-60"
+          className="w-32 py-2 rounded-lg bg-gradient-to-r from-aim-gold to-aim-gold-light hover:from-aim-gold-light hover:to-aim-gold text-aim-navy font-black text-sm tracking-wide shadow-md transition-all duration-200 active:scale-95 cursor-pointer disabled:opacity-60"
         >
           {loading ? 'Logging in...' : 'Log in'}
         </button>
          
       </div>
-      <p className="text-center text-[11px] text-aim-copy-muted mb-6">
+      <p className="text-center text-[11px] text-aim-copy-muted mb-2">
                     Don't have an account? <Link to={ROUTES.PARTNER.REGISTER} className="text-rose-500 hover:text-rose-400 font-bold transition-colors">Register Now</Link>
                   </p>
     </form>

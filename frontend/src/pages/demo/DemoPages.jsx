@@ -82,7 +82,7 @@ const DemoGenericPage = ({ section = 'saas-clients' }) => {
 }
 
 /* ─── Individual page exports ─── */
-export const DemoSaasClients = () => <DemoGenericPage section="saas-clients" />
+export const DemoSaasClients = () => <DemoComingSoon title="SaaS-Clients" icon="💳" />
 
 export const DemoComingSoon = ({ title, icon = '🚧' }) => (
   <div className="space-y-6 animate-fade-in">

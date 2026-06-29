@@ -167,38 +167,45 @@ const PartnerLogin = () => {
             <div className="relative rounded-3xl border border-white/10 bg-aim-navy-card/85 backdrop-blur-2xl shadow-2xl shadow-black/90 overflow-hidden transition-all duration-300">
               <div className="grid grid-cols-1 md:grid-cols-12 font-sans">
                 {/* Left Column (Login Form) */}
-                <div className="col-span-12 md:col-span-6 p-6 sm:p-10 flex flex-col justify-center bg-aim-navy-card/95">
+                <div className="col-span-12 md:col-span-6 p-4 sm:p-7 pt-[0px] sm:pt-[100px] flex flex-col justify-start bg-aim-navy-card/95">
                               {/* <div style={{color:'white'}} className="grid grid-cols-1 md:grid-cols-12 font-sans p-4">Partner Portal</div> */}
+              {/* Header Title & Description */}
+              <div className="relative z-10 text-center mb-3">
+                <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest mb-2 bg-aim-gold/15 border border-aim-gold/30 text-aim-gold">
+                  <span className="w-1 h-1 rounded-full bg-aim-gold animate-ping" />
+                  PARTNER Partner
+                </div>
+                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-none mb-1.5">
+                  Welcome Back
+                </h1>
+                <p className="text-[11px] text-aim-copy-muted leading-relaxed max-w-[290px] mx-auto">
+                  Sign in to the Partner Portal to manage your earnings, orders, and payouts.
+                </p>
+              </div>
 
-                  <div className="flex justify-center mb-8 shrink-0">
-                    <img src={logo} alt="AIM Digitalise" className="h-14 sm:h-16 w-auto object-contain" />
+                  <div className="flex justify-center mb-3.5 shrink-0">
+                    <img src={logo} alt="AIM Digitalise" className="h-9 sm:h-11 w-auto object-contain" />
                   </div>
                   
-                  <h2 
-                    className="text-center font-black text-white tracking-tight mb-1"
-                    style={{ fontSize: 'var(--text-3xl)', lineHeight: 'var(--tw-leading, var(--text-3xl--line-height))' }}
-                  >
-                    Welcome Back Partner  
-                  </h2>
-                 
+                  
 
                   <PartnerLoginForm />
                 </div>
 
                 {/* Right Column (Associate Partner Benefits & Step 3 Resumer Form) */}
-                <div className="col-span-12 md:col-span-6 p-6 sm:p-10 bg-gradient-to-br from-aim-gold/20 via-aim-purple/35 to-aim-navy-card/90 flex flex-col justify-between border-t md:border-t-0 md:border-l border-white/10">
-                  <div className="space-y-4">
-                    <h2 className="text-center text-base sm:text-lg font-black text-aim-gold tracking-wide italic">
+                <div className="col-span-12 md:col-span-6 p-4 sm:p-7 bg-gradient-to-br from-aim-gold/20 via-aim-purple/35 to-aim-navy-card/90 flex flex-col justify-between border-t md:border-t-0 md:border-l border-white/10">
+                  <div className="space-y-3">
+                    <h2 className="text-center text-sm sm:text-base font-black text-aim-gold tracking-wide italic">
                       "Associate Partner"
                     </h2>
 
                     {/* Wrapper card box for lists */}
-                    <div className="rounded-2xl border border-white/5 bg-aim-navy-light/45 p-5 space-y-4 shadow-inner">
+                    <div className="rounded-2xl border border-white/5 bg-aim-navy-light/45 p-3.5 space-y-3 shadow-inner">
                       <div>
                         <h3 className="text-xs font-black uppercase tracking-wider text-aim-gold mb-1.5">
                           Opportunities:
                         </h3>
-                        <ul className="list-disc pl-4 space-y-1.5 text-[10.5px] text-slate-300 leading-normal font-medium font-sans">
+                        <ul className="list-disc pl-4 space-y-1 text-[10px] text-slate-300 leading-normal font-medium font-sans">
                           <li>AIM Digitalise offers customized digital solution, SEO-friendly, fully responsive websites and custom software on a monthly rental model for all segment of businesses.</li>
                           <li>Lifetime commission facilities: A 10% monthly commission is awarded for first 12 months per onboarded client, then 5% for Lifetime, as long as the deal exists. Extra rewards for top-performing partners.</li>
                           <li>The partner is only responsible for sales and customer retention, excluding development, deployment, implementation, debugging, technical support, updates, and renewals.</li>
@@ -207,11 +214,11 @@ const PartnerLogin = () => {
                         </ul>
                       </div>
 
-                      <div className="border-t border-white/5 pt-3">
-                        <h3 className="text-xs font-black uppercase tracking-wider text-aim-gold mb-1.5">
+                      <div className="border-t border-white/5 pt-2">
+                        <h3 className="text-[11px] font-black uppercase tracking-wider text-aim-gold mb-1">
                           Partner Eligibility Criteria:
                         </h3>
-                        <ul className="list-disc pl-4 space-y-1 text-[10.5px] text-slate-300 leading-normal font-medium font-sans">
+                        <ul className="list-disc pl-4 space-y-0.5 text-[10px] text-slate-300 leading-normal font-medium font-sans">
                           <li>Operate an active business unit.</li>
                           <li>Minimum 3 years of proven B2B sales experience.</li>
                           <li>Refundable security deposit: ₹5,000 (Domestic, previously ₹25,000).</li>
@@ -221,13 +228,13 @@ const PartnerLogin = () => {
                     </div>
 
                     {/* View and Download Action Buttons Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
                       <button
                         type="button"
                         onClick={() => setShowPreviewModal(true)}
-                        className="py-2.5 rounded-xl border border-aim-gold/50 bg-aim-navy-light text-aim-gold font-bold text-xs tracking-wide hover:bg-aim-gold/5 hover:border-aim-gold hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="py-2 rounded-xl border border-aim-gold/50 bg-aim-navy-light text-aim-gold font-bold text-xs tracking-wide hover:bg-aim-gold/5 hover:border-aim-gold hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer"
                       >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
@@ -238,12 +245,12 @@ const PartnerLogin = () => {
                         type="button"
                         onClick={handleDownloadBlank}
                         disabled={generatingPdf}
-                        className="py-2.5 rounded-xl border border-aim-gold/50 bg-aim-gold/15 text-aim-gold font-bold text-xs tracking-wide hover:bg-aim-gold/25 hover:border-aim-gold hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        className="py-2 rounded-xl border border-aim-gold/50 bg-aim-gold/15 text-aim-gold font-bold text-xs tracking-wide hover:bg-aim-gold/25 hover:border-aim-gold hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                       >
                         {generatingPdf ? (
-                          <span className="w-3.5 h-3.5 border-2 border-aim-gold border-t-transparent animate-spin rounded-full" />
+                          <span className="w-3 h-3 border-2 border-aim-gold border-t-transparent animate-spin rounded-full" />
                         ) : (
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                           </svg>
                         )}
@@ -253,28 +260,28 @@ const PartnerLogin = () => {
                     {pdfError && <p className="text-center text-[10px] text-red-400 font-semibold">{pdfError}</p>}
                   </div>
 
-                  <div className="border-t border-white/10 pt-4 mt-4">
-                    <form onSubmit={handleCompleteSubmit} className="space-y-2.5">
-                      <h3 className="text-xs font-black text-white uppercase tracking-wider leading-none">
+                  <div className="border-t border-white/10 pt-3 mt-3">
+                    <form onSubmit={handleCompleteSubmit} className="space-y-2">
+                      <h3 className="text-[11px] font-black text-white uppercase tracking-wider leading-none">
                         Complete your registration.
                       </h3>
-                      <p className="text-[10px] text-slate-300 leading-tight font-medium">
+                      <p className="text-[9.5px] text-slate-300 leading-tight font-medium">
                         If you did not complete the signup process after Step 1, enter your Partner ID below to resume and proceed to the upload &amp; payment page.
                       </p>
 
-                      <div className="flex flex-col sm:flex-row gap-2 mt-1">
+                      <div className="flex flex-col sm:flex-row gap-2 mt-0.5">
                         <input
                           type="text"
                           value={completePartnerId}
                           onChange={(e) => setCompletePartnerId(e.target.value)}
                           placeholder="ENTER YOUR PARTNER ID"
-                          className="flex-1 bg-aim-navy-light/60 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-aim-gold font-sans tracking-wide"
+                          className="flex-1 bg-aim-navy-light/60 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-aim-gold font-sans tracking-wide"
                           required
                         />
 
                         <button
                           type="submit"
-                          className="sm:w-32 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs tracking-wider uppercase transition-colors shadow-md shadow-blue-900/20 active:scale-[0.99] cursor-pointer"
+                          className="sm:w-28 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs tracking-wider uppercase transition-colors shadow-md shadow-blue-900/20 active:scale-[0.99] cursor-pointer"
                         >
                           Submit
                         </button>

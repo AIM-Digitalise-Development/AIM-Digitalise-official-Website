@@ -10,6 +10,7 @@ const AdminLayout = () => {
   const navigate = useNavigate()
   const { isAuthenticated, role, logout, user } = useAuth()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
 
   // Wait for Zustand persist rehydration and force dark mode
   const [ready, setReady] = useState(false)
@@ -32,7 +33,7 @@ const AdminLayout = () => {
       console.error('Logout API call failed', error)
     } finally {
       logout()                  // clear Zustand store + localStorage
-      navigate(ROUTES.HOME)     // redirect to public home
+      navigate(`${ROUTES.AUTH.LOGIN}?role=admin`)     // redirect to admin login tab
     }
   }
 
@@ -108,6 +109,35 @@ const AdminLayout = () => {
 
   return (
     <div className="h-screen w-screen bg-[#eaecf4] flex select-none overflow-hidden">
+      {/* Logout Confirmation Modal */}
+      {isLogoutModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-xs p-6 text-center text-slate-800">
+            <div className="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-4 border border-red-100 text-2xl">
+              🚪
+            </div>
+            <h3 className="text-base font-black text-slate-800 mb-2">Sign Out</h3>
+            <p className="text-xs text-slate-500 mb-6">Do you want to sign out?</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setIsLogoutModalOpen(false)}
+                className="flex-grow py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer transition-colors"
+              >
+                No
+              </button>
+              <button
+                onClick={() => {
+                  setIsLogoutModalOpen(false)
+                  handleLogout()
+                }}
+                className="flex-grow py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer transition-all active:scale-[0.98]"
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mobile backdrop */}
       {isSidebarOpen && (
@@ -194,7 +224,7 @@ const AdminLayout = () => {
         <div className="shrink-0 p-3 pt-2">
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={() => setIsLogoutModalOpen(true)}
             className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 hover:border-red-300 py-2 text-red-600 text-xs font-bold cursor-pointer shadow-sm transition-colors active:scale-[0.98]"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">

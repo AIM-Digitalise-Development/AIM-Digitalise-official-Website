@@ -67,6 +67,7 @@ const PartnerLayout = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
 
   // Always force dark mode on Partner portal mount
   useEffect(() => {
@@ -106,6 +107,36 @@ const PartnerLayout = () => {
 
   return (
     <div className="flex h-screen w-screen bg-[#0f1117] overflow-hidden select-none">
+      {/* Logout Confirmation Modal */}
+      {isLogoutModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-[#13151f] rounded-3xl border border-white/10 shadow-2xl w-full max-w-xs p-6 text-center">
+            <div className="w-12 h-12 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto mb-4 border border-red-500/20 text-2xl">
+              🚪
+            </div>
+            <h3 className="text-base font-black text-white mb-2">Sign Out</h3>
+            <p className="text-xs text-gray-400 mb-6">Do you want to sign out?</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setIsLogoutModalOpen(false)}
+                className="flex-1 py-2.5 rounded-xl border border-white/10 text-xs font-bold text-gray-300 hover:bg-white/5 cursor-pointer transition-colors"
+              >
+                No
+              </button>
+              <button
+                onClick={() => {
+                  setIsLogoutModalOpen(false)
+                  handleLogout()
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer transition-all active:scale-[0.98]"
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Mobile backdrop */}
       {isSidebarOpen && (
         <div 
@@ -180,7 +211,7 @@ const PartnerLayout = () => {
         {/* Logout */}
         <div className="p-4 border-t border-white/5">
           <button
-            onClick={handleLogout}
+            onClick={() => setIsLogoutModalOpen(true)}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-aim-copy-muted hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all duration-200 cursor-pointer"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
