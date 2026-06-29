@@ -6,6 +6,7 @@ import Step1RegistrationForm from '../../components/partner/registration/Step1Re
 import Step2DownloadAgreement from '../../components/partner/registration/Step2DownloadAgreement'
 import Step3UploadAndPay from '../../components/partner/registration/Step3UploadAndPay'
 import RegistrationSuccess from '../../components/partner/registration/RegistrationSuccess'
+import { checkPartnerStatus, fetchStep2Data } from '../../api/partner'
 import { ROUTES } from '../../constants/routes'
 import plogo from '../../assets/images/plogo.jpeg'
 
@@ -20,16 +21,47 @@ const PartnerRegister = () => {
   const [step, setStep] = useState(1)
   const [partnerData, setPartnerData] = useState(null)   // from step 1 API
   const [step1FormValues, setStep1FormValues] = useState(null) // from step 1 inputs
+  const [step1FormFiles, setStep1FormFiles] = useState(null)   // from step 1 files
   const [verifyData, setVerifyData] = useState(null)     // from step 3 API
   const [formEmail, setFormEmail] = useState('')
 
+  // ── Auto-resume via status API when arriving from login page ──
   useEffect(() => {
-    if (location.state?.resumePartnerId) {
-      setPartnerData({
-        partner_id: location.state.resumePartnerId,
-        registration_status: 'pending'
-      })
-      setStep(location.state.resumeStep || 3)
+    const resumeId = location.state?.resumePartnerId
+    if (resumeId) {
+      const doResume = async () => {
+        try {
+          const res = await checkPartnerStatus(resumeId.trim())
+          const data = res.data
+          if (data?.success) {
+            const stepData = data.data
+            const currentStep = stepData.current_step
+            setPartnerData({
+              partner_id: stepData.partner_id || resumeId,
+              partner_name: stepData.partner_name,
+              organization_name: stepData.organization_name,
+              email: stepData.email,
+              registration_status: stepData.registration_status || 'pending',
+              signed_agreement_path: stepData.signed_agreement_path,
+            })
+            setFormEmail(stepData.email || '')
+            if (currentStep >= 4) {
+              setStep(3) // all done, show step 3 which will handle redirect
+            } else {
+              setStep(Math.max(currentStep, 2)) // at least step 2
+            }
+          } else {
+            // Fallback: just go to step 3 as before
+            setPartnerData({ partner_id: resumeId, registration_status: 'pending' })
+            setStep(location.state.resumeStep || 3)
+          }
+        } catch {
+          // If status check fails, fall back to old behavior
+          setPartnerData({ partner_id: resumeId, registration_status: 'pending' })
+          setStep(location.state.resumeStep || 3)
+        }
+      }
+      doResume()
     }
   }, [location])
 
@@ -47,9 +79,10 @@ const PartnerRegister = () => {
   const currentTitle = STEP_TITLES.find((t) => t.step === step) || STEP_TITLES[0]
   const isSuccess = step === 4
 
-  const handleStep1Success = (data, formValues) => {
+  const handleStep1Success = (data, formValues, formFiles) => {
     setPartnerData(data)
     setStep1FormValues(formValues)
+    setStep1FormFiles(formFiles)
     setFormEmail(data?.email || '')
     setStep(2)
   }
@@ -66,7 +99,7 @@ const PartnerRegister = () => {
         <meta name="description" content="Register as an AIM Digitalise Partner. Complete the 3-step process to join our partner network." />
       </Helmet>
 
-      <div className="h-screen bg-aim-navy flex flex-col justify-between overflow-hidden relative">
+      <div className="h-screen bg-aim-navy flex flex-col justify-center overflow-hidden relative">
         {/* Background decorations with image & glows */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
           <div 
@@ -78,28 +111,28 @@ const PartnerRegister = () => {
           <div className="absolute inset-0 bg-grid-pattern opacity-20" />
         </div>
 
-        {/* Top bar with plogo.jpeg */}
-        <header className="relative z-10 border-b border-white/5 bg-aim-navy/40 backdrop-blur-md shrink-0">
-          <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-            <Link to={ROUTES.HOME} className="flex items-center gap-2.5 group">
-              <img 
-                src={plogo} 
-                alt="AIM Digitalise Logo" 
-                className="h-10 sm:h-12 w-auto object-contain rounded-lg border border-white/10 shadow-lg shadow-black/30 transition-transform duration-300 group-hover:scale-[1.02]" 
-              />
-            </Link>
-            <Link
-              to={ROUTES.PARTNER.LOGIN}
-              className="text-xs font-semibold text-aim-copy-muted hover:text-aim-gold transition-colors flex items-center gap-1"
-            >
-              Already a partner? Login →
-            </Link>
-          </div>
-        </header>
+        {/* Top corner links */}
+        <div className="absolute top-4 left-6 z-20">
+          <Link to={ROUTES.HOME} className="group">
+            <img 
+              src={plogo} 
+              alt="AIM Digitalise Logo" 
+              className="h-10 w-auto object-contain rounded-lg border border-white/10 shadow-lg transition-transform duration-300 group-hover:scale-[1.02]" 
+            />
+          </Link>
+        </div>
+        <div className="absolute top-4 right-6 z-20">
+          <Link
+            to={ROUTES.PARTNER.LOGIN}
+            className="text-xs font-semibold text-aim-copy-muted hover:text-aim-gold transition-colors"
+          >
+            Already a partner? Login →
+          </Link>
+        </div>
 
         {/* Main Content Area - Center Card, scrollable form internally */}
         <main className="relative z-10 flex-grow flex items-center justify-center px-4 py-6 overflow-hidden">
-          <div className="w-full max-w-2xl max-h-[calc(100vh-140px)] flex flex-col">
+          <div className="w-full max-w-4xl max-h-[calc(100vh-60px)] flex flex-col">
             
             {isSuccess ? (
               <div className="relative rounded-3xl border border-white/10 bg-aim-navy-card/75 backdrop-blur-2xl p-8 shadow-2xl shadow-black/85 flex flex-col overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
@@ -107,32 +140,37 @@ const PartnerRegister = () => {
                 <RegistrationSuccess partnerData={partnerData} verifyData={verifyData} />
               </div>
             ) : (
-              <div className="relative rounded-3xl border border-white/10 bg-aim-navy-card/75 backdrop-blur-2xl p-6 sm:p-8 shadow-2xl shadow-black/85 flex flex-col overflow-hidden max-h-[calc(100vh-150px)]">
+              <div className="relative rounded-3xl border border-white/10 bg-aim-navy-card/75 backdrop-blur-2xl p-4 sm:p-6 shadow-2xl shadow-black/85 flex flex-col overflow-hidden max-h-[calc(100vh-60px)]">
                 {/* Ambient glows inside card */}
                 <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-aim-gold/8 rounded-full blur-2xl pointer-events-none" />
                 <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-48 h-48 bg-aim-purple/8 rounded-full blur-2xl pointer-events-none" />
 
                 {/* Header */}
-                <div className="relative z-10 mb-5 shrink-0">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-aim-gold/10 border border-aim-gold/20 mb-3">
-                    <span className="w-1.5 h-1.5 rounded-full bg-aim-gold animate-pulse" />
-                    <span className="text-aim-gold text-[10px] font-black uppercase tracking-widest">Become a Partner</span>
+                <div className="relative z-10 mb-3 shrink-0">
+                  <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-aim-gold/10 border border-aim-gold/20 mb-1.5">
+                    <span className="w-1 h-1 rounded-full bg-aim-gold animate-pulse" />
+                    <span className="text-aim-gold text-[9px] font-black uppercase tracking-widest">Become a Partner</span>
                   </div>
-                  <h1 className="text-xl sm:text-2xl font-black text-white mb-1 tracking-tight leading-none">
+                  <h1 className="text-lg sm:text-xl font-black text-white mb-0.5 tracking-tight leading-none">
                     {currentTitle.heading}
                   </h1>
-                  <p className="text-[11px] text-aim-copy-muted leading-tight">{currentTitle.sub}</p>
+                  <p className="text-[10px] text-aim-copy-muted leading-tight">{currentTitle.sub}</p>
                 </div>
 
                 {/* Step indicator */}
-                <div className="relative z-10 mb-6 shrink-0">
+                <div className="relative z-10 mb-2.5 shrink-0">
                   <StepIndicator currentStep={step} />
                 </div>
 
                 {/* Step content - Internally Scrollable */}
                 <div className="relative z-10 flex-grow overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                   {step === 1 && (
-                    <Step1RegistrationForm onSuccess={handleStep1Success} />
+                    <Step1RegistrationForm 
+                      onSuccess={handleStep1Success}
+                      initialValues={step1FormValues}
+                      initialFiles={step1FormFiles}
+                      partnerData={partnerData}
+                    />
                   )}
                   {step === 2 && (
                     <Step2DownloadAgreement
@@ -157,15 +195,6 @@ const PartnerRegister = () => {
           </div>
         </main>
 
-        {/* Footer shrink-0 */}
-        <footer className="relative z-10 py-4 border-t border-white/5 bg-aim-navy/40 backdrop-blur-md shrink-0">
-          <p className="text-center text-[10px] text-aim-copy-muted">
-            Need registration help?{' '}
-            <a href="mailto:support@aimdigitalise.com" className="text-aim-gold hover:text-aim-gold-light transition-colors font-bold underline underline-offset-4">
-              Contact Support Desk
-            </a>
-          </p>
-        </footer>
       </div>
     </>
   )

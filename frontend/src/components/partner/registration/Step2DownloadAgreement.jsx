@@ -1,10 +1,19 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import AgreementDoc from './AgreementDoc'
+import { fetchStep2Data, downloadAgreementPdf } from '../../../api/partner'
 
 const Step2DownloadAgreement = ({ partnerData, step1FormValues, onContinue, onBack }) => {
-  const [showPreviewModal, setShowPreviewModal] = useState(false)
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [pdfError, setPdfError] = useState('')
+
+  // Server agreement state
+  const [agreementHtml, setAgreementHtml] = useState('')
+  const [isStep2Completed, setIsStep2Completed] = useState(false)
+  const [loadingStep2, setLoadingStep2] = useState(false)
+  const [step2Error, setStep2Error] = useState('')
+  const [downloadSuccess, setDownloadSuccess] = useState('')
+
+  const partnerId = partnerData?.partner_id
 
   const combinedData = {
     partner_id: partnerData?.partner_id || 'Draft',
@@ -19,46 +28,120 @@ const Step2DownloadAgreement = ({ partnerData, step1FormValues, onContinue, onBa
     pin_code: step1FormValues?.pin_code || '',
   }
 
+  // Fetch Step 2 data from server on mount
+  useEffect(() => {
+    if (!partnerId) return
+    const loadStep2 = async () => {
+      setLoadingStep2(true)
+      setStep2Error('')
+      try {
+        const res = await fetchStep2Data(partnerId)
+        const data = res.data
+        if (data?.success) {
+          setAgreementHtml(data.data?.agreement_html || '')
+          setIsStep2Completed(data.data?.step_2_completed || false)
+        } else {
+          // Not critical — we can still show the local AgreementDoc
+          console.warn('Step 2 data fetch returned non-success:', data?.message)
+        }
+      } catch (err) {
+        console.warn('Failed to fetch Step 2 data from server, using local fallback:', err.message)
+      } finally {
+        setLoadingStep2(false)
+      }
+    }
+    loadStep2()
+  }, [partnerId])
+
+  // Download PDF from server, with client-side fallback
   const handleDownload = async () => {
     setGeneratingPdf(true)
     setPdfError('')
+    setDownloadSuccess('')
+
     try {
-      const html2pdf = window.html2pdf
-      if (!html2pdf) {
-        throw new Error('The PDF engine is still loading. Please try again in a few seconds.')
-      }
+      // Try server-side download first
+      const blob = await downloadAgreementPdf(partnerId)
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `AIM_Partner_Agreement_${partnerId}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
 
-      // Target the print-optimized container
-      const element = document.getElementById('agreement-pdf-container')
-      if (!element) {
-        throw new Error('Agreement element not found')
-      }
+      setDownloadSuccess('✅ Agreement downloaded! Check your email for the PDF copy.')
+      setIsStep2Completed(true)
+    } catch (serverErr) {
+      console.warn('Server download failed, trying client-side PDF generation:', serverErr.message)
 
-      const opt = {
-        margin: 0,
-        filename: `AIM_Partner_Agreement_${partnerData?.partner_id || 'Draft'}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          logging: false
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-      }
+      // Fallback: client-side html2pdf
+      try {
+        const html2pdf = window.html2pdf
+        if (!html2pdf) {
+          throw new Error('The PDF engine is still loading. Please try again in a few seconds.')
+        }
 
-      await html2pdf().from(element).set(opt).save()
-    } catch (err) {
-      console.error('PDF generation failed:', err)
-      setPdfError(err.message || 'Failed to generate PDF. Please try again.')
+        const element = document.getElementById('agreement-pdf-container')
+        if (!element) {
+          throw new Error('Agreement element not found')
+        }
+
+        const opt = {
+          margin: 0,
+          filename: `AIM_Partner_Agreement_${partnerId || 'Draft'}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            logging: false
+          },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        }
+
+        await html2pdf().from(element).set(opt).save()
+        setDownloadSuccess('✅ Agreement downloaded (offline mode). Please sign and upload in Step 3.')
+        setIsStep2Completed(true)
+      } catch (clientErr) {
+        console.error('Client-side PDF generation also failed:', clientErr)
+        setPdfError(clientErr.message || 'Failed to generate PDF. Please try again.')
+      }
     } finally {
       setGeneratingPdf(false)
     }
   }
 
+  const handleDownloadAndContinue = async () => {
+    await handleDownload()
+    // Only proceed if download was successful
+    if (!pdfError) {
+      onContinue()
+    }
+  }
+
   return (
-    <div className="space-y-6">
-      {/* Invisible but properly rendered container for PDF generation */}
+    <div className="space-y-5">
+      {/* Scope-specific Stylesheet to override hardcoded PDF styles for screen preview box */}
+      <style>{`
+        .agreement-preview-box .agreement-page {
+          width: 100% !important;
+          max-width: 100% !important;
+          height: auto !important;
+          min-height: 480px !important;
+          padding: 1.5rem 1.5rem 3.5rem 1.5rem !important;
+          box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1) !important;
+        }
+        .agreement-preview-box #agreement-doc-container,
+        .agreement-preview-box #agreement-pdf-container,
+        .agreement-preview-box .agreement-doc-wrapper {
+          width: 100% !important;
+          max-width: 100% !important;
+        }
+      `}</style>
+
+      {/* Invisible but properly rendered container for PDF generation (client-side fallback) */}
       <div
         style={{
           position: 'absolute',
@@ -75,153 +158,151 @@ const Step2DownloadAgreement = ({ partnerData, step1FormValues, onContinue, onBa
         <AgreementDoc partnerData={combinedData} forPdf={true} />
       </div>
 
-      {/* Partner info card */}
-      <div className="rounded-2xl border border-white/10 bg-aim-navy-light/60 p-5 space-y-2">
-        <p className="text-[10px] font-black uppercase tracking-widest text-aim-copy-muted mb-3">Registration Details</p>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div>
-            <span className="text-aim-copy-muted text-xs block">Partner ID</span>
-            <span className="text-white font-bold">#{partnerData?.partner_id}</span>
+      {/* 2-Column Grid Layout */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+        {/* Left Column: Registration Details */}
+        <div className="col-span-12 md:col-span-5 min-w-0 overflow-hidden">
+          <div className="rounded-2xl border border-white/10 bg-aim-navy-light/60 p-4 space-y-3 h-full">
+            <p className="text-[10px] font-black uppercase tracking-widest text-aim-copy-muted pb-1.5 border-b border-white/5">
+              Registration Details
+            </p>
+            
+            <div className="space-y-2 text-xs">
+              <div>
+                <span className="text-aim-copy-muted text-[10px] block uppercase tracking-wider font-semibold">Partner ID</span>
+                <span className="text-white font-bold text-sm tracking-wide">{partnerData?.partner_id}</span>
+              </div>
+              
+              <div>
+                <span className="text-aim-copy-muted text-[10px] block uppercase tracking-wider font-semibold">Partner Name</span>
+                <span className="text-white font-semibold">{combinedData.partner_name}</span>
+              </div>
+
+              <div>
+                <span className="text-aim-copy-muted text-[10px] block uppercase tracking-wider font-semibold">Organization</span>
+                <span className="text-white font-semibold">{combinedData.organization_name}</span>
+              </div>
+
+              <div>
+                <span className="text-aim-copy-muted text-[10px] block uppercase tracking-wider font-semibold">Contact &amp; Email</span>
+                <span className="text-white block font-medium">{combinedData.contact_no}</span>
+                <span className="text-slate-300 block text-[11px] truncate">{combinedData.email}</span>
+              </div>
+
+              <div>
+                <span className="text-aim-copy-muted text-[10px] block uppercase tracking-wider font-semibold">Location / Address</span>
+                <p className="text-slate-300 text-[11px] leading-relaxed">
+                  {combinedData.address_line1}
+                  {combinedData.address_line2 && <span className="block">{combinedData.address_line2}</span>}
+                  <span className="block">{combinedData.district}, {combinedData.state} - {combinedData.pin_code}</span>
+                </p>
+              </div>
+
+              <div className="pt-1.5">
+                <span className="text-aim-copy-muted text-[10px] block uppercase tracking-wider font-semibold mb-1">Status</span>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                  isStep2Completed 
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                    : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${isStep2Completed ? 'bg-emerald-400' : 'bg-yellow-400 animate-pulse'}`} />
+                  {isStep2Completed ? 'Agreement Downloaded' : 'Pending Download'}
+                </span>
+              </div>
+            </div>
           </div>
-          <div>
-            <span className="text-aim-copy-muted text-xs block">Status</span>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 text-xs font-semibold border border-yellow-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
-              {partnerData?.registration_status || 'Pending'}
-            </span>
-          </div>
-          <div className="col-span-2">
-            <span className="text-aim-copy-muted text-xs block">Email</span>
-            <span className="text-white font-medium">{partnerData?.email}</span>
+        </div>
+
+        {/* Right Column: Agreement Preview */}
+        <div className="col-span-12 md:col-span-7 flex flex-col space-y-1.5 min-w-0 overflow-hidden">
+          <label className="block text-[10px] font-bold text-aim-gold uppercase tracking-wider">
+            Agreement Document Preview
+          </label>
+          <div className="flex-1 w-full max-w-full rounded-xl border border-white/10 bg-slate-950 p-3 overflow-y-auto min-h-[220px] max-h-[300px] scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent agreement-preview-box">
+            {loadingStep2 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-2">
+                <svg className="w-5 h-5 animate-spin text-aim-gold/60" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+                <span className="text-xs text-aim-copy-muted font-sans">Loading agreement contract...</span>
+              </div>
+            ) : agreementHtml ? (
+              <div
+                className="prose prose-sm max-w-none text-[11px] leading-relaxed"
+                style={{ color: '#1e293b' }}
+                dangerouslySetInnerHTML={{ __html: agreementHtml }}
+              />
+            ) : (
+              <AgreementDoc partnerData={combinedData} />
+            )}
           </div>
         </div>
       </div>
 
-      {/* Instructions */}
-      <div className="rounded-2xl border border-aim-gold/20 bg-aim-gold/5 p-5 space-y-3">
-        <div className="flex items-center gap-2">
-          <svg className="w-5 h-5 text-aim-gold shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <p className="text-sm font-bold text-aim-gold">Next Steps</p>
+      {step2Error && (
+        <div className="p-3 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 text-xs font-semibold">
+          {step2Error}
         </div>
-        <ol className="space-y-2 text-sm text-aim-copy-muted list-none">
-          {[
-            'Review and sign the Partner Agreement',
-            'Download the completed PDF document below',
-            'Scan or photograph the signed agreement pages',
-            'Upload it in the next step to finish registration',
-          ].map((item, i) => (
-            <li key={i} className="flex items-start gap-2.5">
-              <span className="w-5 h-5 rounded-full bg-aim-gold/15 border border-aim-gold/30 text-aim-gold text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">
-                {i + 1}
-              </span>
-              <span>{item}</span>
-            </li>
-          ))}
-        </ol>
-      </div>
+      )}
 
       {pdfError && (
-        <div className="p-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 text-xs font-semibold">
+        <div className="p-3 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 text-xs font-semibold">
           {pdfError}
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-        {/* View button */}
-        <button
-          type="button"
-          onClick={() => setShowPreviewModal(true)}
-          className="w-full py-3.5 rounded-xl border border-aim-gold/50 bg-aim-navy-light text-aim-gold font-bold text-xs tracking-wide hover:bg-aim-gold/5 hover:border-aim-gold hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-          </svg>
-          View Agreement
-        </button>
+      {downloadSuccess && (
+        <div className="p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 text-xs font-semibold">
+          {downloadSuccess}
+        </div>
+      )}
 
-        {/* Download button */}
+      {/* Action Buttons */}
+      <div className="space-y-2">
+        {/* Single Main Download & Continue button */}
         <button
           type="button"
-          onClick={handleDownload}
-          disabled={generatingPdf}
-          className="w-full py-3.5 rounded-xl border border-aim-gold/50 bg-aim-gold/15 text-aim-gold font-bold text-xs tracking-wide hover:bg-aim-gold/25 hover:border-aim-gold hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+          onClick={isStep2Completed ? onContinue : handleDownloadAndContinue}
+          disabled={generatingPdf || !partnerId}
+          className="w-full py-3.5 rounded-xl bg-gradient-to-r from-aim-gold to-aim-gold-light text-aim-navy font-black text-sm tracking-wide shadow-lg shadow-aim-gold/20 hover:shadow-aim-gold/40 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {generatingPdf ? (
-            <span className="flex items-center gap-1">
-              <span className="animate-spin">🔄</span> Saving...
+            <span className="flex items-center gap-2">
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+              Downloading Agreement...
             </span>
+          ) : isStep2Completed ? (
+            <>
+              Proceed to Next Step →
+            </>
           ) : (
             <>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
-              Download PDF
+              Download Agreement &amp; Proceed to Next Step →
             </>
           )}
         </button>
+
+        <button
+          type="button"
+          onClick={onBack}
+          disabled={generatingPdf}
+          className="w-full py-2 rounded-xl border border-white/10 text-aim-copy-muted text-xs hover:text-white hover:border-white/20 transition-all cursor-pointer disabled:opacity-50"
+        >
+          ← Back
+        </button>
       </div>
 
-      {/* Continue button */}
-      <button
-        type="button"
-        onClick={onContinue}
-        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-aim-gold to-aim-gold-light text-aim-navy font-black text-sm tracking-wide shadow-lg shadow-aim-gold/20 hover:shadow-aim-gold/40 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 cursor-pointer"
-      >
-        I've Signed the Agreement → Proceed to Upload &amp; Pay
-      </button>
-
-      <button
-        type="button"
-        onClick={onBack}
-        className="w-full py-2.5 rounded-xl border border-white/10 text-aim-copy-muted text-sm hover:text-white hover:border-white/20 transition-all cursor-pointer"
-      >
-        ← Back
-      </button>
-
-      {/* --- PREVIEW MODAL OVERLAY --- */}
-      {showPreviewModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="relative w-full max-w-4xl rounded-2xl border border-white/10 bg-aim-navy-card/95 p-6 shadow-2xl z-10 flex flex-col max-h-[85vh] text-white">
-            {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-white/10 shrink-0">
-              <div>
-                <h3 className="text-base font-black text-white">Agreement Document Preview</h3>
-                <p className="text-[10px] text-aim-copy-muted mt-0.5">Previewing your personalized Partnership Agreement</p>
-              </div>
-              <button
-                onClick={() => setShowPreviewModal(false)}
-                className="text-aim-copy-muted hover:text-white p-1 text-xl font-bold cursor-pointer transition-colors"
-              >
-                ×
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="flex-grow my-4 overflow-y-auto max-h-[60vh] rounded-xl border border-white/10 bg-slate-950 p-2 scrollbar-thin scrollbar-thumb-white/10">
-              <AgreementDoc partnerData={combinedData} />
-            </div>
-
-            {/* Footer */}
-            <div className="pt-4 border-t border-white/10 flex justify-end gap-3 shrink-0">
-              <button
-                onClick={handleDownload}
-                disabled={generatingPdf}
-                className="px-5 py-2.5 rounded-xl bg-aim-gold text-aim-navy font-black text-xs hover:bg-aim-gold-light hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md disabled:opacity-50"
-              >
-                {generatingPdf ? 'Generating PDF...' : 'Download Agreement'}
-              </button>
-              <button
-                onClick={() => setShowPreviewModal(false)}
-                className="px-5 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 text-xs text-aim-copy-muted hover:text-white transition-colors cursor-pointer"
-              >
-                Close Preview
-              </button>
-            </div>
-          </div>
-        </div>
+      {!isStep2Completed && (
+        <p className="text-center text-aim-gold/80 text-[10px] font-semibold">
+          ⚠️ Please download the agreement before proceeding to Step 3.
+        </p>
       )}
     </div>
   )

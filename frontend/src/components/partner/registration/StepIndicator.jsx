@@ -7,7 +7,7 @@ const StepIndicator = ({ currentStep }) => {
   ]
 
   return (
-    <div className="relative flex items-center justify-between mb-10 px-2">
+    <div className="relative flex items-center justify-between mb-3 px-2">
       {/* Connecting line */}
       <div className="absolute top-5 left-0 right-0 h-px bg-white/10 z-0" />
       <div

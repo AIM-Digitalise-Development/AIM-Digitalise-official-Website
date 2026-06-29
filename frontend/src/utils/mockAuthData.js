@@ -1692,6 +1692,107 @@ export const getMockResponse = (url, method, data = null) => {
       return { success: false, message: 'Booking not found' }
     }
   }
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 5. Partner Step-Tracking Registration Mocks
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // POST /partner-step/register
+  if (lowercaseUrl.includes('/partner-step/register') && method === 'POST') {
+    const partnerId = `PIDIN${Math.floor(10000 + Math.random() * 89999)}`
+    return {
+      success: true,
+      message: 'Partner registered successfully. Step 1 complete.',
+      data: {
+        partner_id: partnerId,
+        partner_name: data?.partner_name || 'Simulated Partner',
+        organization_name: data?.organization_name || 'Simulated Organization',
+        email: data?.email || 'partner@example.com',
+        registration_status: 'pending',
+        current_step: 2,
+      }
+    }
+  }
+
+  // GET /partner-step/status/{partnerId}
+  if (lowercaseUrl.includes('/partner-step/status/')) {
+    const idMatch = lowercaseUrl.match(/\/partner-step\/status\/([^/?]+)/)
+    const partnerId = idMatch ? idMatch[1].toUpperCase() : 'PIDIN00000'
+    return {
+      success: true,
+      data: {
+        partner_id: partnerId,
+        partner_name: 'Mock Partner',
+        organization_name: 'Mock Org',
+        email: 'mock@partner.com',
+        registration_status: 'pending',
+        current_step: 2,
+        step_1_completed: true,
+        step_2_completed: false,
+        step_3_completed: false,
+        signed_agreement_path: null,
+      }
+    }
+  }
+
+  // GET /partner-step/step2/{partnerId}
+  if (lowercaseUrl.includes('/partner-step/step2/') && !lowercaseUrl.includes('/download') && !lowercaseUrl.includes('/preview')) {
+    const idMatch = lowercaseUrl.match(/\/partner-step\/step2\/([^/?]+)/)
+    const partnerId = idMatch ? idMatch[1].toUpperCase() : 'PIDIN00000'
+    return {
+      success: true,
+      data: {
+        partner: {
+          partner_id: partnerId,
+          partner_name: 'Mock Partner',
+          organization_name: 'Mock Org',
+          email: 'mock@partner.com',
+        },
+        agreement_html: '',
+        step_2_completed: false,
+      }
+    }
+  }
+
+  // POST /partner-step/step2/download
+  if (lowercaseUrl.includes('/partner-step/step2/download') && method === 'POST') {
+    return {
+      success: true,
+      message: 'Agreement downloaded and emailed (simulated).',
+      data: {
+        step_2_completed: true,
+      }
+    }
+  }
+
+  // POST /partner-step/step3/upload-agreement
+  if (lowercaseUrl.includes('/partner-step/step3/upload-agreement') && method === 'POST') {
+    return {
+      success: true,
+      message: 'Signed agreement uploaded successfully (simulated).',
+      data: {
+        signed_agreement_path: '/storage/agreements/mock_signed.pdf',
+      }
+    }
+  }
+
+  // POST /partner-step/step3/complete-payment
+  if (lowercaseUrl.includes('/partner-step/step3/complete-payment') && method === 'POST') {
+    return {
+      success: true,
+      message: 'Payment verified. All steps completed (simulated).',
+      data: {
+        step_3_completed: true,
+        current_step: 4,
+        token: `sim_token_${Math.random().toString(36).substring(2)}${Date.now()}`,
+        partner: {
+          id: data?.partner_id || 'PIDIN00000',
+          name: 'Mock Partner',
+          email: 'mock@partner.com',
+          organization: 'Mock Org',
+        }
+      }
+    }
+  }
 
   return null
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { completeRegistration, createOrder, verifyPayment } from '../../../api/partner'
+import { uploadSignedAgreement, createOrder, completePayment } from '../../../api/partner'
 
 const CURRENCIES = [
   { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
@@ -32,6 +32,12 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
   const [loading, setLoading] = useState(false)
   const [isOffline, setIsOffline] = useState(false)
 
+  // Track whether agreement has been uploaded
+  const [agreementUploaded, setAgreementUploaded] = useState(
+    !!partnerData?.signed_agreement_path
+  )
+  const [uploadLoading, setUploadLoading] = useState(false)
+
   const handleFileChange = (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -63,94 +69,134 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
     })
   }
 
-  const handleSubmit = async () => {
-    if (!signedFile) { setFileError('Please select the signed agreement'); return }
-    setLoading(true)
+  // ── Step 3a: Upload signed agreement ──
+  const handleUploadAgreement = async () => {
+    if (!signedFile) {
+      setFileError('Please select the signed agreement')
+      return
+    }
+    setUploadLoading(true)
     setError('')
     setIsOffline(false)
     try {
-      // 3a: Upload signed agreement
-      setStatus('Uploading signed agreement...')
-      const uploadFd = new FormData()
-      uploadFd.append('partner_id', partnerData.partner_id)
-      uploadFd.append('email', partnerData.email || formEmail)
-      uploadFd.append('signed_agreement', signedFile)
-      const uploadRes = await completeRegistration(uploadFd)
-      if (!uploadRes.data?.success) throw new Error(uploadRes.data?.message || 'Upload failed')
-
-      // 3b: Create order
-      setStatus('Creating payment order...')
-      const orderRes = await createOrder({ partner_id: partnerData.partner_id, amount, currency })
-      if (!orderRes.data?.success) throw new Error(orderRes.data?.message || 'Order creation failed')
-      const orderData = orderRes.data
-
-      // 3c: Simulate or real Razorpay
-      if (orderData.simulated) {
-        setStatus('Processing simulated payment...')
-        const verifyRes = await verifyPayment({
-          partner_id: partnerData.partner_id,
-          razorpay_payment_id: `sim_pay_${Date.now()}`,
-          razorpay_order_id: orderData.order_id,
-          razorpay_signature: `sim_sig_${Date.now()}`,
-          amount: orderData.amount,
-          currency: orderData.currency,
-        })
-        if (!verifyRes.data?.success) throw new Error(verifyRes.data?.message || 'Verification failed')
-        setStatus('')
-        onSuccess(verifyRes.data)
+      const fd = new FormData()
+      fd.append('partner_id', partnerData.partner_id)
+      fd.append('signed_agreement', signedFile)
+      const res = await uploadSignedAgreement(fd)
+      if (res.data?.success) {
+        setAgreementUploaded(true)
+        setStatus('✅ Signed agreement uploaded successfully! Proceed with payment below.')
       } else {
-        // Real Razorpay
-        setStatus('Loading payment gateway...')
-        await loadRazorpay()
-        setStatus('')
-
-        const options = {
-          key: orderData.key,
-          amount: Math.round(orderData.amount * 100),
-          currency: orderData.currency,
-          name: orderData.organization || 'AIM Digitalise',
-          description: `Partner Registration – ${orderData.partner_name || ''}`,
-          order_id: orderData.order_id,
-          handler: async (response) => {
-            setLoading(true)
-            setStatus('Verifying payment...')
-            try {
-              const verifyRes = await verifyPayment({
-                partner_id: partnerData.partner_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_signature: response.razorpay_signature,
-                amount: orderData.amount,
-                currency: orderData.currency,
-              })
-              if (verifyRes.data?.success) {
-                setStatus('')
-                onSuccess(verifyRes.data)
-              } else {
-                setError(verifyRes.data?.message || 'Payment verification failed')
-              }
-            } catch (err) {
-              setError(err?.response?.data?.message || 'Payment verification failed')
-            } finally {
-              setLoading(false)
-            }
-          },
-          modal: { ondismiss: () => { setError('Payment cancelled'); setLoading(false) } },
-          prefill: { name: orderData.partner_name, email: orderData.partner_email },
-          theme: { color: '#D4AF37' },
+        const msg = res.data?.message
+        const errors = res.data?.errors
+        if (errors) {
+          setError(Object.values(errors).flat().join(' '))
+        } else {
+          setError(msg || 'Upload failed')
         }
-        const rzp = new window.Razorpay(options)
-        rzp.on('payment.failed', (r) => {
-          setError('Payment failed: ' + (r.error?.description || 'Unknown error'))
-          setLoading(false)
-        })
-        rzp.open()
       }
     } catch (err) {
       const isConnectionRefused = !err.response || err.message === 'Failed to fetch' || err.message?.includes('NetworkError')
       if (isConnectionRefused) {
         setIsOffline(true)
-        setError('Network Error: Connection Refused. The partner API server at https://api.nexgn.in/api appears to be offline.')
+        setError('Network Error: Connection Refused. The partner API server appears to be offline.')
+      } else {
+        setError(err?.response?.data?.message || err.message || 'Upload failed')
+      }
+    } finally {
+      setUploadLoading(false)
+    }
+  }
+
+  // ── Step 3b: Payment (create order + Razorpay + verify) ──
+  const handlePayment = async () => {
+    if (!agreementUploaded) {
+      setError('Please upload the signed agreement first before making payment.')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+    setIsOffline(false)
+    try {
+      // Create Razorpay order
+      setStatus('Creating payment order...')
+      const orderRes = await createOrder({
+        partner_id: partnerData.partner_id,
+        amount: 1000,
+        currency: 'INR'
+      })
+      if (!orderRes.data?.success) throw new Error(orderRes.data?.message || 'Order creation failed')
+      const orderData = orderRes.data
+
+      // Handle simulated payment
+      if (orderData.simulated) {
+        setStatus('Processing simulated payment...')
+        const verifyRes = await completePayment({
+          partner_id: partnerData.partner_id,
+          razorpay_payment_id: `sim_pay_${Date.now()}`,
+          razorpay_order_id: orderData.order_id,
+          razorpay_signature: `sim_sig_${Date.now()}`,
+          amount: 1000,
+          currency: 'INR',
+        })
+        if (!verifyRes.data?.success) throw new Error(verifyRes.data?.message || 'Verification failed')
+        setStatus('')
+        onSuccess(verifyRes.data)
+        return
+      }
+
+      // Real Razorpay
+      setStatus('Loading payment gateway...')
+      await loadRazorpay()
+      setStatus('')
+
+      const options = {
+        key: orderData.key,
+        amount: Math.round(orderData.amount * 100),
+        currency: orderData.currency,
+        name: orderData.organization || 'AIM Digitalise',
+        description: `Partner Registration – ${orderData.partner_name || ''}`,
+        order_id: orderData.order_id,
+        handler: async (response) => {
+          setLoading(true)
+          setStatus('Verifying payment...')
+          try {
+            const verifyRes = await completePayment({
+              partner_id: partnerData.partner_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+              amount: orderData.amount,
+              currency: orderData.currency,
+            })
+            if (verifyRes.data?.success) {
+              setStatus('')
+              onSuccess(verifyRes.data)
+            } else {
+              setError(verifyRes.data?.message || 'Payment verification failed')
+            }
+          } catch (err) {
+            setError(err?.response?.data?.message || 'Payment verification failed')
+          } finally {
+            setLoading(false)
+          }
+        },
+        modal: { ondismiss: () => { setError('Payment cancelled'); setLoading(false) } },
+        prefill: { name: orderData.partner_name, email: orderData.partner_email },
+        theme: { color: '#D4AF37' },
+      }
+      const rzp = new window.Razorpay(options)
+      rzp.on('payment.failed', (r) => {
+        setError('Payment failed: ' + (r.error?.description || 'Unknown error'))
+        setLoading(false)
+      })
+      rzp.open()
+    } catch (err) {
+      const isConnectionRefused = !err.response || err.message === 'Failed to fetch' || err.message?.includes('NetworkError')
+      if (isConnectionRefused) {
+        setIsOffline(true)
+        setError('Network Error: Connection Refused. The partner API server appears to be offline.')
       } else {
         const msg = err?.response?.data?.message || err?.response?.data?.errors
         setError(typeof msg === 'object' ? Object.values(msg).flat().join(' ') : (msg || err.message || 'Something went wrong'))
@@ -194,38 +240,86 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
         </div>
       )}
 
-      {/* Upload signed agreement */}
-      <div>
-        <p className="text-xs font-black uppercase tracking-widest text-aim-copy-muted mb-3">
-          Upload Signed Agreement <span className="text-aim-gold">*</span>
-        </p>
-        <label className={`flex items-center gap-3 cursor-pointer rounded-xl border-2 border-dashed px-4 py-5 transition-all ${signedFile
-            ? 'border-aim-gold/60 bg-aim-gold/5'
-            : 'border-white/10 hover:border-aim-gold/30 hover:bg-white/5'
-          }`}>
-          <svg className="w-6 h-6 text-aim-gold/70 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-          </svg>
-          <div className="flex-1 min-w-0">
-            {signedFile ? (
-              <>
-                <p className="text-white text-sm font-semibold truncate">{signedFile.name}</p>
-                <p className="text-aim-copy-muted text-xs">{(signedFile.size / 1024).toFixed(1)} KB</p>
-              </>
-            ) : (
-              <>
-                <p className="text-aim-copy-muted text-sm">Click to upload signed agreement</p>
-                <p className="text-aim-copy-muted text-xs mt-0.5">PDF, JPG, PNG — max 5 MB</p>
-              </>
-            )}
-          </div>
-          <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleFileChange} className="hidden" />
-        </label>
-        {fileError && <p className="mt-1.5 text-red-400 text-xs">{fileError}</p>}
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      {/* Step 3a: Upload Signed Agreement                                     */}
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      <div className={`rounded-2xl border-2 p-5 space-y-3 transition-all ${
+        agreementUploaded
+          ? 'border-emerald-500/40 bg-emerald-500/5'
+          : 'border-white/10 bg-aim-navy-light/30'
+      }`}>
+        <div className="flex items-center gap-2">
+          {agreementUploaded ? (
+            <svg className="w-5 h-5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          ) : (
+            <svg className="w-5 h-5 text-aim-gold/70 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+          )}
+          <p className="text-xs font-black uppercase tracking-widest text-aim-copy-muted">
+            {agreementUploaded ? '✅ Signed Agreement Uploaded' : 'Upload Signed Agreement'}
+            {!agreementUploaded && <span className="text-aim-gold ml-1">*</span>}
+          </p>
+        </div>
+
+        {!agreementUploaded ? (
+          <>
+            <label className={`flex items-center gap-3 cursor-pointer rounded-xl border-2 border-dashed px-4 py-5 transition-all ${signedFile
+                ? 'border-aim-gold/60 bg-aim-gold/5'
+                : 'border-white/10 hover:border-aim-gold/30 hover:bg-white/5'
+              }`}>
+              <svg className="w-6 h-6 text-aim-gold/70 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              <div className="flex-1 min-w-0">
+                {signedFile ? (
+                  <>
+                    <p className="text-white text-sm font-semibold truncate">{signedFile.name}</p>
+                    <p className="text-aim-copy-muted text-xs">{(signedFile.size / 1024).toFixed(1)} KB</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-aim-copy-muted text-sm">Click to upload signed agreement</p>
+                    <p className="text-aim-copy-muted text-xs mt-0.5">PDF, JPG, PNG — max 5 MB</p>
+                  </>
+                )}
+              </div>
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleFileChange} className="hidden" />
+            </label>
+            {fileError && <p className="mt-1.5 text-red-400 text-xs">{fileError}</p>}
+
+            <button
+              type="button"
+              onClick={handleUploadAgreement}
+              disabled={uploadLoading || !signedFile}
+              className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm tracking-wide shadow-md shadow-blue-900/20 active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            >
+              {uploadLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  Uploading Agreement...
+                </span>
+              ) : 'Upload Signed Agreement'}
+            </button>
+          </>
+        ) : (
+          <p className="text-emerald-400 text-xs font-medium">
+            Your signed agreement has been uploaded. You can now proceed with payment.
+          </p>
+        )}
       </div>
 
-      {/* Payment details */}
-      <div className="rounded-2xl border border-white/10 bg-aim-navy-light/60 p-5 space-y-4">
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      {/* Step 3b: Payment Details                                             */}
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      <div className={`rounded-2xl border border-white/10 bg-aim-navy-light/60 p-5 space-y-4 transition-opacity ${
+        agreementUploaded ? 'opacity-100' : 'opacity-40 pointer-events-none'
+      }`}>
         <p className="text-xs font-black uppercase tracking-widest text-aim-copy-muted">Payment Details</p>
 
         <div className="grid grid-cols-2 gap-4">
@@ -267,13 +361,15 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
       {/* Submit */}
       <button
         type="button"
-        onClick={handleSubmit}
-        disabled={loading}
+        onClick={handlePayment}
+        disabled={loading || !agreementUploaded}
         className="w-full py-4 rounded-xl bg-gradient-to-r from-aim-gold to-aim-gold-light text-aim-navy font-black text-sm tracking-wide shadow-lg shadow-aim-gold/20 hover:shadow-aim-gold/40 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
       >
         {loading
           ? 'Processing...'
-          : `Upload & Pay ${selectedCurrency.symbol}${amount.toLocaleString()} ${currency}`}
+          : !agreementUploaded
+            ? 'Upload Agreement First'
+            : `Pay ${selectedCurrency.symbol}${amount.toLocaleString()} ${currency}`}
       </button>
 
       <button

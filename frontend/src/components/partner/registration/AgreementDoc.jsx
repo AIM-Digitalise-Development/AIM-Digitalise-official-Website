@@ -13,15 +13,21 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
   const fullDateStr = `${dayStr} ${monthStr} 20${yearStr}`
 
   const getPageStyle = () => ({
-    height: '297mm',
-    width: '210mm',
+    height: forPdf ? '297mm' : 'auto',
+    minHeight: forPdf ? '297mm' : '480px',
+    width: forPdf ? '210mm' : '100%',
     boxSizing: 'border-box',
     pageBreakAfter: 'always',
     breakAfter: 'page',
-    boxShadow: forPdf ? 'none' : '0 25px 50px -12px rgb(0 0 0 / 0.25)',
+    boxShadow: forPdf ? 'none' : '0 10px 25px -5px rgb(0 0 0 / 0.1)',
     marginBottom: forPdf ? '0' : '1.5rem',
-    position: 'relative'
+    position: 'relative',
+    padding: forPdf ? '2.5rem 3rem' : '1.5rem 1.5rem 3.5rem 1.5rem' // extra bottom padding for footer
   })
+
+  const pageClass = forPdf
+    ? "agreement-page bg-white box-border flex flex-col justify-between"
+    : "agreement-page bg-white box-border flex flex-col justify-between w-full max-w-full"
 
   // Partner details
   const partnerName = partnerData?.partner_name || '_________________________'
@@ -68,17 +74,17 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
 
   return (
     <div 
-      className={forPdf ? "" : "agreement-doc-wrapper bg-slate-900/40 p-4 overflow-x-auto"}
+      className={forPdf ? "" : "agreement-doc-wrapper bg-slate-900/40 p-1.5 overflow-x-hidden w-full max-w-full"}
       style={forPdf ? { padding: 0, backgroundColor: 'transparent' } : {}}
     >
       <div 
         id={forPdf ? "agreement-pdf-container" : "agreement-doc-container"} 
-        className="mx-auto w-[210mm] text-slate-800 text-[10.5px] leading-relaxed select-text font-sans"
-        style={forPdf ? { width: '210mm', margin: '0' } : {}}
+        className={forPdf ? "mx-auto w-[210mm] text-slate-800 text-[10.5px] leading-relaxed select-text font-sans" : "mx-auto w-full max-w-full text-slate-800 text-[10px] leading-relaxed select-text font-sans"}
+        style={forPdf ? { width: '210mm', margin: '0' } : { maxWidth: '100%', margin: '0 auto', color: '#1e293b' }}
       >
         
         {/* PAGE 1 */}
-        <div className="agreement-page bg-white p-10 pr-12 pl-12 box-border flex flex-col justify-between" style={getPageStyle()}>
+        <div className={pageClass} style={getPageStyle()}>
           <Watermark />
           <div className="relative z-10 flex-grow">
             <Header />
@@ -128,7 +134,7 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
         </div>
 
         {/* PAGE 2 */}
-        <div className="agreement-page bg-white p-10 pr-12 pl-12 box-border flex flex-col justify-between" style={getPageStyle()}>
+        <div className={pageClass} style={getPageStyle()}>
           <Watermark />
           <div className="relative z-10 flex-grow">
             <Header />
@@ -188,7 +194,7 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
         </div>
 
         {/* PAGE 3 */}
-        <div className="agreement-page bg-white p-10 pr-12 pl-12 box-border flex flex-col justify-between" style={getPageStyle()}>
+        <div className={pageClass} style={getPageStyle()}>
           <Watermark />
           <div className="relative z-10 flex-grow">
             <Header />
@@ -274,7 +280,7 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
         </div>
 
         {/* PAGE 4 */}
-        <div className="agreement-page bg-white p-10 pr-12 pl-12 box-border flex flex-col justify-between" style={getPageStyle()}>
+        <div className={pageClass} style={getPageStyle()}>
           <Watermark />
           <div className="relative z-10 flex-grow">
             <Header />
@@ -347,7 +353,7 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
         </div>
 
         {/* PAGE 5 */}
-        <div className="agreement-page bg-white p-10 pr-12 pl-12 box-border flex flex-col justify-between" style={getPageStyle()}>
+        <div className={pageClass} style={getPageStyle()}>
           <Watermark />
           <div className="relative z-10 flex-grow">
             <Header />
@@ -403,7 +409,7 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
         </div>
 
         {/* PAGE 6 */}
-        <div className="agreement-page bg-white p-10 pr-12 pl-12 box-border flex flex-col justify-between" style={getPageStyle()}>
+        <div className={pageClass} style={getPageStyle()}>
           <Watermark />
           <div className="relative z-10 flex-grow">
             <Header />
@@ -451,7 +457,7 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
         </div>
 
         {/* PAGE 7 */}
-        <div className="agreement-page bg-white p-10 pr-12 pl-12 box-border flex flex-col justify-between" style={getPageStyle()}>
+        <div className={pageClass} style={getPageStyle()}>
           <Watermark />
           <div className="relative z-10 flex-grow">
             <Header />

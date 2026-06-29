@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async'
 import PartnerLoginForm from '../../components/partner/auth/PartnerLoginForm'
 import AgreementDoc from '../../components/partner/registration/AgreementDoc'
 import { ROUTES } from '../../constants/routes'
+import { checkPartnerStatus } from '../../api/partner'
 import plogo from '../../assets/images/plogo.jpeg'
 import logo from '../../assets/images/logo.png'
 
@@ -11,6 +12,8 @@ const PartnerLogin = () => {
   const navigate = useNavigate()
   const [completePartnerId, setCompletePartnerId] = useState('')
   const [completeError, setCompleteError] = useState('')
+  const [completeSuccess, setCompleteSuccess] = useState('')
+  const [completeLoading, setCompleteLoading] = useState(false)
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [pdfError, setPdfError] = useState('')
   const [showPreviewModal, setShowPreviewModal] = useState(false)
@@ -100,20 +103,43 @@ const PartnerLogin = () => {
     }
   }
 
-  const handleCompleteSubmit = (e) => {
+  const handleCompleteSubmit = async (e) => {
     e.preventDefault()
-    if (!completePartnerId) {
+    if (!completePartnerId.trim()) {
       setCompleteError('Please enter your Partner ID.')
       return
     }
 
-    // Direct redirect to registration page, forcing Step 3 (Signed Contract Upload & Payment)
-    navigate(ROUTES.PARTNER.REGISTER, {
-      state: {
-        resumePartnerId: completePartnerId.trim().toUpperCase(),
-        resumeStep: 3
+    setCompleteLoading(true)
+    setCompleteError('')
+    setCompleteSuccess('')
+
+    try {
+      const res = await checkPartnerStatus(completePartnerId.trim())
+      const data = res.data
+      if (data?.success) {
+        const currentStep = data.data?.current_step
+        if (currentStep === 1) {
+          setCompleteError('Step 1 registration not completed yet. Please fill out the registration form.')
+        } else {
+          setCompleteSuccess(`Redirecting to step ${currentStep}...`)
+          setTimeout(() => {
+            navigate(ROUTES.PARTNER.REGISTER, {
+              state: {
+                resumePartnerId: completePartnerId.trim().toUpperCase(),
+                resumeStep: currentStep >= 4 ? 3 : currentStep
+              }
+            })
+          }, 1000)
+        }
+      } else {
+        setCompleteError(data?.message || 'Partner ID not found. Please register first.')
       }
-    })
+    } catch (err) {
+      setCompleteError(err?.message || 'Error verifying Partner ID. Please try again.')
+    } finally {
+      setCompleteLoading(false)
+    }
   }
 
   return (
@@ -167,15 +193,15 @@ const PartnerLogin = () => {
             <div className="relative rounded-3xl border border-white/10 bg-aim-navy-card/85 backdrop-blur-2xl shadow-2xl shadow-black/90 overflow-hidden transition-all duration-300">
               <div className="grid grid-cols-1 md:grid-cols-12 font-sans">
                 {/* Left Column (Login Form) */}
-                <div className="col-span-12 md:col-span-6 p-4 sm:p-7 pt-[0px] sm:pt-[100px] flex flex-col justify-start bg-aim-navy-card/95">
+                <div className="col-span-12 md:col-span-6 p-4 sm:p-7 pt-[0px] sm:pt-[25px] flex flex-col justify-start bg-aim-navy-card/95">
                               {/* <div style={{color:'white'}} className="grid grid-cols-1 md:grid-cols-12 font-sans p-4">Partner Portal</div> */}
               {/* Header Title & Description */}
-              <div className="relative z-10 text-center mb-3">
+              <div className="relative z-10 text-center mb-8">
                 <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest mb-2 bg-aim-gold/15 border border-aim-gold/30 text-aim-gold">
-                  <span className="w-1 h-1 rounded-full bg-aim-gold animate-ping" />
+                  <span className="w-1 h-1 rounded-full bg-aim-gold animate-ping " />
                   PARTNER Partner
                 </div>
-                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-none mb-1.5">
+                <h1 className="text-xl sm:text-3xl font-black text-white tracking-tight leading-none mb-1.5">
                   Welcome Back
                 </h1>
                 <p className="text-[11px] text-aim-copy-muted leading-relaxed max-w-[290px] mx-auto">
@@ -183,7 +209,7 @@ const PartnerLogin = () => {
                 </p>
               </div>
 
-                  <div className="flex justify-center mb-3.5 shrink-0">
+                  <div className="flex justify-center mb-7 shrink-5">
                     <img src={logo} alt="AIM Digitalise" className="h-9 sm:h-11 w-auto object-contain" />
                   </div>
                   
@@ -262,7 +288,7 @@ const PartnerLogin = () => {
 
                   <div className="border-t border-white/10 pt-3 mt-3">
                     <form onSubmit={handleCompleteSubmit} className="space-y-2">
-                      <h3 className="text-[11px] font-black text-white uppercase tracking-wider leading-none">
+                      <h3 className="text-[11px] font-black text-aim-gold uppercase tracking-wider leading-none">
                         Complete your registration.
                       </h3>
                       <p className="text-[9.5px] text-slate-300 leading-tight font-medium">
@@ -275,20 +301,33 @@ const PartnerLogin = () => {
                           value={completePartnerId}
                           onChange={(e) => setCompletePartnerId(e.target.value)}
                           placeholder="ENTER YOUR PARTNER ID"
-                          className="flex-1 bg-aim-navy-light/60 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-aim-gold font-sans tracking-wide"
+                          className="flex-1 bg-aim-navy-light/60 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-aim-gold font-sans tracking-wide disabled:opacity-50"
                           required
+                          disabled={completeLoading}
                         />
 
                         <button
                           type="submit"
-                          className="sm:w-28 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs tracking-wider uppercase transition-colors shadow-md shadow-blue-900/20 active:scale-[0.99] cursor-pointer"
+                          disabled={completeLoading}
+                          className="sm:w-28 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs tracking-wider uppercase transition-colors shadow-md shadow-blue-900/20 active:scale-[0.99] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                         >
-                          Submit
+                          {completeLoading ? (
+                            <span className="flex items-center gap-1">
+                              <svg className="w-3 h-3 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                              </svg>
+                              Wait...
+                            </span>
+                          ) : 'Submit'}
                         </button>
                       </div>
 
                       {completeError && (
                         <p className="text-[10px] text-red-400 font-semibold mt-1">{completeError}</p>
+                      )}
+                      {completeSuccess && (
+                        <p className="text-[10px] text-emerald-400 font-semibold mt-1">{completeSuccess}</p>
                       )}
                     </form>
                   </div>
@@ -312,6 +351,24 @@ const PartnerLogin = () => {
       {/* --- BLANK AGREEMENT PREVIEW MODAL OVERLAY --- */}
       {showPreviewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          {/* Style override to cleanly fit the agreement pages in the preview box */}
+          <style>{`
+            .agreement-preview-box .agreement-page {
+              width: 100% !important;
+              max-width: 100% !important;
+              height: auto !important;
+              min-height: 480px !important;
+              padding: 1.5rem 1.5rem 3.5rem 1.5rem !important;
+              box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1) !important;
+            }
+            .agreement-preview-box #agreement-doc-container,
+            .agreement-preview-box #agreement-pdf-container,
+            .agreement-preview-box .agreement-doc-wrapper {
+              width: 100% !important;
+              max-width: 100% !important;
+            }
+          `}</style>
+
           <div className="relative w-full max-w-4xl rounded-2xl border border-white/10 bg-aim-navy-card/95 p-6 shadow-2xl z-10 flex flex-col max-h-[85vh] text-white">
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-white/10 shrink-0">
@@ -328,7 +385,7 @@ const PartnerLogin = () => {
             </div>
 
             {/* Modal Body */}
-            <div className="flex-grow my-4 overflow-y-auto max-h-[60vh] rounded-xl border border-white/10 bg-slate-950 p-2 scrollbar-thin scrollbar-thumb-white/10">
+            <div className="flex-grow my-4 overflow-y-auto max-h-[60vh] rounded-xl border border-white/10 bg-slate-950 p-2 scrollbar-thin scrollbar-thumb-white/10 agreement-preview-box">
               <AgreementDoc partnerData={{}} forPdf={false} />
             </div>
 

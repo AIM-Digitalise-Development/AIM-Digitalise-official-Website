@@ -1,7 +1,7 @@
 import client from './client'
 import { getMockResponse } from '../utils/mockAuthData'
 
-const PARTNER_API = import.meta.env.VITE_PARTNER_API_URL || 'https://api.nexgn.in/api'
+export const PARTNER_API = import.meta.env.VITE_PARTNER_API_URL || 'https://api.nexgn.in/api'
 
 // Helper: build a separate axios-like fetch wrapper for partner API
 // (uses fetch directly so it can point at a different base URL)
@@ -77,16 +77,64 @@ const partnerFetch = async (method, path, body = null, isFormData = false) => {
 export const fetchRMOptions = () =>
   partnerFetch('GET', '/public/rm-options')
 
-// ─── Step 1: Register partner ──────────────────────────────────────────────
+// ─── Step 1: Register partner (Step Tracking API) ──────────────────────────
 // formData: FormData with all fields + file uploads
 export const registerPartner = (formData) =>
-  partnerFetch('POST', '/partner/register', formData, true)
+  partnerFetch('POST', '/partner-step/register', formData, true)
 
-// ─── Step 2: Download agreement ────────────────────────────────────────────
+// ─── Check Partner Status by partner_id ─────────────────────────────────────
+export const checkPartnerStatus = (partnerId) =>
+  partnerFetch('GET', `/partner-step/status/${partnerId}`)
+
+// ─── Step 2: Fetch agreement HTML + step data ──────────────────────────────
+export const fetchStep2Data = (partnerId) =>
+  partnerFetch('GET', `/partner-step/step2/${partnerId}`)
+
+// ─── Step 2: Get preview URL (opens PDF in new tab) ────────────────────────
+export const getAgreementPreviewUrl = (partnerId) =>
+  `${PARTNER_API}/partner-step/step2/preview/${partnerId}`
+
+// ─── Step 2: Download agreement PDF (blob) + triggers email ────────────────
+// Returns a Blob for the PDF file; marks step 2 as completed on the server.
+export const downloadAgreementPdf = async (partnerId) => {
+  const token = localStorage.getItem('partner_token')
+
+  // Build form data
+  const fd = new FormData()
+  fd.append('partner_id', partnerId)
+
+  const headers = {}
+  if (token) headers['Authorization'] = `Bearer ${token}`
+
+  const response = await fetch(`${PARTNER_API}/partner-step/step2/download`, {
+    method: 'POST',
+    headers,
+    body: fd,
+  })
+
+  if (!response.ok) {
+    // Try to parse JSON error
+    let msg = 'Failed to download agreement'
+    try {
+      const errData = await response.json()
+      msg = errData.message || msg
+    } catch { /* ignore */ }
+    throw new Error(msg)
+  }
+
+  const blob = await response.blob()
+  return blob
+}
+
+// ─── Step 2: Download agreement (legacy URL helper, kept for compat) ───────
 export const getAgreementDownloadUrl = () => `${PARTNER_API}/partner/download-agreement`
 
 // ─── Step 3a: Upload signed agreement ──────────────────────────────────────
-// formData: { partner_id, email, signed_agreement (file) }
+// formData: FormData { partner_id, signed_agreement (file) }
+export const uploadSignedAgreement = (formData) =>
+  partnerFetch('POST', '/partner-step/step3/upload-agreement', formData, true)
+
+// ─── Step 3a (legacy): Complete registration ───────────────────────────────
 export const completeRegistration = (formData) =>
   partnerFetch('POST', '/partner/complete-registration', formData, true)
 
@@ -95,8 +143,12 @@ export const completeRegistration = (formData) =>
 export const createOrder = (data) =>
   partnerFetch('POST', '/partner/create-order', data)
 
-// ─── Step 3c: Verify payment ────────────────────────────────────────────────
+// ─── Step 3c: Complete payment (step tracking) ─────────────────────────────
 // data: { partner_id, razorpay_payment_id, razorpay_order_id, razorpay_signature, amount, currency }
+export const completePayment = (data) =>
+  partnerFetch('POST', '/partner-step/step3/complete-payment', data)
+
+// ─── Step 3c (legacy): Verify payment ───────────────────────────────────────
 export const verifyPayment = (data) =>
   partnerFetch('POST', '/partner/verify-payment', data)
 

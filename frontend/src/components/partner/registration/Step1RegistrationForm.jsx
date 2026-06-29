@@ -11,7 +11,7 @@ const INDIA_STATES = [
 
 const FieldGroup = ({ label, required, children }) => (
   <div>
-    <label className="block text-xs font-semibold text-aim-copy-muted uppercase tracking-wider mb-1.5">
+    <label className="block text-[10px] font-semibold text-aim-copy-muted uppercase tracking-wider mb-0.5">
       {label} {required && <span className="text-aim-gold">*</span>}
     </label>
     {children}
@@ -19,16 +19,20 @@ const FieldGroup = ({ label, required, children }) => (
 )
 
 const inputCls =
-  'w-full bg-aim-navy-light border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-aim-copy-muted focus:outline-none focus:border-aim-gold/60 focus:ring-1 focus:ring-aim-gold/30 transition-all'
+  'w-full bg-aim-navy-light border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-aim-copy-muted focus:outline-none focus:border-aim-gold/60 focus:ring-1 focus:ring-aim-gold/30 transition-all'
 
-const Step1RegistrationForm = ({ onSuccess }) => {
-  const [form, setForm] = useState({
-    organization_name: '', rm_type: '', rm_id: '', partner_name: '', contact_no: '',
-    email: '', address_line1: '', address_line2: '', district: '',
-    pin_code: '', state: '', country: 'India',
-    password: '', password_confirmation: '',
-  })
-  const [files, setFiles] = useState({ pan_card: null, id_proof: null, organization_proof: null })
+const Step1RegistrationForm = ({ onSuccess, initialValues, initialFiles, partnerData }) => {
+  const [form, setForm] = useState(
+    initialValues || {
+      organization_name: '', rm_type: '', rm_id: '', partner_name: '', contact_no: '',
+      email: '', address_line1: '', address_line2: '', district: '',
+      pin_code: '', state: '', country: 'India',
+      password: '', password_confirmation: '',
+    }
+  )
+  const [files, setFiles] = useState(
+    initialFiles || { pan_card: null, id_proof: null, organization_proof: null }
+  )
   const [rmOptions, setRmOptions] = useState([])
   const [loadingRmOptions, setLoadingRmOptions] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -75,7 +79,7 @@ const Step1RegistrationForm = ({ onSuccess }) => {
       partner_name: form.partner_name || 'Simulated Partner',
       organization_name: form.organization_name || 'Simulated Organization',
       registration_status: 'pending',
-    }, form)
+    }, form, files)
   }
 
   const handleSubmit = async (e) => {
@@ -95,6 +99,13 @@ const Step1RegistrationForm = ({ onSuccess }) => {
       setIsOffline(false)
       return
     }
+
+    // Skip API registration if account was already created with the same email
+    if (partnerData && partnerData.partner_id && form.email === initialValues?.email) {
+      onSuccess(partnerData, form, files)
+      return
+    }
+
     setLoading(true)
     setError('')
     setIsOffline(false)
@@ -104,7 +115,7 @@ const Step1RegistrationForm = ({ onSuccess }) => {
       Object.entries(files).forEach(([k, v]) => { if (v) fd.append(k, v) })
       const res = await registerPartner(fd)
       if (res.data?.success) {
-        onSuccess(res.data.data, form)
+        onSuccess(res.data.data, form, files)
       } else {
         setError(res.data?.message || 'Registration failed. Please try again.')
       }
@@ -142,7 +153,7 @@ const Step1RegistrationForm = ({ onSuccess }) => {
   )
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-3">
       {error && (
         <div className="p-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 text-xs font-medium space-y-3">
           <p>{error}</p>
@@ -164,7 +175,7 @@ const Step1RegistrationForm = ({ onSuccess }) => {
       )}
 
       {/* Organization & RM */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <FieldGroup label="Organization Name" required>
           <input name="organization_name" value={form.organization_name} onChange={handleChange} required placeholder="AIM Pvt. Ltd." className={inputCls} />
         </FieldGroup>
@@ -191,7 +202,7 @@ const Step1RegistrationForm = ({ onSuccess }) => {
             <p className="text-aim-gold text-[10px] mt-1 font-bold">No Super Admins or Master/Premium partners available.</p>
           )}
           {rmOptions.length > 0 && (
-            <p className="text-slate-400 text-[9px] mt-1 font-bold">
+            <p className="text-slate-400 text-[8px] mt-0.5 font-bold">
               👑 Super Admin | 🤝 Master/Premium Partner
             </p>
           )}
@@ -199,7 +210,7 @@ const Step1RegistrationForm = ({ onSuccess }) => {
       </div>
 
       {/* Partner Name & Contact */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <FieldGroup label="Partner Name" required>
           <input name="partner_name" value={form.partner_name} onChange={handleChange} required placeholder="Full Name" className={inputCls} />
         </FieldGroup>
@@ -214,7 +225,7 @@ const Step1RegistrationForm = ({ onSuccess }) => {
       </FieldGroup>
 
       {/* Address */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <FieldGroup label="Address Line 1" required>
           <input name="address_line1" value={form.address_line1} onChange={handleChange} required placeholder="Street / Building" className={inputCls} />
         </FieldGroup>
@@ -223,7 +234,7 @@ const Step1RegistrationForm = ({ onSuccess }) => {
         </FieldGroup>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <FieldGroup label="District" required>
           <input name="district" value={form.district} onChange={handleChange} required placeholder="District" className={inputCls} />
         </FieldGroup>
@@ -239,9 +250,26 @@ const Step1RegistrationForm = ({ onSuccess }) => {
       </div>
 
       {/* Password */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <FieldGroup label="Password" required>
-          <input type="password" name="password" value={form.password} onChange={handleChange} required placeholder="Min. 8 characters" className={inputCls} />
+          <input type="password" name="password" value={form.password} onChange={handleChange} required placeholder="Min. 8 characters"  className={inputCls} />
+         {/* <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-aim-copy-muted hover:text-white transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              {showPassword ? (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+              ) : (
+                <>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </>
+              )}
+            </svg>
+          </button> */}
+          
         </FieldGroup>
         <FieldGroup label="Confirm Password" required>
           <input type="password" name="password_confirmation" value={form.password_confirmation} onChange={handleChange} required placeholder="Repeat password" className={inputCls} />
@@ -249,9 +277,9 @@ const Step1RegistrationForm = ({ onSuccess }) => {
       </div>
 
       {/* Documents */}
-      <div className="pt-2 border-t border-white/10">
-        <p className="text-xs font-bold text-white uppercase tracking-wider mb-4">Required Documents</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="pt-1.5 border-t border-white/10">
+        <p className="text-[10px] font-bold text-white uppercase tracking-wider mb-2">Required Documents</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <FileUpload name="pan_card" label="PAN Card" />
           <FileUpload name="id_proof" label="ID Proof" />
           <FileUpload name="organization_proof" label="Org. Proof" />
@@ -261,7 +289,7 @@ const Step1RegistrationForm = ({ onSuccess }) => {
       <button
         type="submit"
         disabled={loading}
-        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-aim-gold to-aim-gold-light text-aim-navy font-black text-sm tracking-wide shadow-lg shadow-aim-gold/20 hover:shadow-aim-gold/40 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
+        className="w-full py-2.5 rounded-xl bg-gradient-to-r from-aim-gold to-aim-gold-light text-aim-navy font-black text-xs tracking-wide shadow-lg shadow-aim-gold/20 hover:shadow-aim-gold/40 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
       >
         {loading ? (
           <span className="flex items-center justify-center gap-2">
