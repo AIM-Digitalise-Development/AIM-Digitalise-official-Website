@@ -9,6 +9,20 @@ const CURRENCIES = [
   { code: 'AED', symbol: 'د.إ', name: 'UAE Dirham' },
 ]
 
+const loadRazorpay = () => {
+  return new Promise((resolve, reject) => {
+    if (window.Razorpay) {
+      resolve(true)
+      return
+    }
+    const script = document.createElement('script')
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+    script.onload = () => resolve(true)
+    script.onerror = () => reject(new Error('Failed to load Razorpay SDK. Please check your internet connection.'))
+    document.body.appendChild(script)
+  })
+}
+
 const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
   const [signedFile, setSignedFile] = useState(null)
   const [fileError, setFileError] = useState('')

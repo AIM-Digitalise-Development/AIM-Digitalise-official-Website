@@ -78,7 +78,18 @@ const Step2DownloadAgreement = ({ partnerData, step1FormValues, onContinue, onBa
 
       // Fallback: client-side html2pdf
       try {
-        const html2pdf = window.html2pdf
+        let html2pdf = window.html2pdf
+        if (!html2pdf) {
+          const response = await fetch('/html2pdf.bundle.min.js')
+          if (!response.ok) {
+            throw new Error(`Failed to fetch PDF engine script: ${response.status} ${response.statusText}`)
+          }
+          const scriptText = 'var self = window; ' + (await response.text())
+          const fn = new Function(scriptText)
+          fn.call(window)
+          html2pdf = window.html2pdf
+        }
+
         if (!html2pdf) {
           throw new Error('The PDF engine is still loading. Please try again in a few seconds.')
         }
