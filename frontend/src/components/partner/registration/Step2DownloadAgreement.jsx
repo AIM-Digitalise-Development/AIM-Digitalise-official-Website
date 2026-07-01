@@ -2,6 +2,25 @@ import { useState, useEffect } from 'react'
 import AgreementDoc from './AgreementDoc'
 import { fetchStep2Data, downloadAgreementPdf } from '../../../api/partner'
 
+// Scope global styles inside fetched agreement HTML to prevent leaking to the parent page
+const scopeAgreementHtml = (html) => {
+  if (!html) return ''
+
+  // Replace hardcoded page dimensions (both inline and stylesheet styles) with fluid/responsive rules
+  let cleanHtml = html
+    .replace(/width\s*:\s*(?:210mm|21cm|8\.27in|595pt|79[34]px|800px)\b/gi, 'width: 100%')
+    .replace(/height\s*:\s*(?:297mm|29\.7cm|11\.69in|842pt|112[23]px)\b/gi, 'height: auto')
+    .replace(/min-height\s*:\s*(?:297mm|29\.7cm|11\.69in|842pt|112[23]px)\b/gi, 'min-height: auto')
+
+  return cleanHtml.replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, (match, cssContent) => {
+    const scopedCss = cssContent
+      .replace(/([^\w.-]|^)\*(?=\s*[,{])/g, '$1.agreement-preview-box *')
+      .replace(/([^\w.-]|^)body(?=\s*[,{])/g, '$1.agreement-preview-box')
+      .replace(/([^\w.-]|^)html(?=\s*[,{])/g, '$1.agreement-preview-box')
+    return `<style>${scopedCss}</style>`
+  })
+}
+
 const Step2DownloadAgreement = ({ partnerData, step1FormValues, onContinue, onBack }) => {
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [pdfError, setPdfError] = useState('')
@@ -136,11 +155,18 @@ const Step2DownloadAgreement = ({ partnerData, step1FormValues, onContinue, onBa
     <div className="space-y-5">
       {/* Scope-specific Stylesheet to override hardcoded PDF styles for screen preview box */}
       <style>{`
-        .agreement-preview-box .agreement-page {
+        .agreement-preview-box,
+        .agreement-preview-box * {
+          max-width: 100% !important;
+          box-sizing: border-box !important;
+        }
+        .agreement-preview-box .agreement-page,
+        .agreement-preview-box [class*="page"],
+        .agreement-preview-box [id*="page"] {
           width: 100% !important;
           max-width: 100% !important;
           height: auto !important;
-          min-height: 480px !important;
+          min-height: auto !important;
           padding: 1.5rem 1.5rem 3.5rem 1.5rem !important;
           box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1) !important;
         }
@@ -242,7 +268,7 @@ const Step2DownloadAgreement = ({ partnerData, step1FormValues, onContinue, onBa
               <div
                 className="prose prose-sm max-w-none text-[11px] leading-relaxed"
                 style={{ color: '#1e293b' }}
-                dangerouslySetInnerHTML={{ __html: agreementHtml }}
+                dangerouslySetInnerHTML={{ __html: scopeAgreementHtml(agreementHtml) }}
               />
             ) : (
               <AgreementDoc partnerData={combinedData} />
