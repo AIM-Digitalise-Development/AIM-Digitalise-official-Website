@@ -975,7 +975,7 @@ const SaasBasedSoftware = () => {
                                 <div className="grid sm:grid-cols-2 gap-3.5">
                                   <div className="space-y-1.5">
                                     <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                      Client Name <span className="text-aim-gold">*</span>
+                                      Contact Person <span className="text-aim-gold">*</span>
                                     </label>
                                     <input
                                       ref={nameInputRef}
@@ -1099,9 +1099,26 @@ const SaasBasedSoftware = () => {
 
                             {/* Right Column: Address details, RM, GST & Total Students */}
                             <div className="space-y-4">
+                              
                               <div>
+                                
                                 <h4 className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest mb-3">Address & RM Details</h4>
                                 <div className="grid sm:grid-cols-2 gap-3.5">
+                                   {/* Full Address */}
+                                  <div className="space-y-1.5 sm:col-span-2">
+                                    <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                      Full Address <span className="text-aim-gold">*</span>
+                                    </label>
+                                    <textarea
+                                      name="address"
+                                      value={checkoutData.address}
+                                      onChange={handleCheckoutChange}
+                                      required
+                                      rows="2"
+                                      placeholder="Street, building, locality…"
+                                      className="input-brand text-sm transition resize-none bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                    />
+                                  </div>
                                   <div className="space-y-1.5">
                                     <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
                                       District <span className="text-aim-gold">*</span>
@@ -1130,21 +1147,7 @@ const SaasBasedSoftware = () => {
                                       className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                     />
                                   </div>
-                                  {/* Full Address */}
-                                  <div className="space-y-1.5 sm:col-span-2">
-                                    <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                      Full Address <span className="text-aim-gold">*</span>
-                                    </label>
-                                    <textarea
-                                      name="address"
-                                      value={checkoutData.address}
-                                      onChange={handleCheckoutChange}
-                                      required
-                                      rows="2"
-                                      placeholder="Street, building, locality…"
-                                      className="input-brand text-sm transition resize-none bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
-                                    />
-                                  </div>
+                                 
                                   <div className="space-y-1.5">
                                     <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
                                       PIN Code <span className="text-aim-gold">*</span>
@@ -1197,33 +1200,7 @@ const SaasBasedSoftware = () => {
                                   )}
 
                                   {/* Custom Price Adjustments */}
-                                  <div className="space-y-1.5">
-                                    <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                      One-Time Setup Fee (₹) <span className="text-aim-gold">*</span>
-                                    </label>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      value={customProcessingFee}
-                                      onChange={(e) => setCustomProcessingFee(Number(e.target.value))}
-                                      required
-                                      className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
-                                    />
-                                  </div>
-                                  <div className="space-y-1.5">
-                                    <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                      Monthly Subscription (₹) <span className="text-aim-gold">*</span>
-                                    </label>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      value={customMonthlySubscription}
-                                      onChange={(e) => setCustomMonthlySubscription(Number(e.target.value))}
-                                      required
-                                      disabled={isInstitutePro}
-                                      className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold disabled:opacity-50"
-                                    />
-                                  </div>
+                                 
 
                                   {/* Select Relationship Manager */}
                                   <div className="space-y-1.5 sm:col-span-2">
