@@ -184,3 +184,88 @@ export const getDashboardStats = () =>
 // ─── Commission Report ───────────────────────────────────────────────────────
 export const getCommissionReport = () =>
   partnerFetch('GET', '/partner/commission-report')
+
+// ─── Leads Management ────────────────────────────────────────────────────────
+export const getPartnerLeads = (params = {}) => {
+  const query = new URLSearchParams()
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== '' && v !== false && v !== undefined && v !== null) {
+      query.set(k, v)
+    }
+  })
+  const queryString = query.toString()
+  return partnerFetch('GET', `/partner/leads${queryString ? `?${queryString}` : ''}`)
+}
+
+export const getPartnerLeadStats = () =>
+  partnerFetch('GET', '/partner/leads/stats')
+
+export const getPartnerLeadDetails = (id) =>
+  partnerFetch('GET', `/partner/leads/${id}`)
+
+export const createPartnerLead = (data) =>
+  partnerFetch('POST', '/partner/leads', data)
+
+export const updatePartnerLead = (id, data) =>
+  partnerFetch('PUT', `/partner/leads/${id}`, data)
+
+export const deletePartnerLead = (id) =>
+  partnerFetch('DELETE', `/partner/leads/${id}`)
+
+export const assignPartnerDemoSlot = (leadId, slotId) =>
+  partnerFetch('POST', `/partner/leads/${leadId}/assign-demo-slot`, { demo_slot_id: slotId })
+
+export const removePartnerDemoSlot = (leadId) =>
+  partnerFetch('POST', `/partner/leads/${leadId}/remove-demo-slot`)
+
+export const schedulePartnerFollowUp = (leadId, data) =>
+  partnerFetch('POST', `/partner/leads/${leadId}/follow-up`, data)
+
+// ─── Demo Slots ──────────────────────────────────────────────────────────────
+export const getPartnerDemoSlots = (params = {}) => {
+  const query = new URLSearchParams()
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== '' && v !== false && v !== undefined && v !== null) {
+      query.set(k, v)
+    }
+  })
+  const queryString = query.toString()
+  return partnerFetch('GET', `/partner/demo-slots${queryString ? `?${queryString}` : ''}`)
+}
+
+export const getPartnerDemoSlotStats = () =>
+  partnerFetch('GET', '/partner/demo-slots/stats')
+
+export const togglePartnerDemoSlotStatus = (id) =>
+  partnerFetch('POST', `/partner/demo-slots/${id}/toggle-status`)
+
+export const deletePartnerDemoSlot = (id) =>
+  partnerFetch('DELETE', `/partner/demo-slots/${id}`)
+
+export const createPartnerDemoSlot = (data) =>
+  partnerFetch('POST', '/partner/demo-slots', data)
+
+export const updatePartnerDemoSlot = (id, data) =>
+  partnerFetch('PUT', `/partner/demo-slots/${id}`, data)
+
+export const getPartnerSlotBookings = (slotId, date) =>
+  partnerFetch('GET', `/partner/demo-slots/${slotId}/bookings?date=${date}`)
+
+export const getPartnerDemoSlotsAvailable = () =>
+  partnerFetch('GET', '/partner/demo-slots-available')
+
+export const bookPartnerDemoSlot = (leadId, data) =>
+  partnerFetch('POST', `/partner/leads/${leadId}/book-demo-slot`, data)
+
+export const cancelPartnerBooking = (bookingId) =>
+  partnerFetch('POST', `/partner/bookings/${bookingId}/cancel`)
+
+// ─── Dropdown helpers ────────────────────────────────────────────────────────
+export const getPartnerCategories = () =>
+  partnerFetch('GET', '/partner/categories')
+
+export const getPartnerSubcategories = (categoryId) =>
+  partnerFetch('GET', `/partner/subcategories${categoryId ? `?category_id=${categoryId}` : ''}`)
+
+export const getPartnerProductsDropdown = (subCategoryId) =>
+  partnerFetch('GET', `/partner/products-dropdown${subCategoryId ? `?sub_category_id=${subCategoryId}` : ''}`)

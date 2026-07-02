@@ -47,6 +47,7 @@ import PartnerLeads from './pages/partner/Leads'
 import PartnerMarketing from './pages/partner/Marketing'
 import PartnerDueRenewal from './pages/partner/DueRenewal'
 import PartnerSupport from './pages/partner/Support'
+import PartnerDemoSlots from './pages/partner/DemoSlots'
 import ClientLayout from './layouts/ClientLayout'
 import ClientLogin from './pages/client/Login'
 import ClientProducts from './pages/client/Products'
@@ -159,6 +160,7 @@ function App() {
             <Route path="marketing" element={<PartnerMarketing />} />
             <Route path="due-renewal" element={<PartnerDueRenewal />} />
             <Route path="support" element={<PartnerSupport />} />
+            <Route path="demo" element={<PartnerDemoSlots />} />
           </Route>
 
           {/* ── Client portal & login (standalone, no header/footer) ── */}

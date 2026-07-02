@@ -42,6 +42,7 @@ export const ROUTES = {
     MARKETING: '/partner/marketing',
     DUE_RENEWAL: '/partner/due-renewal',
     SUPPORT: '/partner/support',
+    DEMO: '/partner/demo',
   },
   CUSTOMER: {
     DASHBOARD: '/customer',
