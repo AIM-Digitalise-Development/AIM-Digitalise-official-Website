@@ -388,7 +388,7 @@ const SaasBasedSoftware = () => {
       product_id: activePlan.id,
       product_name: activePlan.name,
       product_category: activePlan.category,
-      processing_fee: customProcessingFee,
+      processing_fee: Math.round(customProcessingFee * 1.18),
       monthly_subscription: customMonthlySubscription,
     }
 
@@ -932,7 +932,7 @@ const SaasBasedSoftware = () => {
                               {activePlan.name}
                             </h3>
                             <p className="text-xs text-aim-copy-muted mt-0.5">
-                              One-Time Setup Fee: <span className="font-black text-aim-gold">{activePlan.securityDeposit}</span>
+                              One-Time Setup Fee: <span className="font-black text-aim-gold">{activePlan.securityDeposit} + 18% GST</span>
                               &nbsp;·&nbsp;Then {isInstitutePro
                                 ? `₹${(10 * (parseInt(checkoutData.total_students, 10) || 0)).toLocaleString('en-IN')}/mo (${checkoutData.total_students || 0} students)`
                                 : (activePlan.monthlySubscription.startsWith('₹') ? '' : '₹') + activePlan.monthlySubscription + (activePlan.monthlySubscription.includes('month') ? '' : '/mo')
@@ -1078,6 +1078,19 @@ const SaasBasedSoftware = () => {
                                           className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                         />
                                       </div>
+                                      <div className="space-y-1.5 sm:col-span-2">
+                                        <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                          GSTIN <span className="text-aim-copy-muted normal-case font-normal">(optional)</span>
+                                        </label>
+                                        <input
+                                          type="text"
+                                          name="gstin"
+                                          value={checkoutData.gstin}
+                                          onChange={handleCheckoutChange}
+                                          placeholder="22AAAAA0000A1Z5"
+                                          className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                        />
+                                      </div>
                                     </>
                                   )}
                                 </div>
@@ -1117,6 +1130,21 @@ const SaasBasedSoftware = () => {
                                       className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                     />
                                   </div>
+                                  {/* Full Address */}
+                                  <div className="space-y-1.5 sm:col-span-2">
+                                    <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                      Full Address <span className="text-aim-gold">*</span>
+                                    </label>
+                                    <textarea
+                                      name="address"
+                                      value={checkoutData.address}
+                                      onChange={handleCheckoutChange}
+                                      required
+                                      rows="2"
+                                      placeholder="Street, building, locality…"
+                                      className="input-brand text-sm transition resize-none bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                    />
+                                  </div>
                                   <div className="space-y-1.5">
                                     <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
                                       PIN Code <span className="text-aim-gold">*</span>
@@ -1150,19 +1178,7 @@ const SaasBasedSoftware = () => {
                                           className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                         />
                                       </div>
-                                      <div className="space-y-1.5 sm:col-span-2">
-                                        <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                          GSTIN <span className="text-aim-copy-muted normal-case font-normal">(optional)</span>
-                                        </label>
-                                        <input
-                                          type="text"
-                                          name="gstin"
-                                          value={checkoutData.gstin}
-                                          onChange={handleCheckoutChange}
-                                          placeholder="22AAAAA0000A1Z5"
-                                          className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
-                                        />
-                                      </div>
+                                      
                                     </>
                                   ) : (
                                     <div className="space-y-1.5">
@@ -1235,26 +1251,29 @@ const SaasBasedSoftware = () => {
                                     </div>
                                   </div>
 
-                                  {/* Full Address */}
-                                  <div className="space-y-1.5 sm:col-span-2">
-                                    <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                      Full Address <span className="text-aim-gold">*</span>
-                                    </label>
-                                    <textarea
-                                      name="address"
-                                      value={checkoutData.address}
-                                      onChange={handleCheckoutChange}
-                                      required
-                                      rows="2"
-                                      placeholder="Street, building, locality…"
-                                      className="input-brand text-sm transition resize-none bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
-                                    />
-                                  </div>
+                                  
                                 </div>
                               </div>
                             </div>
                           </div>
 
+
+                          {/* ── Order Summary with 18% GST calculation ── */}
+                          <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2 text-xs mb-4">
+                            <div className="flex justify-between items-center text-aim-copy-muted">
+                              <span>Base Setup Fee</span>
+                              <span className="font-semibold text-white">₹{customProcessingFee.toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-aim-copy-muted">
+                              <span>GST (18%)</span>
+                              <span className="font-semibold text-aim-gold">+ ₹{Math.round(customProcessingFee * 0.18).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="border-t border-white/10 my-2"></div>
+                            <div className="flex justify-between items-center font-bold text-sm">
+                              <span className="text-white">Total Amount (incl. GST)</span>
+                              <span className="text-aim-gold font-black">₹{Math.round(customProcessingFee * 1.18).toLocaleString('en-IN')}</span>
+                            </div>
+                          </div>
 
                           {/* Pay Button */}
                           <div className="pt-4 border-t border-white/10">
@@ -1273,7 +1292,7 @@ const SaasBasedSoftware = () => {
                                   <span>Opening Payment Gateway…</span>
                                 </>
                               ) : (
-                                <span>Pay {activePlan.securityDeposit} Setup Fee via Razorpay</span>
+                                <span>Pay ₹{Math.round(customProcessingFee * 1.18).toLocaleString('en-IN')} (incl. 18% GST) via Razorpay</span>
                               )}
                             </Button>
                             <p className="text-center text-[11px] text-aim-copy-muted mt-2">

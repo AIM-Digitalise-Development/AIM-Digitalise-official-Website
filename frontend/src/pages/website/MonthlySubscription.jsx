@@ -336,7 +336,7 @@ const MonthlySubscription = () => {
       product_id: activePlan.id,
       product_name: activePlan.name,
       product_category: activePlan.category,
-      processing_fee: customProcessingFee,
+      processing_fee: Math.round(customProcessingFee * 1.18),
       monthly_subscription: customMonthlySubscription,
     }
 
@@ -892,7 +892,7 @@ const MonthlySubscription = () => {
                               {activePlan.name}
                             </h3>
                             <p className="text-xs text-aim-copy-muted mt-0.5">
-                              Processing Fee: <span className="font-black text-aim-gold">{activePlan.securityDeposit}</span>
+                              Processing Fee: <span className="font-black text-aim-gold">{activePlan.securityDeposit} + 18% GST</span>
                               &nbsp;·&nbsp;Then {isInstitutePro
                                 ? `₹${(10 * (parseInt(checkoutData.total_students, 10) || 0)).toLocaleString('en-IN')}/mo (${checkoutData.total_students || 0} students)`
                                 : (activePlan.monthlySubscription.startsWith('₹') ? '' : '₹') + activePlan.monthlySubscription + (activePlan.monthlySubscription.includes('month') ? '' : '/mo')
@@ -1251,6 +1251,23 @@ const MonthlySubscription = () => {
                             </div>
                           </div>
 
+                          {/* ── Order Summary with 18% GST calculation ── */}
+                          <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2 text-xs mb-4">
+                            <div className="flex justify-between items-center text-aim-copy-muted">
+                              <span>Base Setup Fee</span>
+                              <span className="font-semibold text-white">₹{customProcessingFee.toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-aim-copy-muted">
+                              <span>GST (18%)</span>
+                              <span className="font-semibold text-aim-gold">+ ₹{Math.round(customProcessingFee * 0.18).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="border-t border-white/10 my-2"></div>
+                            <div className="flex justify-between items-center font-bold text-sm">
+                              <span className="text-white">Total Amount (incl. GST)</span>
+                              <span className="text-aim-gold font-black">₹{Math.round(customProcessingFee * 1.18).toLocaleString('en-IN')}</span>
+                            </div>
+                          </div>
+
                           {/* ── Pay Button ── */}
                           <div className="pt-4 border-t border-white/10">
                             <Button
@@ -1268,7 +1285,7 @@ const MonthlySubscription = () => {
                                   <span>Opening Payment Gateway…</span>
                                 </>
                               ) : (
-                                <span>Pay {activePlan.securityDeposit} Processing Fee via Razorpay</span>
+                                <span>Pay ₹{Math.round(customProcessingFee * 1.18).toLocaleString('en-IN')} (incl. 18% GST) via Razorpay</span>
                               )}
                             </Button>
                             <p className="text-center text-[11px] text-aim-copy-muted mt-2">
