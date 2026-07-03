@@ -611,8 +611,7 @@ export default function EmployeeDemoSlots() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsModalOpen(false)}
-              className="absolute inset-0 bg-black/75 backdrop-blur-[4px]"
+              className="absolute inset-0 bg-black/75 backdrop-blur-[3px]"
             />
 
             {/* Modal Dialog container */}

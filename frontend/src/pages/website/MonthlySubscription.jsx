@@ -314,7 +314,11 @@ const MonthlySubscription = () => {
 
   const handleCheckoutChange = (e) => {
     const { name, value } = e.target
-    setCheckoutData(prev => ({ ...prev, [name]: value }))
+    let val = value
+    if (name === 'contact_number' || name === 'pin_code' || name === 'total_students') {
+      val = value.replace(/\D/g, '')
+    }
+    setCheckoutData(prev => ({ ...prev, [name]: val }))
   }
 
   const handleCheckoutSubmit = async (e) => {
@@ -957,7 +961,14 @@ const MonthlySubscription = () => {
                                       name="contact_number"
                                       value={checkoutData.contact_number}
                                       onChange={handleCheckoutChange}
-                                      placeholder="+91 XXXXX XXXXX"
+                                      onBlur={(e) => {
+                                        let val = e.target.value.replace(/\D/g, '')
+                                        if (val.length === 10) {
+                                          val = '91' + val
+                                        }
+                                        setCheckoutData(prev => ({ ...prev, contact_number: val }))
+                                      }}
+                                      placeholder="e.g. 91 98765 43210"
                                       required
                                       className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                     />

@@ -1251,8 +1251,7 @@ export default function EmployeeLeads() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.5 }}
               exit={{ opacity: 0 }}
-              onClick={() => setSelectedDrawerLead(null)}
-              className="absolute inset-0 bg-black cursor-pointer"
+              className="absolute inset-0 bg-black"
             />
             <motion.div
               initial={{ x: '100%' }}
@@ -1468,8 +1467,7 @@ export default function EmployeeLeads() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.5 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsCreateEditOpen(false)}
-              className="absolute inset-0 bg-black cursor-pointer"
+              className="absolute inset-0 bg-black"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -1786,8 +1784,7 @@ export default function EmployeeLeads() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.5 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsStatusModalOpen(false)}
-              className="absolute inset-0 bg-black cursor-pointer"
+              className="absolute inset-0 bg-black"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -1885,8 +1882,7 @@ export default function EmployeeLeads() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.5 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsBulkAssignOpen(false)}
-              className="absolute inset-0 bg-black cursor-pointer"
+              className="absolute inset-0 bg-black"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -1961,8 +1957,7 @@ export default function EmployeeLeads() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.5 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsMailModalOpen(false)}
-              className="absolute inset-0 bg-black cursor-pointer"
+              className="absolute inset-0 bg-black"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -2134,12 +2129,7 @@ export default function EmployeeLeads() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.5 }}
               exit={{ opacity: 0 }}
-              onClick={() => {
-                setShowAssignModal(false)
-                setSelectedLeadForAssign(null)
-                setSelectedDate('')
-              }}
-              className="absolute inset-0 bg-black cursor-pointer"
+              className="absolute inset-0 bg-black"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -2377,8 +2367,7 @@ export default function EmployeeLeads() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.5 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsFollowUpModalOpen(false)}
-              className="absolute inset-0 bg-black cursor-pointer"
+              className="absolute inset-0 bg-black"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}

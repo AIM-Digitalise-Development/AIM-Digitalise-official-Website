@@ -1011,7 +1011,7 @@ const AdminPartners = () => {
         {selectedPartner && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop */}
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedPartner(null)} />
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
             {/* Modal Box */}
             <div className="relative w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl z-10 flex flex-col max-h-[90vh]">
@@ -1218,7 +1218,7 @@ const AdminPartners = () => {
         {/* Set Rank Modal */}
         {showRankModal && selectedPartnerForRank && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowRankModal(false)} />
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
             <div className="relative w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl z-10 space-y-4 animate-fade-in">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h4 className="text-sm font-black text-slate-800">Set Rank</h4>
@@ -1265,7 +1265,7 @@ const AdminPartners = () => {
         {/* Link Subordinate Modal */}
         {showSubordinateModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowSubordinateModal(false)} />
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
             <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl z-10 space-y-4 animate-fade-in">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h4 className="text-sm font-black text-slate-800">Establish Subordinate Linkage</h4>
@@ -1362,7 +1362,7 @@ const AdminPartners = () => {
         {/* Edit Commission Modal */}
         {showCommissionModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowCommissionModal(false)} />
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
             <div className="relative w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl z-10 space-y-4 animate-fade-in">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h4 className="text-sm font-black text-slate-800">Edit Commission Rate</h4>

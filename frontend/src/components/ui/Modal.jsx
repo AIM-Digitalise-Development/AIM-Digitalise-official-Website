@@ -22,9 +22,12 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
   
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onClick={onClose}></div>
+      <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"></div>
       <div className="flex min-h-full items-center justify-center p-4">
         <div className={`relative bg-white rounded-lg shadow-xl w-full ${sizes[size]} animate-slide-up`}>
+          <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10 text-sm font-bold">
+            ✕
+          </button>
           {title && (
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">{title}</h3>

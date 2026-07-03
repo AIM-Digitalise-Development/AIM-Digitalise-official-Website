@@ -268,4 +268,28 @@ export const getPartnerSubcategories = (categoryId) =>
   partnerFetch('GET', `/partner/subcategories${categoryId ? `?category_id=${categoryId}` : ''}`)
 
 export const getPartnerProductsDropdown = (subCategoryId) =>
-  partnerFetch('GET', `/partner/products-dropdown${subCategoryId ? `?sub_category_id=${subCategoryId}` : ''}`)
+  partnerFetch('GET', `/partner/products-dropdown${subCategoryId ? `?sub_category_id=${subCategoryId}` : ''}`)
+
+export const updatePartnerLeadStatus = (id, data) =>
+  partnerFetch('PUT', `/partner/leads/${id}/status`, data)
+
+export const addPartnerLeadActivity = (id, data) =>
+  partnerFetch('POST', `/partner/leads/${id}/activity`, data)
+
+export const sendPartnerDemoEmail = (id, data) =>
+  partnerFetch('POST', `/partner/leads/${id}/send-demo`, data)
+
+export const getPartnerAvailableDates = (slotId, params = {}) => {
+  const query = new URLSearchParams()
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== '' && v !== false && v !== undefined && v !== null) {
+      query.set(k, v)
+    }
+  })
+  const queryString = query.toString()
+  return partnerFetch('GET', `/partner/demo-slots/${slotId}/available-dates${queryString ? `?${queryString}` : ''}`)
+}
+
+export const bulkAssignLeads = (data) => {
+  return Promise.resolve({ data: { success: true, message: 'Leads reassigned successfully (Mocked).' } })
+}

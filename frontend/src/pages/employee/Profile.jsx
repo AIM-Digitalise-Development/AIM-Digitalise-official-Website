@@ -301,8 +301,7 @@ const EmployeeProfile = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.5 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsEditOpen(false)}
-              className="absolute inset-0 bg-black cursor-pointer"
+              className="absolute inset-0 bg-black"
             />
             {/* Form Body */}
             <motion.div
