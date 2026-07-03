@@ -499,12 +499,25 @@ export default function EmployeeLeads() {
   }
 
 
+  const cleanAndFixPhone = (val) => {
+    if (!val) return ''
+    let cleaned = val.replace(/\+/g, '').replace(/\s+/g, '')
+    if (/^\d{10}$/.test(cleaned)) {
+      cleaned = '91' + cleaned
+    }
+    return cleaned
+  }
+
   const handleCreateEditSubmit = async (e) => {
     e.preventDefault()
     try {
       setSaving(true)
+      const cleanedPhone = cleanAndFixPhone(leadForm.client_phone)
+      const cleanedAltPhone = cleanAndFixPhone(leadForm.client_alternate_phone)
       const payload = {
         ...leadForm,
+        client_phone: cleanedPhone,
+        client_alternate_phone: cleanedAltPhone || null,
         follow_up_date: leadForm.expected_close_date || null
       }
       if (editingLead) {
@@ -1497,8 +1510,12 @@ export default function EmployeeLeads() {
                       type="text"
                       required
                       value={leadForm.client_phone}
-                      onChange={(e) => setLeadForm({ ...leadForm, client_phone: e.target.value })}
-                      placeholder="e.g. +91 9876543210"
+                      onChange={(e) => setLeadForm({ ...leadForm, client_phone: e.target.value.replace(/\+/g, '') })}
+                      onBlur={(e) => {
+                        const fixed = cleanAndFixPhone(e.target.value)
+                        setLeadForm({ ...leadForm, client_phone: fixed })
+                      }}
+                      placeholder="e.g. 91 9876543210"
                       className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] font-bold"
                     />
                   </div>
@@ -1521,8 +1538,12 @@ export default function EmployeeLeads() {
                     <input
                       type="text"
                       value={leadForm.client_alternate_phone}
-                      onChange={(e) => setLeadForm({ ...leadForm, client_alternate_phone: e.target.value })}
-                      placeholder="Backup mobile number"
+                      onChange={(e) => setLeadForm({ ...leadForm, client_alternate_phone: e.target.value.replace(/\+/g, '') })}
+                      onBlur={(e) => {
+                        const fixed = cleanAndFixPhone(e.target.value)
+                        setLeadForm({ ...leadForm, client_alternate_phone: fixed })
+                      }}
+                      placeholder="Backup mobile number (e.g. 91 9876543210)"
                       className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a]"
                     />
                   </div>

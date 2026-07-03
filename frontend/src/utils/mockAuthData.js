@@ -339,7 +339,23 @@ if (typeof window !== 'undefined' && !window.__mockDemoSlots) {
 
 export const getMockResponse = (url, method, data = null) => {
   method = (method || '').toUpperCase()
-  const lowercaseUrl = url.toLowerCase()
+  let normalizedUrl = url.toLowerCase()
+  if (normalizedUrl.includes('/partner/leads')) {
+    normalizedUrl = normalizedUrl.replace('/partner/leads', '/employee/leads')
+  } else if (normalizedUrl.includes('/partner/demo-slots')) {
+    normalizedUrl = normalizedUrl.replace('/partner/demo-slots', '/employee/demo-slots')
+  } else if (normalizedUrl.includes('/partner/demo-slots-available')) {
+    normalizedUrl = normalizedUrl.replace('/partner/demo-slots-available', '/employee/demo-slots-available')
+  } else if (normalizedUrl.includes('/partner/categories')) {
+    normalizedUrl = normalizedUrl.replace('/partner/categories', '/employee/categories')
+  } else if (normalizedUrl.includes('/partner/subcategories')) {
+    normalizedUrl = normalizedUrl.replace('/partner/subcategories', '/employee/subcategories')
+  } else if (normalizedUrl.includes('/partner/products-dropdown')) {
+    normalizedUrl = normalizedUrl.replace('/partner/products-dropdown', '/employee/products-dropdown')
+  } else if (normalizedUrl.includes('/partner/bookings')) {
+    normalizedUrl = normalizedUrl.replace('/partner/bookings', '/employee/bookings')
+  }
+  const lowercaseUrl = normalizedUrl
   if (!data) data = {}
 
   if (lowercaseUrl.includes('/public/rm-options')) {

@@ -207,13 +207,29 @@ const PartnerLeads = () => {
     } catch {}
   }
 
+  const cleanAndFixPhone = (val) => {
+    if (!val) return ''
+    let cleaned = val.replace(/\+/g, '').replace(/\s+/g, '')
+    if (/^\d{10}$/.test(cleaned)) {
+      cleaned = '91' + cleaned
+    }
+    return cleaned
+  }
+
   const createLead = async (e) => {
     e.preventDefault()
     setLoading(true)
     setError('')
     setValidationErrors({})
+    const cleanedPhone = cleanAndFixPhone(leadFormData.client_phone)
+    const cleanedAltPhone = cleanAndFixPhone(leadFormData.client_alternate_phone)
+    const payload = {
+      ...leadFormData,
+      client_phone: cleanedPhone,
+      client_alternate_phone: cleanedAltPhone || null
+    }
     try {
-      const res = await createPartnerLead(leadFormData)
+      const res = await createPartnerLead(payload)
       if (res.data?.success) {
         setSuccess('Lead created successfully!')
         setShowLeadModal(false)
@@ -235,8 +251,15 @@ const PartnerLeads = () => {
     setLoading(true)
     setError('')
     setValidationErrors({})
+    const cleanedPhone = cleanAndFixPhone(leadFormData.client_phone)
+    const cleanedAltPhone = cleanAndFixPhone(leadFormData.client_alternate_phone)
+    const payload = {
+      ...leadFormData,
+      client_phone: cleanedPhone,
+      client_alternate_phone: cleanedAltPhone || null
+    }
     try {
-      const res = await updatePartnerLead(editingLead.id, leadFormData)
+      const res = await updatePartnerLead(editingLead.id, payload)
       if (res.data?.success) {
         setSuccess('Lead updated successfully!')
         setShowLeadModal(false)
@@ -559,13 +582,17 @@ const PartnerLeads = () => {
 
   const onLeadChange = (e) => {
     const { name, value, type, checked } = e.target
-    setLeadFormData(p => ({ ...p, [name]: type === 'checkbox' ? checked : value }))
+    let val = type === 'checkbox' ? checked : value
+    if (name === 'client_phone' || name === 'client_alternate_phone') {
+      val = value.replace(/\+/g, '')
+    }
+    setLeadFormData(p => ({ ...p, [name]: val }))
     if (name === 'category_id') {
-      fetchSubcategories(value)
+      fetchSubcategories(val)
       setLeadFormData(p => ({ ...p, sub_category_id: '', product_id: '' }))
     }
     if (name === 'sub_category_id') {
-      fetchProducts(value)
+      fetchProducts(val)
       setLeadFormData(p => ({ ...p, product_id: '' }))
     }
   }
@@ -937,9 +964,13 @@ const PartnerLeads = () => {
                       type="text"
                       name="client_phone"
                       required
-                      placeholder="+91 98765 43210"
+                      placeholder="91 98765 43210"
                       value={leadFormData.client_phone}
                       onChange={onLeadChange}
+                      onBlur={(e) => {
+                        const fixed = cleanAndFixPhone(e.target.value)
+                        setLeadFormData(p => ({ ...p, client_phone: fixed }))
+                      }}
                       className="w-full bg-white/5 border border-white/10 focus:border-aim-gold rounded-xl px-3 py-2 text-white placeholder-white/20 focus:outline-none transition-colors font-mono"
                     />
                   </div>
@@ -948,9 +979,13 @@ const PartnerLeads = () => {
                     <input
                       type="text"
                       name="client_alternate_phone"
-                      placeholder="Optional alternate number"
+                      placeholder="Optional alternate number (e.g. 91 98765 43210)"
                       value={leadFormData.client_alternate_phone}
                       onChange={onLeadChange}
+                      onBlur={(e) => {
+                        const fixed = cleanAndFixPhone(e.target.value)
+                        setLeadFormData(p => ({ ...p, client_alternate_phone: fixed }))
+                      }}
                       className="w-full bg-white/5 border border-white/10 focus:border-aim-gold rounded-xl px-3 py-2 text-white placeholder-white/20 focus:outline-none transition-colors font-mono"
                     />
                   </div>

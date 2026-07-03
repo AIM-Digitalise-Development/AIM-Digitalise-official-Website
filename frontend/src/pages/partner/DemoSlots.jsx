@@ -698,15 +698,22 @@ const DemoSlots = () => {
               <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4">
                 <div>
                   <label className="block text-[10px] text-aim-copy-muted uppercase tracking-wider mb-1.5">Slot Title *</label>
-                  <input
-                    type="text"
+                  <select
                     name="title"
                     value={formState.title}
                     onChange={handleInputChange}
-                    placeholder="e.g. Discovery Meeting - school Suite ERP"
                     required
-                    className="w-full bg-white/5 border border-white/10 focus:border-aim-gold rounded-xl px-3 py-2 text-white placeholder-white/20 focus:outline-none transition-colors"
-                  />
+                    className="w-full bg-[#0B1B3A] border border-white/10 focus:border-aim-gold rounded-xl px-3 py-2 text-white focus:outline-none transition-colors cursor-pointer"
+                  >
+                    <option value="" disabled className="bg-[#0B1B3A]">Select Slot Title</option>
+                    <option value="Morning Slot" className="bg-[#0B1B3A]">Morning Slot</option>
+                    <option value="Evening Slot" className="bg-[#0B1B3A]">Evening Slot</option>
+                    <option value="Afternoon Slot" className="bg-[#0B1B3A]">Afternoon Slot</option>
+                    <option value="Noon Slot" className="bg-[#0B1B3A]">Noon Slot</option>
+                    {formState.title && !['Morning Slot', 'Evening Slot', 'Afternoon Slot', 'Noon Slot'].includes(formState.title) && (
+                      <option value={formState.title} className="bg-[#0B1B3A]">{formState.title}</option>
+                    )}
+                  </select>
                 </div>
 
                 <div>
