@@ -41,9 +41,10 @@ const AdminLayout = () => {
     return null
   }
 
-  // Exact menu items from the screenshot
+  // Exact menu items from the screenshot, with Lead Management added after Dashboard
   const menuItems = [
     { route: ROUTES.ADMIN.DASHBOARD, label: 'Dashboard', icon: 'dashboard', color: '#10b981' },
+    { route: ROUTES.ADMIN.LEADS, label: 'Lead Management', icon: 'leads', color: '#f59e0b' },
     { route: ROUTES.ADMIN.SAAS_CLIENTS, label: 'SaaS Based Client', icon: 'clients', color: '#38b34a' },
     { route: ROUTES.ADMIN.SUBSCRIBED_CLIENTS, label: 'Subscribed Client', icon: 'subscription', color: '#ef4444' },
     { route: ROUTES.ADMIN.USERS, label: 'General Client', icon: 'general_client', color: '#f97316' },
@@ -53,6 +54,7 @@ const AdminLayout = () => {
     { route: ROUTES.ADMIN.COMPLIANCE, label: 'Compliance', icon: 'compliance', color: '#8b5cf6' },
     { route: ROUTES.ADMIN.PARTNERS, label: 'Partner', icon: 'partners', color: '#38b34a' },
     { route: null, label: 'Reports', icon: 'reports', color: '#f59e0b' },
+    { route: ROUTES.ADMIN.IMPLEMENTATION, label: 'Implementation', icon: 'implementation', color: '#10b981' },
     { route: ROUTES.ADMIN.SUPPORT, label: 'Support', icon: 'support', color: '#06b6d4' },
     { route: ROUTES.ADMIN.SETTINGS, label: 'Settings', icon: 'settings', color: '#6366f1' },
   ]
@@ -60,6 +62,11 @@ const AdminLayout = () => {
   const renderIcon = (type, isActive) => {
     const iconClass = `w-4.5 h-4.5 ${isActive ? 'text-[#38b34a]' : ''}`
     if (type === 'dashboard') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /></svg>
+    if (type === 'leads') return (
+      <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+    )
     if (type === 'clients') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><circle cx="9" cy="8" r="3.5" /><path d="M4 18c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5" /><path d="M16 11h5m-2.5-2.5v5" /></svg>
     if (type === 'products') return (
       <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -89,6 +96,11 @@ const AdminLayout = () => {
         <line x1="16" y1="13" x2="8" y2="13" />
         <line x1="16" y1="17" x2="8" y2="17" />
         <polyline points="10 9 9 9 8 9" />
+      </svg>
+    )
+    if (type === 'implementation') return (
+      <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
       </svg>
     )
     if (type === 'support') return (
@@ -253,6 +265,7 @@ const AdminLayout = () => {
             <span className="text-sm font-semibold text-slate-400 font-sans truncate hidden md:inline-block">
               {(() => {
                 if (location.pathname === ROUTES.ADMIN.DASHBOARD) return "Welcome back! Here's your business overview for June 2026."
+                if (location.pathname === ROUTES.ADMIN.LEADS) return "Manage all system leads, assignments, and follow-ups."
                 if (location.pathname === ROUTES.ADMIN.USERS) return "Manage your client accounts."
                 if (location.pathname === ROUTES.ADMIN.SAAS_CLIENTS) return "Manage SaaS clients and deliveries."
                 if (location.pathname === ROUTES.ADMIN.SUBSCRIBED_CLIENTS) return "Manage client subscriptions, customization requests, and payment reports."
@@ -262,6 +275,7 @@ const AdminLayout = () => {
                 if (location.pathname === ROUTES.ADMIN.PARTNERS) return "Manage partner accounts and sales."
                 if (location.pathname === ROUTES.ADMIN.EMPLOYEE) return "Manage your employees, attendance, leave, and payroll."
                 if (location.pathname === ROUTES.ADMIN.COMPLIANCE) return "Review corporate compliance, audit logs, and tax filings."
+                if (location.pathname === ROUTES.ADMIN.IMPLEMENTATION) return "Review project implementations, execution status, and delivery milestones."
                 return "Manage your company overview."
               })()}
             </span>

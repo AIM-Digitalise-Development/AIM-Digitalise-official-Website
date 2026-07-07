@@ -28,6 +28,7 @@ import DigitalSignature from './pages/website/DigitalSignature'
 import Users from './pages/website/Users'
 import GeneralLogin from './pages/website/GeneralLogin'
 import AdminDashboard from './pages/admin/Dashboard'
+import AdminLeads from './pages/admin/Leads'
 import AdminUsers from './pages/admin/Users'
 import AdminSaasClients from './pages/admin/SaasClients'
 import AdminProducts from './pages/admin/Products'
@@ -38,6 +39,7 @@ import AdminPartners from './pages/admin/Partners'
 import AdminSupport from './pages/admin/Support'
 import AdminEmployee from './pages/admin/Employee'
 import AdminCompliance from './pages/admin/Compliance'
+import AdminImplementation from './pages/admin/Implementation'
 import PartnerLogin from './pages/partner/Login'
 import PartnerRegister from './pages/partner/Register'
 import PartnerDashboard from './pages/partner/Dashboard'
@@ -115,6 +117,7 @@ function App() {
           {/* ── Admin portal (standalone shell) ── */}
           <Route path={ROUTES.ADMIN.DASHBOARD} element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
+            <Route path="leads" element={<AdminLeads />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="saas-clients" element={<AdminSaasClients />} />
             <Route path="products" element={<Navigate to="/admin/settings" replace />} />
@@ -125,6 +128,7 @@ function App() {
             <Route path="support" element={<AdminSupport />} />
             <Route path="employee" element={<AdminEmployee />} />
             <Route path="compliance" element={<AdminCompliance />} />
+            <Route path="implementation" element={<AdminImplementation />} />
           </Route>
 
           {/* ── Employee portal (authenticated shell with sidebar) ── */}

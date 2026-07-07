@@ -352,8 +352,14 @@ export const getMockResponse = (url, method, data = null) => {
     normalizedUrl = normalizedUrl.replace('/partner/subcategories', '/employee/subcategories')
   } else if (normalizedUrl.includes('/partner/products-dropdown')) {
     normalizedUrl = normalizedUrl.replace('/partner/products-dropdown', '/employee/products-dropdown')
-  } else if (normalizedUrl.includes('/partner/bookings')) {
-    normalizedUrl = normalizedUrl.replace('/partner/bookings', '/employee/bookings')
+  } else if (normalizedUrl.includes('/admin/leads')) {
+    normalizedUrl = normalizedUrl.replace('/admin/leads', '/employee/leads')
+  } else if (normalizedUrl.includes('/admin/demo-slots')) {
+    normalizedUrl = normalizedUrl.replace('/admin/demo-slots', '/employee/demo-slots')
+  } else if (normalizedUrl.includes('/admin/demo-slots-available')) {
+    normalizedUrl = normalizedUrl.replace('/admin/demo-slots-available', '/employee/demo-slots-available')
+  } else if (normalizedUrl.includes('/admin/bookings')) {
+    normalizedUrl = normalizedUrl.replace('/admin/bookings', '/employee/bookings')
   }
   const lowercaseUrl = normalizedUrl
   if (!data) data = {}

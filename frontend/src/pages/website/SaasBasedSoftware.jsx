@@ -343,6 +343,20 @@ const SaasBasedSoftware = () => {
       .catch(err => console.error('Could not load partners:', err))
   }, [])
 
+  useEffect(() => {
+    if (paymentStep !== 'idle') {
+      document.body.style.overflow = 'hidden'
+      document.documentElement.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+      document.documentElement.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+      document.documentElement.style.overflow = ''
+    }
+  }, [paymentStep])
+
   const handleCategoryChange = (catId) => {
     setActiveCategory(catId)
     const firstPlan = products.find(plan => plan.category === catId)
@@ -845,7 +859,7 @@ const SaasBasedSoftware = () => {
                       setApiError('')
                     }
                   }}
-                  className="fixed inset-0 bg-slate-950/75 backdrop-blur-md cursor-default"
+                  className="fixed inset-0 bg-black/40 backdrop-blur-md cursor-default"
                 />
 
                 {/* Modal Container */}
@@ -854,8 +868,17 @@ const SaasBasedSoftware = () => {
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 20 }}
                   transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-                  className="relative w-full max-w-5xl bg-slate-900 border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl z-10 max-h-[95vh] overflow-y-auto text-left"
+                  className="relative w-full max-w-5xl bg-slate-900 border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl z-10 max-h-[95vh] overflow-y-auto overflow-x-hidden no-scrollbar text-left"
                 >
+                  <style>{`
+                    .no-scrollbar::-webkit-scrollbar {
+                      display: none !important;
+                    }
+                    .no-scrollbar {
+                      -ms-overflow-style: none !important;
+                      scrollbar-width: none !important;
+                    }
+                  `}</style>
                   {/* Close button */}
                   <button
                     type="button"
@@ -969,15 +992,15 @@ const SaasBasedSoftware = () => {
                           )}
                         </AnimatePresence>
 
-                        <form onSubmit={handleCheckoutSubmit} className="space-y-5">
+                        <form onSubmit={handleCheckoutSubmit} className="space-y-4">
 
-                          <div className="grid md:grid-cols-2 gap-6 md:gap-8 items-start">
+                          <div className="grid md:grid-cols-2 gap-4 items-start">
                             {/* Left Column: Billing Details */}
-                            <div className="space-y-4">
+                            <div className="space-y-3">
                               <div>
-                                <h4 className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest mb-3">Billing Details</h4>
-                                <div className="grid sm:grid-cols-2 gap-3.5">
-                                  <div className="space-y-1.5">
+                                <h4 className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest mb-2.5">Billing Details</h4>
+                                <div className="grid sm:grid-cols-2 gap-2.5">
+                                  <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
                                       Contact Person <span className="text-aim-gold">*</span>
                                     </label>
@@ -989,10 +1012,10 @@ const SaasBasedSoftware = () => {
                                       onChange={handleCheckoutChange}
                                       placeholder="Full name"
                                       required
-                                      className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                      className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                     />
                                   </div>
-                                  <div className="space-y-1.5">
+                                  <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
                                       Contact Number <span className="text-aim-gold">*</span>
                                     </label>
@@ -1010,10 +1033,10 @@ const SaasBasedSoftware = () => {
                                       }}
                                       placeholder="e.g. 91 98765 43210"
                                       required
-                                      className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                      className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                     />
                                   </div>
-                                  <div className="space-y-1.5 sm:col-span-2">
+                                  <div className="space-y-1 sm:col-span-2">
                                     <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
                                       Email Address <span className="text-aim-gold">*</span>
                                     </label>
@@ -1024,13 +1047,13 @@ const SaasBasedSoftware = () => {
                                       onChange={handleCheckoutChange}
                                       placeholder="name@company.com"
                                       required
-                                      className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                      className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                     />
                                   </div>
 
                                   {/* Conditional fields for Institute Pro (id=15) vs others */}
                                   {!isInstitutePro ? (
-                                    <div className="space-y-1.5 sm:col-span-2">
+                                    <div className="space-y-1 sm:col-span-2">
                                       <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
                                         Company Name
                                       </label>
@@ -1040,12 +1063,12 @@ const SaasBasedSoftware = () => {
                                         value={checkoutData.company_name}
                                         onChange={handleCheckoutChange}
                                         placeholder="Your organization"
-                                        className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                        className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                       />
                                     </div>
                                   ) : (
                                     <>
-                                      <div className="space-y-1.5 sm:col-span-2">
+                                      <div className="space-y-1 sm:col-span-2">
                                         <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
                                           School Name <span className="text-aim-gold">*</span>
                                         </label>
@@ -1056,10 +1079,10 @@ const SaasBasedSoftware = () => {
                                           onChange={handleCheckoutChange}
                                           required
                                           placeholder="Full school name"
-                                          className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                          className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                         />
                                       </div>
-                                      <div className="space-y-1.5">
+                                      <div className="space-y-1">
                                         <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
                                           Short Name <span className="text-aim-gold">*</span> <span className="text-aim-copy-muted normal-case font-normal">(max 8 chars)</span>
                                         </label>
@@ -1071,10 +1094,10 @@ const SaasBasedSoftware = () => {
                                           onChange={handleCheckoutChange}
                                           required
                                           placeholder="e.g. STMARY"
-                                          className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                          className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                         />
                                       </div>
-                                      <div className="space-y-1.5">
+                                      <div className="space-y-1">
                                         <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
                                           Current Session <span className="text-aim-gold">*</span> <span className="text-aim-copy-muted normal-case font-normal">(max 10 chars)</span>
                                         </label>
@@ -1086,10 +1109,10 @@ const SaasBasedSoftware = () => {
                                           onChange={handleCheckoutChange}
                                           required
                                           placeholder="2025-26"
-                                          className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                          className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                         />
                                       </div>
-                                      <div className="space-y-1.5 sm:col-span-2">
+                                      <div className="space-y-1 sm:col-span-2">
                                         <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
                                           GSTIN <span className="text-aim-copy-muted normal-case font-normal">(optional)</span>
                                         </label>
@@ -1099,7 +1122,7 @@ const SaasBasedSoftware = () => {
                                           value={checkoutData.gstin}
                                           onChange={handleCheckoutChange}
                                           placeholder="22AAAAA0000A1Z5"
-                                          className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                          className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                         />
                                       </div>
                                     </>
@@ -1109,14 +1132,12 @@ const SaasBasedSoftware = () => {
                             </div>
 
                             {/* Right Column: Address details, RM, GST & Total Students */}
-                            <div className="space-y-4">
-
+                            <div className="space-y-3">
                               <div>
-
-                                <h4 className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest mb-3">Address & RM Details</h4>
-                                <div className="grid sm:grid-cols-2 gap-3.5">
+                                <h4 className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest mb-2.5">Address & RM Details</h4>
+                                <div className="grid sm:grid-cols-2 gap-2.5">
                                   {/* Full Address */}
-                                  <div className="space-y-1.5 sm:col-span-2">
+                                  <div className="space-y-1 sm:col-span-2">
                                     <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
                                       Full Address <span className="text-aim-gold">*</span>
                                     </label>
@@ -1127,10 +1148,10 @@ const SaasBasedSoftware = () => {
                                       required
                                       rows="2"
                                       placeholder="Street, building, locality…"
-                                      className="input-brand text-sm transition resize-none bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                      className="input-brand text-xs py-1.5 px-3 transition resize-none bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                     />
                                   </div>
-                                  <div className="space-y-1.5">
+                                  <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
                                       District <span className="text-aim-gold">*</span>
                                     </label>
@@ -1141,10 +1162,10 @@ const SaasBasedSoftware = () => {
                                       onChange={handleCheckoutChange}
                                       required
                                       placeholder="e.g. Kolkata"
-                                      className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                      className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                     />
                                   </div>
-                                  <div className="space-y-1.5">
+                                  <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
                                       State <span className="text-aim-gold">*</span>
                                     </label>
@@ -1155,11 +1176,11 @@ const SaasBasedSoftware = () => {
                                       onChange={handleCheckoutChange}
                                       required
                                       placeholder="e.g. West Bengal"
-                                      className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                      className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                     />
                                   </div>
 
-                                  <div className="space-y-1.5">
+                                  <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
                                       PIN Code <span className="text-aim-gold">*</span>
                                     </label>
@@ -1170,14 +1191,14 @@ const SaasBasedSoftware = () => {
                                       onChange={handleCheckoutChange}
                                       required
                                       placeholder="700001"
-                                      className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                      className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                     />
                                   </div>
 
                                   {/* Total Students & GSTIN conditional slots */}
                                   {isInstitutePro ? (
                                     <>
-                                      <div className="space-y-1.5">
+                                      <div className="space-y-1">
                                         <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
                                           Total Students <span className="text-aim-gold">*</span>
                                         </label>
@@ -1189,13 +1210,12 @@ const SaasBasedSoftware = () => {
                                           onChange={handleCheckoutChange}
                                           required
                                           placeholder="e.g. 450"
-                                          className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                          className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                         />
                                       </div>
-
                                     </>
                                   ) : (
-                                    <div className="space-y-1.5">
+                                    <div className="space-y-1">
                                       <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
                                         GSTIN <span className="text-aim-copy-muted normal-case font-normal">(optional)</span>
                                       </label>
@@ -1205,16 +1225,13 @@ const SaasBasedSoftware = () => {
                                         value={checkoutData.gstin}
                                         onChange={handleCheckoutChange}
                                         placeholder="22AAAAA0000A1Z5"
-                                        className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                        className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                       />
                                     </div>
                                   )}
 
-                                  {/* Custom Price Adjustments */}
-
-
                                   {/* Select Relationship Manager */}
-                                  <div className="space-y-1.5 sm:col-span-2">
+                                  <div className="space-y-1 sm:col-span-2">
                                     <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
                                       Select Relationship Manager <span className="text-aim-gold">*</span>
                                     </label>
@@ -1224,7 +1241,7 @@ const SaasBasedSoftware = () => {
                                         value={checkoutData.partner_id}
                                         onChange={handleCheckoutChange}
                                         required
-                                        className="input-brand text-sm appearance-none cursor-pointer bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                        className="input-brand text-xs py-1.5 px-3 appearance-none cursor-pointer bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                       >
                                         <option value="">Select your RM / Partner</option>
                                         {partners.map(p => (
@@ -1238,7 +1255,6 @@ const SaasBasedSoftware = () => {
                                       </div>
                                     </div>
                                   </div>
-
 
                                 </div>
                               </div>
