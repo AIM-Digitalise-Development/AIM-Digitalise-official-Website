@@ -63,7 +63,6 @@ const PartnerLoginForm = () => {
           onChange={(e) => setLogin(e.target.value)}
           placeholder="ENTER YOUR PARTNER ID OR EMAIL"
           className={inputCls}
-          autoFocus
           required
         />
       </div>

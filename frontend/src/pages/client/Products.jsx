@@ -218,6 +218,7 @@ const ClientProducts = () => {
 
   const companyName = displayUser?.company_name || displayUser?.school_name || displayUser?.organization || 'Demo Pvt.Ltd'
   const productName = activeProduct?.product_name || activeProduct?.name || displayUser?.product_name || 'NEXGN Hotel Pro'
+  const isInstitutePro = productName.toLowerCase().includes('institute pro')
   
   const activationDateStr = (() => {
     const rawDate = activeProduct?.activated_at || displayUser?.activated_at
@@ -248,19 +249,42 @@ const ClientProducts = () => {
     <div className="space-y-8 max-w-7xl mx-auto pb-10 select-none animate-fade-in text-slate-700" style={{ fontFamily: "'Inter', sans-serif" }}>
       
       {/* 1. Portal Heading & Info Section */}
-      <div className="space-y-1 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-        <h1 className="text-3xl font-black text-slate-900 tracking-tight">{companyName}</h1>
-        <p className="text-sm font-bold text-slate-500">{productName}</p>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5 pt-2 text-xs font-semibold">
-          <span className="flex items-center gap-1.5">
-            <span className="text-slate-400">Activation Date:</span>
-            <strong className="text-[#2563eb]">{activationDateStr}</strong>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="text-slate-400">Delivery Date:</span>
-            <strong className="text-[#10b981]">{deliveryDateStr}</strong>
-          </span>
+      <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">{companyName}</h1>
+          <p className="text-sm font-bold text-slate-500">{productName}</p>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5 pt-2 text-xs font-semibold">
+            <span className="flex items-center gap-1.5">
+              <span className="text-slate-400">Activation Date:</span>
+              <strong className="text-[#2563eb]">{activationDateStr}</strong>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="text-slate-400">Delivery Date:</span>
+              <strong className="text-[#10b981]">{deliveryDateStr}</strong>
+            </span>
+          </div>
         </div>
+
+        {isInstitutePro ? (
+          <>
+            {/* Middle portion: Session */}
+            <div className="md:text-center shrink-0">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Academic Session</span>
+              <span className="text-sm font-black text-slate-800 block mt-1 px-4 py-1.5 bg-slate-50 rounded-xl border border-slate-100">
+                2026-27
+              </span>
+            </div>
+            {/* Right portion: Student Count */}
+            <div className="md:text-right shrink-0">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Total Student Count</span>
+              <span className="text-2xl font-black text-[#2563eb] block mt-1 font-mono">
+                {studentCountData?.student_count !== undefined ? studentCountData.student_count : '0'}
+              </span>
+            </div>
+          </>
+        ) : (
+          <div className="flex-grow md:max-w-xs" />
+        )}
       </div>
 
       {error && (
@@ -317,15 +341,15 @@ const ClientProducts = () => {
             </div>
           </div>
 
-          {/* Card 5: Total ERP Students */}
+          {/* Card 5: Total Addon Feature Added */}
           <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center gap-5 transition-transform hover:scale-[1.01]">
             <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 text-2xl font-bold shadow-inner">
-              👨‍🎓
+              🧩
             </div>
             <div className="space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Total ERP Students</span>
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Total Addon Feature Added</span>
               <span className="text-3xl font-black text-slate-800 block font-mono">
-                {studentCountData?.student_count !== undefined ? studentCountData.student_count : '—'}
+                0
               </span>
             </div>
           </div>
@@ -404,6 +428,28 @@ const ClientProducts = () => {
             >
               Complete Now
             </button>
+          </div>
+
+          {/* Teacher count, Last Payment, Next Payment in the blank portion of this card */}
+          <div className="pt-4 border-t border-slate-100 space-y-3.5">
+            {isInstitutePro && (
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-bold text-slate-400 uppercase tracking-wider">Total Teacher Count</span>
+                <span className="font-black text-slate-800 text-sm font-mono">0</span>
+              </div>
+            )}
+            <div className="flex justify-between items-center text-xs">
+              <span className="font-bold text-slate-400 uppercase tracking-wider">Last Payment</span>
+              <span className="font-black text-slate-800 font-mono">
+                ₹{Number(subscriptionPrice).toLocaleString('en-IN')}.00
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-xs">
+              <span className="font-bold text-slate-400 uppercase tracking-wider">Next Payment</span>
+              <span className="font-black text-indigo-600 font-mono">
+                ₹{Number(subscriptionPrice).toLocaleString('en-IN')}.00
+              </span>
+            </div>
           </div>
 
         </div>
