@@ -65,3 +65,8 @@ export const bookDemoSlot = (leadId, data) =>
 export const cancelBooking = (bookingId) =>
   client.post(`/employee/bookings/${bookingId}/cancel`)
 
+// Schedule Follow-Up - POST /employee/leads/{leadId}/follow-up
+// Body: { next_date, status, remark, lost_reason }
+export const scheduleFollowUp = (leadId, data) =>
+  client.post(`/employee/leads/${leadId}/follow-up`, data)
+

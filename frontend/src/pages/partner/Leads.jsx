@@ -1227,15 +1227,7 @@ export default function PartnerLeads() {
                               🚫
                             </button>
                           )}
-                          {!lead.is_converted && (
-                            <button
-                              onClick={() => handleDeleteLead(lead.id)}
-                              title="Delete Lead"
-                              className="p-1 text-gray-500 hover:text-red-400 hover:bg-white/5 rounded transition-all cursor-pointer"
-                            >
-                              🗑️
-                            </button>
-                          )}
+                         
                         </div>
                       </td>
                     </tr>

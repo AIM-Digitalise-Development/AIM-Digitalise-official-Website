@@ -602,8 +602,8 @@ const SaasBasedSoftware = () => {
                         key={plan.id}
                         onClick={() => handlePlanSelect(plan.id)}
                         className={`w-full flex items-center gap-3.5 p-3.5 text-left rounded-xl border text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer ${activePlanId === plan.id
-                            ? getCategoryButtonActiveStyles(activeCategory)
-                            : 'card-elevated text-aim-copy-muted hover:text-aim-gold hover:bg-aim-gold/5'
+                          ? getCategoryButtonActiveStyles(activeCategory)
+                          : 'card-elevated text-aim-copy-muted hover:text-aim-gold hover:bg-aim-gold/5'
                           }`}
                       >
                         <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 transition-colors ${getCategoryNumberStyles(activeCategory, activePlanId === plan.id)
@@ -1110,12 +1110,12 @@ const SaasBasedSoftware = () => {
 
                             {/* Right Column: Address details, RM, GST & Total Students */}
                             <div className="space-y-4">
-                              
+
                               <div>
-                                
+
                                 <h4 className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest mb-3">Address & RM Details</h4>
                                 <div className="grid sm:grid-cols-2 gap-3.5">
-                                   {/* Full Address */}
+                                  {/* Full Address */}
                                   <div className="space-y-1.5 sm:col-span-2">
                                     <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
                                       Full Address <span className="text-aim-gold">*</span>
@@ -1158,7 +1158,7 @@ const SaasBasedSoftware = () => {
                                       className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                     />
                                   </div>
-                                 
+
                                   <div className="space-y-1.5">
                                     <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
                                       PIN Code <span className="text-aim-gold">*</span>
@@ -1192,7 +1192,7 @@ const SaasBasedSoftware = () => {
                                           className="input-brand text-sm bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                         />
                                       </div>
-                                      
+
                                     </>
                                   ) : (
                                     <div className="space-y-1.5">
@@ -1211,7 +1211,7 @@ const SaasBasedSoftware = () => {
                                   )}
 
                                   {/* Custom Price Adjustments */}
-                                 
+
 
                                   {/* Select Relationship Manager */}
                                   <div className="space-y-1.5 sm:col-span-2">
@@ -1239,7 +1239,7 @@ const SaasBasedSoftware = () => {
                                     </div>
                                   </div>
 
-                                  
+
                                 </div>
                               </div>
                             </div>

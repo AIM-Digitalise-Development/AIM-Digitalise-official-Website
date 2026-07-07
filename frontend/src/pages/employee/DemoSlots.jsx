@@ -6,8 +6,10 @@ import {
   updateDemoSlot,
   toggleDemoSlotStatus,
   deleteDemoSlot,
-  getDemoStats
+  getDemoStats,
+  getSlotBookings
 } from '../../api/demoSlots'
+import { cancelBooking } from '../../api/leads'
 
 export default function EmployeeDemoSlots() {
   // Lists & Stats state
@@ -29,6 +31,16 @@ export default function EmployeeDemoSlots() {
   const [isEditMode, setIsEditMode] = useState(false)
   const [selectedSlot, setSelectedSlot] = useState(null)
   const [saving, setSaving] = useState(false)
+
+  // ── Demo Slots Calendar State ──
+  const [showDemoCalendarModal, setShowDemoCalendarModal] = useState(false)
+  const [demoCalendarMonth, setDemoCalendarMonth] = useState(new Date())
+  const [selectedDemoDate, setSelectedDemoDate] = useState('')
+  const [demoCalendarSlots, setDemoCalendarSlots] = useState([])
+  const [demoCalendarBookings, setDemoCalendarBookings] = useState([])
+  const [showDemoSlotPopup, setShowDemoSlotPopup] = useState(false)
+  const [selectedDemoSlotId, setSelectedDemoSlotId] = useState(null)
+  const [selectedDemoSlotDetail, setSelectedDemoSlotDetail] = useState(null)
 
   // Form state
   const [formState, setFormState] = useState({
@@ -267,6 +279,162 @@ export default function EmployeeDemoSlots() {
     }
   }
 
+  // ── Demo Slots Calendar Handlers ──
+  const openDemoCalendar = () => {
+    setShowDemoCalendarModal(true)
+    setDemoCalendarMonth(new Date())
+    setSelectedDemoDate('')
+    setShowDemoSlotPopup(false)
+    setSelectedDemoSlotId(null)
+    setSelectedDemoSlotDetail(null)
+    setDemoCalendarSlots([])
+    setDemoCalendarBookings([])
+  }
+
+  const demoPrevMonth = () => {
+    setDemoCalendarMonth(new Date(demoCalendarMonth.getFullYear(), demoCalendarMonth.getMonth() - 1, 1))
+    setSelectedDemoDate('')
+    setShowDemoSlotPopup(false)
+    setSelectedDemoSlotId(null)
+    setSelectedDemoSlotDetail(null)
+    setDemoCalendarSlots([])
+    setDemoCalendarBookings([])
+  }
+
+  const demoNextMonth = () => {
+    setDemoCalendarMonth(new Date(demoCalendarMonth.getFullYear(), demoCalendarMonth.getMonth() + 1, 1))
+    setSelectedDemoDate('')
+    setShowDemoSlotPopup(false)
+    setSelectedDemoSlotId(null)
+    setSelectedDemoSlotDetail(null)
+    setDemoCalendarSlots([])
+    setDemoCalendarBookings([])
+  }
+
+  const getDemoSlotsForDate = (dateString) => {
+    const parts = dateString.split('-')
+    const date = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10))
+    const dayOfWeek = date.getDay()
+    const dayMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+    const dayKey = dayMap[dayOfWeek]
+
+    return slots.filter(slot => {
+      if (!slot.is_active) return false
+      if (slot.all_days) return true
+      return slot[dayKey] === true
+    })
+  }
+
+  const handleDemoDateSelect = (dateString) => {
+    setSelectedDemoDate(dateString)
+    setShowDemoSlotPopup(false)
+    setSelectedDemoSlotId(null)
+    setSelectedDemoSlotDetail(null)
+
+    const slotsForDate = getDemoSlotsForDate(dateString)
+    setDemoCalendarSlots(slotsForDate)
+
+    if (slotsForDate.length > 0) {
+      setShowDemoSlotPopup(true)
+    }
+  }
+
+  const handleDemoSlotSelect = async (slotId) => {
+    setSelectedDemoSlotId(slotId)
+    const slot = demoCalendarSlots.find(s => s.id === slotId)
+    if (slot) {
+      setSelectedDemoSlotDetail(slot)
+      try {
+        const res = await getSlotBookings(slotId, selectedDemoDate)
+        if (res.data?.success) {
+          setDemoCalendarBookings(res.data.data?.bookings || [])
+        }
+      } catch (e) {
+        console.error('Error fetching bookings:', e)
+      }
+    }
+  }
+
+  const handleCancelBooking = async (bookingId) => {
+    if (!window.confirm('Are you sure you want to cancel this slot booking?')) return
+    try {
+      const res = await cancelBooking(bookingId)
+      if (res.data?.success) {
+        alert('Booking successfully cancelled!')
+        // Refresh bookings for selected slot
+        if (selectedDemoSlotId) {
+          const bRes = await getSlotBookings(selectedDemoSlotId, selectedDemoDate)
+          if (bRes.data?.success) {
+            setDemoCalendarBookings(bRes.data.data?.bookings || [])
+          }
+        }
+        loadStats()
+      }
+    } catch (e) {
+      console.error(e)
+      alert('Failed to cancel booking.')
+    }
+  }
+
+  const renderDemoCalendarDays = () => {
+    const year = demoCalendarMonth.getFullYear()
+    const month = demoCalendarMonth.getMonth()
+
+    const firstDayIndex = new Date(year, month, 1).getDay()
+    const lastDay = new Date(year, month + 1, 0).getDate()
+
+    const daysList = []
+
+    for (let i = 0; i < firstDayIndex; i++) {
+      daysList.push(<div key={`empty-demo-${i}`} className="p-2 border border-white/5 opacity-10"></div>)
+    }
+
+    for (let d = 1; d <= lastDay; d++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+      const isSelected = selectedDemoDate === dateStr
+      const daySlots = getDemoSlotsForDate(dateStr)
+      const hasSlots = daySlots.length > 0
+
+      daysList.push(
+        <button
+          key={`day-demo-${d}`}
+          type="button"
+          onClick={() => handleDemoDateSelect(dateStr)}
+          className={`p-2.5 border border-white/5 text-xs font-bold text-center hover:bg-[#38b34a]/20 hover:text-white transition-all rounded-lg cursor-pointer flex flex-col items-center justify-between min-h-[42px] ${
+            isSelected ? 'bg-[#38b34a] text-black border-[#38b34a] font-extrabold' : 'text-gray-300'
+          }`}
+        >
+          <span>{d}</span>
+          {hasSlots && (
+            <span className={`w-1.5 h-1.5 rounded-full mt-1 ${isSelected ? 'bg-black' : 'bg-[#38b34a] animate-pulse'}`} />
+          )}
+        </button>
+      )
+    }
+
+    return daysList
+  }
+
+  const formatDate = (dStr) => {
+    if (!dStr) return '—'
+    const date = new Date(dStr)
+    if (isNaN(date.getTime())) return dStr
+    return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  }
+
+  const fmtTime = (t) => {
+    if (!t) return ''
+    const parts = t.split(':')
+    if (parts.length >= 2) {
+      let hours = parseInt(parts[0])
+      const minutes = parts[1].split(':')[0]
+      const ampm = hours >= 12 ? 'PM' : 'AM'
+      hours = hours % 12 || 12
+      return `${hours}:${minutes} ${ampm}`
+    }
+    return t
+  }
+
   // 5. Presentation formatting utils
   const getDayBadges = (slot) => {
     if (slot.all_days) {
@@ -297,12 +465,20 @@ export default function EmployeeDemoSlots() {
           <h1 className="text-2xl font-black text-white tracking-tight">Demo Slots Registry</h1>
           <p className="text-xs text-gray-500 mt-1 font-semibold">Manage, schedule, and configure customer and partner video conference demo sessions.</p>
         </div>
-        <button
-          onClick={openCreateModal}
-          className="px-4 py-2 bg-[#38b34a] hover:bg-[#38b34a]/85 text-black rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5 self-start sm:self-auto"
-        >
-          ➕ Add Demo Slot
-        </button>
+        <div className="flex gap-2 self-start sm:self-auto">
+          <button
+            onClick={openDemoCalendar}
+            className="px-4 py-2 border border-white/10 hover:border-white/20 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+          >
+            📅 View Demo Calendar
+          </button>
+          <button
+            onClick={openCreateModal}
+            className="px-4 py-2 bg-[#38b34a] hover:bg-[#38b34a]/85 text-black rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5"
+          >
+            ➕ Add Demo Slot
+          </button>
+        </div>
       </div>
 
       {/* Success alert notifications */}
@@ -639,15 +815,22 @@ export default function EmployeeDemoSlots() {
                 {/* Title */}
                 <div>
                   <label className="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Slot Title *</label>
-                  <input
-                    type="text"
+                  <select
                     name="title"
                     value={formState.title}
                     onChange={handleInputChange}
-                    placeholder="e.g. Greenwood School ERP Discovery"
                     required
-                    className="w-full bg-white/3 border border-white/5 focus:border-[#38b34a] rounded-xl px-3 py-2 text-xs text-white placeholder-gray-650 focus:outline-none transition-colors"
-                  />
+                    className="w-full bg-white/3 border border-white/5 focus:border-[#38b34a] rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors cursor-pointer"
+                  >
+                    <option value="" disabled className="bg-[#13151f]">Select Slot Title</option>
+                    <option value="Morning Slot" className="bg-[#13151f]">Morning Slot</option>
+                    <option value="Afternoon Slot" className="bg-[#13151f]">Afternoon Slot</option>
+                    <option value="Noon Slot" className="bg-[#13151f]">Noon Slot</option>
+                    <option value="Evening Slot" className="bg-[#13151f]">Evening Slot</option>
+                    {formState.title && !['Morning Slot', 'Afternoon Slot', 'Noon Slot', 'Evening Slot'].includes(formState.title) && (
+                      <option value={formState.title} className="bg-[#13151f]">{formState.title}</option>
+                    )}
+                  </select>
                 </div>
 
                 {/* Demo Type Tabs */}
@@ -785,6 +968,176 @@ export default function EmployeeDemoSlots() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── VIEW DEMO CALENDAR MODAL ─── */}
+      <AnimatePresence>
+        {showDemoCalendarModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/75 backdrop-blur-[3px]"
+              onClick={() => setShowDemoCalendarModal(false)}
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-4xl bg-[#13151f] border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-10 text-xs font-semibold text-left flex flex-col max-h-[90vh]"
+            >
+              {/* Header */}
+              <div className="p-4 border-b border-white/5 flex items-center justify-between">
+                <h3 className="text-xs font-black text-white uppercase tracking-widest">
+                  📅 Demo Slots Calendar
+                </h3>
+                <button
+                  onClick={() => setShowDemoCalendarModal(false)}
+                  className="p-1 text-gray-500 hover:text-white rounded-lg transition-colors cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Grid layout body */}
+              <div className="p-5 overflow-y-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                {/* Left: Monthly Calendar Picker */}
+                <div className="lg:col-span-5 space-y-4">
+                  <div className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
+                    <button
+                      type="button"
+                      onClick={demoPrevMonth}
+                      className="p-1 text-white hover:text-[#38b34a] cursor-pointer font-bold text-sm"
+                    >
+                      ◀ Prev
+                    </button>
+                    <span className="text-white font-black text-sm uppercase tracking-wider">
+                      {demoCalendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={demoNextMonth}
+                      className="p-1 text-white hover:text-[#38b34a] cursor-pointer font-bold text-sm"
+                    >
+                      Next ▶
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-7 gap-1 text-center font-bold text-gray-550 text-[10px] uppercase">
+                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                        <div key={d} className="p-1">{d}</div>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-7 gap-1.5">
+                      {renderDemoCalendarDays()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Date specific slots & bookings */}
+                <div className="lg:col-span-7 space-y-4 border-t lg:border-t-0 lg:border-l border-white/5 pt-4 lg:pt-0 lg:pl-6">
+                  {selectedDemoDate ? (
+                    <div className="space-y-4">
+                      <p className="text-white font-black text-xs uppercase tracking-wider">
+                        Slots on: <span className="text-[#38b34a]">{formatDate(selectedDemoDate)}</span>
+                      </p>
+
+                      {/* Slots selector */}
+                      <div className="space-y-2">
+                        <label className="block text-[10px] text-gray-500 uppercase">Select Slot Session</label>
+                        {demoCalendarSlots.length > 0 ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {demoCalendarSlots.map(s => {
+                              const isSelected = selectedDemoSlotId === s.id
+                              return (
+                                <button
+                                  key={s.id}
+                                  type="button"
+                                  onClick={() => handleDemoSlotSelect(s.id)}
+                                  className={`p-3 rounded-lg text-xs font-bold transition-all border text-left cursor-pointer flex flex-col justify-between ${
+                                    isSelected
+                                      ? 'bg-[#38b34a]/15 border-[#38b34a] text-[#38b34a]'
+                                      : 'bg-white/5 border-white/10 hover:border-white/20 text-white'
+                                  }`}
+                                >
+                                  <span>{s.title}</span>
+                                  <span className="text-[10px] text-gray-550 font-mono mt-1">
+                                    {fmtTime(s.timing_from)} - {fmtTime(s.timing_to)}
+                                  </span>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-gray-550 py-2">No active slots scheduled for this day of the week.</p>
+                        )}
+                      </div>
+
+                      {/* Bookings details */}
+                      {selectedDemoSlotId && selectedDemoSlotDetail && (
+                        <div className="border-t border-white/5 pt-4 space-y-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="text-white font-bold">{selectedDemoSlotDetail.title}</p>
+                              <a
+                                href={selectedDemoSlotDetail.meeting_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10.5px] text-[#38b34a] hover:underline font-mono"
+                              >
+                                Join link: {selectedDemoSlotDetail.meeting_link}
+                              </a>
+                            </div>
+                            <span className="text-[10px] bg-white/5 px-2 py-1 rounded text-gray-300 font-mono">
+                              Max attendees: {selectedDemoSlotDetail.max_attendees}
+                            </span>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="block text-[10px] text-gray-550 uppercase">Booked Attendees ({demoCalendarBookings.length})</label>
+                            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                              {demoCalendarBookings.length > 0 ? (
+                                demoCalendarBookings.map((b) => (
+                                  <div key={b.id} className="bg-white/3 p-3 rounded-xl border border-white/5 flex items-center justify-between text-xs">
+                                    <div>
+                                      <p className="text-white font-bold">{b.lead?.client_name}</p>
+                                      <p className="text-[10px] text-gray-550 font-mono">{b.lead?.client_email} | {b.lead?.client_phone}</p>
+                                      {b.notes && <p className="text-[10px] text-gray-400 mt-1 leading-relaxed">Note: {b.notes}</p>}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCancelBooking(b.id)}
+                                      className="px-2 py-1 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-450 font-bold rounded text-[10px] transition-colors cursor-pointer"
+                                    >
+                                      Cancel Booking
+                                    </button>
+                                  </div>
+                                ))
+                              ) : (
+                                <p className="text-[10.5px] text-gray-550 py-2 text-center">No bookings registered for this session on this date.</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                    </div>
+                  ) : (
+                    <div className="text-center py-20 text-gray-550">
+                      <span className="text-3xl block mb-2">👈</span>
+                      Select a date on the calendar to view its recurring slot sessions and attendees lists.
+                    </div>
+                  )}
+                </div>
+
+              </div>
             </motion.div>
           </div>
         )}

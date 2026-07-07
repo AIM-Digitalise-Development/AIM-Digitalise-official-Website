@@ -1635,6 +1635,8 @@ export const getMockResponse = (url, method, data = null) => {
           demo_slot: `${booking_date} ${slot ? slot.timing_from : '10:00'}:00`,
           demo_link: slot ? slot.meeting_link : 'https://meet.google.com/mock-demo',
           booking_id: Math.floor(Math.random() * 100000),
+          demo_slot_id: Number(demo_slot_id),
+          demo_notes: notes || '',
           updated_at: new Date().toISOString()
         }
         if (!updated.activities) updated.activities = []
@@ -1666,8 +1668,135 @@ export const getMockResponse = (url, method, data = null) => {
     }
   }
 
+  const slotBookingsMatch = lowercaseUrl.match(/\/employee\/demo-slots\/(\d+)\/bookings/)
+  if (slotBookingsMatch && method === 'GET') {
+    const slotId = parseInt(slotBookingsMatch[1])
+    const urlObj = new URL(url, 'https://dummy.com')
+    const queryDate = urlObj.searchParams.get('date')
+    const bookings = (window.__mockLeads || [])
+      .filter(l => {
+        if (!l.booking_id) return false
+        if (Number(l.demo_slot_id) !== slotId) return false
+        if (l.demo_status !== 'assigned') return false
+        if (!l.demo_slot) return false
+        const bookingDate = l.demo_slot.split(' ')[0]
+        return bookingDate === queryDate
+      })
+      .map(l => ({
+        id: l.booking_id,
+        demo_slot_id: slotId,
+        booking_date: l.demo_slot.split(' ')[0],
+        status: 'scheduled',
+        notes: l.demo_notes || 'Demo booked via employee portal calendar.',
+        lead: {
+          client_name: l.client_name,
+          client_email: l.client_email || l.email,
+          client_phone: l.client_phone
+        }
+      }))
+    return {
+      success: true,
+      data: {
+        bookings
+      }
+    }
+  }
+
+  const followUpMatch = lowercaseUrl.match(/\/employee\/leads\/(\d+)\/follow-up/)
+  if (followUpMatch && method === 'POST') {
+    const leadId = parseInt(followUpMatch[1])
+    const { next_date, status, remark, lost_reason } = data || {}
+    let updated = null
+    window.__mockLeads = (window.__mockLeads || []).map(l => {
+      if (l.id === leadId) {
+        updated = {
+          ...l,
+          lead_status: status,
+          follow_up_date: next_date,
+          expected_close_date: next_date,
+          lost_reason: status === 'lost' ? lost_reason : l.lost_reason,
+          updated_at: new Date().toISOString()
+        }
+        if (!updated.activities) updated.activities = []
+        updated.activities.unshift({
+          id: Math.floor(Math.random() * 100000),
+          lead_id: l.id,
+          employee_id: getLoggedInMockEmployee().id,
+          activity_type: 'follow_up',
+          description: `Follow-up status: ${status}`,
+          notes: remark || 'No remark provided.',
+          scheduled_date: next_date,
+          completed_at: null,
+          created_at: new Date().toISOString(),
+          employee: getLoggedInMockEmployee()
+        })
+        return updated
+      }
+      return l
+    })
+    if (updated) {
+      return {
+        success: true,
+        message: 'Follow-up scheduled successfully',
+        data: updated
+      }
+    } else {
+      return { success: false, message: 'Lead not found' }
+    }
+  }
+
+  const demoSlotsAvailableMatch = lowercaseUrl.match(/\/employee\/demo-slots-available/)
+  if (demoSlotsAvailableMatch && method === 'GET') {
+    return {
+      success: true,
+      data: window.__mockDemoSlots || []
+    }
+  }
+
+  const availableDatesMatch = lowercaseUrl.match(/\/employee\/demo-slots\/(\d+)\/available-dates/)
+  if (availableDatesMatch && method === 'GET') {
+    const slotId = parseInt(availableDatesMatch[1])
+    const slot = (window.__mockDemoSlots || []).find(s => s.id === slotId)
+    const dates = []
+    const today = new Date()
+    const currentMonth = today.getMonth()
+    const currentYear = today.getFullYear()
+    const daysMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+    
+    for (let i = 0; i < 60; i++) {
+      const d = new Date(currentYear, currentMonth, today.getDate() + i)
+      const dateStr = d.toISOString().split('T')[0]
+      const dayOfWeek = d.getDay()
+      const dayKey = daysMap[dayOfWeek]
+      
+      const isActiveOnDay = slot ? (slot.all_days || slot[dayKey] === true) : false
+      if (isActiveOnDay && slot.is_active) {
+        const bookingsCount = (window.__mockLeads || []).filter(l => {
+          if (!l.booking_id || Number(l.demo_slot_id) !== slotId) return false
+          const bDate = l.demo_slot ? l.demo_slot.split(' ')[0] : ''
+          return bDate === dateStr && l.demo_status === 'assigned'
+        }).length
+        
+        const maxAttendees = slot.max_attendees || 10
+        dates.push({
+          date: dateStr,
+          available_attendees: maxAttendees - bookingsCount,
+          total_attendees: maxAttendees,
+          is_fully_booked: bookingsCount >= maxAttendees
+        })
+      }
+    }
+    return {
+      success: true,
+      data: {
+        available_dates: dates
+      }
+    }
+  }
+
   const cancelBookingMatch = lowercaseUrl.match(/\/employee\/bookings\/(\d+)\/cancel/)
   if (cancelBookingMatch && method === 'POST') {
+
     const bookingId = parseInt(cancelBookingMatch[1])
     let updated = null
     window.__mockLeads = (window.__mockLeads || []).map(l => {

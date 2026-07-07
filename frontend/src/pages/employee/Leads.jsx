@@ -14,11 +14,13 @@ import {
   getSubcategories,
   getProductsDropdown,
   bookDemoSlot,
-  cancelBooking
+  cancelBooking,
+  scheduleFollowUp
 } from '../../api/leads'
 import {
   getAvailableDemoSlots,
-  getAvailableDates
+  getAvailableDates,
+  getSlotBookings
 } from '../../api/demoSlots'
 
 export default function EmployeeLeads() {
@@ -56,6 +58,7 @@ export default function EmployeeLeads() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [bookingNotes, setBookingNotes] = useState('')
   const [allSlotsData, setAllSlotsData] = useState({})
+  const [slotBookings, setSlotBookings] = useState([])
   const [selectedSlotIdForBooking, setSelectedSlotIdForBooking] = useState(null)
   const [showSlotBookingModal, setShowSlotBookingModal] = useState(false)
   const [selectedDate, setSelectedDate] = useState('')
@@ -269,35 +272,82 @@ export default function EmployeeLeads() {
     }))
   }
 
-  const fetchAllSlotDataForMonth = async () => {
-    const startDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
-    const endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0)
-    const startDateStr = startDate.toISOString().split('T')[0]
-    const endDateStr = endDate.toISOString().split('T')[0]
-    const slotData = {}
+  const openAssignModal = (lead) => {
+    setSelectedLeadForAssign(lead)
+    setShowAssignModal(true)
+    setSelectedDate('')
+    setSlotBookings([])
+    setSelectedSlotIdForBooking(null)
+    setBookingNotes('')
+    setCurrentMonth(new Date())
+  }
 
-    if (availableDemoSlots.length === 0) {
+  const fetchAllSlotDataForMonth = async () => {
+    if (!availableDemoSlots || availableDemoSlots.length === 0) {
       setAllSlotsData({})
       return
     }
 
-    for (const slot of availableDemoSlots) {
-      try {
-        const res = await getAvailableDates(slot.id, { start_date: startDateStr, end_date: endDateStr })
-        if (res.data?.success) {
-          slotData[slot.id] = {
+    const startDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
+    const endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0)
+    const startDateStr = startDate.toISOString().split('T')[0]
+    const endDateStr = endDate.toISOString().split('T')[0]
+
+    try {
+      const promises = availableDemoSlots.map(slot =>
+        getAvailableDates(slot.id, { start_date: startDateStr, end_date: endDateStr })
+          .then(res => ({
+            slotId: slot.id,
             slot: slot,
-            availableDates: res.data.data?.available_dates || []
-          }
-        } else {
-          slotData[slot.id] = { slot, availableDates: [] }
+            availableDates: res.data?.success ? (res.data.data?.available_dates || []) : []
+          }))
+          .catch(err => {
+            console.error(`Failed to fetch dates for slot ${slot.id}:`, err)
+            return { slotId: slot.id, slot, availableDates: [] }
+          })
+      )
+      const results = await Promise.all(promises)
+      const slotData = {}
+      results.forEach(res => {
+        slotData[res.slotId] = {
+          slot: res.slot,
+          availableDates: res.availableDates
         }
-      } catch (err) {
-        console.error('Failed to fetch slot dates:', err)
-        slotData[slot.id] = { slot, availableDates: [] }
-      }
+      })
+      setAllSlotsData(slotData)
+    } catch (err) {
+      console.error('Failed to fetch slots data:', err)
     }
-    setAllSlotsData(slotData)
+  }
+
+  const handleDateSelect = async (dateStr) => {
+    setSelectedDate(dateStr)
+    setSelectedSlotIdForBooking(null)
+    setBookingNotes('')
+
+    const daySlots = getSlotsForDate(dateStr)
+    if (daySlots.length === 0) {
+      setSlotBookings([])
+      return
+    }
+
+    setSaving(true)
+    try {
+      const bookingsPromises = daySlots.map(slot =>
+        getSlotBookings(slot.id, dateStr)
+          .then(res => res.data?.success ? (res.data.data?.bookings || []) : [])
+          .catch(err => {
+            console.error(`Failed to fetch bookings for slot ${slot.id}:`, err)
+            return []
+          })
+      )
+      const results = await Promise.all(bookingsPromises)
+      setSlotBookings(results.flat())
+    } catch (err) {
+      console.error('Failed to fetch slot bookings:', err)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleBookSlot = async (slotId, date) => {
@@ -319,7 +369,7 @@ export default function EmployeeLeads() {
         setSelectedLeadForAssign(null)
         setSelectedDate('')
         setBookingNotes('')
-        setAllSlotsData({})
+        setSlotBookings([])
         setSelectedSlotIdForBooking(null)
       } else {
         setError(res.data?.message || 'Failed to book demo slot')
@@ -341,8 +391,8 @@ export default function EmployeeLeads() {
         triggerSuccess('Booking cancelled successfully!')
         loadLeads()
         loadStats()
-        if (showAssignModal) {
-          fetchAllSlotDataForMonth()
+        if (showAssignModal && selectedDate) {
+          handleDateSelect(selectedDate)
         }
       } else {
         alert(res.data?.message || 'Failed to cancel booking')
@@ -371,12 +421,23 @@ export default function EmployeeLeads() {
       if (!data || !data.availableDates) continue
       const dateData = data.availableDates.find(d => d.date === dateStr)
       if (dateData) {
+        const bookings = slotBookings.filter(b => {
+          const bookingDate = b.booking_date ? b.booking_date.split(/[T ]/)[0] : ''
+          return String(b.demo_slot_id) === String(slotId) &&
+                 bookingDate === dateStr &&
+                 b.status === 'scheduled'
+        })
+        const bookedCount = bookings.length
+        const maxAttendees = data.slot.max_attendees || 10
+        const available = maxAttendees - bookedCount
+
         slots.push({
           ...data.slot,
-          available_attendees: dateData.available_attendees || 0,
-          total_attendees: dateData.total_attendees || 10,
-          is_fully_booked: dateData.is_fully_booked || false,
-          date: dateStr
+          total_attendees: maxAttendees,
+          available_attendees: available,
+          is_fully_booked: available <= 0,
+          date: dateStr,
+          bookings: bookings
         })
       }
     }
@@ -663,49 +724,25 @@ export default function EmployeeLeads() {
     setSaving(true)
     setError('')
     try {
-      const leadPayload = {
-        client_name: followUpLead.client_name || '',
-        client_email: followUpLead.client_email || '',
-        client_phone: followUpLead.client_phone || '',
-        client_alternate_phone: followUpLead.client_alternate_phone || '',
-        company_name: followUpLead.company_name || '',
-        address: followUpLead.address || '',
-        city: followUpLead.city || '',
-        state: followUpLead.state || '',
-        pin_code: followUpLead.pin_code || '',
-        country: followUpLead.country || 'India',
-        lead_source: followUpLead.lead_source || 'Website',
-        lead_status: followUpForm.status,
-        lead_priority: followUpLead.lead_priority || 'medium',
-        notes: followUpLead.notes || '',
-        budget: followUpLead.budget || '',
-        expected_close_date: followUpForm.next_date,
-        follow_up_date: followUpForm.next_date,
-        category_id: followUpLead.category_id || '',
-        sub_category_id: followUpLead.sub_category_id || '',
-        product_id: followUpLead.product_id || '',
-        product_name: followUpLead.product_name || '',
-        product_processing_fee: followUpLead.product_processing_fee || '',
-        product_monthly_subscription: followUpLead.product_monthly_subscription || ''
+      const payload = {
+        next_date: followUpForm.next_date,
+        status: followUpForm.status,
+        remark: followUpForm.remark,
+        lost_reason: followUpForm.status === 'lost' ? followUpForm.remark : undefined
       }
       
-      await updateLead(followUpLead.id, leadPayload)
-
-      const activityPayload = {
-        activity_type: 'follow_up',
-        description: `Follow-up status: ${followUpForm.status}`,
-        notes: followUpForm.remark || 'No remark provided.',
-        scheduled_date: followUpForm.next_date
+      const res = await scheduleFollowUp(followUpLead.id, payload)
+      if (res.data?.success) {
+        triggerSuccess('Follow-up scheduled and updated successfully.')
+        setIsFollowUpModalOpen(false)
+        loadLeads()
+        loadStats()
+      } else {
+        alert(res.data?.message || 'Failed to update follow-up details.')
       }
-      await addLeadActivity(followUpLead.id, activityPayload)
-
-      triggerSuccess('Follow-up updated and activity logged successfully.')
-      setIsFollowUpModalOpen(false)
-      loadLeads()
-      loadStats()
     } catch (err) {
       console.error(err)
-      alert(err?.response?.data?.message || 'Failed to update follow-up details.')
+      alert(err?.response?.data?.message || 'Failed to update follow-up details: ' + err.message)
     } finally {
       setSaving(false)
     }
@@ -1205,10 +1242,7 @@ export default function EmployeeLeads() {
                           </button>
                           
                           <button
-                            onClick={() => {
-                              setSelectedLeadForAssign(lead)
-                              setShowAssignModal(true)
-                            }}
+                            onClick={() => openAssignModal(lead)}
                             title="Assign/Book Demo Slot"
                             className="p-1 text-gray-500 hover:text-green-450 hover:bg-white/5 rounded transition-all cursor-pointer"
                           >
@@ -1223,15 +1257,7 @@ export default function EmployeeLeads() {
                               🚫
                             </button>
                           )}
-                          {!lead.is_converted && (
-                            <button
-                              onClick={() => handleDeleteLead(lead.id)}
-                              title="Delete Lead"
-                              className="p-1 text-gray-500 hover:text-red-400 hover:bg-white/5 rounded transition-all cursor-pointer"
-                            >
-                              🗑️
-                            </button>
-                          )}
+                        
                         </div>
                       </td>
                     </tr>
@@ -2236,8 +2262,7 @@ export default function EmployeeLeads() {
                             type="button"
                             onClick={() => {
                               if (hasAvailability) {
-                                setSelectedDate(dateString)
-                                setSelectedSlotIdForBooking(null)
+                                handleDateSelect(dateString)
                               }
                             }}
                             className={`h-11 rounded-xl flex flex-col items-center justify-between py-1.5 transition-all text-xs font-bold border ${

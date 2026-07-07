@@ -32,3 +32,8 @@ export const getAvailableDemoSlots = () =>
 // Get Available Dates for Demo Slot - GET /employee/demo-slots/{id}/available-dates
 export const getAvailableDates = (slotId, params = {}) =>
   client.get(`/employee/demo-slots/${slotId}/available-dates`, { params })
+
+// Get Bookings for a Demo Slot on a Specific Date - GET /employee/demo-slots/{id}/bookings
+export const getSlotBookings = (slotId, date) =>
+  client.get(`/employee/demo-slots/${slotId}/bookings`, { params: { date } })
+
