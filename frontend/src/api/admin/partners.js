@@ -172,3 +172,21 @@ export const getCommissionSettings = () =>
 // POST /api/admin/commission-settings  — body: { rules: [...] }
 export const updateCommissionSettings = (payload) =>
   adminFetch('POST', '/admin/commission-settings', payload)
+
+// ─── Customization Requests ───────────────────────────────────────────────────
+// GET /api/admin/customization/requests?status=&search=
+export const getAdminCustomizationRequests = (filters = {}) => {
+  const params = new URLSearchParams()
+  if (filters.status) params.append('status', filters.status)
+  if (filters.search) params.append('search', filters.search)
+  const qs = params.toString()
+  return adminFetch('GET', `/admin/customization/requests${qs ? '?' + qs : ''}`)
+}
+
+// POST /api/admin/customization/requests/{id}/set-amount  — body: { amount, admin_notes }
+export const setCustomizationAmount = (id, amount, adminNotes) =>
+  adminFetch('POST', `/admin/customization/requests/${id}/set-amount`, { amount, admin_notes: adminNotes })
+
+// POST /api/admin/customization/requests/{id}/update-status  — body: { status, admin_notes }
+export const updateCustomizationStatus = (id, status, adminNotes) =>
+  adminFetch('POST', `/admin/customization/requests/${id}/update-status`, { status, admin_notes: adminNotes })

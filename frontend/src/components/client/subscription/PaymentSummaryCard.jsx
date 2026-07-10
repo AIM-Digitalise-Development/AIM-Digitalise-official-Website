@@ -2,6 +2,9 @@ const PaymentSummaryCard = ({ calculatedAmount, processingPayment, onPaymentSubm
   if (!calculatedAmount) return null
 
   const { calculation, breakdown } = calculatedAmount
+  const perPerson = calculatedAmount.product?.per_person !== undefined 
+    ? calculatedAmount.product.per_person 
+    : 1
 
   return (
     <div className="bg-white rounded-xl overflow-hidden" style={{ border: '1px solid #ebedf0' }}>
@@ -15,10 +18,12 @@ const PaymentSummaryCard = ({ calculatedAmount, processingPayment, onPaymentSubm
 
         {/* Calculation Table */}
         <div className="space-y-2.5 text-[12px]">
-          <div className="flex justify-between items-center text-gray-400">
-            <span>ERP Student Enrollment</span>
-            <strong className="text-gray-700">{calculation?.student_count} students</strong>
-          </div>
+          {perPerson === 1 && (
+            <div className="flex justify-between items-center text-gray-400">
+              <span>ERP Student Enrollment</span>
+              <strong className="text-gray-700">{calculation?.student_count} students</strong>
+            </div>
+          )}
           <div className="flex justify-between items-center text-gray-400">
             <span>Base Monthly Subscription</span>
             <strong className="text-gray-700">₹{calculation?.base_monthly_amount?.toLocaleString()}</strong>

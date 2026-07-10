@@ -236,7 +236,9 @@ const ClientProducts = () => {
 
   const securityDeposit = activeProduct?.processing_fee || displayUser?.processing_fee || 3299
   const subscriptionPrice = activeProduct?.monthly_subscription || displayUser?.monthly_subscription || 3299
-  const payBillAmount = studentCountData?.student_count ? studentCountData.student_count * 10 : 0
+  const payBillAmount = isInstitutePro
+    ? (studentCountData?.student_count ? studentCountData.student_count * 10 : 0)
+    : subscriptionPrice
 
   // Mock Recharge list
   const rechargeHistory = [

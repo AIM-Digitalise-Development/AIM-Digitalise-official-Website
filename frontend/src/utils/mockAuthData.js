@@ -1228,6 +1228,107 @@ export const getMockResponse = (url, method, data = null) => {
     }
   }
 
+  if (lowercaseUrl.includes('/client/customization/pending-payments')) {
+    return {
+      success: true,
+      data: {
+        pending_requests: [
+          {
+            id: 101,
+            customization_text: "[iOS App Development] (Target Rollout: 2026-09-15)\n\nRequesting a premium iOS wrapper with notification support.",
+            amount: 15000,
+            status: 'amount_set',
+            created_at: '2026-07-01T12:00:00Z'
+          },
+          {
+            id: 102,
+            customization_text: "[Biometric Machine API] (Target Rollout: 2026-08-30)\n\nIntegrate local face-recognition machines with school attendance module.",
+            amount: 8500,
+            status: 'amount_set',
+            created_at: '2026-07-02T14:30:00Z'
+          }
+        ]
+      }
+    }
+  }
+
+  if (lowercaseUrl.includes('/client/customization/payment-history')) {
+    return {
+      success: true,
+      data: {
+        payments: [
+          {
+            id: 201,
+            razorpay_payment_id: 'pay_CUST12345678',
+            customization_text: "[WhatsApp Alerts Integration]\n\nAutomated monthly fee receipt delivery via WhatsApp API.",
+            amount: 5900,
+            status: 'success',
+            created_at: '2026-06-15T09:00:00Z'
+          }
+        ]
+      }
+    }
+  }
+
+  if (lowercaseUrl.includes('/client/customization/create-payment-order')) {
+    return {
+      success: true,
+      simulated: true,
+      amount: data?.amount || 5000,
+      order_id: 'order_cust_' + Math.random().toString(36).substring(2, 12),
+      payment_record_id: 'record_' + Math.random().toString(36).substring(2, 12),
+      key: 'rzp_test_mockkey123',
+      currency: 'INR',
+      client_name: 'Demo Client School',
+      client_email: 'client@demo.com'
+    }
+  }
+
+  if (lowercaseUrl.includes('/client/customization/verify-payment')) {
+    return {
+      success: true,
+      message: 'Customization payment verified successfully (Mock Mode).'
+    }
+  }
+
+  if (lowercaseUrl.includes('/client/customization/requests')) {
+    return {
+      success: true,
+      data: {
+        requests: [
+          {
+            id: 101,
+            customization_text: "[iOS App Development] (Target Rollout: 2026-09-15)\n\nRequesting a premium iOS wrapper with notification support.",
+            amount: 15000,
+            status: 'amount_set',
+            created_at: '2026-07-01T12:00:00Z'
+          },
+          {
+            id: 102,
+            customization_text: "[Biometric Machine API] (Target Rollout: 2026-08-30)\n\nIntegrate local face-recognition machines with school attendance module.",
+            amount: 8500,
+            status: 'amount_set',
+            created_at: '2026-07-02T14:30:00Z'
+          },
+          {
+            id: 103,
+            customization_text: "[Custom Report Design] (Target Rollout: 2026-08-10)\n\nFormat fee book and report card PDF with custom branding.",
+            amount: null,
+            status: 'pending',
+            created_at: '2026-07-05T10:00:00Z'
+          }
+        ]
+      }
+    }
+  }
+
+  if (lowercaseUrl.includes('/client/customization/submit')) {
+    return {
+      success: true,
+      message: 'Customization request submitted successfully.'
+    }
+  }
+
   // 4. Partner Portal Mocks
   if (lowercaseUrl.includes('/partner/login')) {
     return {

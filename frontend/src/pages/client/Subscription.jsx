@@ -44,6 +44,37 @@ const ClientSubscription = () => {
   const [selectedCycle, setSelectedCycle] = useState('annual')
   const [calculatedAmount, setCalculatedAmount] = useState(null)
 
+  // Product Pricing Info
+  const [perPerson, setPerPerson] = useState(1)
+  const [monthlySubscription, setMonthlySubscription] = useState(0)
+
+  // Sync profile details
+  useEffect(() => {
+    if (profileData) {
+      if (profileData.per_person !== undefined) {
+        setPerPerson(profileData.per_person)
+      }
+      if (profileData.monthly_subscription !== undefined) {
+        setMonthlySubscription(profileData.monthly_subscription)
+      }
+    }
+  }, [profileData])
+
+  // Sync product details
+  useEffect(() => {
+    if (productData) {
+      const product = Array.isArray(productData) ? productData[0] : productData
+      if (product) {
+        if (product.per_person !== undefined) {
+          setPerPerson(product.per_person)
+        }
+        if (product.monthly_subscription !== undefined) {
+          setMonthlySubscription(product.monthly_subscription)
+        }
+      }
+    }
+  }, [productData])
+
   // Backend payment details and error warnings
   const [paymentStatus, setPaymentStatus] = useState(null)
   const [showPayNow, setShowPayNow] = useState(false)
@@ -124,11 +155,22 @@ const ClientSubscription = () => {
         setPaymentHistory(historyRes.data)
       }
 
-      // 3. Fetch Billing Cycles (only if we have students)
-      if (!zeroStudents) {
+      // 3. Fetch Billing Cycles (only if we have students or if flat rate)
+      const activeProduct = Array.isArray(productData) ? productData[0] : productData
+      const currentPerPerson = activeProduct?.per_person !== undefined 
+        ? activeProduct.per_person 
+        : (profileData?.per_person !== undefined ? profileData.per_person : 1)
+
+      if (!zeroStudents || currentPerPerson !== 1) {
         const cyclesRes = await getClientPaymentCycles(clientToken)
         if (cyclesRes?.success) {
           setPaymentCycles(cyclesRes.data)
+          if (cyclesRes.data.per_person !== undefined) {
+            setPerPerson(cyclesRes.data.per_person)
+          }
+          if (cyclesRes.data.monthly_subscription !== undefined) {
+            setMonthlySubscription(cyclesRes.data.monthly_subscription)
+          }
           await calculateSubscriptionForCycle('annual', clientToken)
           setStudentCountWarning(null)
         } else {
@@ -170,6 +212,12 @@ const ClientSubscription = () => {
       if (res.success) {
         setCalculatedAmount(res.data)
         setSelectedCycle(cycle)
+        if (res.data.product?.per_person !== undefined) {
+          setPerPerson(res.data.product.per_person)
+        }
+        if (res.data.product?.monthly_subscription !== undefined) {
+          setMonthlySubscription(res.data.product.monthly_subscription)
+        }
         // Generate bill data when calculation is done
         generateBillData(res.data, cycle)
       } else {
@@ -277,6 +325,14 @@ const ClientSubscription = () => {
       }
     }
 
+    const perPersonValue = data.product?.per_person !== undefined 
+      ? data.product.per_person 
+      : (perPerson !== undefined ? perPerson : 1)
+    
+    const monthlySubscriptionValue = data.product?.monthly_subscription !== undefined
+      ? data.product.monthly_subscription
+      : (monthlySubscription !== undefined ? monthlySubscription : 0)
+
     // Build bill data
     const bill = {
       invoiceNumber,
@@ -291,6 +347,8 @@ const ClientSubscription = () => {
       periodEnd,
       deliveryDate,
       studentCount: data.student_count || 0,
+      perPerson: perPersonValue,
+      monthlySubscription: monthlySubscriptionValue,
       // Base values (without discount) - for reference only
       baseMonthlyAmount,
       baseCarryover,
@@ -351,6 +409,8 @@ const ClientSubscription = () => {
         .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
         .badge-first { background: #dbeafe; color: #1e40af; }
         .badge-regular { background: #d1fae5; color: #065f46; }
+        .badge-per-person { background: #dbeafe; color: #1e40af; }
+        .badge-flat { background: #fce7f3; color: #9d174d; }
       </style>
     `
 
@@ -374,7 +434,7 @@ const ClientSubscription = () => {
   }
 
   const handleCycleChange = (cycle) => {
-    if (hasZeroStudents) {
+    if (hasZeroStudents && perPerson === 1) {
       setError('Cannot change payment cycle: No students found in your school database.')
       return
     }
@@ -448,7 +508,12 @@ const ClientSubscription = () => {
         setPaymentHistory(historyRes.data)
       }
 
-      if (cyclesRes?.success && studentRes?.data?.student_count > 0) {
+      const activeProduct = Array.isArray(productData) ? productData[0] : productData
+      const currentPerPerson = activeProduct?.per_person !== undefined 
+        ? activeProduct.per_person 
+        : (profileData?.per_person !== undefined ? profileData.per_person : 1)
+
+      if (cyclesRes?.success && (studentRes?.data?.student_count > 0 || currentPerPerson !== 1)) {
         setPaymentCycles(cyclesRes.data)
         if (selectedCycle) {
           await calculateSubscriptionForCycle(selectedCycle, clientToken)
@@ -466,7 +531,7 @@ const ClientSubscription = () => {
   }
 
   const handlePaymentSubmit = async () => {
-    if (hasZeroStudents) {
+    if (hasZeroStudents && perPerson === 1) {
       setError('Cannot process payment: No students found in your school database. Please add student records first.')
       return
     }
@@ -643,6 +708,8 @@ const ClientSubscription = () => {
           .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
           .badge-first { background: #dbeafe; color: #1e40af; }
           .badge-regular { background: #d1fae5; color: #065f46; }
+          .badge-per-person { background: #dbeafe; color: #1e40af; }
+          .badge-flat { background: #fce7f3; color: #9d174d; }
         ` }} />
         <div style={{
           backgroundColor: 'white',
@@ -684,7 +751,14 @@ const ClientSubscription = () => {
                 <div><strong>School:</strong> {billData.schoolName || '-'}</div>
                 <div><strong>Product:</strong> {billData.productName || '-'}</div>
                 <div><strong>Cycle:</strong> {billData.cycle}</div>
-                <div><strong>Students:</strong> {billData.studentCount}</div>
+                {billData.perPerson === 1 && (
+                  <div><strong>Students:</strong> {billData.studentCount}</div>
+                )}
+                <div><strong>Billing Type:</strong>
+                  <span className={`badge ${billData.perPerson === 1 ? 'badge-per-person' : 'badge-flat'}`}>
+                    {billData.perPerson === 1 ? '👥 Per Student' : '📦 Flat Rate'}
+                  </span>
+                </div>
                 {billData.isFirstPayment && (
                   <div>
                     <span className="badge badge-first">First Payment</span>
@@ -696,6 +770,26 @@ const ClientSubscription = () => {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Pricing Formula Display */}
+            <div style={{ 
+              marginBottom: '20px', 
+              padding: '12px', 
+              background: billData.perPerson === 1 ? '#dbeafe' : '#fce7f3', 
+              borderRadius: '8px',
+              borderLeft: `4px solid ${billData.perPerson === 1 ? '#3b82f6' : '#9d174d'}`
+            }}>
+              <strong>📊 Pricing Formula:</strong>
+              {billData.perPerson === 1 ? (
+                <span>
+                  ₹{billData.monthlySubscription || (billData.studentCount > 0 ? (billData.baseMonthlyAmount / billData.studentCount) : 10)} × {billData.studentCount} students = ₹{billData.baseMonthlyAmount} per month
+                </span>
+              ) : (
+                <span>
+                  Flat Rate: ₹{billData.monthlySubscription || billData.baseMonthlyAmount} per month (not per student)
+                </span>
+              )}
             </div>
             
             {/* Period Info */}
@@ -910,7 +1004,7 @@ const ClientSubscription = () => {
   const schoolName = profileData?.company_name || profileData?.school_name || profileData?.organization || 'Academic Institute'
   
   // Decide which screen structure to render
-  const canPay = hasZeroStudents ? false : (showPayNow || (paymentStatus && !paymentStatus.has_previous_payments))
+  const canPay = (hasZeroStudents && perPerson === 1) ? false : (showPayNow || (paymentStatus && !paymentStatus.has_previous_payments))
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-10 select-none" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -936,7 +1030,7 @@ const ClientSubscription = () => {
         )}
 
         {/* Warning Banner when student count is 0 */}
-        {studentCountWarning && studentCountWarning.show && (
+        {studentCountWarning && studentCountWarning.show && perPerson === 1 && (
           <div className="p-5 rounded-2xl bg-amber-50 border-l-4 border-amber-500 text-amber-900 space-y-2.5">
             <div className="flex gap-2.5 items-start">
               <span className="text-xl">⚠️</span>
@@ -963,7 +1057,7 @@ const ClientSubscription = () => {
         )}
 
         {/* Core Billing / Pay Layout */}
-        {hasZeroStudents ? (
+        {(hasZeroStudents && perPerson === 1) ? (
           <div className="bg-white rounded-xl p-8 text-center border border-slate-100 space-y-4">
             <span className="text-4xl block select-none">💳</span>
             <h3 className="text-sm font-black text-slate-800">Payment Gateway Inactive</h3>
@@ -1004,11 +1098,13 @@ const ClientSubscription = () => {
             />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-1">
-                <StudentCountCard studentCount={studentCount} />
-              </div>
+              {perPerson === 1 && (
+                <div className="md:col-span-1">
+                  <StudentCountCard studentCount={studentCount} />
+                </div>
+              )}
 
-              <div className="md:col-span-2">
+              <div className={perPerson === 1 ? "md:col-span-2" : "md:col-span-3"}>
                 {loadingSubscription && !calculatedAmount ? (
                   <div className="flex justify-center items-center py-16 bg-white rounded-xl h-full border border-slate-100">
                     <svg className="w-5 h-5 animate-spin text-gray-300" fill="none" viewBox="0 0 24 24">
@@ -1063,9 +1159,11 @@ const ClientSubscription = () => {
               </div>
             </div>
 
-            <div className="max-w-md mx-auto">
-              <StudentCountCard studentCount={studentCount} />
-            </div>
+            {perPerson === 1 && (
+              <div className="max-w-md mx-auto">
+                <StudentCountCard studentCount={studentCount} />
+              </div>
+            )}
           </div>
         )}
 

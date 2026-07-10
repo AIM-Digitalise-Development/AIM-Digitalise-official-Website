@@ -75,7 +75,7 @@ const NxtGenErpSection = () => {
             Enterprise Solutions
           </div>
           <h2 className="heading-display">
-            Meet <span className="text-gradient">NxtGen ERP</span>
+            SaaS <span className="text-[#facc15]">NE</span><span className="text-[#ef4444]">X</span><span className="text-[#facc15]">GN</span> <span className="text">Cloud</span>
           </h2>
           <p className="text-lg copy-on-dark-muted text-left sm:text-center">
             A comprehensive, cloud-based ERP ecosystem designed and developed by <span className="text-aim-copy font-semibold">AIM Digitalise Pvt. Ltd.</span> to streamline operations for small and medium-scale industries.

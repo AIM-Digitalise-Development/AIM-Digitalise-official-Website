@@ -74,3 +74,15 @@ export const getClientCustomizationRequests = (token) =>
 
 export const submitClientCustomizationRequest = (customizationText, token) =>
   clientPortalFetch('POST', '/client/customization/submit', { customization_text: customizationText }, token)
+
+export const getClientPendingCustomizationPayments = (token) =>
+  clientPortalFetch('GET', '/client/customization/pending-payments', null, token)
+
+export const getClientCustomPaymentHistory = (token) =>
+  clientPortalFetch('GET', '/client/customization/payment-history', null, token)
+
+export const createCustomizationPaymentOrder = (requestId, token) =>
+  clientPortalFetch('POST', '/client/customization/create-payment-order', { customization_request_id: requestId }, token)
+
+export const verifyCustomizationPayment = (paymentData, token) =>
+  clientPortalFetch('POST', '/client/customization/verify-payment', paymentData, token)

@@ -6,6 +6,9 @@ import {
   getAdminSubscriptions,
   activateSubscription,
   deactivateSubscription,
+  getAdminCustomizationRequests,
+  setCustomizationAmount,
+  updateCustomizationStatus,
 } from '../../api/admin/partners'
 import { isSaasClient } from '../../utils/subscription'
 
@@ -86,7 +89,139 @@ const AdminSaasClients = () => {
 
   useEffect(() => {
     if (activePageTab === 'subscriptions') fetchSubscriptions()
+    if (activePageTab === 'customization') fetchCustomizationRequestsData(customizationFilters)
   }, [activePageTab])
+
+  // ── CUSTOMIZATION ──────────────────────────────────────────────────────────
+  const [customizationRequests, setCustomizationRequests] = useState([])
+  const [loadingCustomization, setLoadingCustomization] = useState(false)
+  const [selectedRequest, setSelectedRequest] = useState(null)
+  const [showAmountModal, setShowAmountModal] = useState(false)
+  const [amountForm, setAmountForm] = useState({ amount: '', admin_notes: '' })
+  const [showStatusModal, setShowStatusModal] = useState(false)
+  const [statusForm, setStatusForm] = useState({ status: '', admin_notes: '' })
+  const [customizationFilters, setCustomizationFilters] = useState({ status: '', search: '' })
+  const [customizationStats, setCustomizationStats] = useState({
+    total: 0,
+    pending: 0,
+    amount_set: 0,
+    approved: 0,
+    rejected: 0
+  })
+
+  const fetchCustomizationRequestsData = async (filters = {}) => {
+    setLoadingCustomization(true)
+    try {
+      const res = await getAdminCustomizationRequests(filters)
+      if (res.data?.success) {
+        let requests = []
+        if (Array.isArray(res.data.data?.requests)) {
+          requests = res.data.data.requests
+        } else if (Array.isArray(res.data.data)) {
+          requests = res.data.data
+        }
+        setCustomizationRequests(requests)
+        setCustomizationStats({
+          total: requests.length,
+          pending: requests.filter(r => r.status === 'pending').length,
+          amount_set: requests.filter(r => r.status === 'amount_set').length,
+          approved: requests.filter(r => r.status === 'approved').length,
+          rejected: requests.filter(r => r.status === 'rejected').length
+        })
+      } else {
+        flashError(res.data?.message || 'Failed to fetch customization requests')
+      }
+    } catch (err) {
+      console.error(err)
+      flashError('Failed to fetch customization requests: ' + err.message)
+    } finally {
+      setLoadingCustomization(false)
+    }
+  }
+
+  const handleSetAmount = async (e) => {
+    e.preventDefault()
+    setLoadingCustomization(true)
+    try {
+      const res = await setCustomizationAmount(
+        selectedRequest.id,
+        parseFloat(amountForm.amount),
+        amountForm.admin_notes
+      )
+      if (res.data?.success) {
+        flashSuccess(`Amount ₹${amountForm.amount} set successfully!`)
+        setShowAmountModal(false)
+        setAmountForm({ amount: '', admin_notes: '' })
+        fetchCustomizationRequestsData(customizationFilters)
+        setSelectedRequest(null)
+      } else {
+        flashError(res.data?.message || 'Failed to set amount')
+      }
+    } catch (err) {
+      flashError('Failed to set amount: ' + err.message)
+    } finally {
+      setLoadingCustomization(false)
+    }
+  }
+
+  const handleUpdateStatus = async (e) => {
+    e.preventDefault()
+    setLoadingCustomization(true)
+    try {
+      const res = await updateCustomizationStatus(
+        selectedRequest.id,
+        statusForm.status,
+        statusForm.admin_notes
+      )
+      if (res.data?.success) {
+        flashSuccess(`Status updated to ${statusForm.status}!`)
+        setShowStatusModal(false)
+        setStatusForm({ status: '', admin_notes: '' })
+        fetchCustomizationRequestsData(customizationFilters)
+        setSelectedRequest(null)
+      } else {
+        flashError(res.data?.message || 'Failed to update status')
+      }
+    } catch (err) {
+      flashError('Failed to update status: ' + err.message)
+    } finally {
+      setLoadingCustomization(false)
+    }
+  }
+
+  const parseCustomizationText = (text) => {
+    if (!text) return { title: 'Custom Upgrade', description: '' }
+    const match = text.match(/^\[(.*?)\]\s*(?:\(Target Rollout:\s*(.*?)\))?\s*\n*([\s\S]*)$/)
+    if (match) {
+      return {
+        title: match[1],
+        rollout: match[2] || '',
+        description: match[3].trim()
+      }
+    }
+    return { title: 'Custom Upgrade', description: text }
+  }
+
+  const getStatusBadge = (status) => {
+    const badges = {
+      'pending': { color: 'text-amber-600 bg-amber-50 border-amber-100', text: 'Pending' },
+      'amount_set': { color: 'text-blue-600 bg-blue-50 border-blue-100', text: 'Amount Set' },
+      'approved': { color: 'text-emerald-600 bg-emerald-50 border-emerald-100', text: 'Approved' },
+      'rejected': { color: 'text-rose-600 bg-rose-50 border-rose-100', text: 'Rejected' }
+    }
+    return badges[status?.toLowerCase()] || { color: 'text-amber-600 bg-amber-50 border-amber-100', text: status || 'Pending' }
+  }
+
+  const formatAmount = (amount) => {
+    if (!amount) return '—'
+    return `₹ ${parseFloat(amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  }
+
+  const truncateText = (text, maxLength = 100) => {
+    if (!text) return ''
+    if (text.length <= maxLength) return text
+    return text.substring(0, maxLength) + '...'
+  }
 
   // ── SUBSCRIPTIONS ──────────────────────────────────────────────────────────
   const [subscriptions, setSubscriptions] = useState([])
@@ -147,6 +282,103 @@ const AdminSaasClients = () => {
               <button onClick={() => setDeliveryModal(false)} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-500 hover:bg-slate-50 cursor-pointer">Cancel</button>
               <button onClick={saveDelivery} disabled={deliverySaving} className="flex-1 py-2.5 rounded-xl bg-purple-600 text-white text-sm font-bold hover:bg-purple-700 disabled:opacity-50 cursor-pointer">{deliverySaving ? 'Saving...' : 'Save'}</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ SET AMOUNT MODAL ══════════════════════════════════════════════════════ */}
+      {showAmountModal && selectedRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 border border-slate-200/80">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-black text-slate-800 flex items-center gap-2"><span className="text-[#3b82f6]">💵</span> Set Customization Quote</h3>
+              <button onClick={() => { setShowAmountModal(false); setSelectedRequest(null); }} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 text-xl cursor-pointer">×</button>
+            </div>
+            <div className="mb-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+              <p className="text-[10px] text-slate-400 font-semibold uppercase">Client</p>
+              <p className="font-black text-slate-800">{selectedRequest.client?.name || selectedRequest.client_display_id}</p>
+              <p className="text-[10px] text-slate-400 mt-1 font-semibold uppercase">Description</p>
+              <p className="text-slate-600 line-clamp-3 font-normal mt-0.5">{selectedRequest.customization_text}</p>
+            </div>
+            <form onSubmit={handleSetAmount} className="space-y-4 mt-4 text-xs font-bold">
+              <div className="space-y-1.5">
+                <label className="text-slate-500 uppercase tracking-wider block">Quote Amount (₹)</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  step="0.01"
+                  value={amountForm.amount}
+                  onChange={e => setAmountForm({ ...amountForm, amount: e.target.value })}
+                  placeholder="Enter quote amount in INR..."
+                  className={inputCls}
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-slate-500 uppercase tracking-wider block">Admin Notes</label>
+                <textarea
+                  value={amountForm.admin_notes}
+                  onChange={e => setAmountForm({ ...amountForm, admin_notes: e.target.value })}
+                  placeholder="Notes shown to the client on invoice..."
+                  rows="3"
+                  className={`${inputCls} resize-none`}
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => { setShowAmountModal(false); setSelectedRequest(null); }} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-500 hover:bg-slate-50 cursor-pointer">Cancel</button>
+                <button type="submit" className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 cursor-pointer">Set Quote</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ══ UPDATE STATUS MODAL ══════════════════════════════════════════════════ */}
+      {showStatusModal && selectedRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 border border-slate-200/80">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-black text-slate-800 flex items-center gap-2"><span className="text-[#8b5cf6]">⚙️</span> Update Request Status</h3>
+              <button onClick={() => { setShowStatusModal(false); setSelectedRequest(null); }} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 text-xl cursor-pointer">×</button>
+            </div>
+            <div className="mb-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+              <p className="text-[10px] text-slate-400 font-semibold uppercase">Client</p>
+              <p className="font-black text-slate-800">{selectedRequest.client?.name || selectedRequest.client_display_id}</p>
+              <p className="text-[10px] text-slate-400 mt-1 font-semibold uppercase">Current Status</p>
+              <p className="text-slate-600 font-black mt-0.5 capitalize">{selectedRequest.status}</p>
+            </div>
+            <form onSubmit={handleUpdateStatus} className="space-y-4 mt-4 text-xs font-bold">
+              <div className="space-y-1.5">
+                <label className="text-slate-500 uppercase tracking-wider block">New Status</label>
+                <select
+                  required
+                  value={statusForm.status}
+                  onChange={e => setStatusForm({ ...statusForm, status: e.target.value })}
+                  className={inputCls}
+                >
+                  <option value="">Select Status...</option>
+                  <option value="pending">Pending</option>
+                  <option value="amount_set">Amount Set</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-slate-500 uppercase tracking-wider block">Admin Notes</label>
+                <textarea
+                  value={statusForm.admin_notes}
+                  onChange={e => setStatusForm({ ...statusForm, admin_notes: e.target.value })}
+                  placeholder="Notes about this status update..."
+                  rows="3"
+                  className={`${inputCls} resize-none`}
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => { setShowStatusModal(false); setSelectedRequest(null); }} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-500 hover:bg-slate-50 cursor-pointer">Cancel</button>
+                <button type="submit" className="flex-1 py-2.5 rounded-xl bg-purple-600 text-white text-sm font-bold hover:bg-purple-700 cursor-pointer">Update</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -337,16 +569,177 @@ const AdminSaasClients = () => {
             </div>
           )}
           {activePageTab === 'customization' && (
-            <div className="space-y-4">
-              <h3 className="text-base font-bold text-slate-800 flex items-center gap-2 pb-3 border-b border-slate-100">⚙️ Client Customization Requests</h3>
-              <div className="overflow-x-auto rounded-2xl border border-slate-200/80 shadow-sm">
-                <table className="w-full text-left text-xs"><thead><tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider"><th className="px-5 py-4">Request ID</th><th className="px-5 py-4">Client</th><th className="px-5 py-4">Module</th><th className="px-5 py-4">Submitted</th><th className="px-5 py-4">Est. Delivery</th><th className="px-5 py-4 text-center">Status</th></tr></thead>
-                  <tbody className="divide-y divide-slate-100 text-slate-700">
-                    <tr className="hover:bg-slate-50/50"><td className="px-5 py-3 font-mono font-bold text-slate-500">REQ-2026-004</td><td className="px-5 py-3 font-bold text-slate-800">Sunrise Academy</td><td className="px-5 py-3">Custom Certificate Template</td><td className="px-5 py-3 text-slate-400">12 May 2026</td><td className="px-5 py-3 text-slate-400">20 Jun 2026</td><td className="px-5 py-3 text-center"><span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-purple-100 text-purple-800 border border-purple-200">In Progress</span></td></tr>
-                    <tr className="hover:bg-slate-50/50"><td className="px-5 py-3 font-mono font-bold text-slate-500">REQ-2026-003</td><td className="px-5 py-3 font-bold text-slate-800">Greenfield School</td><td className="px-5 py-3">WhatsApp Alert Gateway</td><td className="px-5 py-3 text-slate-400">08 May 2026</td><td className="px-5 py-3 text-slate-400">10 Jun 2026</td><td className="px-5 py-3 text-center"><span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-200">Pending</span></td></tr>
-                  </tbody>
-                </table>
+            <div className="space-y-6">
+              {/* Customization Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                  <span className="text-[#8b5cf6]">🎨</span> Client Customization Requests
+                </h3>
               </div>
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+                <div className="bg-slate-50 border border-slate-200/60 p-4.5 rounded-2xl text-center shadow-sm">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Requests</span>
+                  <span className="text-2xl font-black text-slate-800 mt-1 block font-mono">{customizationStats.total}</span>
+                </div>
+                <div className="bg-amber-50/50 border border-amber-100/60 p-4.5 rounded-2xl text-center shadow-sm">
+                  <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider block">Pending</span>
+                  <span className="text-2xl font-black text-amber-600 mt-1 block font-mono">{customizationStats.pending}</span>
+                </div>
+                <div className="bg-blue-50/50 border border-blue-100/60 p-4.5 rounded-2xl text-center shadow-sm">
+                  <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider block">Amount Set</span>
+                  <span className="text-2xl font-black text-blue-600 mt-1 block font-mono">{customizationStats.amount_set}</span>
+                </div>
+                <div className="bg-emerald-50/50 border border-emerald-100/60 p-4.5 rounded-2xl text-center shadow-sm">
+                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider block">Approved</span>
+                  <span className="text-2xl font-black text-emerald-600 mt-1 block font-mono">{customizationStats.approved}</span>
+                </div>
+                <div className="bg-rose-50/50 border border-rose-100/60 p-4.5 rounded-2xl text-center shadow-sm">
+                  <span className="text-[10px] font-bold text-rose-500 uppercase tracking-wider block">Rejected</span>
+                  <span className="text-2xl font-black text-rose-600 mt-1 block font-mono">{customizationStats.rejected}</span>
+                </div>
+              </div>
+
+              {/* Filters Panel */}
+              <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-2xl flex flex-col sm:flex-row gap-4 items-end text-xs font-semibold shadow-sm">
+                <div className="flex-1 w-full space-y-1">
+                  <label className="text-slate-400 block font-bold uppercase tracking-wider">Search</label>
+                  <input
+                    type="text"
+                    placeholder="Client ID, name, school or description..."
+                    value={customizationFilters.search}
+                    onChange={e => setCustomizationFilters({ ...customizationFilters, search: e.target.value })}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 transition-all font-semibold"
+                  />
+                </div>
+                <div className="w-full sm:w-44 space-y-1">
+                  <label className="text-slate-400 block font-bold uppercase tracking-wider">Status</label>
+                  <select
+                    value={customizationFilters.status}
+                    onChange={e => setCustomizationFilters({ ...customizationFilters, status: e.target.value })}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 transition-all font-semibold"
+                  >
+                    <option value="">All Statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="amount_set">Amount Set</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                </div>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <button
+                    onClick={() => fetchCustomizationRequestsData(customizationFilters)}
+                    className="flex-1 sm:flex-none px-5 py-2.5 bg-[#1e3e6b] hover:bg-[#152e51] text-white font-bold rounded-xl cursor-pointer transition-colors shadow-sm text-xs"
+                  >
+                    🔍 Filter
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCustomizationFilters({ status: '', search: '' })
+                      fetchCustomizationRequestsData({ status: '', search: '' })
+                    }}
+                    className="flex-1 sm:flex-none px-4 py-2.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 font-bold rounded-xl cursor-pointer transition-colors text-xs"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+
+              {/* Customization requests table */}
+              {loadingCustomization ? (
+                <div className="text-center py-12 font-bold text-slate-400 bg-white rounded-3xl border border-slate-200 shadow-sm animate-pulse">
+                  <span className="inline-block animate-spin mr-2">🔄</span>Loading requests...
+                </div>
+              ) : customizationRequests.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 bg-slate-50/20 rounded-2xl border border-slate-100 shadow-sm">
+                  <span className="text-4xl block">⚙️</span>
+                  <p className="font-bold mt-2">No customization requests found</p>
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50 text-slate-400 font-bold uppercase tracking-wider">
+                          <th className="px-5 py-4">Client</th>
+                          <th className="px-5 py-4">Request Details</th>
+                          <th className="px-5 py-4">Quote Cost</th>
+                          <th className="px-5 py-4 text-center">Status</th>
+                          <th className="px-5 py-4 text-center">Submitted</th>
+                          <th className="px-5 py-4 text-center">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700">
+                        {customizationRequests.map((request) => {
+                          const parsed = parseCustomizationText(request.customization_text)
+                          const statusBadge = getStatusBadge(request.status)
+                          const clientName = request.client?.name || request.client_display_id || 'N/A'
+                          const clientId = request.client?.id || request.client_display_id || 'N/A'
+                          const schoolName = request.client?.school_name || ''
+
+                          return (
+                            <tr key={request.id} className="hover:bg-slate-50/50">
+                              <td className="px-5 py-4">
+                                <p className="font-bold text-slate-800 text-sm">{clientName}</p>
+                                <p className="text-[10px] text-slate-400">
+                                  ID: {clientId} {schoolName && `• ${schoolName}`}
+                                </p>
+                              </td>
+                              <td className="px-5 py-4 max-w-[280px]">
+                                <div className="font-bold text-slate-800">{parsed.title}</div>
+                                <div className="text-[10px] text-slate-400 mt-0.5 line-clamp-2 leading-relaxed">
+                                  {parsed.description}
+                                </div>
+                                {parsed.rollout && (
+                                  <div className="text-[9px] text-blue-500 font-bold mt-1">
+                                    📅 Expected Rollout: {parsed.rollout}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-5 py-4 font-mono font-black text-slate-800">
+                                {request.amount ? formatAmount(request.amount) : '—'}
+                              </td>
+                              <td className="px-5 py-4 text-center">
+                                <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase border ${statusBadge.color}`}>
+                                  {statusBadge.text}
+                                </span>
+                              </td>
+                              <td className="px-5 py-4 text-center text-slate-400 font-sans">
+                                {request.submitted_at ? new Date(request.submitted_at).toLocaleDateString('en-IN') : (request.created_at ? new Date(request.created_at).toLocaleDateString('en-IN') : '—')}
+                              </td>
+                              <td className="px-5 py-4 text-center">
+                                <div className="flex gap-2 justify-center">
+                                  <button
+                                    onClick={() => {
+                                      setSelectedRequest(request)
+                                      setAmountForm({ amount: request.amount || '', admin_notes: request.admin_notes || '' })
+                                      setShowAmountModal(true)
+                                    }}
+                                    className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-[#38b34a] hover:bg-[#38b34a]/5 hover:text-[#38b34a] transition-all font-bold cursor-pointer text-[10px]"
+                                  >
+                                    💵 Set Quote
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedRequest(request)
+                                      setStatusForm({ status: request.status || '', admin_notes: request.admin_notes || '' })
+                                      setShowStatusModal(true)
+                                    }}
+                                    className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50 hover:text-indigo-600 transition-all font-bold cursor-pointer text-[10px]"
+                                  >
+                                    ⚙️ Status
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           {activePageTab === 'renewal' && (

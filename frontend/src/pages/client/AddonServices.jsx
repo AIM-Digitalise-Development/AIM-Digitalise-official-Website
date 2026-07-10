@@ -34,10 +34,9 @@ const ClientAddonServices = () => {
 
       <ClientPageHeader title="Add-on Services" />
 
-      {isNexgnInstitutePro ? (
         <div className="space-y-6">
           <div className="bg-blue-50 border border-blue-200 text-blue-800 rounded-2xl p-4.5 text-xs font-semibold leading-relaxed">
-            ℹ️ You are subscribed to <strong>NEXGN Institute Pro</strong>. The services catalog below details verified add-on expansions, ID card printing, and infrastructure integrations specifically customized for your organization.
+            ℹ️ You are subscribed to <strong>{productName}</strong>. The services catalog below details verified add-on expansions, ID card printing, and infrastructure integrations specifically customized for your organization.
           </div>
 
           {/* Grid of 7 Cards */}
@@ -299,24 +298,6 @@ const ClientAddonServices = () => {
 
           </div>
         </div>
-      ) : (
-        <div className="bg-white rounded-3xl p-8 shadow-md border border-slate-100 text-center max-w-xl mx-auto space-y-4">
-          <span className="text-4xl block">🛠️</span>
-          <h3 className="text-base font-black text-[#1e3e6b]">Add-on Services Optimization</h3>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            The add-on services catalog is currently optimized for organizations subscribed to **NEXGN Institute Pro** plans.
-          </p>
-          <div className="p-3 bg-slate-50 rounded-xl text-[10.5px] text-slate-500 leading-normal font-semibold">
-            To query custom domain settings, transportation addons, or additional laminated card prints for your current package ({productName}), please contact your account manager directly via help desk.
-          </div>
-          <button
-            onClick={() => navigate('/client/portal/support')}
-            className="px-5 py-2.5 bg-gradient-to-r from-[#1a3c5e] to-[#2a6f97] hover:opacity-90 text-white text-xs font-bold rounded-xl transition-opacity active:scale-95 cursor-pointer"
-          >
-            Contact Support Desk
-          </button>
-        </div>
-      )}
 
     </div>
   )
