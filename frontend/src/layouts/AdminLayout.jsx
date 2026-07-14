@@ -55,6 +55,7 @@ const AdminLayout = () => {
     { route: ROUTES.ADMIN.PARTNERS, label: 'Partner', icon: 'partners', color: '#38b34a' },
     { route: null, label: 'Reports', icon: 'reports', color: '#f59e0b' },
     { route: ROUTES.ADMIN.IMPLEMENTATION, label: 'Implementation', icon: 'implementation', color: '#10b981' },
+    { route: ROUTES.ADMIN.ADDON_SERVICES, label: 'Add-on Services', icon: 'addon_services', color: '#8b5cf6' },
     { route: ROUTES.ADMIN.SUPPORT, label: 'Support', icon: 'support', color: '#06b6d4' },
     { route: ROUTES.ADMIN.SETTINGS, label: 'Settings', icon: 'settings', color: '#6366f1' },
   ]
@@ -114,6 +115,14 @@ const AdminLayout = () => {
       <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3" />
         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+      </svg>
+    )
+    if (type === 'addon_services') return (
+      <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 6L7 17l-4-4" />
+        <circle cx="19" cy="5" r="3" />
+        <circle cx="5" cy="19" r="3" />
+        <path d="M5 16V5h14" />
       </svg>
     )
     return null
@@ -276,6 +285,7 @@ const AdminLayout = () => {
                 if (location.pathname === ROUTES.ADMIN.EMPLOYEE) return "Manage your employees, attendance, leave, and payroll."
                 if (location.pathname === ROUTES.ADMIN.COMPLIANCE) return "Review corporate compliance, audit logs, and tax filings."
                 if (location.pathname === ROUTES.ADMIN.IMPLEMENTATION) return "Review project implementations, execution status, and delivery milestones."
+                if (location.pathname === ROUTES.ADMIN.ADDON_SERVICES) return "View all add-on service subscriptions and payment history across clients."
                 return "Manage your company overview."
               })()}
             </span>

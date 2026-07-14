@@ -581,7 +581,12 @@ const ClientSubscription = () => {
             cycle: selectedCycle,
             amount: orderRes.amount,
             cycle_months: orderRes.cycle_months || 1,
-            is_first_payment: orderRes.is_first_payment || false
+            is_first_payment: orderRes.is_first_payment || false,
+            has_carryover: orderRes.has_carryover || false,
+            carryover_from: orderRes.carryover_from || null,
+            carryover_to: orderRes.carryover_to || null,
+            carryover_days: orderRes.carryover_days || 0,
+            student_count: orderRes.student_count || null,
           }, clientToken)
 
           if (verifyRes.success) {
@@ -615,7 +620,12 @@ const ClientSubscription = () => {
               cycle: selectedCycle,
               amount: orderRes.amount,
               cycle_months: orderRes.cycle_months || 1,
-              is_first_payment: orderRes.is_first_payment || false
+              is_first_payment: orderRes.is_first_payment || false,
+              has_carryover: orderRes.has_carryover || false,
+              carryover_from: orderRes.carryover_from || null,
+              carryover_to: orderRes.carryover_to || null,
+              carryover_days: orderRes.carryover_days || 0,
+              student_count: orderRes.student_count || null,
             }, clientToken)
 
             if (verifyRes.success) {

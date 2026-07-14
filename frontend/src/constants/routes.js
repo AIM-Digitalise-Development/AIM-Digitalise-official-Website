@@ -26,6 +26,7 @@ export const ROUTES = {
     EMPLOYEE: '/admin/employee',
     COMPLIANCE: '/admin/compliance',
     IMPLEMENTATION: '/admin/implementation',
+    ADDON_SERVICES: '/admin/addon-services',
   },
   EMPLOYEE: {
     DASHBOARD: '/employee',

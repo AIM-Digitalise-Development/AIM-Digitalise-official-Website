@@ -307,9 +307,9 @@ const ClientProducts = () => {
               💰
             </div>
             <div className="space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Security Deposit</span>
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Processing Fee</span>
               <span className="text-lg font-black text-slate-800 block">
-                ₹ {Number(securityDeposit).toLocaleString('en-IN')}.00 <span className="text-[10px] font-medium text-slate-400 block mt-0.5">(Refundable)</span>
+                ₹ {Number(securityDeposit).toLocaleString('en-IN')}.00 <span className="text-[10px] font-medium text-slate-400 block mt-0.5"></span>
               </span>
             </div>
           </div>

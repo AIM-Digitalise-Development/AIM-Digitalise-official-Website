@@ -86,3 +86,15 @@ export const createCustomizationPaymentOrder = (requestId, token) =>
 
 export const verifyCustomizationPayment = (paymentData, token) =>
   clientPortalFetch('POST', '/client/customization/verify-payment', paymentData, token)
+
+export const getClientAddonPreview = (addonType, recipientType, token) =>
+  clientPortalFetch('GET', '/client/addon/preview', { addon_type: addonType, recipient_type: recipientType }, token)
+
+export const getClientAddonHistory = (token) =>
+  clientPortalFetch('GET', '/client/addon/history', null, token)
+
+export const createAddonPaymentOrder = (addonType, recipientType, token) =>
+  clientPortalFetch('POST', '/client/addon/create-order', { addon_type: addonType, recipient_type: recipientType }, token)
+
+export const verifyAddonPayment = (paymentData, token) =>
+  clientPortalFetch('POST', '/client/addon/verify-payment', paymentData, token)

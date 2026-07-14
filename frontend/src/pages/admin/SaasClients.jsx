@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   getAdminClients,
   updateClientDelivery,
@@ -9,6 +10,7 @@ import {
   getAdminCustomizationRequests,
   setCustomizationAmount,
   updateCustomizationStatus,
+  getAdminClientById,
 } from '../../api/admin/partners'
 import { isSaasClient } from '../../utils/subscription'
 
@@ -31,6 +33,161 @@ const AdminSaasClients = () => {
   const [summary, setSummary] = useState(null)
   const [clientsLoading, setClientsLoading] = useState(true)
   const [clientSearch, setClientSearch] = useState('')
+  const [selectedClientDetails, setSelectedClientDetails] = useState(null)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [dossierTab, setDossierTab] = useState('profile')
+
+  const handleDownloadInvoice = (payment, clientDetails) => {
+    const today = new Date(payment.created_at || Date.now())
+    const invoiceDate = today.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    const invoiceNumber = `INV-${today.getTime()}-${Math.floor(Math.random() * 1000)}`
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Invoice #${invoiceNumber}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #1e293b; }
+            .bill-container { max-width: 800px; margin: 0 auto; padding: 30px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; }
+            .bill-header { text-align: center; border-bottom: 2px solid #1e3c5e; padding-bottom: 20px; margin-bottom: 20px; }
+            .bill-title { font-size: 24px; font-weight: bold; color: #1e3c5e; }
+            .bill-subtitle { color: #64748b; font-size: 14px; margin-top: 4px; }
+            .bill-info { display: flex; justify-content: space-between; margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; font-size: 13px; }
+            .bill-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            .bill-table th { background: #1e3c5e; color: white; padding: 12px; text-align: left; font-size: 13px; }
+            .bill-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
+            .bill-total { text-align: right; padding: 20px; background: #f8fafc; border-radius: 8px; margin-top: 20px; font-size: 14px; }
+            .bill-footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #94a3b8; font-size: 11px; }
+          </style>
+        </head>
+        <body>
+          <div class="bill-container">
+            <div class="bill-header">
+              <div class="bill-title">🎓 AIM Digitalise</div>
+              <div class="bill-subtitle">Payment Receipt / Tax Invoice</div>
+            </div>
+            <div class="bill-info">
+              <div>
+                <strong>Client:</strong> ${clientDetails.client_name || clientDetails.company_name}<br/>
+                <strong>Client ID:</strong> ${clientDetails.client_id}<br/>
+                <strong>School/Org:</strong> ${clientDetails.company_name}
+              </div>
+              <div>
+                <strong>Invoice #:</strong> ${invoiceNumber}<br/>
+                <strong>Payment ID:</strong> ${payment.razorpay_payment_id || 'simulated_pay'}<br/>
+                <strong>Date:</strong> ${invoiceDate}
+              </div>
+            </div>
+            <table class="bill-table">
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th>Cycle</th>
+                  <th style="text-align: right;">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <strong>Subscription Service Fees</strong><br/>
+                    <span style="font-size: 11px; color:#64748b;">Period: ${payment.period_start ? formatDate(payment.period_start) : '—'} to ${payment.period_end ? formatDate(payment.period_end) : '—'}</span>
+                  </td>
+                  <td style="text-transform: capitalize;">${payment.cycle}</td>
+                  <td style="text-align: right;">₹ ${parseFloat(payment.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="bill-total">
+              <strong>Total Paid (incl. GST):</strong> <span style="font-size: 18px; color: #2563eb; font-weight: bold; margin-left: 10px;">₹ ${parseFloat(payment.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div class="bill-footer">
+              <p>This is a system generated transaction invoice copy served for verification.</p>
+              <p>AIM Digitalise Private Limited • support@aimdigitalise.com</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+
+    const blob = new Blob([htmlContent], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `Receipt_${payment.razorpay_payment_id || 'invoice'}.html`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const triggerMockReminder = (client) => {
+    alert(`✉️ Payment reminder sent successfully to ${client.client_name} (${client.email}) for ₹${Number(client.total_due_amount || 2500).toLocaleString()}.`)
+  }
+
+  const [loadingClientDetail, setLoadingClientDetail] = useState(false)
+
+  const handleFetchClientDetails = async (clientId) => {
+    setLoadingClientDetail(true)
+    setError(null)
+    try {
+      const res = await getAdminClientById(clientId)
+      if (res.data?.success) {
+        setSelectedClientDetails(res.data.data)
+        setDossierTab('profile')
+        setShowDetailsModal(true)
+      } else {
+        flashError(res.data?.message || 'Failed to fetch client details')
+      }
+    } catch (err) {
+      flashError(err.message || 'Error fetching client details')
+    } finally {
+      setLoadingClientDetail(false)
+    }
+  }
+
+  const handleUpdateDeliveryDays = async (clientId, days) => {
+    try {
+      const res = await updateClientDelivery(clientId, days)
+      if (res.data?.success) {
+        flashSuccess(`Delivery set to ${days} days`)
+        fetchClients()
+        // If this client is currently selected, update their details modal too
+        if (selectedClientDetails && selectedClientDetails.id === clientId) {
+          // Temporarily set details from local updates, or refetch
+          const detailsRes = await getAdminClientById(clientId)
+          if (detailsRes.data?.success) {
+            setSelectedClientDetails(detailsRes.data.data)
+          }
+        }
+      } else {
+        flashError(res.data?.message || 'Failed to update delivery')
+      }
+    } catch (err) {
+      flashError(err.message)
+    }
+  }
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '—'
+    try {
+      const d = new Date(dateStr)
+      if (isNaN(d.getTime())) return '—'
+      return d.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      })
+    } catch (e) {
+      return '—'
+    }
+  }
+
+  const formatCurrency = (amount) => {
+    if (amount === undefined || amount === null) return '—'
+    const val = typeof amount === 'string' ? parseFloat(amount) : amount
+    return `₹${val.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+  }
 
   const fetchClients = async () => {
     setClientsLoading(true); setError(null)
@@ -494,8 +651,28 @@ const AdminSaasClients = () => {
                             <td className="px-5 py-4 text-right font-black text-slate-800">
                               ₹{Number(c.processing_fee || 0).toLocaleString('en-IN')}
                             </td>
-                            <td className="px-5 py-4 text-center font-bold text-slate-700">
-                              {c.delivery_after != null ? `${c.delivery_after} Days` : '—'}
+                            <td className="px-5 py-4 text-center">
+                              <input
+                                type="number"
+                                min="0"
+                                defaultValue={c.delivery_after != null ? c.delivery_after : 0}
+                                onBlur={(e) => {
+                                  const val = parseInt(e.target.value, 10)
+                                  if (!isNaN(val) && val !== c.delivery_after) {
+                                    handleUpdateDeliveryDays(c.id, val)
+                                  }
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    const val = parseInt(e.target.value, 10)
+                                    if (!isNaN(val) && val !== c.delivery_after) {
+                                      handleUpdateDeliveryDays(c.id, val)
+                                      e.target.blur()
+                                    }
+                                  }
+                                }}
+                                className="w-16 px-1.5 py-0.5 text-center font-bold border border-slate-200 hover:border-slate-300 rounded focus:outline-none focus:border-[#38b34a] text-[10px]"
+                              />
                             </td>
                             <td className="px-5 py-4 text-center">
                               <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${c.is_active ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-rose-100 text-rose-800 border-rose-200'
@@ -504,12 +681,24 @@ const AdminSaasClients = () => {
                               </span>
                             </td>
                             <td className="px-5 py-4 text-center">
-                              <button
-                                onClick={() => openDeliveryModal(c)}
-                                className="px-3 py-1.5 rounded-lg border border-slate-200 hover:border-[#38b34a] hover:bg-[#38b34a]/5 hover:text-[#38b34a] transition-all font-bold cursor-pointer text-[10px]"
-                              >
-                                🚚 Delivery Days
-                              </button>
+                              <div className="flex gap-2 justify-center">
+                                <button
+                                  onClick={() => handleFetchClientDetails(c.id)}
+                                  className="p-1.5 rounded-lg border border-slate-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 transition-all font-bold cursor-pointer flex items-center justify-center"
+                                  title="View Details"
+                                >
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={() => openDeliveryModal(c)}
+                                  className="px-2 py-1.5 rounded-lg border border-slate-200 hover:border-[#38b34a] hover:bg-[#38b34a]/5 hover:text-[#38b34a] transition-all font-bold cursor-pointer text-[10px]"
+                                >
+                                  🚚 Delivery
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -746,9 +935,47 @@ const AdminSaasClients = () => {
             <div className="space-y-4">
               <h3 className="text-base font-bold text-slate-800 flex items-center gap-2 pb-3 border-b border-slate-100">🔄 Renewals &amp; Products Management</h3>
               <div className="overflow-x-auto rounded-2xl border border-slate-200/80 shadow-sm">
-                <table className="w-full text-left text-xs"><thead><tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider"><th className="px-5 py-4">Client</th><th className="px-5 py-4">Product</th><th className="px-5 py-4">Expiration</th><th className="px-5 py-4 text-right">Cost</th><th className="px-5 py-4 text-center">Days Left</th><th className="px-5 py-4 text-center">Actions</th></tr></thead>
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider">
+                      <th className="px-5 py-4">Client</th>
+                      <th className="px-5 py-4">Product</th>
+                      <th className="px-5 py-4">Expiration</th>
+                      <th className="px-5 py-4 text-right">Subscription Price</th>
+                      <th className="px-5 py-4 text-center">Days Left</th>
+                      <th className="px-5 py-4 text-center">Actions</th>
+                    </tr>
+                  </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700">
-                    <tr className="hover:bg-slate-50/50"><td className="px-5 py-3 font-bold text-slate-800">Greenfield School</td><td className="px-5 py-3">School MS (Silver)</td><td className="px-5 py-3 text-slate-400">11 Jun 2026</td><td className="px-5 py-3 text-right font-black">₹30,000</td><td className="px-5 py-3 text-center"><span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-200">5 Days</span></td><td className="px-5 py-3 text-center"><div className="flex gap-2 justify-center"><button className="px-2.5 py-1 bg-emerald-600 text-white rounded font-bold cursor-pointer text-[10px]">Renew</button><button className="px-2.5 py-1 bg-blue-600 text-white rounded font-bold cursor-pointer text-[10px]">+ Add Product</button></div></td></tr>
+                    {clients.filter(c => c.valid_until).map(c => {
+                      const daysLeft = Math.ceil((new Date(c.valid_until) - new Date()) / (1000 * 60 * 60 * 24))
+                      const isExpired = daysLeft <= 0
+                      return (
+                        <tr key={c.id} className="hover:bg-slate-50/50">
+                          <td className="px-5 py-3 font-bold text-slate-800">{c.company_name}</td>
+                          <td className="px-5 py-3">{c.product_name}</td>
+                          <td className="px-5 py-3 text-slate-400">{new Date(c.valid_until).toLocaleDateString('en-IN')}</td>
+                          <td className="px-5 py-3 text-right font-black">₹{Number(c.monthly_subscription || 0).toLocaleString('en-IN')}/mo</td>
+                          <td className="px-5 py-3 text-center">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${
+                              isExpired 
+                                ? 'bg-rose-100 text-rose-800 border-rose-200' 
+                                : daysLeft <= 30 
+                                  ? 'bg-amber-100 text-amber-800 border-amber-200 animate-pulse'
+                                  : 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                            }`}>
+                              {isExpired ? 'Expired' : `${daysLeft} Days`}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3 text-center">
+                            <div className="flex gap-2 justify-center">
+                              <button onClick={() => alert(`Initiating renewal for ${c.company_name}`)} className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold cursor-pointer text-[10px]">Renew</button>
+                              <button onClick={() => alert(`Adding product to ${c.company_name}`)} className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold cursor-pointer text-[10px]">+ Add Product</button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -758,9 +985,36 @@ const AdminSaasClients = () => {
             <div className="space-y-4">
               <h3 className="text-base font-bold text-slate-800 flex items-center gap-2 pb-3 border-b border-slate-100">⚠️ Outstanding Client Payments</h3>
               <div className="overflow-x-auto rounded-2xl border border-slate-200/80 shadow-sm">
-                <table className="w-full text-left text-xs"><thead><tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider"><th className="px-5 py-4">Invoice ID</th><th className="px-5 py-4">Client</th><th className="px-5 py-4 text-right">Outstanding</th><th className="px-5 py-4">Due Date</th><th className="px-5 py-4 text-center">Status</th><th className="px-5 py-4 text-center">Action</th></tr></thead>
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider">
+                      <th className="px-5 py-4">Client ID</th>
+                      <th className="px-5 py-4">Client</th>
+                      <th className="px-5 py-4 text-right">Outstanding</th>
+                      <th className="px-5 py-4">Due Date</th>
+                      <th className="px-5 py-4">Unpaid Cycles</th>
+                      <th className="px-5 py-4 text-center">Action</th>
+                    </tr>
+                  </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700">
-                    <tr className="hover:bg-slate-50/50"><td className="px-5 py-3 font-mono font-bold text-slate-500">INV-2026-089</td><td className="px-5 py-3 font-bold text-slate-800">Blue Hill Institute</td><td className="px-5 py-3 text-right font-black text-rose-600">₹15,000</td><td className="px-5 py-3 text-slate-400">28 May 2026</td><td className="px-5 py-3 text-center"><span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-100 text-red-800 border border-red-200 animate-pulse">Overdue</span></td><td className="px-5 py-3 text-center"><button className="px-3 py-1.5 bg-orange-500 text-white rounded font-bold cursor-pointer text-[10px]">Send Reminder</button></td></tr>
+                    {clients.filter(c => Number(c.total_due_amount) > 0).map(c => (
+                      <tr key={c.id} className="hover:bg-slate-50/50">
+                        <td className="px-5 py-3 font-mono font-bold text-slate-500">{c.client_id}</td>
+                        <td className="px-5 py-3 font-bold text-slate-800">{c.company_name}</td>
+                        <td className="px-5 py-3 text-right font-black text-rose-600">₹{Number(c.total_due_amount || 0).toLocaleString('en-IN')}</td>
+                        <td className="px-5 py-3 text-slate-400">{c.valid_until ? new Date(c.valid_until).toLocaleDateString('en-IN') : '—'}</td>
+                        <td className="px-5 py-3">
+                          {c.unpaid_months?.map(m => (
+                            <span key={m} className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 border border-rose-200 font-bold text-[9px] mr-1 inline-block">
+                              {m}
+                            </span>
+                          ))}
+                        </td>
+                        <td className="px-5 py-3 text-center">
+                          <button onClick={() => triggerMockReminder(c)} className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded font-bold cursor-pointer text-[10px]">Send Reminder</button>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -770,9 +1024,30 @@ const AdminSaasClients = () => {
             <div className="space-y-4">
               <h3 className="text-base font-bold text-slate-800 flex items-center gap-2 pb-3 border-b border-slate-100">📄 Payment History &amp; Invoices</h3>
               <div className="overflow-x-auto rounded-2xl border border-slate-200/80 shadow-sm">
-                <table className="w-full text-left text-xs"><thead><tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider"><th className="px-5 py-4">Transaction ID</th><th className="px-5 py-4">Client</th><th className="px-5 py-4 text-right">Amount</th><th className="px-5 py-4">Date</th><th className="px-5 py-4">Method</th><th className="px-5 py-4 text-center">Invoice</th></tr></thead>
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider">
+                      <th className="px-5 py-4">Transaction ID</th>
+                      <th className="px-5 py-4">Client</th>
+                      <th className="px-5 py-4 text-right">Amount</th>
+                      <th className="px-5 py-4">Date</th>
+                      <th className="px-5 py-4">Cycle</th>
+                      <th className="px-5 py-4 text-center">Invoice</th>
+                    </tr>
+                  </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700">
-                    <tr className="hover:bg-slate-50/50"><td className="px-5 py-3 font-mono font-bold text-slate-500">TXN-98014529</td><td className="px-5 py-3 font-bold text-slate-800">Sunrise Academy</td><td className="px-5 py-3 text-right font-black text-emerald-600">₹45,000</td><td className="px-5 py-3 text-slate-400">10 Apr 2026</td><td className="px-5 py-3 text-slate-600 font-semibold">UPI / Razorpay</td><td className="px-5 py-3 text-center"><button className="text-blue-600 hover:text-blue-800 font-bold cursor-pointer">📥 Download</button></td></tr>
+                    {clients.flatMap(c => (c.payments || []).map(p => ({ ...p, client: c }))).map(p => (
+                      <tr key={p.id} className="hover:bg-slate-50/50">
+                        <td className="px-5 py-3 font-mono font-bold text-slate-500">{p.razorpay_payment_id || 'simulated_pay'}</td>
+                        <td className="px-5 py-3 font-bold text-slate-800">{p.client?.company_name}</td>
+                        <td className="px-5 py-3 text-right font-black text-emerald-600">₹{Number(p.amount || 0).toLocaleString('en-IN')}</td>
+                        <td className="px-5 py-3 text-slate-400">{new Date(p.created_at).toLocaleDateString('en-IN')}</td>
+                        <td className="px-5 py-3 text-slate-600 font-semibold capitalize">{p.cycle}</td>
+                        <td className="px-5 py-3 text-center">
+                          <button onClick={() => handleDownloadInvoice(p, p.client)} className="text-blue-600 hover:text-blue-800 font-bold cursor-pointer transition-colors">📥 Download</button>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -781,8 +1056,404 @@ const AdminSaasClients = () => {
 
         </div>
       </div>
+
+      {/* ══ CLIENT DETAILS MODAL (SIDE DRAWER) ════════════════════════════════════ */}
+      <AnimatePresence>
+        {showDetailsModal && selectedClientDetails && (
+          <div className="fixed inset-0 z-50 flex items-center justify-end">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.4 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900"
+              onClick={() => setShowDetailsModal(false)}
+            />
+
+            {/* Slide-over panel */}
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'tween', duration: 0.3 }}
+              className="relative w-full max-w-xl h-full shadow-2xl flex flex-col justify-between overflow-hidden z-10 bg-white border-l border-slate-200"
+            >
+              {loadingClientDetail && (
+                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex items-center justify-center font-bold text-slate-600 text-xs">
+                  ⏳ Updating details...
+                </div>
+              )}
+
+              {/* Header */}
+              <div className="px-6 py-5 flex items-center justify-between bg-slate-50 border-b border-slate-200">
+                <div>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Client Details Dossier</span>
+                  <h3 className="text-lg font-black text-slate-900 leading-tight">{selectedClientDetails.company_name || selectedClientDetails.school_name}</h3>
+                  <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
+                    <span className="text-[10px] text-blue-600 font-bold font-mono tracking-wider">{selectedClientDetails.client_id}</span>
+                    <span className="text-slate-300">•</span>
+                    <span className="text-[10px] text-slate-500 font-medium">Connected Person: <strong className="text-slate-700">{selectedClientDetails.client_name}</strong></span>
+                    <span className="text-slate-300">•</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border uppercase ${
+                      selectedClientDetails.is_active
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-rose-50 text-rose-700 border-rose-200'
+                    }`}>
+                      {selectedClientDetails.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowDetailsModal(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all cursor-pointer ml-3 flex-shrink-0"
+                >
+                  ✕
+                </button>
+              </div>
+
+                  {/* Dossier Tabs */}
+                  <div className="grid grid-cols-2 gap-2 bg-slate-50 border-b border-slate-200 px-6 py-3 z-10 shrink-0">
+                    {[
+                      { id: 'profile', label: 'Company Profile', icon: '🏢' },
+                      { id: 'school', label: 'School Metrics', icon: '🏫' },
+                      { id: 'product', label: 'Product & Logistics', icon: '📦' },
+                      { id: 'ledger', label: 'Payments Ledger', icon: '💳' },
+                    ].map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => setDossierTab(t.id)}
+                        className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer border ${
+                          dossierTab === t.id
+                            ? 'bg-[#1e3e6b] text-white border-[#1e3e6b] shadow-sm'
+                            : 'bg-white hover:bg-slate-50 text-slate-500 border-slate-200'
+                        }`}
+                      >
+                        <span>{t.icon}</span>
+                        <span>{t.label}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Scrollable body */}
+                  <div className="flex-1 overflow-y-auto px-6 py-6 bg-white">
+                    <AnimatePresence mode="wait">
+                      {dossierTab === 'profile' && (
+                        <motion.div
+                          key="profile"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.15 }}
+                          className="space-y-6"
+                        >
+                          {/* Profile Section */}
+                          <div>
+                            <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-3.5 block font-sans">Client / Company Profile</h4>
+                            <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-[11px]">
+                              <div>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Email Address</span>
+                                <p className="text-slate-800 font-medium mt-1 select-text">{selectedClientDetails.email}</p>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Phone Number</span>
+                                <p className="text-slate-800 font-medium mt-1 select-text">{selectedClientDetails.contact_number || selectedClientDetails.phone || '—'}</p>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Client / Company Name</span>
+                                <p className="text-slate-800 font-medium mt-1">{selectedClientDetails.company_name || '—'}</p>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Connected Person</span>
+                                <p className="text-slate-800 font-medium mt-1">{selectedClientDetails.client_name || '—'}</p>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">GSTIN</span>
+                                <p className="text-slate-800 font-medium mt-1">{selectedClientDetails.gstin || '—'}</p>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Portal Password</span>
+                                <p className="text-slate-800 font-medium mt-1 font-mono">{selectedClientDetails.default_password || '—'}</p>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Registration Date</span>
+                                <p className="text-slate-800 font-medium mt-1">{formatDate(selectedClientDetails.created_at)}</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Associated Partner Section */}
+                          {selectedClientDetails.partner && (
+                            <>
+                              <div className="border-t border-slate-100" />
+                              <div>
+                                <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-3.5 block font-sans">Associated Marketing Partner</h4>
+                                <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-[11px]">
+                                  <div>
+                                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Partner ID</span>
+                                    <p className="text-slate-800 font-medium mt-1">{selectedClientDetails.partner.partner_id}</p>
+                                  </div>
+                                  <div>
+                                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Partner Name</span>
+                                    <p className="text-slate-800 font-medium mt-1">{selectedClientDetails.partner.name}</p>
+                                  </div>
+                                  <div>
+                                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Email Address</span>
+                                    <p className="text-slate-800 font-medium mt-1">{selectedClientDetails.partner.email}</p>
+                                  </div>
+                                  <div>
+                                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Contact Number</span>
+                                    <p className="text-slate-800 font-medium mt-1">{selectedClientDetails.partner.contact}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </motion.div>
+                      )}
+
+                      {dossierTab === 'school' && (
+                        <motion.div
+                          key="school"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.15 }}
+                          className="space-y-6"
+                        >
+                          {/* School Registry Section */}
+                          <div>
+                            <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-3.5 block font-sans">School Registration Metrics</h4>
+                            <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-[11px]">
+                              <div>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">School Name</span>
+                                <p className="text-slate-800 font-medium mt-1">{selectedClientDetails.school_name || '—'}</p>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Short Name</span>
+                                <p className="text-slate-800 font-medium mt-1">{selectedClientDetails.school_short_name || '—'}</p>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Academic Session</span>
+                                <p className="text-slate-800 font-medium mt-1">{selectedClientDetails.school_session || '—'}</p>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Total Students</span>
+                                <p className="text-slate-800 font-medium mt-1">{selectedClientDetails.total_students != null ? selectedClientDetails.total_students : selectedClientDetails.student_count || '—'}</p>
+                              </div>
+                              <div className="col-span-2">
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Residence Address</span>
+                                <p className="text-slate-800 font-medium mt-1 leading-relaxed">
+                                  {selectedClientDetails.address
+                                    ? `${selectedClientDetails.address}, ${selectedClientDetails.district || ''}, ${selectedClientDetails.state || ''} - ${selectedClientDetails.pin_code || ''}`
+                                    : '—'}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {dossierTab === 'product' && (
+                        <motion.div
+                          key="product"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.15 }}
+                          className="space-y-6"
+                        >
+                          {/* Product Pricing & Logistics Section */}
+                          <div>
+                            <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-3.5 block font-sans">Product & Logistics Information</h4>
+                            <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-[11px]">
+                              <div>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Product Category</span>
+                                <p className="text-blue-600 font-bold mt-1 uppercase">{selectedClientDetails.product_category}</p>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Product Name</span>
+                                <p className="text-slate-800 font-medium mt-1">{selectedClientDetails.product_name}</p>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Setup Processing Fee</span>
+                                <p className="text-slate-800 font-medium mt-1">{formatCurrency(selectedClientDetails.processing_fee)}</p>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Monthly Subscription</span>
+                                <p className="text-slate-800 font-medium mt-1">{formatCurrency(selectedClientDetails.monthly_subscription)}/mo</p>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Delivery Limit Date</span>
+                                <p className="text-slate-800 font-medium mt-1">{formatDate(selectedClientDetails.delivery_date || selectedClientDetails.valid_until)}</p>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Delivery Offset Days</span>
+                                <div className="flex items-center gap-1.5 mt-1 font-sans">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    defaultValue={selectedClientDetails.delivery_after != null ? selectedClientDetails.delivery_after : 0}
+                                    onBlur={(e) => {
+                                      const val = parseInt(e.target.value, 10)
+                                      if (!isNaN(val) && val !== selectedClientDetails.delivery_after) {
+                                        handleUpdateDeliveryDays(selectedClientDetails.id, val)
+                                      }
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        const val = parseInt(e.target.value, 10)
+                                        if (!isNaN(val) && val !== selectedClientDetails.delivery_after) {
+                                          handleUpdateDeliveryDays(selectedClientDetails.id, val)
+                                          e.target.blur()
+                                        }
+                                      }
+                                    }}
+                                    className="w-14 px-1.5 py-0.5 bg-slate-50 border border-slate-200 text-slate-800 text-center font-bold rounded text-xs focus:outline-none focus:border-blue-500"
+                                  />
+                                  <span className="text-slate-400 text-[10px]">days</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="border-t border-slate-100" />
+
+                          {/* Customizations Section */}
+                          <div>
+                            <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-3.5 block font-sans">Customizations & Upgrades</h4>
+                            {selectedClientDetails.customizations && selectedClientDetails.customizations.length > 0 ? (
+                              <div className="space-y-3 font-sans">
+                                {selectedClientDetails.customizations.map((cust, idx) => (
+                                  <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-[10px]">
+                                    <div className="flex justify-between items-center border-b border-slate-100 pb-1.5">
+                                      <span className="font-bold text-slate-700">{cust.customization_text}</span>
+                                      <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-bold border border-amber-200 uppercase text-[9px]">{cust.status}</span>
+                                    </div>
+                                    {cust.admin_notes && <p className="text-slate-500 italic">Notes: {cust.admin_notes}</p>}
+                                    <div className="flex justify-between items-center text-slate-500">
+                                      <span>Quote Cost: <strong className="text-slate-700">{cust.amount ? formatCurrency(cust.amount) : 'Not Quoted'}</strong></span>
+                                      <span>Submitted: {new Date(cust.submitted_at).toLocaleDateString('en-IN')}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-slate-400 italic text-[11px] font-sans">No customization requests recorded.</p>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {dossierTab === 'ledger' && (
+                        <motion.div
+                          key="ledger"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.15 }}
+                          className="space-y-6"
+                        >
+                          {/* Subscription Payment ledger history */}
+                          <div>
+                            <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-3.5 block font-sans">Subscription Payments & Receipts Ledger</h4>
+                            {selectedClientDetails.payments && selectedClientDetails.payments.length > 0 ? (
+                              <div className="space-y-3 font-sans">
+                                {selectedClientDetails.payments.map((p, index) => {
+                                  const start = p.period_covered?.start_date_formatted || (p.period_start ? formatDate(p.period_start) : '—')
+                                  const end = p.period_covered?.end_date_formatted || (p.period_end ? formatDate(p.period_end) : '—')
+                                  const formattedTotal = p.amount_formatted || formatCurrency(p.amount)
+                                  const formattedGst = p.gst_amount_formatted || formatCurrency(p.gst_amount)
+                                  const formattedSubtotal = p.amount_before_gst_formatted || formatCurrency(p.amount_before_gst || p.amount)
+
+                                  return (
+                                    <div key={index} className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-[10px]">
+                                      <div className="flex justify-between items-center border-b border-slate-100 pb-1.5">
+                                        <span className="font-bold text-slate-500">Payment ID: <span className="font-mono text-blue-600">{p.payment_id || p.razorpay_payment_id}</span></span>
+                                        <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-black border border-emerald-200 uppercase text-[9px]">{p.payment_status || p.status || 'Paid'}</span>
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-y-2 gap-x-1 text-slate-600">
+                                        <p><strong className="text-slate-700">Cycle:</strong> <span className="capitalize">{p.cycle_label || p.cycle}</span> ({p.months_paid || p.cycle_months || '—'} mo)</p>
+                                        <p><strong className="text-slate-700">Period:</strong> {start} → {end}</p>
+                                        <p className="col-span-2"><strong className="text-slate-700">Breakdown:</strong> {formattedSubtotal} + GST ({p.gst_percentage || 18}%): {formattedGst}</p>
+                                        <p className="text-emerald-700 font-bold col-span-2"><strong>Total Paid:</strong> {formattedTotal}</p>
+                                      </div>
+                                      <div className="flex justify-between items-center pt-1.5 border-t border-dashed border-slate-200">
+                                        <span className="text-slate-400">Date: {p.payment_date_formatted || formatDate(p.payment_date || p.created_at)}</span>
+                                        <button
+                                          onClick={() => handleDownloadInvoice(p, selectedClientDetails)}
+                                          className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 rounded font-bold cursor-pointer text-[9px] transition-all"
+                                        >
+                                          📥 Receipt
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            ) : (
+                              <p className="text-slate-400 italic text-[11px] font-sans">No payments logged yet.</p>
+                            )}
+                          </div>
+
+                          <div className="border-t border-slate-100" />
+
+                          {/* Add-on Services Payment History */}
+                          <div>
+                            <h4 className="text-[10px] font-black text-violet-600 uppercase tracking-widest mb-3.5 block font-sans">Add-on Services Payment History</h4>
+                            {selectedClientDetails.addon_payments && selectedClientDetails.addon_payments.length > 0 ? (
+                              <div className="space-y-3 font-sans">
+                                {selectedClientDetails.addon_payments.map((p, idx) => (
+                                  <div key={idx} className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-[10px]">
+                                    <div className="flex justify-between items-center border-b border-slate-100 pb-1.5">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 font-black border border-violet-200 uppercase text-[9px]">{p.addon_type}</span>
+                                        {p.recipient_type && (
+                                          <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${
+                                            p.recipient_type === 'teacher' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                          }`}>{p.recipient_type === 'teacher' ? '👨‍🏫 Staff' : '👥 Students'}</span>
+                                        )}
+                                      </div>
+                                      <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-black border border-emerald-200 uppercase text-[9px]">{p.payment_status || 'Paid'}</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-y-2 gap-x-1 text-slate-600">
+                                      <p><strong className="text-slate-700">Count:</strong> {p.recipient_type === 'teacher' ? (p.teacher_count || '—') : (p.student_count || '—')}</p>
+                                      <p><strong className="text-slate-700">Period:</strong> {p.start_date_formatted || '—'} → {p.end_date_formatted || '—'}</p>
+                                      <p><strong className="text-slate-700">Subtotal:</strong> {p.subtotal_formatted || '—'}</p>
+                                      <p><strong className="text-slate-700">GST:</strong> +{p.gst_amount_formatted || '—'}</p>
+                                      <p className="text-emerald-700 font-bold col-span-2"><strong>Total Paid:</strong> {p.amount_formatted || formatCurrency(p.amount)}</p>
+                                    </div>
+                                    <div className="pt-1 border-t border-dashed border-slate-200 text-slate-400">
+                                      Date: {p.payment_date_formatted || '—'} · ID: <span className="font-mono text-blue-600">{p.payment_id || '—'}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-slate-400 italic text-[11px] font-sans">No add-on service payments recorded.</p>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 flex justify-end bg-slate-50 border-t border-slate-200">
+                <button
+                  onClick={() => setShowDetailsModal(false)}
+                  className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 cursor-pointer transition-all"
+                >
+                  Close Panel
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </>
   )
 }
+
 
 export default AdminSaasClients

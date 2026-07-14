@@ -1329,6 +1329,156 @@ export const getMockResponse = (url, method, data = null) => {
     }
   }
 
+  // --- Client Addon Services Mocks ---
+  if (lowercaseUrl.includes('/client/addon/history')) {
+    if (typeof window !== 'undefined' && !window.__mockAddonHistory) {
+      window.__mockAddonHistory = [
+        {
+          addon_type: 'Transportation',
+          recipient_type: 'student',
+          student_count: 850,
+          teacher_count: null,
+          start_date_formatted: '01 Jun 2026',
+          end_date_formatted: '01 Jun 2027',
+          subtotal: 30600,
+          gst_amount: 5508,
+          amount: 36108,
+          amount_formatted: '₹ 36,108.00',
+          subtotal_formatted: '₹ 30,600.00',
+          gst_amount_formatted: '₹ 5,508.00',
+          payment_date_formatted: '10 Jun 2026',
+          payment_id: 'pay_addon_1001',
+          payment_status: 'paid'
+        }
+      ]
+    }
+    return {
+      success: true,
+      data: window.__mockAddonHistory || []
+    }
+  }
+
+  if (lowercaseUrl.includes('/client/addon/preview')) {
+    try {
+      const urlObj = new URL(url, 'https://dummy.com')
+      const addonType = urlObj.searchParams.get('addon_type') || 'Transportation'
+      const recipientType = urlObj.searchParams.get('recipient_type') || 'student'
+      
+      const count = recipientType === 'teacher' ? 45 : 850
+      let rate = 36
+      if (addonType === 'Hostel') rate = 60
+      else if (addonType === 'Domain Services') rate = 7300
+      else if (addonType === 'id card Type A') rate = 60
+      else if (addonType === 'id card Type B') rate = 42
+      else if (addonType === 'id card Type C') rate = 37
+      else if (addonType === 'Previous Year Backup') rate = 36
+      
+      const finalCount = addonType === 'Domain Services' ? 1 : count
+      const subtotal = rate * finalCount
+      const gst = Math.round(subtotal * 18) / 100
+      const total = subtotal + gst
+      
+      return {
+        success: true,
+        data: {
+          addon_type: addonType,
+          recipient_type: recipientType,
+          rate: rate,
+          rate_formatted: `₹ ${rate.toLocaleString('en-IN')}`,
+          student_count: recipientType === 'student' ? finalCount : null,
+          teacher_count: recipientType === 'teacher' ? finalCount : null,
+          subtotal: subtotal,
+          subtotal_formatted: `₹ ${subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+          gst_percentage: 18,
+          gst_amount: gst,
+          gst_amount_formatted: `₹ ${gst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+          amount: total,
+          amount_formatted: `₹ ${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+        }
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  if (lowercaseUrl.includes('/client/addon/create-order') && method === 'POST') {
+    const { addon_type, recipient_type } = data || {}
+    const count = recipient_type === 'teacher' ? 45 : 850
+    let rate = 36
+    if (addon_type === 'Hostel') rate = 60
+    else if (addon_type === 'Domain Services') rate = 7300
+    else if (addon_type === 'id card Type A') rate = 60
+    else if (addon_type === 'id card Type B') rate = 42
+    else if (addon_type === 'id card Type C') rate = 37
+    else if (addon_type === 'Previous Year Backup') rate = 36
+    
+    const finalCount = addon_type === 'Domain Services' ? 1 : count
+    const subtotal = rate * finalCount
+    const gst = subtotal * 0.18
+    const total = subtotal + gst
+
+    return {
+      success: true,
+      simulated: true,
+      order_id: 'order_addon_' + Math.floor(Math.random() * 1000000),
+      amount: total,
+      currency: 'INR',
+      client_name: 'Greenfield School',
+      client_email: 'info@greenfield.edu.in'
+    }
+  }
+
+  if (lowercaseUrl.includes('/client/addon/verify-payment') && method === 'POST') {
+    const { addon_type, recipient_type } = data || {}
+    const count = recipient_type === 'teacher' ? 45 : 850
+    let rate = 36
+    if (addon_type === 'Hostel') rate = 60
+    else if (addon_type === 'Domain Services') rate = 7300
+    else if (addon_type === 'id card Type A') rate = 60
+    else if (addon_type === 'id card Type B') rate = 42
+    else if (addon_type === 'id card Type C') rate = 37
+    else if (addon_type === 'Previous Year Backup') rate = 36
+    
+    const finalCount = addon_type === 'Domain Services' ? 1 : count
+    const subtotal = rate * finalCount
+    const gst = subtotal * 0.18
+    const total = subtotal + gst
+
+    const today = new Date()
+    const formatDate = (date) => {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      return `${String(date.getDate()).padStart(2, '0')} ${months[date.getMonth()]} ${date.getFullYear()}`
+    }
+
+    const newPayment = {
+      addon_type: addon_type,
+      recipient_type: recipient_type,
+      student_count: recipient_type === 'student' ? finalCount : null,
+      teacher_count: recipient_type === 'teacher' ? finalCount : null,
+      start_date_formatted: formatDate(today),
+      end_date_formatted: formatDate(new Date(today.getFullYear() + 1, today.getMonth(), today.getDate())),
+      subtotal: subtotal,
+      gst_amount: gst,
+      amount: total,
+      amount_formatted: `₹ ${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+      subtotal_formatted: `₹ ${subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+      gst_amount_formatted: `₹ ${gst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+      payment_date_formatted: formatDate(today),
+      payment_id: 'pay_addon_' + Math.floor(Math.random() * 1000000),
+      payment_status: 'paid'
+    }
+
+    if (typeof window !== 'undefined') {
+      if (!window.__mockAddonHistory) window.__mockAddonHistory = []
+      window.__mockAddonHistory.unshift(newPayment)
+    }
+
+    return {
+      success: true,
+      message: 'Payment verified and service activated successfully.'
+    }
+  }
+
   // 4. Partner Portal Mocks
   if (lowercaseUrl.includes('/partner/login')) {
     return {
@@ -2046,6 +2196,272 @@ export const getMockResponse = (url, method, data = null) => {
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 6. Admin Panel Mocks (SaaS Clients, Subscriptions, Payments & Reports)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // Setup mock clients database if not present on window
+  if (typeof window !== 'undefined' && !window.__mockClients) {
+    window.__mockClients = [
+      {
+        id: 1,
+        client_id: "AIM2733488",
+        client_name: "Greenfield School",
+        company_name: "Greenfield School",
+        school_name: "Greenfield School",
+        email: "info@greenfield.edu.in",
+        phone: "+91 98765 11111",
+        product_name: "NexGen ERP (SaaS)",
+        product_category: "nexgn",
+        partner_name: "Master Partner Kumar",
+        processing_fee: "30000",
+        monthly_subscription: "2500",
+        per_person: 1,
+        delivery_after: 5,
+        is_active: true,
+        created_at: "2026-03-01T10:00:00Z",
+        valid_until: "2027-03-01T10:00:00Z",
+        student_count: 850,
+        unpaid_months: [],
+        total_due_amount: 0,
+        payments: [
+          { id: 101, razorpay_payment_id: "pay_GF1001", cycle: "annual", period_start: "2026-03-01", period_end: "2027-03-01", amount: 30000, status: "success", created_at: "2026-03-01T11:00:00Z" }
+        ],
+        customizations: [
+          { id: 201, customization_text: "[Online Admission Portal] Add customizable admission forms and fees collector", amount: 15000, status: "approved", admin_notes: "Approved and deployed", submitted_at: "2026-04-01T09:00:00Z" }
+        ]
+      },
+      {
+        id: 2,
+        client_id: "AIM2688941",
+        client_name: "Blue Hill Institute",
+        company_name: "Blue Hill Institute",
+        school_name: "Blue Hill Institute",
+        email: "contact@bluehill.edu.in",
+        phone: "+91 98765 22222",
+        product_name: "NexGen ERP (SaaS)",
+        product_category: "nexgn",
+        partner_name: "Premium Partner Sharma",
+        processing_fee: "15000",
+        monthly_subscription: "1250",
+        per_person: 1,
+        delivery_after: 10,
+        is_active: true,
+        created_at: "2026-01-15T10:00:00Z",
+        valid_until: "2026-07-15T10:00:00Z",
+        student_count: 1200,
+        unpaid_months: ["May 2026", "June 2026"],
+        total_due_amount: 2500,
+        payments: [
+          { id: 102, razorpay_payment_id: "pay_BH1002", cycle: "quarterly", period_start: "2026-01-15", period_end: "2026-04-15", amount: 3750, status: "success", created_at: "2026-01-15T11:30:00Z" }
+        ],
+        customizations: []
+      },
+      {
+        id: 3,
+        client_id: "AIM2699312",
+        client_name: "Sunrise Academy",
+        company_name: "Sunrise Academy",
+        school_name: "Sunrise Academy",
+        email: "admin@sunrise.edu.in",
+        phone: "+91 98765 33333",
+        product_name: "NexGen ERP (SaaS)",
+        product_category: "nexgn",
+        partner_name: "Master Partner Kumar",
+        processing_fee: "45000",
+        monthly_subscription: "3500",
+        per_person: 1,
+        delivery_after: 0,
+        is_active: false,
+        created_at: "2026-04-10T10:00:00Z",
+        valid_until: "2026-05-10T10:00:00Z",
+        student_count: 0,
+        unpaid_months: ["April 2026"],
+        total_due_amount: 3500,
+        payments: [],
+        customizations: [
+          { id: 202, customization_text: "[Hostel Management System] Track room allotment and dining billing", amount: null, status: "pending", admin_notes: "", submitted_at: "2026-05-01T12:00:00Z" }
+        ]
+      },
+      {
+        id: 4,
+        client_id: "AIM2600101",
+        client_name: "Tech Solutions Pvt Ltd",
+        company_name: "Tech Solutions Pvt Ltd",
+        school_name: "Tech Solutions Pvt Ltd",
+        email: "ceo@techsolutions.com",
+        phone: "+91 98765 44444",
+        product_name: "Static Corporate Website",
+        product_category: "static",
+        partner_name: "Direct Sales",
+        processing_fee: "5000",
+        monthly_subscription: "0",
+        per_person: 0,
+        delivery_after: 7,
+        is_active: true,
+        created_at: "2026-02-20T10:00:00Z",
+        valid_until: "2027-02-20T10:00:00Z",
+        student_count: 0,
+        unpaid_months: [],
+        total_due_amount: 0,
+        payments: [
+          { id: 103, razorpay_payment_id: "pay_TS1003", cycle: "annual", period_start: "2026-02-20", period_end: "2027-02-20", amount: 5000, status: "success", created_at: "2026-02-20T14:00:00Z" }
+        ],
+        customizations: []
+      },
+      {
+        id: 5,
+        client_id: "AIM2600102",
+        client_name: "Education First Academy",
+        company_name: "Education First Academy",
+        school_name: "Education First Academy",
+        email: "contact@edufirst.org",
+        phone: "+91 98765 55555",
+        product_name: "Dynamic Portal & LMS",
+        product_category: "dynamic",
+        partner_name: "Premium Partner Sharma",
+        processing_fee: "15000",
+        monthly_subscription: "1000",
+        per_person: 0,
+        delivery_after: 15,
+        is_active: true,
+        created_at: "2026-05-01T10:00:00Z",
+        valid_until: "2026-08-01T10:00:00Z",
+        student_count: 0,
+        unpaid_months: ["July 2026"],
+        total_due_amount: 1000,
+        payments: [
+          { id: 104, razorpay_payment_id: "pay_EF1004", cycle: "quarterly", period_start: "2026-05-01", period_end: "2026-08-01", amount: 15000, status: "success", created_at: "2026-05-01T16:45:00Z" }
+        ],
+        customizations: [
+          { id: 203, customization_text: "[Video Conferencing Tool] Zoom API integration for class schedules", amount: 8000, status: "amount_set", admin_notes: "Quote set to ₹8,000 for server credentials.", submitted_at: "2026-06-10T14:30:00Z" }
+        ]
+      }
+    ];
+  }
+
+  // GET /admin/clients
+  if (lowercaseUrl.includes('/admin/clients') && method === 'GET') {
+    // If it's looking for a specific client e.g. /admin/clients/1
+    const detailMatch = lowercaseUrl.match(/\/admin\/clients\/(\d+)/);
+    if (detailMatch) {
+      const clientId = parseInt(detailMatch[1], 10);
+      const client = window.__mockClients.find(c => c.id === clientId);
+      if (client) {
+        return {
+          success: true,
+          data: client
+        };
+      }
+      return { success: false, message: 'Client not found' };
+    }
+
+    return {
+      success: true,
+      data: {
+        all_clients: window.__mockClients
+      }
+    };
+  }
+
+  // GET /admin/subscriptions
+  if (lowercaseUrl.includes('/admin/subscriptions') && method === 'GET') {
+    const list = [];
+    window.__mockClients.forEach(c => {
+      c.payments.forEach(p => {
+        list.push({
+          id: p.id,
+          client_id: c.client_id,
+          client_name: c.client_name,
+          client_email: c.email,
+          product_name: c.product_name,
+          billing_cycle: p.cycle,
+          amount: p.amount,
+          start_date: p.period_start,
+          end_date: p.period_end,
+          is_active: c.is_active
+        });
+      });
+    });
+    return {
+      success: true,
+      data: list
+    };
+  }
+
+  // GET /admin/customization/requests
+  if (lowercaseUrl.includes('/admin/customization/requests') && method === 'GET') {
+    const list = [];
+    window.__mockClients.forEach(c => {
+      c.customizations.forEach(cust => {
+        list.push({
+          id: cust.id,
+          client_display_id: c.client_id,
+          client: {
+            id: c.id,
+            name: c.client_name,
+            school_name: c.school_name,
+            email: c.email
+          },
+          customization_text: cust.customization_text,
+          amount: cust.amount,
+          status: cust.status,
+          admin_notes: cust.admin_notes,
+          submitted_at: cust.submitted_at,
+          created_at: cust.submitted_at
+        });
+      });
+    });
+    return {
+      success: true,
+      data: {
+        requests: list
+      }
+    };
+  }
+
+  // POST /admin/customization/requests/{id}/set-amount
+  const quoteMatch = lowercaseUrl.match(/\/admin\/customization\/requests\/(\d+)\/set-amount/);
+  if (quoteMatch && method === 'POST') {
+    const requestId = parseInt(quoteMatch[1], 10);
+    const { amount, admin_notes } = data || {};
+    
+    window.__mockClients.forEach(c => {
+      c.customizations.forEach(cust => {
+        if (cust.id === requestId) {
+          cust.amount = parseFloat(amount);
+          cust.admin_notes = admin_notes;
+          cust.status = 'amount_set';
+        }
+      });
+    });
+    return {
+      success: true,
+      message: 'Quote set successfully'
+    };
+  }
+
+  // POST /admin/customization/requests/{id}/update-status
+  const statusUpdateMatch = lowercaseUrl.match(/\/admin\/customization\/requests\/(\d+)\/update-status/);
+  if (statusUpdateMatch && method === 'POST') {
+    const requestId = parseInt(statusUpdateMatch[1], 10);
+    const { status, admin_notes } = data || {};
+
+    window.__mockClients.forEach(c => {
+      c.customizations.forEach(cust => {
+        if (cust.id === requestId) {
+          cust.status = status;
+          if (admin_notes) cust.admin_notes = admin_notes;
+        }
+      });
+    });
+    return {
+      success: true,
+      message: 'Request status updated successfully'
+    };
+  }
+
   return null
 }
+
 

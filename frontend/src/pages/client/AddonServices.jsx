@@ -1,303 +1,536 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useClientAuthStore } from '../../store/clientAuthStore'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  getClientAddonPreview,
+  getClientAddonHistory,
+  createAddonPaymentOrder,
+  verifyAddonPayment
+} from '../../api/clientPortal'
 import ClientPageHeader from '../../components/client/ClientPageHeader'
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+const fmtCurrency = (v) => {
+  if (v === undefined || v === null) return '—'
+  const n = typeof v === 'string' ? parseFloat(v) : v
+  return `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+const ADDON_COLORS = {
+  Transportation: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', icon: '🚌' },
+  Hostel: { bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200', icon: '🏢' },
+  'Previous Year Backup': { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200', icon: '💾' },
+  'Domain Services': { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', icon: '🌐' },
+  'id card Type A': { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', icon: '🪪' },
+  'id card Type B': { bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-200', icon: '🪪' },
+  'id card Type C': { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-300', icon: '🪪' },
+}
+
+const addonColor = (type) => ADDON_COLORS[type] || { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', icon: '🔌' }
 
 const ClientAddonServices = () => {
   const navigate = useNavigate()
-  const { profileData, clientUser, productData } = useClientAuthStore()
+  const { profileData, clientToken, isClientAuthenticated, productData, clientLogout } = useClientAuthStore()
 
-  // Service 2-4 states (ID Cards Qty)
-  const [qtyA, setQtyA] = useState(100)
-  const [qtyB, setQtyB] = useState(100)
-  const [qtyC, setQtyC] = useState(100)
+  // ── States ─────────────────────────────────────────────────────────────────
+  const [addonHistory, setAddonHistory] = useState([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
-  // Service 5-7 availed counts
-  const [qtyTransport, setQtyTransport] = useState(50)
-  const [qtyHostel, setQtyHostel] = useState(30)
-  const [qtyBackup, setQtyBackup] = useState(250)
+  // Selected addon form states
+  const [selectedAddonType, setSelectedAddonType] = useState('Transportation')
+  const [selectedIdCardType, setSelectedIdCardType] = useState('Type A')
+  const [selectedRecipientType, setSelectedRecipientType] = useState('student')
+
+  const [addonPreview, setAddonPreview] = useState(null)
+  const [loadingPreview, setLoadingPreview] = useState(false)
+  const [processingPayment, setProcessingPayment] = useState(false)
 
   const activeProduct = productData?.[0] || {}
-  const productName = activeProduct?.product_name || activeProduct?.name || clientUser?.product_name || 'NEXGN Institute Pro'
+  const productName = activeProduct?.product_name || activeProduct?.name || 'NEXGN Institute Pro'
 
-  // Check if product is NEXGN Institute Pro
-  const isNexgnInstitutePro = productName === 'NEXGN Institute Pro'
-
-  const schoolName = profileData?.company_name || profileData?.school_name || profileData?.organization || 'Academic Institute'
-
-  const handleOrder = (serviceName, qty, unitPrice, totalPrice) => {
-    alert(`Order request submitted successfully!\n\nService: ${serviceName}\nQuantity: ${qty}\nUnit Price: ₹${unitPrice}\nTotal Est. Cost: ₹${totalPrice.toLocaleString('en-IN')}\n\nOur representative will contact you to verify details.`)
+  // ── Sync History ───────────────────────────────────────────────────────────
+  const fetchHistory = async () => {
+    if (!isClientAuthenticated || !clientToken) return
+    setLoadingHistory(true)
+    try {
+      const res = await getClientAddonHistory(clientToken)
+      if (res?.success) {
+        setAddonHistory(res.data || [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch addon history:', err)
+      if (err.response?.status === 401) {
+        clientLogout()
+      }
+    } finally {
+      setLoadingHistory(false)
+    }
   }
 
+  useEffect(() => {
+    fetchHistory()
+  }, [clientToken, isClientAuthenticated])
+
+  // ── Resolved Addon Type ────────────────────────────────────────────────────
+  const getResolvedAddonType = () => {
+    return selectedAddonType === 'id card' ? 'id card ' + selectedIdCardType : selectedAddonType
+  }
+
+  // ── Fetch Addon Preview ───────────────────────────────────────────────────
+  const fetchPreview = async (addonType, recipientType) => {
+    if (!clientToken) return
+    setLoadingPreview(true)
+    setError('')
+    try {
+      const res = await getClientAddonPreview(addonType, recipientType, clientToken)
+      if (res?.success) {
+        setAddonPreview(res.data)
+      } else {
+        setAddonPreview(null)
+        setError(res?.message || 'Failed to calculate pricing preview')
+      }
+    } catch (err) {
+      console.error('Failed to load addon preview:', err)
+      setError('Pricing error: ' + (err.response?.data?.message || err.message))
+      setAddonPreview(null)
+    } finally {
+      setLoadingPreview(false)
+    }
+  }
+
+  // Fetch preview when selections change
+  useEffect(() => {
+    if (isClientAuthenticated && clientToken) {
+      fetchPreview(getResolvedAddonType(), selectedRecipientType)
+    }
+  }, [selectedAddonType, selectedIdCardType, selectedRecipientType, clientToken, isClientAuthenticated])
+
+  // ── Load Razorpay Script ───────────────────────────────────────────────────
+  const loadRazorpayScript = () => {
+    return new Promise((resolve, reject) => {
+      if (window.Razorpay) {
+        resolve(true)
+        return
+      }
+      const script = document.createElement('script')
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+      script.onload = () => resolve(true)
+      script.onerror = () => reject(new Error('Failed to load Razorpay SDK'))
+      document.body.appendChild(script)
+    })
+  }
+
+  // ── Process Checkout Payment ───────────────────────────────────────────────
+  const handlePaymentSubmit = async () => {
+    const finalAddonType = getResolvedAddonType()
+    
+    setProcessingPayment(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      // 1. Create order on backend
+      const orderRes = await createAddonPaymentOrder(finalAddonType, selectedRecipientType, clientToken)
+      if (!orderRes.success) {
+        throw new Error(orderRes.message || 'Failed to initialize transaction order')
+      }
+
+      // 2. Simulated payment mode
+      if (orderRes.simulated) {
+        const confirmSim = window.confirm(
+          `SIMULATION GATEWAY MODE\n\nAmount: ${addonPreview?.amount_formatted || fmtCurrency(addonPreview?.amount)}\nService: ${finalAddonType}\n\nClick OK to simulate successful transaction.`
+        )
+
+        if (confirmSim) {
+          setSuccess('Simulating receipt generation...')
+          const verifyRes = await verifyAddonPayment({
+            addon_type: finalAddonType,
+            recipient_type: selectedRecipientType,
+            order_id: orderRes.order_id,
+            razorpay_payment_id: 'sim_pay_' + Date.now(),
+            razorpay_order_id: orderRes.order_id,
+            razorpay_signature: 'sim_signature_' + Date.now()
+          }, clientToken)
+
+          if (verifyRes.success) {
+            setSuccess(`✅ ${verifyRes.message || 'Payment successfully processed!'}`)
+            fetchHistory()
+          } else {
+            setError(verifyRes.message || 'Simulation verification rejected by server')
+          }
+        }
+        setProcessingPayment(false)
+        return
+      }
+
+      // 3. Real Payment Mode
+      await loadRazorpayScript()
+
+      const options = {
+        key: orderRes.key,
+        amount: Math.round(orderRes.amount * 100),
+        currency: orderRes.currency || 'INR',
+        name: 'AIM Digitalise',
+        description: `${finalAddonType} Add-on Service`,
+        order_id: orderRes.order_id,
+        handler: async (response) => {
+          setSuccess('Verifying checkout transaction details on server...')
+          try {
+            const verifyRes = await verifyAddonPayment({
+              addon_type: finalAddonType,
+              recipient_type: selectedRecipientType,
+              order_id: orderRes.order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature
+            }, clientToken)
+
+            if (verifyRes.success) {
+              setSuccess(`✅ Payment of ${addonPreview.amount_formatted || fmtCurrency(addonPreview.amount)} verified successfully!`)
+              fetchHistory()
+            } else {
+              setError(verifyRes.message || 'Payment verification failed.')
+            }
+          } catch (err) {
+            console.error('Payment verify API error:', err)
+            setError('Verification failed: ' + (err?.response?.data?.message || err.message))
+          } finally {
+            setProcessingPayment(false)
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setError('Payment cancelled')
+            setProcessingPayment(false)
+          }
+        },
+        prefill: {
+          name: profileData?.company_name || profileData?.school_name || '',
+          email: profileData?.email || '',
+        },
+        theme: {
+          color: '#3b82f6',
+        },
+      }
+
+      const rzp = new window.Razorpay(options)
+      rzp.on('payment.failed', (response) => {
+        setError('Payment failed: ' + (response.error?.description || 'Unknown error'))
+        setProcessingPayment(false)
+      })
+      rzp.open()
+
+    } catch (err) {
+      console.error('Checkout error:', err)
+      setError(err.message || 'Failed to process checkout transaction')
+      setProcessingPayment(false)
+    }
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-10 select-none animate-fade-in text-slate-705" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="space-y-6 max-w-6xl mx-auto pb-12 select-none animate-fade-in text-slate-700" style={{ fontFamily: "'Inter', sans-serif" }}>
 
       <ClientPageHeader title="Add-on Services" />
 
-        <div className="space-y-6">
-          <div className="bg-blue-50 border border-blue-200 text-blue-800 rounded-2xl p-4.5 text-xs font-semibold leading-relaxed">
-            ℹ️ You are subscribed to <strong>{productName}</strong>. The services catalog below details verified add-on expansions, ID card printing, and infrastructure integrations specifically customized for your organization.
-          </div>
+      {/* Info Warning */}
+      <div className="bg-blue-50 border border-blue-200 text-blue-800 rounded-2xl p-4.5 text-xs font-semibold leading-relaxed shadow-sm">
+        ℹ️ You are subscribed to <strong>{productName}</strong>. Use this portal to purchase and instantly activate verified add-on services, GPS transit modules, or custom staff & student smart ID card print packages.
+      </div>
 
-          {/* Grid of 7 Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Toast Alert */}
+      {success && (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl px-4.5 py-3 text-xs font-bold shadow-md">
+          {success}
+        </div>
+      )}
+      {error && (
+        <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-xl px-4.5 py-3 text-xs font-bold shadow-md">
+          ⚠️ {error}
+        </div>
+      )}
 
-            {/* Service 1: Domain Services */}
-            <div className="bg-white rounded-3xl p-5 shadow-md border border-slate-100 flex flex-col justify-between hover:shadow-lg transition-shadow">
-              <div className="space-y-3">
-                <div className="flex justify-between items-start">
-                  <span className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-lg">🌐</span>
-                  <span className="bg-orange-100 text-orange-800 px-2 py-0.5 rounded text-[9px] font-black uppercase">Domain</span>
-                </div>
-                <h3 className="text-sm font-black text-slate-800">Domain Services</h3>
-                <p className="text-[11px] text-slate-400 leading-relaxed font-sans font-medium">
-                  Client's own live domain integration on website & Software. Secure SSL connection setup included.
-                </p>
-              </div>
-              <div className="pt-4 border-t border-slate-50 mt-4 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] text-slate-400 block font-bold">Cost</span>
-                  <span className="text-base font-black text-slate-800 font-mono">₹7,300<span className="text-[10px] font-semibold text-slate-400">/year</span></span>
-                </div>
-                <button
-                  onClick={() => handleOrder('Domain Services', 1, 7300, 7300)}
-                  className="px-4 py-2 bg-gradient-to-r from-[#1a3c5e] to-[#2a6f97] hover:opacity-90 text-white text-[10.5px] font-bold rounded-lg transition-opacity cursor-pointer"
-                >
-                  Order Integration
-                </button>
-              </div>
+      {/* Main Split Interface */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        {/* Left Column: Form / Checkout (5 Cols) */}
+        <div className="lg:col-span-5 space-y-6">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-md p-6 space-y-5">
+            <h2 className="text-sm font-black text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-1.5">
+              <span>💳</span> Add-on Checkout Form
+            </h2>
+
+            {/* 1. Add-on Type Select */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">1. Select Service Module</label>
+              <select
+                value={selectedAddonType}
+                onChange={(e) => setSelectedAddonType(e.target.value)}
+                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:border-blue-400 font-bold"
+              >
+                <option value="Transportation">🚌 Transportation Transit Services</option>
+                <option value="Hostel">🏢 Hostel Dormitory Allocation</option>
+                <option value="Previous Year Backup">💾 Previous Year Data Backup</option>
+                <option value="Domain Services">🌐 Domain Services (Client Own Domain)</option>
+                <option value="id card">🪪 Students & Teachers ID Card</option>
+              </select>
             </div>
 
-            {/* Service 2: ID Card Type A */}
-            <div className="bg-white rounded-3xl p-5 shadow-md border border-slate-100 flex flex-col justify-between hover:shadow-lg transition-shadow">
-              <div className="space-y-3">
-                <div className="flex justify-between items-start">
-                  <span className="w-10 h-10 rounded-xl bg-[#475569]/10 flex items-center justify-center text-lg">🪪</span>
-                  <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[9px] font-black uppercase">Super PVC</span>
-                </div>
-                <h3 className="text-sm font-black text-slate-800">Students & Teachers ID Card (Type A)</h3>
-                <p className="text-[11px] text-slate-400 leading-relaxed font-sans font-medium">
-                  Ready Card (20 mm Multi color Ribbon, PVC supper Card, Card Holder & clip). High durability gloss finish.
-                </p>
-
-                {/* Qty Input */}
-                <div className="pt-2 flex items-center justify-between text-[11px] font-bold">
-                  <span className="text-slate-500">Quantity</span>
-                  <input
-                    type="number"
-                    min="1"
-                    value={qtyA}
-                    onChange={(e) => setQtyA(Math.max(1, parseInt(e.target.value) || 0))}
-                    className="w-20 px-2 py-1 bg-white border border-slate-300 rounded text-center font-mono font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-              <div className="pt-4 border-t border-slate-50 mt-4 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] text-slate-400 block font-bold">Total Est. Cost</span>
-                  <span className="text-base font-black text-slate-800 font-mono">₹{(qtyA * 60).toLocaleString('en-IN')}.00</span>
-                </div>
-                <button
-                  onClick={() => handleOrder('ID Card Type A (Super PVC)', qtyA, 60, qtyA * 60)}
-                  className="px-4 py-2 bg-gradient-to-r from-[#1a3c5e] to-[#2a6f97] hover:opacity-90 text-white text-[10.5px] font-bold rounded-lg transition-opacity cursor-pointer"
+            {/* 2. Sub-options (ID Card Types) */}
+            {selectedAddonType === 'id card' && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">2. Select ID Card Printing Type</label>
+                <select
+                  value={selectedIdCardType}
+                  onChange={(e) => setSelectedIdCardType(e.target.value)}
+                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:border-blue-400 font-bold"
                 >
-                  Order Cards
-                </button>
+                  <option value="Type A">Super PVC (20mm Multi-color ribbon, gloss finish) — ₹60 / card</option>
+                  <option value="Type B">Regular PVC (16mm Single-color ribbon, thermal) — ₹42 / card</option>
+                  <option value="Type C">Laminated PVC (Single-color ribbon, gum pasting) — ₹37 / card</option>
+                </select>
               </div>
+            )}
+
+            {/* 3. Recipient Type Selection */}
+            {['Transportation', 'Hostel', 'id card'].includes(selectedAddonType) && (
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  {selectedAddonType === 'id card' ? '3. Card Recipients' : '2. Service Recipients'}
+                </label>
+                <div className="flex gap-2">
+                  {[
+                    { label: '👥 Students', value: 'student' },
+                    { label: '👨‍🏫 Staff Members', value: 'teacher' }
+                  ].map((item) => (
+                    <button
+                      key={item.value}
+                      onClick={() => setSelectedRecipientType(item.value)}
+                      className={`flex-1 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                        selectedRecipientType === item.value
+                          ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 4. Live Pricing Estimate Box */}
+            <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/50 space-y-3.5">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Live Billing Preview</span>
+              {loadingPreview ? (
+                <div className="flex items-center justify-center py-6 gap-2 text-xs font-bold text-slate-500">
+                  <span className="w-3.5 h-3.5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                  Requesting live estimate...
+                </div>
+              ) : addonPreview ? (
+                <div className="space-y-2.5 text-xs font-sans text-slate-600 font-medium">
+                  <div className="flex justify-between items-center">
+                    <span>Base Unit Rate:</span>
+                    <strong className="text-slate-800 font-mono">{addonPreview.rate_formatted || fmtCurrency(addonPreview.rate)}</strong>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Applicable Records Count:</span>
+                    <strong className="text-slate-800 font-mono">
+                      {addonPreview.student_count !== null 
+                        ? `${addonPreview.student_count} students` 
+                        : (addonPreview.teacher_count !== null ? `${addonPreview.teacher_count} staff` : '1 flat')}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Subtotal:</span>
+                    <strong className="text-slate-800 font-mono">{addonPreview.subtotal_formatted || fmtCurrency(addonPreview.subtotal)}</strong>
+                  </div>
+                  <div className="flex justify-between items-center text-amber-700">
+                    <span>GST ({addonPreview.gst_percentage || 18}%):</span>
+                    <strong className="font-mono">+{addonPreview.gst_amount_formatted || fmtCurrency(addonPreview.gst_amount)}</strong>
+                  </div>
+                  <div className="flex justify-between items-center border-t border-slate-200 pt-2.5 text-sm font-black text-slate-800">
+                    <span className="text-emerald-700">Grand Total Due:</span>
+                    <span className="text-emerald-700 font-mono">{addonPreview.amount_formatted || fmtCurrency(addonPreview.amount)}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-6 text-[10px] italic text-slate-400">
+                  Fill selection options to view calculations.
+                </div>
+              )}
             </div>
 
-            {/* Service 3: ID Card Type B */}
-            <div className="bg-white rounded-3xl p-5 shadow-md border border-slate-100 flex flex-col justify-between hover:shadow-lg transition-shadow">
-              <div className="space-y-3">
-                <div className="flex justify-between items-start">
-                  <span className="w-10 h-10 rounded-xl bg-[#475569]/10 flex items-center justify-center text-lg">🪪</span>
-                  <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-[9px] font-black uppercase">Regular PVC</span>
-                </div>
-                <h3 className="text-sm font-black text-slate-800">Students & Teachers ID Card (Type B)</h3>
-                <p className="text-[11px] text-slate-400 leading-relaxed font-sans font-medium">
-                  Ready Card (16 mm Single color Ribbon, PVC Regular Card, Card Holder & clip). Quality thermal printing.
-                </p>
-
-                {/* Qty Input */}
-                <div className="pt-2 flex items-center justify-between text-[11px] font-bold">
-                  <span className="text-slate-500">Quantity</span>
-                  <input
-                    type="number"
-                    min="1"
-                    value={qtyB}
-                    onChange={(e) => setQtyB(Math.max(1, parseInt(e.target.value) || 0))}
-                    className="w-20 px-2 py-1 bg-white border border-slate-300 rounded text-center font-mono font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-              <div className="pt-4 border-t border-slate-50 mt-4 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] text-slate-400 block font-bold">Total Est. Cost</span>
-                  <span className="text-base font-black text-slate-800 font-mono">₹{(qtyB * 42).toLocaleString('en-IN')}.00</span>
-                </div>
-                <button
-                  onClick={() => handleOrder('ID Card Type B (Regular PVC)', qtyB, 42, qtyB * 42)}
-                  className="px-4 py-2 bg-gradient-to-r from-[#1a3c5e] to-[#2a6f97] hover:opacity-90 text-white text-[10.5px] font-bold rounded-lg transition-opacity cursor-pointer"
-                >
-                  Order Cards
-                </button>
-              </div>
-            </div>
-
-            {/* Service 4: ID Card Type C */}
-            <div className="bg-white rounded-3xl p-5 shadow-md border border-slate-100 flex flex-col justify-between hover:shadow-lg transition-shadow">
-              <div className="space-y-3">
-                <div className="flex justify-between items-start">
-                  <span className="w-10 h-10 rounded-xl bg-[#475569]/10 flex items-center justify-center text-lg">🪪</span>
-                  <span className="bg-slate-100 text-slate-800 px-2 py-0.5 rounded text-[9px] font-black uppercase">Laminated</span>
-                </div>
-                <h3 className="text-sm font-black text-slate-800">Students & Teachers ID Card (Type C)</h3>
-                <p className="text-[11px] text-slate-400 leading-relaxed font-sans font-medium">
-                  Regular printed Single color Ribbon, Gum Pesting Laminated card with Card Holder & clip.
-                </p>
-
-                {/* Qty Input */}
-                <div className="pt-2 flex items-center justify-between text-[11px] font-bold">
-                  <span className="text-slate-500">Quantity</span>
-                  <input
-                    type="number"
-                    min="1"
-                    value={qtyC}
-                    onChange={(e) => setQtyC(Math.max(1, parseInt(e.target.value) || 0))}
-                    className="w-20 px-2 py-1 bg-white border border-slate-300 rounded text-center font-mono font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-              <div className="pt-4 border-t border-slate-50 mt-4 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] text-slate-400 block font-bold">Total Est. Cost</span>
-                  <span className="text-base font-black text-slate-800 font-mono">₹{(qtyC * 37).toLocaleString('en-IN')}.00</span>
-                </div>
-                <button
-                  onClick={() => handleOrder('ID Card Type C (Laminated)', qtyC, 37, qtyC * 37)}
-                  className="px-4 py-2 bg-gradient-to-r from-[#1a3c5e] to-[#2a6f97] hover:opacity-90 text-white text-[10.5px] font-bold rounded-lg transition-opacity cursor-pointer"
-                >
-                  Order Cards
-                </button>
-              </div>
-            </div>
-
-            {/* Service 5: Transportation Services */}
-            <div className="bg-white rounded-3xl p-5 shadow-md border border-slate-100 flex flex-col justify-between hover:shadow-lg transition-shadow">
-              <div className="space-y-3">
-                <div className="flex justify-between items-start">
-                  <span className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-lg">🚌</span>
-                  <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[9px] font-black uppercase">Transit</span>
-                </div>
-                <h3 className="text-sm font-black text-slate-800">Transportation Services</h3>
-                <p className="text-[11px] text-slate-400 leading-relaxed font-sans font-medium">
-                  GPS-enabled transportation logging, route tracking, dynamic SMS alerts, and fee management integrations.
-                </p>
-
-                {/* Qty Input */}
-                <div className="pt-2 flex items-center justify-between text-[11px] font-bold">
-                  <span className="text-slate-500">Availed Students</span>
-                  <input
-                    type="number"
-                    min="1"
-                    value={qtyTransport}
-                    onChange={(e) => setQtyTransport(Math.max(1, parseInt(e.target.value) || 0))}
-                    className="w-20 px-2 py-1 bg-white border border-slate-300 rounded text-center font-mono font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-              <div className="pt-4 border-t border-slate-50 mt-4 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] text-slate-400 block font-bold">Total Cost</span>
-                  <span className="text-base font-black text-slate-800 font-mono">₹{(qtyTransport * 36).toLocaleString('en-IN')}<span className="text-[10px] font-semibold text-slate-400">/year</span></span>
-                </div>
-                <button
-                  onClick={() => handleOrder('Transportation Services', qtyTransport, 36, qtyTransport * 36)}
-                  className="px-4 py-2 bg-gradient-to-r from-[#1a3c5e] to-[#2a6f97] hover:opacity-90 text-white text-[10.5px] font-bold rounded-lg transition-opacity cursor-pointer"
-                >
-                  Avail Services
-                </button>
-              </div>
-            </div>
-
-            {/* Service 6: Hostel Services */}
-            <div className="bg-white rounded-3xl p-5 shadow-md border border-slate-100 flex flex-col justify-between hover:shadow-lg transition-shadow">
-              <div className="space-y-3">
-                <div className="flex justify-between items-start">
-                  <span className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center text-lg">🏢</span>
-                  <span className="bg-violet-100 text-violet-800 px-2 py-0.5 rounded text-[9px] font-black uppercase">Hostel</span>
-                </div>
-                <h3 className="text-sm font-black text-slate-800">Hostel Services</h3>
-                <p className="text-[11px] text-slate-400 leading-relaxed font-sans font-medium">
-                  Dormitory allocation manager, mess billing integration, warden controls, and entry logs tracking software.
-                </p>
-
-                {/* Qty Input */}
-                <div className="pt-2 flex items-center justify-between text-[11px] font-bold">
-                  <span className="text-slate-500">Availed Students</span>
-                  <input
-                    type="number"
-                    min="1"
-                    value={qtyHostel}
-                    onChange={(e) => setQtyHostel(Math.max(1, parseInt(e.target.value) || 0))}
-                    className="w-20 px-2 py-1 bg-white border border-slate-300 rounded text-center font-mono font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-              <div className="pt-4 border-t border-slate-50 mt-4 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] text-slate-400 block font-bold">Total Cost</span>
-                  <span className="text-base font-black text-slate-800 font-mono">₹{(qtyHostel * 60).toLocaleString('en-IN')}<span className="text-[10px] font-semibold text-slate-400">/year</span></span>
-                </div>
-                <button
-                  onClick={() => handleOrder('Hostel Services', qtyHostel, 60, qtyHostel * 60)}
-                  className="px-4 py-2 bg-gradient-to-r from-[#1a3c5e] to-[#2a6f97] hover:opacity-90 text-white text-[10.5px] font-bold rounded-lg transition-opacity cursor-pointer"
-                >
-                  Avail Services
-                </button>
-              </div>
-            </div>
-
-            {/* Service 7: Previous Year Data back-up and record */}
-            <div className="bg-white rounded-3xl p-5 shadow-md border border-slate-100 flex flex-col justify-between hover:shadow-lg transition-shadow">
-              <div className="space-y-3">
-                <div className="flex justify-between items-start">
-                  <span className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-lg">💾</span>
-                  <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-[9px] font-black uppercase">Archives</span>
-                </div>
-                <h3 className="text-sm font-black text-slate-800">Previous Year Data Backup</h3>
-                <p className="text-[11px] text-slate-400 leading-relaxed font-sans font-medium">
-                  Secure archival backup database hosting. Retrieve historical student records, attendance, and audit logs.
-                </p>
-
-                {/* Qty Input */}
-                <div className="pt-2 flex items-center justify-between text-[11px] font-bold">
-                  <span className="text-slate-500">Student Database Size</span>
-                  <input
-                    type="number"
-                    min="1"
-                    value={qtyBackup}
-                    onChange={(e) => setQtyBackup(Math.max(1, parseInt(e.target.value) || 0))}
-                    className="w-20 px-2 py-1 bg-white border border-slate-300 rounded text-center font-mono font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-              <div className="pt-4 border-t border-slate-50 mt-4 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] text-slate-400 block font-bold">Total Cost</span>
-                  <span className="text-base font-black text-slate-800 font-mono">₹{(qtyBackup * 36).toLocaleString('en-IN')}<span className="text-[10px] font-semibold text-slate-400">/year</span></span>
-                </div>
-                <button
-                  onClick={() => handleOrder('Previous Year Data backup and record', qtyBackup, 36, qtyBackup * 36)}
-                  className="px-4 py-2 bg-gradient-to-r from-[#1a3c5e] to-[#2a6f97] hover:opacity-90 text-white text-[10.5px] font-bold rounded-lg transition-opacity cursor-pointer"
-                >
-                  Get Backup
-                </button>
-              </div>
-            </div>
-
+            {/* Pay Button */}
+            <button
+              onClick={handlePaymentSubmit}
+              disabled={processingPayment || !addonPreview || loadingPreview}
+              className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 transition-all shadow-md hover:shadow-lg"
+            >
+              {processingPayment ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Processing checkout payment...
+                </>
+              ) : (
+                <>💳 Pay & Activate Service</>
+              )}
+            </button>
           </div>
         </div>
+
+        {/* Right Column: Catalog List (7 Cols) */}
+        <div className="lg:col-span-7 space-y-6">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-md p-6 space-y-4">
+            <h2 className="text-sm font-black text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-1.5">
+              <span>📋</span> Service Catalog Descriptions
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              <div className="p-3.5 bg-blue-50/50 border border-blue-100 rounded-2xl space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-800">🚌 Transportation Transit</span>
+                  <span className="text-[9px] font-black text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">Transit</span>
+                </div>
+                <p className="text-[10px] text-slate-500 leading-relaxed font-sans font-medium">GPS-enabled transportation logging, route tracking, dynamic SMS alerts, and fee management integrations.</p>
+              </div>
+
+              <div className="p-3.5 bg-violet-50/50 border border-violet-100 rounded-2xl space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-800">🏢 Hostel allocation</span>
+                  <span className="text-[9px] font-black text-violet-700 bg-violet-100 px-2 py-0.5 rounded-full border border-violet-200">Hostel</span>
+                </div>
+                <p className="text-[10px] text-slate-500 leading-relaxed font-sans font-medium">Dormitory allocation manager, mess billing integration, warden controls, and entry logs tracking software.</p>
+              </div>
+
+              <div className="p-3.5 bg-orange-50/50 border border-orange-100 rounded-2xl space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-800">🌐 Domain Services</span>
+                  <span className="text-[9px] font-black text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full border border-orange-200">Domain</span>
+                </div>
+                <p className="text-[10px] text-slate-500 leading-relaxed font-sans font-medium">Client's own live domain integration on website & Software. Secure SSL connection setup included.</p>
+              </div>
+
+              <div className="p-3.5 bg-indigo-50/50 border border-indigo-100 rounded-2xl space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-800">💾 Previous Year Backup</span>
+                  <span className="text-[9px] font-black text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full border border-indigo-200">Archives</span>
+                </div>
+                <p className="text-[10px] text-slate-500 leading-relaxed font-sans font-medium">Secure archival backup database hosting. Retrieve historical student records, attendance, and audit logs.</p>
+              </div>
+
+              <div className="col-span-1 md:col-span-2 p-3.5 bg-emerald-50/50 border border-emerald-100 rounded-2xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-800">🪪 Students & Teachers Smart ID Cards</span>
+                  <span className="text-[9px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200">ID Cards</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2.5 text-[10px] text-slate-500 leading-relaxed font-sans font-medium">
+                  <div className="border border-emerald-100/60 p-2 rounded-xl bg-white">
+                    <span className="font-black text-slate-700 block">Type A (Super PVC)</span>
+                    20mm Ribbon, PVC Super Card, Card Holder & clip. gloss finish.
+                  </div>
+                  <div className="border border-emerald-100/60 p-2 rounded-xl bg-white">
+                    <span className="font-black text-slate-700 block">Type B (Regular PVC)</span>
+                    16mm Ribbon, PVC Regular Card, Card Holder & clip. thermal print.
+                  </div>
+                  <div className="border border-emerald-100/60 p-2 rounded-xl bg-white">
+                    <span className="font-black text-slate-700 block">Type C (Laminated)</span>
+                    Single color Ribbon, Gum Pasting Laminated card with Holder & clip.
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* ─── ADD-ON PAYMENT HISTORY ────────────────────────────────────────── */}
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-md p-6 mt-6">
+        <div className="flex items-center gap-2 border-b border-slate-100 pb-4 mb-4">
+          <span className="text-lg">🧾</span>
+          <h2 className="text-base font-black text-slate-800">Add-on Services Billing History</h2>
+          {loadingHistory && <span className="text-xs text-slate-400 font-bold ml-2">Refreshing...</span>}
+        </div>
+
+        {loadingHistory && addonHistory.length === 0 ? (
+          <div className="py-10 text-center text-slate-400 text-xs font-bold">
+            ⏳ Loading billing records...
+          </div>
+        ) : addonHistory.length === 0 ? (
+          <div className="py-12 text-center text-slate-400 text-xs font-medium italic">
+            📭 No add-on service transactions recorded for your organization yet.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-400 font-black uppercase tracking-wider text-[9px] bg-slate-50">
+                  <th className="px-4 py-2.5">Add-on Type</th>
+                  <th className="px-4 py-2.5 text-center">Unit Count</th>
+                  <th className="px-4 py-2.5">Billing Period</th>
+                  <th className="px-4 py-2.5 text-right">Subtotal</th>
+                  <th className="px-4 py-2.5 text-right">GST</th>
+                  <th className="px-4 py-2.5 text-right">Paid Amount</th>
+                  <th className="px-4 py-2.5">Date Paid</th>
+                  <th className="px-4 py-2.5 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {addonHistory.map((p, idx) => {
+                  const col = addonColor(p.addon_type)
+                  return (
+                    <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                      <td className="px-4 py-3.5">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black border ${col.bg} ${col.text} ${col.border}`}>
+                          <span>{col.icon}</span>
+                          {p.addon_type}
+                        </span>
+                        {p.recipient_type && (
+                          <span className={`ml-2 inline-flex px-1.5 py-0.5 rounded text-[8px] font-bold ${
+                            p.recipient_type === 'teacher' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          }`}>{p.recipient_type === 'teacher' ? '👨‍🏫 Staff' : '👥 Students'}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5 text-center font-black text-blue-600 font-mono">
+                        {p.recipient_type === 'teacher'
+                          ? p.teacher_count || p.student_count || '—'
+                          : p.student_count || '—'}
+                      </td>
+                      <td className="px-4 py-3.5 whitespace-nowrap text-[10px]">
+                        <span className="font-semibold text-slate-700 font-mono">{p.start_date_formatted || '—'}</span>
+                        <span className="text-slate-300 mx-1">→</span>
+                        <span className="font-semibold text-slate-700 font-mono">{p.end_date_formatted || '—'}</span>
+                      </td>
+                      <td className="px-4 py-3.5 text-right text-slate-500 font-semibold font-mono">
+                        {p.subtotal_formatted || fmtCurrency(p.subtotal)}
+                      </td>
+                      <td className="px-4 py-3.5 text-right text-amber-600 font-semibold font-mono">
+                        +{p.gst_amount_formatted || fmtCurrency(p.gst_amount)}
+                      </td>
+                      <td className="px-4 py-3.5 text-right font-black text-emerald-600 font-mono">
+                        {p.amount_formatted || fmtCurrency(p.amount)}
+                      </td>
+                      <td className="px-4 py-3.5 whitespace-nowrap text-slate-500 font-semibold font-mono">
+                        {p.payment_date_formatted || '—'}
+                      </td>
+                      <td className="px-4 py-3.5 text-center">
+                        <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm">
+                          ✓ Paid
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
     </div>
   )

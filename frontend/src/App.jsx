@@ -40,6 +40,7 @@ import AdminSupport from './pages/admin/Support'
 import AdminEmployee from './pages/admin/Employee'
 import AdminCompliance from './pages/admin/Compliance'
 import AdminImplementation from './pages/admin/Implementation'
+import AdminAddonServices from './pages/admin/AddonServices'
 import PartnerLogin from './pages/partner/Login'
 import PartnerRegister from './pages/partner/Register'
 import PartnerDashboard from './pages/partner/Dashboard'
@@ -129,6 +130,7 @@ function App() {
             <Route path="employee" element={<AdminEmployee />} />
             <Route path="compliance" element={<AdminCompliance />} />
             <Route path="implementation" element={<AdminImplementation />} />
+            <Route path="addon-services" element={<AdminAddonServices />} />
           </Route>
 
           {/* ── Employee portal (authenticated shell with sidebar) ── */}
