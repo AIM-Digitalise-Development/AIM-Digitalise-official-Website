@@ -48,6 +48,7 @@ const ClientProducts = () => {
   const [paymentStatus, setPaymentStatus] = useState(null)
   const [rechargeHistory, setRechargeHistory] = useState([])
   const [currentPage, setCurrentPage] = useState(1)
+  const [addonServicesCount, setAddonServicesCount] = useState(0)
 
   const syncStudentCount = async () => {
     if (!isClientAuthenticated || !clientToken) return
@@ -259,6 +260,8 @@ const ClientProducts = () => {
       })
 
       setRechargeHistory(unifiedList)
+      // Update the addon count from the actual fetched data
+      setAddonServicesCount(addonPayments.length)
     } catch (err) {
       console.error('Error combining histories:', err)
     }
@@ -961,53 +964,92 @@ const ClientProducts = () => {
             <div className="space-y-1">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Total Addon Feature Added</span>
               <span className="text-3xl font-black text-slate-800 block font-mono">
-                0
+                {addonServicesCount}
               </span>
             </div>
           </div>
 
           {/* Card 4: Pay Current Monthly Bill (Spans 2 columns) */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-transform hover:scale-[1.01] sm:col-span-2">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 text-2xl font-bold shadow-inner shrink-0">
-                💳
+          {(() => {
+            // Derive correct subscription state from ALL available fields
+            const hasMadePayment = !!paymentStatus?.delivery_info?.last_payment_date
+            const isOverdue = paymentStatus?.show_pay_now === true
+            const isPaidAndActive = paymentStatus && !isOverdue && hasMadePayment
+            const isNeverPaid = !paymentStatus || (!isOverdue && !hasMadePayment)
+
+            return (
+              <div className={`rounded-3xl p-6 shadow-sm border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-transform hover:scale-[1.01] sm:col-span-2 ${
+                isPaidAndActive
+                  ? 'bg-white border-slate-100'
+                  : isOverdue
+                    ? 'bg-rose-50/40 border-rose-200'
+                    : 'bg-amber-50/40 border-amber-200'
+              }`}>
+                <div className="flex items-center gap-4">
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold shadow-inner shrink-0 ${
+                    isPaidAndActive
+                      ? 'bg-emerald-50 text-emerald-600'
+                      : isOverdue
+                        ? 'bg-rose-100 text-rose-500'
+                        : 'bg-amber-100 text-amber-600'
+                  }`}>
+                    {isPaidAndActive ? '💳' : isOverdue ? '⚠️' : '🔔'}
+                  </div>
+
+                  {isPaidAndActive ? (
+                    <div className="space-y-1">
+                      <span className="bg-emerald-50 text-emerald-700 text-[9.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md inline-block mb-1 border border-emerald-100 capitalize">
+                        {paymentStatus.delivery_info?.last_payment_cycle || 'Active'}
+                      </span>
+                      <span className="text-2xl font-black text-emerald-600 block">
+                        Paid &amp; Active
+                      </span>
+                      <span className="text-[11px] font-bold text-slate-400 block">
+                        Next Payment: {paymentStatus.next_payment_date ? new Date(paymentStatus.next_payment_date).toLocaleDateString('en-IN') : '—'}
+                      </span>
+                    </div>
+                  ) : isOverdue ? (
+                    <div className="space-y-1">
+                      <span className="bg-rose-100 text-rose-700 text-[9.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md inline-block mb-1 border border-rose-200">
+                        Payment Due
+                      </span>
+                      <span className="text-2xl font-black text-rose-600 block font-mono">
+                        ₹{payBillAmount.toLocaleString('en-IN')}
+                      </span>
+                      <span className="text-[11px] font-bold text-rose-400 block">
+                        Your subscription payment is overdue
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <span className="bg-amber-100 text-amber-700 text-[9.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md inline-block mb-1 border border-amber-200">
+                        Not Activated
+                      </span>
+                      <span className="text-2xl font-black text-amber-700 block">
+                        No Active Subscription
+                      </span>
+                      <span className="text-[11px] font-bold text-slate-400 block">
+                        Make your first payment to activate your subscription
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => navigate('/client/portal/subscription')}
+                  className={`px-5 py-3 font-extrabold rounded-xl text-xs shadow-md transition-all active:scale-95 whitespace-nowrap cursor-pointer shrink-0 ${
+                    isPaidAndActive
+                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 shadow-none border border-slate-200'
+                      : isOverdue
+                        ? 'bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white shadow-rose-200'
+                        : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-amber-200'
+                  }`}
+                >
+                  {isPaidAndActive ? 'View Subscription' : isOverdue ? '⚡ Pay Now' : '🚀 Activate Now'}
+                </button>
               </div>
-              {paymentStatus && !paymentStatus.show_pay_now ? (
-                <div className="space-y-1">
-                  <span className="bg-emerald-50 text-emerald-700 text-[9.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md inline-block mb-1 border border-emerald-100 capitalize">
-                    {paymentStatus.delivery_info?.last_payment_cycle || 'Active'}
-                  </span>
-                  <span className="text-2xl font-black text-emerald-600 block">
-                    Paid & Active
-                  </span>
-                  <span className="text-[11px] font-bold text-slate-400 block">
-                    Next Payment: {paymentStatus.next_payment_date ? new Date(paymentStatus.next_payment_date).toLocaleDateString('en-IN') : '—'}
-                  </span>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  <span className="bg-emerald-50 text-emerald-700 text-[9.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md inline-block mb-1 border border-emerald-100">
-                    Monthly
-                  </span>
-                  <span className="text-2xl font-black text-slate-800 block font-mono">
-                    ₹{payBillAmount.toLocaleString('en-IN')}
-                  </span>
-                  <span className="text-[11px] font-bold text-slate-400 block">
-                    Pay Current Monthly Bill
-                  </span>
-                </div>
-              )}
-            </div>
-            <button
-              onClick={() => navigate('/client/portal/subscription')}
-              className={`px-5 py-3 font-extrabold rounded-xl text-xs shadow-md transition-all active:scale-95 whitespace-nowrap cursor-pointer shrink-0 ${paymentStatus && !paymentStatus.show_pay_now
-                ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 shadow-none border border-slate-200'
-                : 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white'
-                }`}
-            >
-              {paymentStatus && !paymentStatus.show_pay_now ? 'View Subscription' : 'Pay Now'}
-            </button>
-          </div>
+            )
+          })()}
 
         </div>
 

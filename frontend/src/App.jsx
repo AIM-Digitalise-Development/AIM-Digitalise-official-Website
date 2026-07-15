@@ -41,6 +41,8 @@ import AdminEmployee from './pages/admin/Employee'
 import AdminCompliance from './pages/admin/Compliance'
 import AdminImplementation from './pages/admin/Implementation'
 import AdminAddonServices from './pages/admin/AddonServices'
+import AdminPgKyc from './pages/admin/PgKyc'
+import AdminDemoSlots from './pages/admin/DemoSlots'
 import PartnerLogin from './pages/partner/Login'
 import PartnerRegister from './pages/partner/Register'
 import PartnerDashboard from './pages/partner/Dashboard'
@@ -59,6 +61,7 @@ import ClientSubscription from './pages/client/Subscription'
 import ClientSupport from './pages/client/Support'
 import ClientCustomization from './pages/client/Customization'
 import ClientAddonServices from './pages/client/AddonServices'
+import ClientPgKyc from './pages/client/PgKyc'
 import DemoPortal from './pages/demo/DemoPortal'
 import DemoDashboard from './pages/demo/DemoDashboard'
 import DemoEmployeePunchIn from './pages/demo/DemoEmployeePunchIn'
@@ -131,6 +134,8 @@ function App() {
             <Route path="compliance" element={<AdminCompliance />} />
             <Route path="implementation" element={<AdminImplementation />} />
             <Route path="addon-services" element={<AdminAddonServices />} />
+            <Route path="demo" element={<AdminDemoSlots />} />
+            <Route path="pg-kyc" element={<AdminPgKyc />} />
           </Route>
 
           {/* ── Employee portal (authenticated shell with sidebar) ── */}
@@ -182,6 +187,7 @@ function App() {
             <Route path="support" element={<ClientSupport />} />
             <Route path="customization" element={<ClientCustomization />} />
             <Route path="addon-services" element={<ClientAddonServices />} />
+            <Route path="pg-kyc" element={<ClientPgKyc />} />
           </Route>
 
           {/* ── Demo Portal (no auth required, dark admin-style with demo data) ── */}

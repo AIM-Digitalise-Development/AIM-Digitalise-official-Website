@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
-import { getAdminClients, getAdminClientById } from '../../api/admin/partners'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { getAdminClients, getAdminClientById, getAdminAddonPayments } from '../../api/admin/partners'
 import { motion, AnimatePresence } from 'framer-motion'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -19,7 +19,12 @@ const ADDON_COLORS = {
   'ID Card Type C': { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-300', icon: '🪪' },
 }
 
-const addonColor = (type) => ADDON_COLORS[type] || { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', icon: '🔌' }
+const addonColor = (type) => {
+  if (!type) return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', icon: '🔌' }
+  // Match by prefix to handle types like "id card super pvc" from the API
+  const key = Object.keys(ADDON_COLORS).find(k => type.toLowerCase().includes(k.toLowerCase()))
+  return ADDON_COLORS[key] || { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', icon: '🔌' }
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 const AdminAddonServices = () => {
@@ -41,45 +46,82 @@ const AdminAddonServices = () => {
     { icon: '💾', label: 'Previous Year Data Backup', category: 'Archives', desc: 'Secure archival backup DB. Retrieve historical records, attendance & audit logs.', price: '₹36 / student / year' },
   ]
 
-  // ── Fetch all clients + their addon payments ───────────────────────────────
-  useEffect(() => {
-    const fetchAll = async () => {
-      setLoading(true)
-      setError(null)
+  // ── Normalise a single payment row into a consistent shape ────────────────
+  const normaliseRow = (p, clientInfo = {}) => ({
+    client_id:   p.client_id   || clientInfo.client_id   || '—',
+    client_name: p.client_name || clientInfo.client_name || '—',
+    company_name: p.company_name || clientInfo.company_name || '',
+    school_name:  p.school_name  || clientInfo.school_name  || '',
+    addon_type:           p.addon_type,
+    recipient_type:       p.recipient_type,
+    student_count:        p.student_count,
+    teacher_count:        p.teacher_count,
+    start_date_formatted: p.start_date_formatted,
+    end_date_formatted:   p.end_date_formatted,
+    subtotal:             p.subtotal,
+    subtotal_formatted:   p.subtotal_formatted,
+    gst_amount:           p.gst_amount,
+    gst_amount_formatted: p.gst_amount_formatted,
+    amount:               p.amount,
+    amount_formatted:     p.amount_formatted,
+    payment_id:           p.payment_id || p.razorpay_payment_id,
+    payment_date_formatted: p.payment_date_formatted,
+    payment_status:       p.payment_status || 'paid',
+  })
+
+  // ── Fetch all addon payments ───────────────────────────────────────────────
+  const fetchAll = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      // Strategy 1: Try the direct admin addon payments endpoint (fast, single call)
       try {
-        const clientsRes = await getAdminClients()
-        const clients = clientsRes?.all_clients || clientsRes?.data?.all_clients || []
-
-        // Fetch details for each client in parallel (capped to avoid hammering)
-        const detailResults = await Promise.allSettled(
-          clients.map((c) => getAdminClientById(c.id))
-        )
-
-        const rows = []
-        detailResults.forEach((result, idx) => {
-          if (result.status !== 'fulfilled') return
-          const d = result.value
-          const clientInfo = {
-            client_id: d?.client_id || clients[idx]?.client_id,
-            client_name: d?.client_name || clients[idx]?.client_name,
-            company_name: d?.company_name || clients[idx]?.company_name || '',
-            school_name: d?.school_name || '',
-          }
-          const payments = d?.addon_payments || []
-          payments.forEach((p) => {
-            rows.push({ ...clientInfo, ...p })
-          })
-        })
-
-        setAddonRows(rows)
-      } catch (err) {
-        setError('Failed to load addon service data: ' + (err.message || 'Unknown error'))
-      } finally {
-        setLoading(false)
+        const directRes = await getAdminAddonPayments()
+        const payments = directRes?.data?.payments || directRes?.data?.data || directRes?.data || []
+        if (Array.isArray(payments) && payments.length >= 0) {
+          setAddonRows(payments.map(p => normaliseRow(p)))
+          setLoading(false)
+          return
+        }
+      } catch (directErr) {
+        // 404 = endpoint not yet implemented on backend, fall through to strategy 2
+        if (directErr?.response?.status !== 404 && directErr?.response?.status !== 405) {
+          console.warn('Direct addon endpoint failed, falling back to per-client fetch:', directErr.message)
+        }
       }
+
+      // Strategy 2 (Fallback): Fetch all clients, then their individual details
+      const clientsRes = await getAdminClients()
+      const clients = clientsRes?.data?.all_clients || clientsRes?.data?.clients || clientsRes?.all_clients || []
+
+      const detailResults = await Promise.allSettled(
+        clients.map((c) => getAdminClientById(c.id || c.client_id))
+      )
+
+      const rows = []
+      detailResults.forEach((result, idx) => {
+        if (result.status !== 'fulfilled') return
+        const d = result.value?.data || result.value
+        const clientInfo = {
+          client_id:    d?.client_id    || clients[idx]?.client_id,
+          client_name:  d?.client_name  || clients[idx]?.client_name,
+          company_name: d?.company_name || clients[idx]?.company_name || '',
+          school_name:  d?.school_name  || '',
+        }
+        // Try multiple known field names for addon payments
+        const payments = d?.addon_payments || d?.addons || d?.addon_history || []
+        payments.forEach((p) => rows.push(normaliseRow(p, clientInfo)))
+      })
+
+      setAddonRows(rows)
+    } catch (err) {
+      setError('Failed to load addon service data: ' + (err.message || 'Unknown error'))
+    } finally {
+      setLoading(false)
     }
-    fetchAll()
   }, [])
+
+  useEffect(() => { fetchAll() }, [fetchAll])
 
   // ── Derived filter values ──────────────────────────────────────────────────
   const addonTypes = useMemo(() => {
@@ -131,9 +173,19 @@ const AdminAddonServices = () => {
           <h1 className="text-xl font-black text-slate-800 tracking-tight">Add-on Services Overview</h1>
           <p className="text-xs text-slate-400 font-medium mt-0.5">All client add-on service subscriptions & payment ledger</p>
         </div>
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-full text-[10px] font-black text-blue-700 uppercase tracking-wider">
-          🔌 {addonRows.length} total transactions
-        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchAll}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-full text-[10px] font-black text-slate-600 uppercase tracking-wider hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            {loading ? 'Loading…' : 'Refresh'}
+          </button>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-full text-[10px] font-black text-blue-700 uppercase tracking-wider">
+            🔌 {addonRows.length} total transactions
+          </span>
+        </div>
       </div>
 
       {/* Error Banner */}

@@ -45,10 +45,12 @@ const AdminLayout = () => {
   const menuItems = [
     { route: ROUTES.ADMIN.DASHBOARD, label: 'Dashboard', icon: 'dashboard', color: '#10b981' },
     { route: ROUTES.ADMIN.LEADS, label: 'Lead Management', icon: 'leads', color: '#f59e0b' },
+    { route: ROUTES.ADMIN.DEMO, label: 'Demo Slots', icon: 'demo', color: '#6366f1' },
     { route: ROUTES.ADMIN.SAAS_CLIENTS, label: 'SaaS Based Client', icon: 'clients', color: '#38b34a' },
     { route: ROUTES.ADMIN.SUBSCRIBED_CLIENTS, label: 'Subscribed Client', icon: 'subscription', color: '#ef4444' },
     { route: ROUTES.ADMIN.USERS, label: 'General Client', icon: 'general_client', color: '#f97316' },
     { route: ROUTES.ADMIN.ANALYTICS, label: 'Accounts', icon: 'accounts', color: '#ec4899' },
+    { route: ROUTES.ADMIN.PG_KYC, label: 'PG-KYC', icon: 'pg_kyc', color: '#8b5cf6' },
     { route: ROUTES.ADMIN.EMPLOYEE, label: 'Employee', icon: 'employee', color: '#3b82f6' },
     { route: null, label: 'Projects', icon: 'projects', color: '#f43f5e' },
     { route: ROUTES.ADMIN.COMPLIANCE, label: 'Compliance', icon: 'compliance', color: '#8b5cf6' },
@@ -66,6 +68,12 @@ const AdminLayout = () => {
     if (type === 'leads') return (
       <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+    )
+    if (type === 'demo') return (
+      <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 12v3l2 2" />
       </svg>
     )
     if (type === 'clients') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><circle cx="9" cy="8" r="3.5" /><path d="M4 18c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5" /><path d="M16 11h5m-2.5-2.5v5" /></svg>
@@ -87,6 +95,11 @@ const AdminLayout = () => {
     if (type === 'subscription') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="6" width="18" height="12" rx="2" /><path d="M3 11h18" /></svg>
     if (type === 'general_client') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="8" r="3.5" /><path d="M5 19c0-3 3-5 7-5s7 2 7 5" /><path d="M17 11l1.5 1.5L21 10" /></svg>
     if (type === 'accounts') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M4 7h16v10H4z" /><path d="M7 11h4" /></svg>
+    if (type === 'pg_kyc') return (
+      <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+      </svg>
+    )
     if (type === 'employee') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="8" r="3.5" /><path d="M5 19c0-3 3-5 7-5s7 2 7 5" /></svg>
     if (type === 'projects') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M3 7h7l2 2h9v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
     if (type === 'compliance') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M12 3l7 3v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z" /></svg>
@@ -275,12 +288,14 @@ const AdminLayout = () => {
               {(() => {
                 if (location.pathname === ROUTES.ADMIN.DASHBOARD) return "Welcome back! Here's your business overview for June 2026."
                 if (location.pathname === ROUTES.ADMIN.LEADS) return "Manage all system leads, assignments, and follow-ups."
+                if (location.pathname === ROUTES.ADMIN.DEMO) return "Manage customer and partner video conference demo slots."
                 if (location.pathname === ROUTES.ADMIN.USERS) return "Manage your client accounts."
                 if (location.pathname === ROUTES.ADMIN.SAAS_CLIENTS) return "Manage SaaS clients and deliveries."
                 if (location.pathname === ROUTES.ADMIN.SUBSCRIBED_CLIENTS) return "Manage client subscriptions, customization requests, and payment reports."
                 if (location.pathname === ROUTES.ADMIN.PRODUCTS) return "Manage your products, categories, sub-categories, and discounts."
                 if (location.pathname === ROUTES.ADMIN.SETTINGS) return "Manage your products, categories, sub-categories, and discounts."
                 if (location.pathname === ROUTES.ADMIN.ANALYTICS) return "Manage financial records and statements."
+                if (location.pathname === ROUTES.ADMIN.PG_KYC) return "Review client payment gateway KYC applications."
                 if (location.pathname === ROUTES.ADMIN.PARTNERS) return "Manage partner accounts and sales."
                 if (location.pathname === ROUTES.ADMIN.EMPLOYEE) return "Manage your employees, attendance, leave, and payroll."
                 if (location.pathname === ROUTES.ADMIN.COMPLIANCE) return "Review corporate compliance, audit logs, and tax filings."

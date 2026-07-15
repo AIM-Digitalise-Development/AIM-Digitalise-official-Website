@@ -190,3 +190,19 @@ export const setCustomizationAmount = (id, amount, adminNotes) =>
 // POST /api/admin/customization/requests/{id}/update-status  — body: { status, admin_notes }
 export const updateCustomizationStatus = (id, status, adminNotes) =>
   adminFetch('POST', `/admin/customization/requests/${id}/update-status`, { status, admin_notes: adminNotes })
+
+// ─── Admin Addon Payments ─────────────────────────────────────────────────────
+// GET /api/admin/addon/payments?search=&addon_type=&status=&client_id=
+export const getAdminAddonPayments = (filters = {}) => {
+  const params = new URLSearchParams()
+  if (filters.search)     params.append('search', filters.search)
+  if (filters.addon_type) params.append('addon_type', filters.addon_type)
+  if (filters.status)     params.append('status', filters.status)
+  if (filters.client_id)  params.append('client_id', filters.client_id)
+  const qs = params.toString()
+  return adminFetch('GET', `/admin/addon/payments${qs ? '?' + qs : ''}`)
+}
+
+// GET /api/admin/addon/stats
+export const getAdminAddonStats = () =>
+  adminFetch('GET', '/admin/addon/stats')

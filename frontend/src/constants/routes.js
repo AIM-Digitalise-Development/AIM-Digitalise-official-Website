@@ -27,6 +27,8 @@ export const ROUTES = {
     COMPLIANCE: '/admin/compliance',
     IMPLEMENTATION: '/admin/implementation',
     ADDON_SERVICES: '/admin/addon-services',
+    DEMO: '/admin/demo',
+    PG_KYC: '/admin/pg-kyc',
   },
   EMPLOYEE: {
     DASHBOARD: '/employee',
@@ -60,6 +62,7 @@ export const ROUTES = {
     SUPPORT: '/client/portal/support',
     CUSTOMIZATION: '/client/portal/customization',
     ADDON_SERVICES: '/client/portal/addon-services',
+    PG_KYC: '/client/portal/pg-kyc',
   },
   AUTH: {
     LOGIN: '/login',

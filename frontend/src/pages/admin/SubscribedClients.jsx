@@ -296,67 +296,6 @@ const AdminSubscribedClients = () => {
           </div>
         </div>
 
-        {/* Filters Panel Card */}
-        {activeTab === 'client_list' && (
-          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-md flex flex-col md:flex-row gap-5 items-end">
-            {/* Product dropdown */}
-            <div className="w-full md:flex-grow">
-              <label className="block text-[9.5px] font-black text-slate-500 uppercase tracking-widest mb-1.5 font-sans">Product Wise Search</label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </span>
-                <select
-                  value={productFilter}
-                  onChange={(e) => setProductFilter(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 transition-all font-semibold"
-                >
-                  <option value="All">All Categories</option>
-                  <option value="static">Static Websites</option>
-                  <option value="dynamic">Dynamic Websites</option>
-                  <option value="ecommerce">E-Commerce</option>
-                  <option value="mobile">Mobile Apps</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Client Search */}
-            <div className="w-full md:flex-grow">
-              <label className="block text-[9.5px] font-black text-slate-500 uppercase tracking-widest mb-1.5 font-sans">Client Name / Search</label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </span>
-                <input
-                  type="text"
-                  value={clientSearch}
-                  onChange={(e) => setClientSearch(e.target.value)}
-                  placeholder="Type to search client..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 transition-all font-sans"
-                />
-              </div>
-            </div>
-
-            {/* Status Dropdown */}
-            <div className="w-full md:w-56 shrink-0">
-              <label className="block text-[9.5px] font-black text-slate-500 uppercase tracking-widest mb-1.5 font-sans">Status</label>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 transition-all font-semibold"
-              >
-                <option value="All">All Statuses</option>
-                <option value="ACTIVE">ACTIVE</option>
-                <option value="INACTIVE">INACTIVE</option>
-              </select>
-            </div>
-          </div>
-        )}
-
         {/* Content Card Panel */}
         <div className="bg-white rounded-3xl border border-slate-200/80 shadow-md p-6">
 
@@ -370,6 +309,15 @@ const AdminSubscribedClients = () => {
                 }`}
             >
               Client List
+            </button>
+            <button
+              onClick={() => handleTabChange('follow_up')}
+              className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${activeTab === 'follow_up'
+                ? 'bg-white border-[#ef4444] text-[#ef4444] -mb-[13px] z-10'
+                : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
+                }`}
+            >
+              Follow Up
             </button>
             <button
               onClick={() => handleTabChange('customization')}
@@ -482,6 +430,64 @@ const AdminSubscribedClients = () => {
                 </div>
               </div>
 
+              {/* Filters Panel Card */}
+              <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200/80 shadow-sm flex flex-col md:flex-row gap-5 items-end mb-6">
+                {/* Product dropdown */}
+                <div className="w-full md:flex-grow">
+                  <label className="block text-[9.5px] font-black text-slate-500 uppercase tracking-widest mb-1.5 font-sans">Product Wise Search</label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </span>
+                    <select
+                      value={productFilter}
+                      onChange={(e) => setProductFilter(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 transition-all font-semibold"
+                    >
+                      <option value="All">All Categories</option>
+                      <option value="static">Static Websites</option>
+                      <option value="dynamic">Dynamic Websites</option>
+                      <option value="ecommerce">E-Commerce</option>
+                      <option value="mobile">Mobile Apps</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Client Search */}
+                <div className="w-full md:flex-grow">
+                  <label className="block text-[9.5px] font-black text-slate-500 uppercase tracking-widest mb-1.5 font-sans">Client Name / Search</label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </span>
+                    <input
+                      type="text"
+                      value={clientSearch}
+                      onChange={(e) => setClientSearch(e.target.value)}
+                      placeholder="Type to search client..."
+                      className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 transition-all font-sans"
+                    />
+                  </div>
+                </div>
+
+                {/* Status Dropdown */}
+                <div className="w-full md:w-56 shrink-0">
+                  <label className="block text-[9.5px] font-black text-slate-500 uppercase tracking-widest mb-1.5 font-sans">Status</label>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 transition-all font-semibold"
+                  >
+                    <option value="All">All Statuses</option>
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="INACTIVE">INACTIVE</option>
+                  </select>
+                </div>
+              </div>
 
               {/* Table Subtitle Bar */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -1000,8 +1006,18 @@ const AdminSubscribedClients = () => {
             )}
           </AnimatePresence>
 
+          {activeTab === 'follow_up' && (
+            <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
+              <span className="text-4xl">📞</span>
+              <h4 className="text-base font-bold text-slate-800 font-sans">Follow Up Reminders</h4>
+              <p className="text-xs text-slate-400 max-w-sm leading-relaxed font-sans">
+                Active follow-up schedules, client feedback timelines, and partner support logs will appear here.
+              </p>
+            </div>
+          )}
+
           {/* Inactive Tab Placeholders */}
-          {activeTab !== 'client_list' && (
+          {activeTab !== 'client_list' && activeTab !== 'follow_up' && (
             <div className="flex flex-col items-center justify-center py-16 text-center space-y-3.5">
               <span className="text-4xl">📄</span>
               <h4 className="text-base font-bold text-slate-800 capitalize">{activeTab.replace('_', ' ')} Tab Content</h4>

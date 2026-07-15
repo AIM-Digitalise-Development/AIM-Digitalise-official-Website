@@ -33,6 +33,8 @@ const AdminSaasClients = () => {
   const [summary, setSummary] = useState(null)
   const [clientsLoading, setClientsLoading] = useState(true)
   const [clientSearch, setClientSearch] = useState('')
+  const [productFilter, setProductFilter] = useState('All')
+  const [statusFilter, setStatusFilter] = useState('All')
   const [selectedClientDetails, setSelectedClientDetails] = useState(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [dossierTab, setDossierTab] = useState('profile')
@@ -211,14 +213,18 @@ const AdminSaasClients = () => {
   useEffect(() => { fetchClients() }, [])
 
   const filteredClients = clients.filter(c => {
+    const matchesProduct = productFilter === 'All' || c.product_category === productFilter
+    const matchesStatus = statusFilter === 'All' || (statusFilter === 'ACTIVE' ? c.is_active : !c.is_active)
+
     const q = clientSearch.toLowerCase()
-    return (
+    const matchesSearch =
       (c.client_name || '').toLowerCase().includes(q) ||
       (c.email || '').toLowerCase().includes(q) ||
       (c.client_id || '').toString().includes(q) ||
       (c.product_name || '').toLowerCase().includes(q) ||
       (c.partner_name || '').toLowerCase().includes(q)
-    )
+
+    return matchesProduct && matchesStatus && matchesSearch
   })
 
   // ── DELIVERY MODAL ─────────────────────────────────────────────────────────
@@ -569,7 +575,6 @@ const AdminSaasClients = () => {
           <div className="flex flex-wrap items-center gap-1 border-b border-slate-200/60 pb-3 mb-6">
             {[
               { id: 'show_clients', label: 'Client List' },
-              { id: 'subscriptions', label: 'Subscriptions' },
               { id: 'follow_up', label: 'Follow Up' },
               { id: 'customization', label: 'Customization' },
               { id: 'renewal', label: 'Next Renewal' },
@@ -607,10 +612,63 @@ const AdminSaasClients = () => {
                   <div className="w-12 h-12 rounded-xl bg-yellow-50 flex items-center justify-center border border-yellow-100">₹</div>
                 </div>
               </div>
-              {/* Search */}
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></span>
-                <input type="text" value={clientSearch} onChange={e => setClientSearch(e.target.value)} placeholder="Search by ID, name, email, product, or partner..." className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 transition-all" />
+              {/* Filters Panel Card */}
+              <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200/80 shadow-sm flex flex-col md:flex-row gap-5 items-end mb-6">
+                {/* Product wise search */}
+                <div className="w-full md:flex-grow">
+                  <label className="block text-[9.5px] font-black text-slate-500 uppercase tracking-widest mb-1.5 font-sans">Product Wise Search</label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </span>
+                    <select
+                      value={productFilter}
+                      onChange={(e) => setProductFilter(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 transition-all font-semibold"
+                    >
+                      <option value="All">All Categories</option>
+                      <option value="static">Static Websites</option>
+                      <option value="dynamic">Dynamic Websites</option>
+                      <option value="ecommerce">E-Commerce</option>
+                      <option value="mobile">Mobile Apps</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Client Search */}
+                <div className="w-full md:flex-grow">
+                  <label className="block text-[9.5px] font-black text-slate-500 uppercase tracking-widest mb-1.5 font-sans">Client Name / Search</label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </span>
+                    <input
+                      type="text"
+                      value={clientSearch}
+                      onChange={(e) => setClientSearch(e.target.value)}
+                      placeholder="Type to search client..."
+                      className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 transition-all font-sans"
+                    />
+                  </div>
+                </div>
+
+                {/* Status Dropdown */}
+                <div className="w-full md:w-56 shrink-0">
+                  <label className="block text-[9.5px] font-black text-slate-550 uppercase tracking-widest mb-1.5 font-sans">Status</label>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 transition-all font-semibold"
+                  >
+                    <option value="All">All Statuses</option>
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="INACTIVE">INACTIVE</option>
+                  </select>
+                </div>
               </div>
               {/* Table */}
               {clientsLoading ? (
