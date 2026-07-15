@@ -13,13 +13,13 @@ import ClientPageHeader from '../../components/client/ClientPageHeader'
 
 const ClientCustomization = () => {
   const { profileData, clientToken, isClientAuthenticated } = useClientAuthStore()
-  
+
   // Customization Form States
   const [customType, setCustomType] = useState('')
   const [customDesc, setCustomDesc] = useState('')
   const [targetDate, setTargetDate] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  
+
   // General UI States
   const [successMsg, setSuccessMsg] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
@@ -57,7 +57,7 @@ const ClientCustomization = () => {
           } else if (req.amount_value) {
             amountValue = typeof req.amount_value === 'string' ? parseFloat(req.amount_value) : req.amount_value
           }
-          
+
           return {
             ...req,
             amount: amountValue,
@@ -125,14 +125,14 @@ const ClientCustomization = () => {
       setErrorMsg('Please enter at least 10 characters describing your customization needs.')
       return
     }
-    
+
     setIsSubmitting(true)
     setSuccessMsg('')
     setErrorMsg('')
-    
+
     // Combine fields into customization_text
     const combinedText = `[${customType}] (Target Rollout: ${targetDate})\n\n${customDesc}`
-    
+
     try {
       const res = await submitClientCustomizationRequest(combinedText, clientToken)
       if (res.success) {
@@ -207,7 +207,7 @@ const ClientCustomization = () => {
       invoiceNumber,
       invoiceDate,
       clientName: profileData?.company_name || profileData?.school_name || profileData?.organization || 'Academic Institute',
-      clientId: profileData?.client_id || '',
+      clientId: profileData?.client_id || profileData?.client_unique_id || 'AIM6590550',
       requestId: payment.id,
       customizationText: payment.customization_text || payment.full_text || '',
       baseAmount,
@@ -349,21 +349,35 @@ const ClientCustomization = () => {
     const content = billRef.current.innerHTML
     const style = `
       <style>
-        body { font-family: Arial, sans-serif; }
-        .bill-container { max-width: 800px; margin: 0 auto; padding: 30px; background: white; }
-        .bill-header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 20px; }
-        .bill-title { font-size: 24px; font-weight: bold; color: #1e293b; }
-        .bill-subtitle { color: #64748b; font-size: 14px; }
-        .bill-info { display: flex; justify-content: space-between; margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; }
-        .bill-info-item { font-size: 14px; }
-        .bill-info-item strong { color: #1e293b; }
-        .bill-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        .bill-table th { background: #1e293b; color: white; padding: 12px; text-align: left; font-size: 14px; }
-        .bill-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
-        .bill-total { text-align: right; padding: 20px; background: #f8fafc; border-radius: 8px; margin-top: 20px; }
-        .bill-total-row { display: flex; justify-content: space-between; padding: 8px 0; }
-        .bill-total-grand { font-size: 20px; font-weight: bold; color: #3b82f6; border-top: 2px solid #333; padding-top: 12px; margin-top: 8px; }
-        .bill-footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #94a3b8; font-size: 12px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; padding: 20px; color: #1e293b; }
+        .bill-container { max-width: 850px; margin: 0 auto; padding: 40px; background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .bill-header { display: flex; justify-content: space-between; border-bottom: 2px solid #f1f5f9; padding-bottom: 24px; margin-bottom: 24px; text-align: left; }
+        .brand-details h1 { font-size: 26px; font-weight: 800; color: #4f46e5; margin: 0; }
+        .brand-details p { font-size: 12px; color: #64748b; margin: 4px 0 0 0; font-weight: 600; }
+        .company-info { text-align: right; font-size: 12px; color: #475569; line-height: 1.6; }
+        .company-info strong { color: #0f172a; }
+        .invoice-meta-section { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 24px; }
+        .meta-block { padding: 18px; background: #f8fafc; border-radius: 12px; border: 1px solid #f1f5f9; }
+        .meta-block h3 { font-size: 12px; font-weight: 700; text-transform: uppercase; color: #4f46e5; margin: 0 0 12px 0; letter-spacing: 0.05em; }
+        .meta-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 12px; font-size: 13px; color: #334155; }
+        .meta-grid div { line-height: 1.4; }
+        .meta-grid strong { color: #0f172a; }
+        
+        .client-info-container { margin-bottom: 24px; padding: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; color: #1e293b; }
+        .client-info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; font-size: 13px; color: #334155; }
+        .client-info-grid strong { color: #0f172a; }
+
+        .cust-description-box { font-size: 13px; color: #334155; margin-top: 8px; padding: 12px 16px; background: #f1f5f9; border-radius: 8px; font-weight: 400; line-height: 1.5; border-left: 4px solid #4f46e5; overflow-wrap: break-word; word-wrap: break-word; word-break: break-word; white-space: pre-wrap; }
+
+        .bill-table { width: 100%; border-collapse: collapse; margin: 24px 0; color: #1e293b; }
+        .bill-table th { background: #4f46e5; color: white; padding: 14px; text-align: left; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+        .bill-table td { padding: 14px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #334155; }
+        .bill-table tr:hover { background: #f8fafc; }
+        
+        .bill-total { text-align: right; padding: 24px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin-top: 24px; color: #1e293b; }
+        .bill-total-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 13px; color: #475569; }
+        .bill-total-grand { font-size: 22px; font-weight: 800; color: #4f46e5; border-top: 2px solid #e2e8f0; padding-top: 14px; margin-top: 8px; }
+        .bill-footer { text-align: center; margin-top: 40px; padding-top: 24px; border-top: 1px solid #e2e8f0; color: #94a3b8; font-size: 12px; font-weight: 500; }
       </style>
     `
     const fullHtml = `
@@ -403,6 +417,71 @@ const ClientCustomization = () => {
         padding: '20px',
         overflow: 'auto'
       }} onClick={() => setShowBillModal(false)}>
+        <style dangerouslySetInnerHTML={{
+          __html: `
+          .bill-container { max-width: 850px; margin: 0 auto; padding: 40px; background: white; border: 1px solid #e2e8f0; border-radius: 4px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+          .bill-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+          .logo-circle { width: 85px; height: 85px; background: #c25e17; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 38px; font-weight: 800; }
+          .company-info { text-align: right; font-size: 13px; color: #64748b; line-height: 1.5; }
+          .company-info h2 { font-size: 22px; font-weight: 700; color: #c25e17; margin: 0 0 6px 0; }
+          
+          .invoice-divider-container { display: flex; align-items: center; margin: 24px 0; }
+          .invoice-divider-line { flex: 1; height: 1px; background: #e2e8f0; }
+          .invoice-divider-text { padding: 0 16px; font-size: 18px; font-weight: 700; color: #c25e17; letter-spacing: 0.05em; text-transform: uppercase; }
+
+          .invoice-grid-section { display: flex; justify-content: space-between; margin-bottom: 30px; gap: 30px; }
+          .invoice-left-side { width: 55%; display: flex; flex-direction: column; gap: 20px; }
+          .invoice-right-side { width: 40%; }
+          
+          .address-block h4 { font-size: 14px; font-weight: 700; color: #64748b; margin: 0 0 6px 0; text-transform: uppercase; }
+          .address-block p { font-size: 13px; color: #334155; margin: 0; line-height: 1.5; }
+          .address-block .client-highlight-name { font-size: 16px; font-weight: 700; color: #c25e17; margin-bottom: 4px; }
+          
+          .meta-table { width: 100%; border-collapse: collapse; border: 1px solid #e2e8f0; font-size: 13px; }
+          .meta-table td { padding: 8px 12px; border: 1px solid #e2e8f0; }
+          .meta-table td.meta-label { background: #c25e17; color: white; font-weight: 600; width: 45%; }
+          .meta-table td.meta-value { background: white; color: #475569; }
+
+          .bill-table { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 13px; }
+          .bill-table th { background: #c25e17; color: white; padding: 12px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid #c25e17; }
+          .bill-table th:first-child { text-align: center; width: 5%; }
+          .bill-table th:nth-child(2) { text-align: left; width: 50%; }
+          .bill-table th:nth-child(3), .bill-table th:nth-child(4), .bill-table th:nth-child(5) { text-align: right; width: 15%; }
+          
+          .bill-table td { padding: 16px 12px; border: 1px solid #e2e8f0; color: #334155; vertical-align: top; }
+          .bill-table td.cell-center { text-align: center; }
+          .bill-table td.cell-right { text-align: right; }
+          .bill-table tr:nth-child(even) td { background-color: #fafafa; }
+          
+          .item-title { font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+          .item-desc { font-size: 12px; color: #64748b; line-height: 1.4; }
+
+          .invoice-bottom-section { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 20px; gap: 30px; }
+          .terms-section { width: 50%; font-size: 12px; line-height: 1.6; }
+          .terms-section h5 { font-size: 13px; font-weight: 700; color: #0f172a; margin: 0 0 6px 0; }
+          .terms-section p { color: #64748b; margin: 0 0 8px 0; }
+          .thanks-msg { font-size: 13px; font-style: italic; color: #475569; margin-bottom: 20px; }
+
+          .summary-section { width: 45%; }
+          .summary-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 13px; }
+          .summary-table td { padding: 6px 12px; text-align: right; color: #475569; }
+          .summary-table td:last-child { width: 40%; font-weight: 600; color: #0f172a; }
+          .summary-table tr.total-row td { font-size: 16px; font-weight: 800; color: #0f172a; border-top: 1px solid #e2e8f0; padding-top: 12px; }
+          
+          .balance-due-bar { background: #c25e17; color: white; display: flex; justify-content: space-between; padding: 12px 16px; font-size: 15px; font-weight: 700; border-radius: 2px; }
+          .cust-description-box { font-size: 13px; color: #334155; margin-top: 8px; padding: 12px 16px; background: #f8fafc; border: 1px dashed #c25e17; border-radius: 4px; font-weight: 400; line-height: 1.5; overflow-wrap: break-word; word-wrap: break-word; word-break: break-word; white-space: pre-wrap; }
+          .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+
+          .modal-actions-bar { display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end; border-top: 1px solid #f1f5f9; padding-top: 20px; }
+          .btn-modal { padding: 12px 26px; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 13px; transition: all 0.2s; }
+          .btn-modal-close { background-color: #f1f5f9; color: #475569; }
+          .btn-modal-close:hover { background-color: #e2e8f0; color: #1e293b; }
+          .btn-modal-download { background-color: #4f46e5; color: white; box-shadow: 0 4px 6px -1px rgb(79 70 229 / 0.2); }
+          .btn-modal-download:hover { background-color: #4338ca; box-shadow: 0 6px 8px -1px rgb(79 70 229 / 0.3); }
+          .btn-modal-pay { background-color: #10b981; color: white; box-shadow: 0 4px 6px -1px rgb(16 185 129 / 0.2); }
+          .btn-modal-pay:hover:not(:disabled) { background-color: #059669; box-shadow: 0 6px 8px -1px rgb(16 185 129 / 0.3); }
+          .btn-modal:disabled { opacity: 0.6; cursor: not-allowed; }
+        ` }} />
         <div style={{
           backgroundColor: 'white',
           borderRadius: '16px',
@@ -413,147 +492,147 @@ const ClientCustomization = () => {
           padding: '30px',
           position: 'relative'
         }} onClick={(e) => e.stopPropagation()}>
-          
+
           {/* Bill Content */}
           <div ref={billRef} className="bill-container">
             {/* Header */}
             <div className="bill-header">
-              <div className="bill-title">🎓 AIM Digitalise</div>
-              <div className="bill-subtitle">Customization Invoice</div>
-            </div>
-            
-            {/* Invoice Info */}
-            <div className="bill-info">
-              <div className="bill-info-item">
-                <strong>Invoice #:</strong> {billData.invoiceNumber}
-              </div>
-              <div className="bill-info-item">
-                <strong>Date:</strong> {billData.invoiceDate}
-              </div>
-              <div className="bill-info-item">
-                <strong>Status:</strong> <span style={{ color: '#f59e0b', fontWeight: 'bold' }}>Pending</span>
+              <div className="logo-circle">A</div>
+              <div className="company-info">
+                <h2>AIM Digitalise</h2>
+                #139, 3rd Floor, Rajdanga Main Road,<br />
+                Kolkata, West Bangal - 700107<br />
+                GSTIN: 19ABCCA9672L1Z0<br />
+                Email: support@aimdigitalise.com
               </div>
             </div>
-            
-            {/* Client Info */}
-            <div style={{ marginBottom: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px' }}>
-                <div><strong>Client:</strong> {billData.clientName}</div>
-                <div><strong>Client ID:</strong> {billData.clientId}</div>
-                <div style={{ gridColumn: 'span 2' }}><strong>Request ID:</strong> #{billData.requestId}</div>
-                <div style={{ gridColumn: 'span 2' }}>
-                  <strong>Customization Description:</strong>
-                  <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', padding: '8px', background: '#f1f5f9', borderRadius: '6px', fontWeight: 'normal' }}>
-                    {billData.customizationText}
+
+            <div className="invoice-divider-container">
+              <div className="invoice-divider-line"></div>
+              <div className="invoice-divider-text">PROFORMA INVOICE</div>
+              <div className="invoice-divider-line"></div>
+            </div>
+
+            <div className="invoice-grid-section">
+              <div className="invoice-left-side">
+                <div className="address-block">
+                  <h4>Bill To</h4>
+                  <div className="client-highlight-name">{billData.clientName}</div>
+                  <p>
+                    <strong>ID:</strong> {billData.clientId}<br />
+                    <strong>School:</strong> {billData.schoolName || '-'}<br />
+                    <strong>Request ID:</strong> #{billData.requestId}
+                  </p>
+                </div>
+                <div className="address-block">
+                  <h4>Ship To</h4>
+                  <div className="client-highlight-name">{billData.schoolName || '-'}</div>
+                  <p>
+                    Noida, Uttar Pradesh, India
                   </p>
                 </div>
               </div>
+
+              <div className="invoice-right-side">
+                <table className="meta-table">
+                  <tbody>
+                    <tr>
+                      <td className="meta-label">Invoice#</td>
+                      <td className="meta-value" style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#c25e17' }}>{billData.invoiceNumber}</td>
+                    </tr>
+                    <tr>
+                      <td className="meta-label">Invoice Date</td>
+                      <td className="meta-value">{billData.invoiceDate}</td>
+                    </tr>
+                    <tr>
+                      <td className="meta-label">Terms</td>
+                      <td className="meta-value">Due on Receipt</td>
+                    </tr>
+                    <tr>
+                      <td className="meta-label">Due Date</td>
+                      <td className="meta-value">{billData.invoiceDate}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
-            
-            {/* Bill Table */}
+
+            <div style={{ marginBottom: '24px', padding: '16px', background: '#f8fafc', borderRadius: '4px', border: '1px dashed #c25e17', fontSize: '13px' }}>
+              <strong style={{ color: '#c25e17', display: 'block', marginBottom: '6px' }}>Customization Description:</strong>
+              <p className="cust-description-box" style={{ margin: 0, border: 'none', padding: 0 }}>
+                {billData.customizationText}
+              </p>
+            </div>
+
             <table className="bill-table">
               <thead>
                 <tr>
-                  <th>Description</th>
-                  <th style={{ textAlign: 'right' }}>Rate</th>
+                  <th>#</th>
+                  <th>Item & Description</th>
                   <th style={{ textAlign: 'right' }}>Qty</th>
+                  <th style={{ textAlign: 'right' }}>Rate</th>
                   <th style={{ textAlign: 'right' }}>Amount</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
+                  <td className="cell-center">1</td>
                   <td>
-                    <strong>🎨 Customization Service</strong>
-                    <div style={{ fontSize: '12px', color: '#64748b' }}>
-                      Custom development work as requested
-                    </div>
+                    <div className="item-title">🎨 Customization Service</div>
+                    <div className="item-desc">Custom software modifications and code rollout as requested.</div>
                   </td>
-                  <td style={{ textAlign: 'right' }}>₹{billData.baseAmount.toFixed(2)}</td>
-                  <td style={{ textAlign: 'right' }}>1</td>
-                  <td style={{ textAlign: 'right', fontWeight: 'bold' }}>₹{billData.baseAmount.toFixed(2)}</td>
-                </tr>
-                
-                {/* Subtotal */}
-                <tr>
-                  <td colSpan="3" style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '15px' }}>
-                    Subtotal
-                  </td>
-                  <td style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '15px' }}>
-                    ₹{billData.baseAmount.toFixed(2)}
-                  </td>
-                </tr>
-                
-                {/* GST */}
-                <tr>
-                  <td colSpan="3" style={{ textAlign: 'right', color: '#f59e0b', fontSize: '14px' }}>
-                    GST ({billData.gstPercentage}%)
-                  </td>
-                  <td style={{ textAlign: 'right', color: '#f59e0b', fontSize: '14px', fontWeight: 'bold' }}>
-                    +₹{billData.gstAmount.toFixed(2)}
-                  </td>
+                  <td className="cell-right">1.00</td>
+                  <td className="cell-right">₹{billData.baseAmount.toFixed(2)}</td>
+                  <td className="cell-right" style={{ fontWeight: 'bold' }}>₹{billData.baseAmount.toFixed(2)}</td>
                 </tr>
               </tbody>
             </table>
-            
-            {/* Total */}
-            <div className="bill-total">
-              <div className="bill-total-row">
-                <span style={{ fontSize: '18px', fontWeight: 'bold' }}>Total Amount (incl. GST)</span>
-                <span style={{ fontSize: '28px', fontWeight: 'bold', color: '#3b82f6' }}>
-                  ₹{billData.totalWithGST.toFixed(2)}
-                </span>
+
+            <div className="invoice-bottom-section">
+              <div className="terms-section">
+                <div className="thanks-msg">Thanks for your business.</div>
+                <h5>Terms & Conditions</h5>
+                <p>All payments must be made in full before the activation of any services.</p>
+                <p style={{ fontSize: '10px', color: '#cbd5e1', marginTop: '8px' }}>This is a computer generated invoice and does not require a physical signature.</p>
+              </div>
+
+              <div className="summary-section">
+                <table className="summary-table">
+                  <tbody>
+                    <tr>
+                      <td>Sub Total</td>
+                      <td>₹{billData.baseAmount.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                      <td>GST Tax ({billData.gstPercentage}%)</td>
+                      <td>+₹{billData.gstAmount.toFixed(2)}</td>
+                    </tr>
+                    <tr className="total-row">
+                      <td>Total</td>
+                      <td>₹{billData.totalWithGST.toFixed(2)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div className="balance-due-bar">
+                  <span>Balance Due</span>
+                  <span>₹{billData.totalWithGST.toFixed(2)}</span>
+                </div>
               </div>
             </div>
-            
-            {/* Footer */}
-            <div className="bill-footer">
-              <p>Thank you for your business! For any queries, please contact support.</p>
-              <p style={{ fontSize: '11px' }}>This is a system generated invoice.</p>
-            </div>
           </div>
-          
           {/* Buttons */}
-          <div style={{ display: 'flex', gap: '12px', marginTop: '20px', justifyContent: 'flex-end', borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
-            <button
-              onClick={() => setShowBillModal(false)}
-              style={{
-                padding: '10px 24px',
-                backgroundColor: '#e2e8f0',
-                color: '#1e293b',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
+          <div className="modal-actions-bar">
+            <button onClick={() => setShowBillModal(false)} className="btn-modal btn-modal-close">
               Close
             </button>
-            <button
-              onClick={downloadBill}
-              style={{
-                padding: '10px 24px',
-                backgroundColor: '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
+            <button onClick={downloadBill} className="btn-modal btn-modal-download">
               📥 Download Bill
             </button>
             <button
               onClick={() => processCustomizationPayment(billData.requestId, billData.totalWithGST)}
               disabled={processingCustomPayment}
-              style={{
-                padding: '10px 24px',
-                backgroundColor: processingCustomPayment ? '#9ca3af' : '#10b981',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: processingCustomPayment ? 'not-allowed' : 'pointer',
-                fontWeight: 'bold'
-              }}
+              className="btn-modal btn-modal-pay"
             >
               {processingCustomPayment ? 'Processing...' : '💳 Pay Now'}
             </button>
@@ -567,7 +646,7 @@ const ClientCustomization = () => {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-10 select-none animate-fade-in text-slate-700" style={{ fontFamily: "'Inter', sans-serif" }}>
-      
+
       <ClientPageHeader title="Customizations" />
 
       {successMsg && (
@@ -587,7 +666,7 @@ const ClientCustomization = () => {
 
       {/* Main Grid: Request form + Sub-Tabbed Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
+
         {/* Request Form (Col Span 5) */}
         <div className="lg:col-span-5 bg-white rounded-3xl p-6 shadow-md border border-slate-100 space-y-4">
           <div>
@@ -658,7 +737,7 @@ const ClientCustomization = () => {
             <div className="flex items-center gap-2">
               <span>⚙️</span> Customization Overview
             </div>
-            
+
             <div className="flex bg-slate-700/60 p-0.5 rounded-lg text-[10px] font-bold self-start sm:self-auto">
               <button
                 onClick={() => setSubTab('requests')}
@@ -685,7 +764,7 @@ const ClientCustomization = () => {
               </button>
             </div>
           </div>
-          
+
           {/* Sub-Tab 1: Requests List */}
           {subTab === 'requests' && (
             <div className="overflow-x-auto">

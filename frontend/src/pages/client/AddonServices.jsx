@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useClientAuthStore } from '../../store/clientAuthStore'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -47,6 +47,119 @@ const ClientAddonServices = () => {
   const [addonPreview, setAddonPreview] = useState(null)
   const [loadingPreview, setLoadingPreview] = useState(false)
   const [processingPayment, setProcessingPayment] = useState(false)
+
+  // Payment Confirmation Modal States
+  const [showBillModal, setShowBillModal] = useState(false)
+  const [billData, setBillData] = useState(null)
+  const billRef = useRef(null)
+
+  const reviewAddonPayment = () => {
+    if (!addonPreview) return
+
+    const today = new Date()
+    const invoiceDate = today.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    const invoiceNumber = `ADDON-INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+
+    const bill = {
+      invoiceNumber,
+      invoiceDate,
+      clientName: profileData?.company_name || profileData?.school_name || profileData?.organization || 'Academic Institute',
+      clientId: profileData?.client_id || '',
+      addonType: getResolvedAddonType(),
+      recipientType: selectedRecipientType,
+      rate: addonPreview.rate,
+      rateFormatted: addonPreview.rate_formatted || fmtCurrency(addonPreview.rate),
+      count: selectedAddonType === 'Domain Services' ? 1 : (selectedRecipientType === 'teacher' ? addonPreview.teacher_count || 45 : addonPreview.student_count || 850),
+      subtotal: addonPreview.subtotal,
+      subtotalFormatted: addonPreview.subtotal_formatted || fmtCurrency(addonPreview.subtotal),
+      gstPercentage: addonPreview.gst_percentage || 18,
+      gstAmount: addonPreview.gst_amount,
+      gstAmountFormatted: addonPreview.gst_amount_formatted || fmtCurrency(addonPreview.gst_amount),
+      amount: addonPreview.amount,
+      amountFormatted: addonPreview.amount_formatted || fmtCurrency(addonPreview.amount),
+      status: 'Pending'
+    }
+
+    setBillData(bill)
+    setShowBillModal(true)
+  }
+
+  const downloadBill = () => {
+    if (!billRef.current) return
+    const content = billRef.current.innerHTML
+    const style = `
+      <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; padding: 20px; color: #1e293b; }
+        .bill-container { max-width: 850px; margin: 0 auto; padding: 40px; background: white; border: 1px solid #e2e8f0; border-radius: 4px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .bill-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+        .logo-circle { width: 85px; height: 85px; background: #c25e17; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 38px; font-weight: 800; }
+        .company-info { text-align: right; font-size: 13px; color: #64748b; line-height: 1.5; }
+        .company-info h2 { font-size: 22px; font-weight: 700; color: #c25e17; margin: 0 0 6px 0; }
+        
+        .invoice-divider-container { display: flex; align-items: center; margin: 24px 0; }
+        .invoice-divider-line { flex: 1; height: 1px; background: #e2e8f0; }
+        .invoice-divider-text { padding: 0 16px; font-size: 18px; font-weight: 700; color: #c25e17; letter-spacing: 0.05em; text-transform: uppercase; }
+
+        .invoice-grid-section { display: flex; justify-content: space-between; margin-bottom: 30px; gap: 30px; }
+        .invoice-left-side { width: 55%; display: flex; flex-direction: column; gap: 20px; }
+        .invoice-right-side { width: 40%; }
+        
+        .address-block h4 { font-size: 14px; font-weight: 700; color: #64748b; margin: 0 0 6px 0; text-transform: uppercase; }
+        .address-block p { font-size: 13px; color: #334155; margin: 0; line-height: 1.5; }
+        .address-block .client-highlight-name { font-size: 16px; font-weight: 700; color: #c25e17; margin-bottom: 4px; }
+        
+        .meta-table { width: 100%; border-collapse: collapse; border: 1px solid #e2e8f0; font-size: 13px; }
+        .meta-table td { padding: 8px 12px; border: 1px solid #e2e8f0; }
+        .meta-table td.meta-label { background: #c25e17; color: white; font-weight: 600; width: 45%; }
+        .meta-table td.meta-value { background: white; color: #475569; }
+
+        .bill-table { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 13px; }
+        .bill-table th { background: #c25e17; color: white; padding: 12px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid #c25e17; }
+        .bill-table th:first-child { text-align: center; width: 5%; }
+        .bill-table th:nth-child(2) { text-align: left; width: 50%; }
+        .bill-table th:nth-child(3), .bill-table th:nth-child(4), .bill-table th:nth-child(5) { text-align: right; width: 15%; }
+        
+        .bill-table td { padding: 16px 12px; border: 1px solid #e2e8f0; color: #334155; vertical-align: top; }
+        .bill-table td.cell-center { text-align: center; }
+        .bill-table td.cell-right { text-align: right; }
+        .bill-table tr:nth-child(even) td { background-color: #fafafa; }
+        
+        .item-title { font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+        .item-desc { font-size: 12px; color: #64748b; line-height: 1.4; }
+
+        .invoice-bottom-section { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 20px; gap: 30px; }
+        .terms-section { width: 50%; font-size: 12px; line-height: 1.6; }
+        .terms-section h5 { font-size: 13px; font-weight: 700; color: #0f172a; margin: 0 0 6px 0; }
+        .terms-section p { color: #64748b; margin: 0 0 8px 0; }
+        .thanks-msg { font-size: 13px; font-style: italic; color: #475569; margin-bottom: 20px; }
+
+        .summary-section { width: 45%; }
+        .summary-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 13px; }
+        .summary-table td { padding: 6px 12px; text-align: right; color: #475569; }
+        .summary-table td:last-child { width: 40%; font-weight: 600; color: #0f172a; }
+        .summary-table tr.total-row td { font-size: 16px; font-weight: 800; color: #0f172a; border-top: 1px solid #e2e8f0; padding-top: 12px; }
+        
+        .balance-due-bar { background: #c25e17; color: white; display: flex; justify-content: space-between; padding: 12px 16px; font-size: 15px; font-weight: 700; border-radius: 2px; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+      </style>
+    `
+    const fullHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head><title>Invoice ${billData?.invoiceNumber || ''}</title>${style}</head>
+        <body>${content}</body>
+      </html>
+    `
+    const blob = new Blob([fullHtml], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `Invoice_${billData?.invoiceNumber || 'bill'}.html`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
 
   const activeProduct = productData?.[0] || {}
   const productName = activeProduct?.product_name || activeProduct?.name || 'NEXGN Institute Pro'
@@ -126,7 +239,7 @@ const ClientAddonServices = () => {
   // ── Process Checkout Payment ───────────────────────────────────────────────
   const handlePaymentSubmit = async () => {
     const finalAddonType = getResolvedAddonType()
-    
+
     setProcessingPayment(true)
     setError('')
     setSuccess('')
@@ -157,6 +270,7 @@ const ClientAddonServices = () => {
 
           if (verifyRes.success) {
             setSuccess(`✅ ${verifyRes.message || 'Payment successfully processed!'}`)
+            setShowBillModal(false)
             fetchHistory()
           } else {
             setError(verifyRes.message || 'Simulation verification rejected by server')
@@ -190,6 +304,7 @@ const ClientAddonServices = () => {
 
             if (verifyRes.success) {
               setSuccess(`✅ Payment of ${addonPreview.amount_formatted || fmtCurrency(addonPreview.amount)} verified successfully!`)
+              setShowBillModal(false)
               fetchHistory()
             } else {
               setError(verifyRes.message || 'Payment verification failed.')
@@ -230,6 +345,243 @@ const ClientAddonServices = () => {
     }
   }
 
+  // Addon Invoice Bill Modal Overlay
+  const BillModal = () => {
+    if (!showBillModal || !billData) return null
+
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 9999,
+        padding: '20px',
+        overflow: 'auto'
+      }} onClick={() => setShowBillModal(false)}>
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '16px',
+          maxWidth: '900px',
+          width: '100%',
+          maxHeight: '95vh',
+          overflow: 'auto',
+          padding: '30px',
+          position: 'relative'
+        }} onClick={(e) => e.stopPropagation()}>
+
+          <style dangerouslySetInnerHTML={{
+            __html: `
+            .bill-container { max-width: 850px; margin: 0 auto; padding: 40px; background: white; border: 1px solid #e2e8f0; border-radius: 4px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+            .bill-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+            .logo-circle { width: 85px; height: 85px; background: #c25e17; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 38px; font-weight: 800; }
+            .company-info { text-align: right; font-size: 13px; color: #64748b; line-height: 1.5; }
+            .company-info h2 { font-size: 22px; font-weight: 700; color: #c25e17; margin: 0 0 6px 0; }
+            
+            .invoice-divider-container { display: flex; align-items: center; margin: 24px 0; }
+            .invoice-divider-line { flex: 1; height: 1px; background: #e2e8f0; }
+            .invoice-divider-text { padding: 0 16px; font-size: 18px; font-weight: 700; color: #c25e17; letter-spacing: 0.05em; text-transform: uppercase; }
+
+            .invoice-grid-section { display: flex; justify-content: space-between; margin-bottom: 30px; gap: 30px; }
+            .invoice-left-side { width: 55%; display: flex; flex-direction: column; gap: 20px; }
+            .invoice-right-side { width: 40%; }
+            
+            .address-block h4 { font-size: 14px; font-weight: 700; color: #64748b; margin: 0 0 6px 0; text-transform: uppercase; }
+            .address-block p { font-size: 13px; color: #334155; margin: 0; line-height: 1.5; }
+            .address-block .client-highlight-name { font-size: 16px; font-weight: 700; color: #c25e17; margin-bottom: 4px; }
+            
+            .meta-table { width: 100%; border-collapse: collapse; border: 1px solid #e2e8f0; font-size: 13px; }
+            .meta-table td { padding: 8px 12px; border: 1px solid #e2e8f0; }
+            .meta-table td.meta-label { background: #c25e17; color: white; font-weight: 600; width: 45%; }
+            .meta-table td.meta-value { background: white; color: #475569; }
+
+            .bill-table { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 13px; }
+            .bill-table th { background: #c25e17; color: white; padding: 12px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid #c25e17; }
+            .bill-table th:first-child { text-align: center; width: 5%; }
+            .bill-table th:nth-child(2) { text-align: left; width: 50%; }
+            .bill-table th:nth-child(3), .bill-table th:nth-child(4), .bill-table th:nth-child(5) { text-align: right; width: 15%; }
+            
+            .bill-table td { padding: 16px 12px; border: 1px solid #e2e8f0; color: #334155; vertical-align: top; }
+            .bill-table td.cell-center { text-align: center; }
+            .bill-table td.cell-right { text-align: right; }
+            .bill-table tr:nth-child(even) td { background-color: #fafafa; }
+            
+            .item-title { font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+            .item-desc { font-size: 12px; color: #64748b; line-height: 1.4; }
+
+            .invoice-bottom-section { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 20px; gap: 30px; }
+            .terms-section { width: 50%; font-size: 12px; line-height: 1.6; }
+            .terms-section h5 { font-size: 13px; font-weight: 700; color: #0f172a; margin: 0 0 6px 0; }
+            .terms-section p { color: #64748b; margin: 0 0 8px 0; }
+            .thanks-msg { font-size: 13px; font-style: italic; color: #475569; margin-bottom: 20px; }
+
+            .summary-section { width: 45%; }
+            .summary-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 13px; }
+            .summary-table td { padding: 6px 12px; text-align: right; color: #475569; }
+            .summary-table td:last-child { width: 40%; font-weight: 600; color: #0f172a; }
+            .summary-table tr.total-row td { font-size: 16px; font-weight: 800; color: #0f172a; border-top: 1px solid #e2e8f0; padding-top: 12px; }
+            
+            .balance-due-bar { background: #c25e17; color: white; display: flex; justify-content: space-between; padding: 12px 16px; font-size: 15px; font-weight: 700; border-radius: 2px; }
+            .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+
+            .modal-actions-bar { display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end; border-top: 1px solid #f1f5f9; padding-top: 20px; }
+            .btn-modal { padding: 12px 26px; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 13px; transition: all 0.2s; }
+            .btn-modal-close { background-color: #f1f5f9; color: #475569; }
+            .btn-modal-close:hover { background-color: #e2e8f0; color: #1e293b; }
+            .btn-modal-download { background-color: #4f46e5; color: white; box-shadow: 0 4px 6px -1px rgb(79 70 229 / 0.2); }
+            .btn-modal-download:hover { background-color: #4338ca; box-shadow: 0 6px 8px -1px rgb(79 70 229 / 0.3); }
+            .btn-modal-pay { background-color: #10b981; color: white; box-shadow: 0 4px 6px -1px rgb(16 185 129 / 0.2); }
+            .btn-modal-pay:hover:not(:disabled) { background-color: #059669; box-shadow: 0 6px 8px -1px rgb(16 185 129 / 0.3); }
+            .btn-modal:disabled { opacity: 0.6; cursor: not-allowed; }
+          ` }} />
+
+          <div ref={billRef} className="bill-container">
+            {/* Header */}
+            <div className="bill-header">
+              <div className="logo-circle">A</div>
+              <div className="company-info">
+                <h2>AIM Digitalise</h2>
+                #139, 3rd Floor, Rajdanga Main Road,<br />
+                Kolkata, West Bangal - 700107<br />
+                GSTIN: 19ABCCA9672L1Z0<br />
+                Email: support@aimdigitalise.com
+              </div>
+            </div>
+
+            <div className="invoice-divider-container">
+              <div className="invoice-divider-line"></div>
+              <div className="invoice-divider-text">PROFORMA INVOICE</div>
+              <div className="invoice-divider-line"></div>
+            </div>
+
+            <div className="invoice-grid-section">
+              <div className="invoice-left-side">
+                <div className="address-block">
+                  <h4>Bill To</h4>
+                  <div className="client-highlight-name">{billData.clientName}</div>
+                  <p>
+                    <strong>ID:</strong> {billData.clientId}<br />
+                    <strong>School:</strong> {billData.schoolName || '-'}<br />
+                    <strong>Service Recipient:</strong> <span className="capitalize">{billData.recipientType}</span>
+                  </p>
+                </div>
+                <div className="address-block">
+                  <h4>Ship To</h4>
+                  <div className="client-highlight-name">{billData.schoolName || '-'}</div>
+                  <p>
+                    Noida, Uttar Pradesh, India
+                  </p>
+                </div>
+              </div>
+
+              <div className="invoice-right-side">
+                <table className="meta-table">
+                  <tbody>
+                    <tr>
+                      <td className="meta-label">Invoice#</td>
+                      <td className="meta-value" style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#c25e17' }}>{billData.invoiceNumber}</td>
+                    </tr>
+                    <tr>
+                      <td className="meta-label">Invoice Date</td>
+                      <td className="meta-value">{billData.invoiceDate}</td>
+                    </tr>
+                    <tr>
+                      <td className="meta-label">Terms</td>
+                      <td className="meta-value">Due on Receipt</td>
+                    </tr>
+                    <tr>
+                      <td className="meta-label">Due Date</td>
+                      <td className="meta-value">{billData.invoiceDate}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <table className="bill-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Item & Description</th>
+                  <th style={{ textAlign: 'right' }}>Qty</th>
+                  <th style={{ textAlign: 'right' }}>Rate</th>
+                  <th style={{ textAlign: 'right' }}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="cell-center">1</td>
+                  <td>
+                    <div className="item-title">🔌 Add-on: {billData.addonType}</div>
+                    <div className="item-desc">Additional service activation and module deployment.</div>
+                  </td>
+                  <td className="cell-right">{parseFloat(billData.count).toFixed(2)}</td>
+                  <td className="cell-right">{billData.rateFormatted}</td>
+                  <td className="cell-right" style={{ fontWeight: 'bold' }}>{billData.subtotalFormatted}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div className="invoice-bottom-section">
+              <div className="terms-section">
+                <div className="thanks-msg">Thanks for your business.</div>
+                <h5>Terms & Conditions</h5>
+                <p>All payments must be made in full before the activation of any services.</p>
+                <p style={{ fontSize: '10px', color: '#cbd5e1', marginTop: '8px' }}>This is a computer generated invoice and does not require a physical signature.</p>
+              </div>
+
+              <div className="summary-section">
+                <table className="summary-table">
+                  <tbody>
+                    <tr>
+                      <td>Sub Total</td>
+                      <td>{billData.subtotalFormatted}</td>
+                    </tr>
+                    <tr>
+                      <td>GST Tax ({billData.gstPercentage}%)</td>
+                      <td>+{billData.gstAmountFormatted}</td>
+                    </tr>
+                    <tr className="total-row">
+                      <td>Total</td>
+                      <td>{billData.amountFormatted}</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div className="balance-due-bar">
+                  <span>Balance Due</span>
+                  <span>{billData.amountFormatted}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="modal-actions-bar">
+            <button onClick={() => setShowBillModal(false)} className="btn-modal btn-modal-close">
+              Close
+            </button>
+            <button onClick={downloadBill} className="btn-modal btn-modal-download">
+              📥 Download Bill
+            </button>
+            <button
+              onClick={handlePaymentSubmit}
+              disabled={processingPayment}
+              className="btn-modal btn-modal-pay"
+            >
+              {processingPayment ? 'Processing...' : '💳 Pay & Activate'}
+            </button>
+          </div>
+
+        </div>
+      </div>
+    )
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12 select-none animate-fade-in text-slate-700" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -255,7 +607,7 @@ const ClientAddonServices = () => {
 
       {/* Main Split Interface */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
+
         {/* Left Column: Form / Checkout (5 Cols) */}
         <div className="lg:col-span-5 space-y-6">
           <div className="bg-white rounded-3xl border border-slate-100 shadow-md p-6 space-y-5">
@@ -309,11 +661,10 @@ const ClientAddonServices = () => {
                     <button
                       key={item.value}
                       onClick={() => setSelectedRecipientType(item.value)}
-                      className={`flex-1 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
-                        selectedRecipientType === item.value
-                          ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
-                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
+                      className={`flex-1 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${selectedRecipientType === item.value
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
                     >
                       {item.label}
                     </button>
@@ -339,8 +690,8 @@ const ClientAddonServices = () => {
                   <div className="flex justify-between items-center">
                     <span>Applicable Records Count:</span>
                     <strong className="text-slate-800 font-mono">
-                      {addonPreview.student_count !== null 
-                        ? `${addonPreview.student_count} students` 
+                      {addonPreview.student_count !== null
+                        ? `${addonPreview.student_count} students`
                         : (addonPreview.teacher_count !== null ? `${addonPreview.teacher_count} staff` : '1 flat')}
                     </strong>
                   </div>
@@ -366,7 +717,7 @@ const ClientAddonServices = () => {
 
             {/* Pay Button */}
             <button
-              onClick={handlePaymentSubmit}
+              onClick={reviewAddonPayment}
               disabled={processingPayment || !addonPreview || loadingPreview}
               className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 transition-all shadow-md hover:shadow-lg"
             >
@@ -389,7 +740,7 @@ const ClientAddonServices = () => {
               <span>📋</span> Service Catalog Descriptions
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              
+
               <div className="p-3.5 bg-blue-50/50 border border-blue-100 rounded-2xl space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-black text-slate-800">🚌 Transportation Transit</span>
@@ -491,9 +842,8 @@ const ClientAddonServices = () => {
                           {p.addon_type}
                         </span>
                         {p.recipient_type && (
-                          <span className={`ml-2 inline-flex px-1.5 py-0.5 rounded text-[8px] font-bold ${
-                            p.recipient_type === 'teacher' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          }`}>{p.recipient_type === 'teacher' ? '👨‍🏫 Staff' : '👥 Students'}</span>
+                          <span className={`ml-2 inline-flex px-1.5 py-0.5 rounded text-[8px] font-bold ${p.recipient_type === 'teacher' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            }`}>{p.recipient_type === 'teacher' ? '👨‍🏫 Staff' : '👥 Students'}</span>
                         )}
                       </td>
                       <td className="px-4 py-3.5 text-center font-black text-blue-600 font-mono">
@@ -532,6 +882,8 @@ const ClientAddonServices = () => {
         )}
       </div>
 
+      {/* Add-on Bill Modal Overlay */}
+      <BillModal />
     </div>
   )
 }
