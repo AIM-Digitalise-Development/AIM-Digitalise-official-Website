@@ -81,8 +81,11 @@ export const getClientPendingCustomizationPayments = (token) =>
 export const getClientCustomPaymentHistory = (token) =>
   clientPortalFetch('GET', '/client/customization/payment-history', null, token)
 
-export const createCustomizationPaymentOrder = (requestId, token) =>
-  clientPortalFetch('POST', '/client/customization/create-payment-order', { customization_request_id: requestId }, token)
+export const createCustomizationPaymentOrder = (requestId, token, amount = null) =>
+  clientPortalFetch('POST', '/client/customization/create-payment-order', { 
+    customization_request_id: requestId,
+    ...(amount !== null ? { amount: Math.round(amount) } : {})
+  }, token)
 
 export const verifyCustomizationPayment = (paymentData, token) =>
   clientPortalFetch('POST', '/client/customization/verify-payment', paymentData, token)
@@ -98,3 +101,28 @@ export const createAddonPaymentOrder = (addonType, recipientType, token) =>
 
 export const verifyAddonPayment = (paymentData, token) =>
   clientPortalFetch('POST', '/client/addon/verify-payment', paymentData, token)
+
+export const getClientAddonCart = (token) =>
+  clientPortalFetch('GET', '/client/addon/cart', null, token)
+
+export const addAddonToCart = (addonType, recipientType, token) =>
+  clientPortalFetch('POST', '/client/addon/cart/add', { addon_type: addonType, recipient_type: recipientType }, token)
+
+export const removeAddonFromCart = (cartItemId, token) =>
+  clientPortalFetch('DELETE', `/client/addon/cart/remove/${cartItemId}`, null, token)
+
+export const clearAddonCart = (token) =>
+  clientPortalFetch('POST', '/client/addon/cart/clear', null, token)
+
+export const createCartPaymentOrder = (token) =>
+  clientPortalFetch('POST', '/client/addon/cart/create-order', null, token)
+
+export const verifyCartPayment = (paymentData, token) =>
+  clientPortalFetch('POST', '/client/addon/cart/verify-payment', paymentData, token)
+
+export const createUnifiedOrder = (cycle, token) =>
+  clientPortalFetch('POST', '/client/unified/create-order', { cycle }, token)
+
+export const verifyUnifiedPayment = (paymentData, token) =>
+  clientPortalFetch('POST', '/client/unified/verify-payment', paymentData, token)
+

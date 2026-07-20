@@ -61,7 +61,18 @@ client.interceptors.response.use(
         return client(originalRequest)
       } catch (refreshError) {
         localStorage.clear()
-        window.location.href = '/login'
+        const path = window.location.pathname
+        if (path.startsWith('/admin')) {
+          window.location.href = '/admin-login'
+        } else if (path.startsWith('/employee')) {
+          window.location.href = '/employee-login'
+        } else if (path.startsWith('/partner')) {
+          window.location.href = '/partner/login'
+        } else if (path.startsWith('/client')) {
+          window.location.href = '/client/login'
+        } else {
+          window.location.href = '/login'
+        }
         return Promise.reject(refreshError)
       }
     }

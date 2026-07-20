@@ -8,7 +8,7 @@ const cycleDisplayNames = {
   'monthly': 'Monthly'
 }
 
-const PaymentCyclesCard = ({ paymentCycles, selectedCycle, onCycleChange }) => {
+const PaymentCyclesCard = ({ paymentCycles, selectedCycle, onCycleChange, isLocked }) => {
   if (!paymentCycles || !paymentCycles.cycles) return null
 
   return (
@@ -17,7 +17,9 @@ const PaymentCyclesCard = ({ paymentCycles, selectedCycle, onCycleChange }) => {
         <div>
           <h3 className="text-[13px] font-bold text-gray-800">Select Billing Cycle</h3>
           <p className="text-[11px] text-gray-400 mt-0.5">
-            Choose a longer billing cycle for additional discounts.
+            {isLocked
+              ? 'Your billing cycle is locked to match your active subscription plan.'
+              : 'Choose a longer billing cycle for additional discounts.'}
           </p>
         </div>
 
@@ -30,10 +32,16 @@ const PaymentCyclesCard = ({ paymentCycles, selectedCycle, onCycleChange }) => {
             return (
               <motion.div
                 key={cycle}
-                onClick={() => onCycleChange(cycle)}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.98 }}
-                className="rounded-lg transition-all duration-200 text-center cursor-pointer flex flex-col justify-between p-4"
+                onClick={() => {
+                  if (!isLocked) {
+                    onCycleChange(cycle)
+                  }
+                }}
+                whileHover={isLocked ? {} : { scale: 1.01 }}
+                whileTap={isLocked ? {} : { scale: 0.98 }}
+                className={`rounded-lg transition-all duration-200 text-center flex flex-col justify-between p-4 ${
+                  isLocked && !isSelected ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                }`}
                 style={{
                   border: isSelected ? '2px solid #1a6b54' : '1px solid #ebedf0',
                   background: isSelected ? '#f0fdf9' : '#fafafa',

@@ -66,6 +66,8 @@ export const ROUTES = {
   },
   AUTH: {
     LOGIN: '/login',
+    ADMIN_LOGIN: '/admin-login',
+    EMPLOYEE_LOGIN: '/employee-login',
     REGISTER: '/register',
     FORGOT_PASSWORD: '/forgot-password',
     RESET_PASSWORD: '/reset-password',

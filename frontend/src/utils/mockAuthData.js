@@ -364,6 +364,47 @@ export const getMockResponse = (url, method, data = null) => {
   const lowercaseUrl = normalizedUrl
   if (!data) data = {}
 
+  if (typeof window !== 'undefined') {
+    if (!window.__mockCustomizationRequests) {
+      window.__mockCustomizationRequests = [
+        {
+          id: 101,
+          customization_text: "[iOS App Development] (Target Rollout: 2026-09-15)\n\nRequesting a premium iOS wrapper with notification support.",
+          amount: 15000,
+          status: 'amount_set',
+          created_at: '2026-07-01T12:00:00Z'
+        },
+        {
+          id: 102,
+          customization_text: "[Biometric Machine API] (Target Rollout: 2026-08-30)\n\nIntegrate local face-recognition machines with school attendance module.",
+          amount: 8500,
+          status: 'amount_set',
+          created_at: '2026-07-02T14:30:00Z'
+        },
+        {
+          id: 103,
+          customization_text: "[Custom Report Design] (Target Rollout: 2026-08-10)\n\nFormat fee book and report card PDF with custom branding.",
+          amount: null,
+          status: 'pending',
+          created_at: '2026-07-05T10:00:00Z'
+        }
+      ]
+    }
+
+    if (!window.__mockCustomizationPayments) {
+      window.__mockCustomizationPayments = [
+        {
+          id: 201,
+          razorpay_payment_id: 'pay_CUST12345678',
+          customization_text: "[WhatsApp Alerts Integration]\n\nAutomated monthly fee receipt delivery via WhatsApp API.",
+          amount: 5900,
+          status: 'success',
+          created_at: '2026-06-15T09:00:00Z'
+        }
+      ]
+    }
+  }
+
   if (lowercaseUrl.includes('/public/rm-options')) {
     return {
       success: true,
@@ -1049,7 +1090,7 @@ export const getMockResponse = (url, method, data = null) => {
       success: true,
       data: {
         student_count: 250,
-        min_students: 100
+        min_students: 215  // students covered by the initial paid subscription
       }
     }
   }
@@ -1106,13 +1147,25 @@ export const getMockResponse = (url, method, data = null) => {
     
     const mult = multipliers[cycle] || 12
     const disc = discounts[cycle] || 15
+
+    // Simulate: 250 total students, 215 were paid initially → 35 new unpaid students
     const studentCount = 250
+    const baseStudentCount = 215 // students paid at first subscription
+    const extraStudents = studentCount - baseStudentCount // 35 new unpaid students
+    const hasExtraStudents = extraStudents > 0
+
     const baseMonthly = studentCount * 10
     const baseTotal = baseMonthly * mult
     const discountVal = baseTotal * (disc / 100)
     const subtotal = baseTotal - discountVal
     const gst = subtotal * 0.18
     const grandTotal = subtotal + gst
+
+    // Pro-rated extra students amount (simplified: extra students * rate * remaining fraction of cycle)
+    const extraMonthly = extraStudents * 10
+    const extraSubtotal = extraMonthly * mult * (1 - disc / 100)
+    const extraGst = extraSubtotal * 0.18
+    const extraTotal = extraSubtotal + extraGst
     
     return {
       success: true,
@@ -1128,7 +1181,11 @@ export const getMockResponse = (url, method, data = null) => {
           gst_percentage: 18,
           gst_amount: gst,
           total_amount: grandTotal,
-          savings: discountVal
+          savings: discountVal,
+          // Extra students fields — key fields read by Products.jsx
+          extra_students_overdue: hasExtraStudents ? extraStudents : 0,
+          is_extra_students_payment: hasExtraStudents,
+          extra_students_amount: hasExtraStudents ? Math.round(extraTotal * 100) / 100 : 0
         },
         breakdown: {
           formula: `${studentCount} Students * ₹10.00/student = ₹${baseMonthly.toLocaleString()}/month`,
@@ -1160,6 +1217,9 @@ export const getMockResponse = (url, method, data = null) => {
   }
 
   if (lowercaseUrl.includes('/client/verify-subscription-payment')) {
+    if (typeof window !== 'undefined') {
+      window.__mockSubscriptionPaid = true
+    }
     return {
       success: true,
       message: 'Subscription payment successfully processed and recorded (Mock Mode).'
@@ -1167,24 +1227,25 @@ export const getMockResponse = (url, method, data = null) => {
   }
 
   if (lowercaseUrl.includes('/client/payment-status')) {
+    const isPaid = typeof window !== 'undefined' && window.__mockSubscriptionPaid
     return {
       success: true,
       data: {
-        show_pay_now: true,
-        next_payment_date: '2026-07-15',
-        message: 'Your subscription period has ended. Please renew your subscription.',
+        show_pay_now: !isPaid,
+        next_payment_date: isPaid ? '2027-07-15' : '2026-07-15',
+        message: isPaid ? 'Your subscription is active.' : 'Your subscription period has ended. Please renew your subscription.',
         has_previous_payments: true,
-        total_payments_made: 2,
+        total_payments_made: isPaid ? 3 : 2,
         delivery_info: {
           first_payment_date: '2026-01-01',
-          last_payment_date: '2026-04-01',
+          last_payment_date: isPaid ? new Date().toISOString().split('T')[0] : '2026-04-01',
           last_payment_cycle: 'quarterly',
-          next_due_date: '2026-07-15',
-          days_until_due: 30,
+          next_due_date: isPaid ? '2027-07-15' : '2026-07-15',
+          days_until_due: isPaid ? 365 : 30,
           is_period_over: false,
           activated_at: '2026-01-02',
-          unpaid_months: ['May 2026', 'June 2026'],
-          total_due_amount: 5000
+          unpaid_months: isPaid ? [] : ['May 2026', 'June 2026'],
+          total_due_amount: isPaid ? 0 : 5000
         }
       }
     }
@@ -1229,25 +1290,11 @@ export const getMockResponse = (url, method, data = null) => {
   }
 
   if (lowercaseUrl.includes('/client/customization/pending-payments')) {
+    const pending = (window.__mockCustomizationRequests || []).filter(r => r.status === 'amount_set')
     return {
       success: true,
       data: {
-        pending_requests: [
-          {
-            id: 101,
-            customization_text: "[iOS App Development] (Target Rollout: 2026-09-15)\n\nRequesting a premium iOS wrapper with notification support.",
-            amount: 15000,
-            status: 'amount_set',
-            created_at: '2026-07-01T12:00:00Z'
-          },
-          {
-            id: 102,
-            customization_text: "[Biometric Machine API] (Target Rollout: 2026-08-30)\n\nIntegrate local face-recognition machines with school attendance module.",
-            amount: 8500,
-            status: 'amount_set',
-            created_at: '2026-07-02T14:30:00Z'
-          }
-        ]
+        pending_requests: pending
       }
     }
   }
@@ -1256,25 +1303,26 @@ export const getMockResponse = (url, method, data = null) => {
     return {
       success: true,
       data: {
-        payments: [
-          {
-            id: 201,
-            razorpay_payment_id: 'pay_CUST12345678',
-            customization_text: "[WhatsApp Alerts Integration]\n\nAutomated monthly fee receipt delivery via WhatsApp API.",
-            amount: 5900,
-            status: 'success',
-            created_at: '2026-06-15T09:00:00Z'
-          }
-        ]
+        payments: window.__mockCustomizationPayments || []
       }
     }
   }
 
   if (lowercaseUrl.includes('/client/customization/create-payment-order')) {
+    const reqId = Number(data?.customization_request_id)
+    let orderAmount = data?.amount || 5000
+
+    if (typeof window !== 'undefined' && window.__mockCustomizationRequests) {
+      const found = window.__mockCustomizationRequests.find(r => r.id === reqId)
+      if (found && found.amount) {
+        orderAmount = found.amount
+      }
+    }
+
     return {
       success: true,
       simulated: true,
-      amount: data?.amount || 5000,
+      amount: orderAmount,
       order_id: 'order_cust_' + Math.random().toString(36).substring(2, 12),
       payment_record_id: 'record_' + Math.random().toString(36).substring(2, 12),
       key: 'rzp_test_mockkey123',
@@ -1285,6 +1333,47 @@ export const getMockResponse = (url, method, data = null) => {
   }
 
   if (lowercaseUrl.includes('/client/customization/verify-payment')) {
+    const reqId = data?.customization_request_id ? Number(data.customization_request_id) : null
+    const payId = data?.razorpay_payment_id || 'pay_mock_' + Date.now()
+
+    if (typeof window !== 'undefined' && window.__mockCustomizationRequests) {
+      if (reqId) {
+        const reqIdx = window.__mockCustomizationRequests.findIndex(r => r.id === reqId)
+        if (reqIdx !== -1) {
+          const req = window.__mockCustomizationRequests[reqIdx]
+          window.__mockCustomizationRequests[reqIdx] = {
+            ...req,
+            status: 'success'
+          }
+
+          if (!window.__mockCustomizationPayments) window.__mockCustomizationPayments = []
+          window.__mockCustomizationPayments.push({
+            id: Math.max(...(window.__mockCustomizationPayments || []).map(p => p.id), 200) + 1,
+            razorpay_payment_id: payId,
+            customization_text: req.customization_text,
+            amount: req.amount || 0,
+            status: 'success',
+            created_at: new Date().toISOString()
+          })
+        }
+      } else {
+        // Consolidated bulk checkout
+        const pendingReqs = window.__mockCustomizationRequests.filter(r => r.status === 'amount_set')
+        pendingReqs.forEach(req => {
+          req.status = 'success'
+          if (!window.__mockCustomizationPayments) window.__mockCustomizationPayments = []
+          window.__mockCustomizationPayments.push({
+            id: Math.max(...(window.__mockCustomizationPayments || []).map(p => p.id), 200) + 1,
+            razorpay_payment_id: payId,
+            customization_text: req.customization_text,
+            amount: req.amount || 0,
+            status: 'success',
+            created_at: new Date().toISOString()
+          })
+        })
+      }
+    }
+
     return {
       success: true,
       message: 'Customization payment verified successfully (Mock Mode).'
@@ -1295,34 +1384,25 @@ export const getMockResponse = (url, method, data = null) => {
     return {
       success: true,
       data: {
-        requests: [
-          {
-            id: 101,
-            customization_text: "[iOS App Development] (Target Rollout: 2026-09-15)\n\nRequesting a premium iOS wrapper with notification support.",
-            amount: 15000,
-            status: 'amount_set',
-            created_at: '2026-07-01T12:00:00Z'
-          },
-          {
-            id: 102,
-            customization_text: "[Biometric Machine API] (Target Rollout: 2026-08-30)\n\nIntegrate local face-recognition machines with school attendance module.",
-            amount: 8500,
-            status: 'amount_set',
-            created_at: '2026-07-02T14:30:00Z'
-          },
-          {
-            id: 103,
-            customization_text: "[Custom Report Design] (Target Rollout: 2026-08-10)\n\nFormat fee book and report card PDF with custom branding.",
-            amount: null,
-            status: 'pending',
-            created_at: '2026-07-05T10:00:00Z'
-          }
-        ]
+        requests: window.__mockCustomizationRequests || []
       }
     }
   }
 
   if (lowercaseUrl.includes('/client/customization/submit')) {
+    const text = data?.customization_text || ''
+    const newId = Math.max(...(window.__mockCustomizationRequests || []).map(r => r.id), 100) + 1
+    const newReq = {
+      id: newId,
+      customization_text: text,
+      amount: null,
+      status: 'pending',
+      created_at: new Date().toISOString()
+    }
+    if (typeof window !== 'undefined') {
+      if (!window.__mockCustomizationRequests) window.__mockCustomizationRequests = []
+      window.__mockCustomizationRequests.push(newReq)
+    }
     return {
       success: true,
       message: 'Customization request submitted successfully.'
@@ -1349,6 +1429,23 @@ export const getMockResponse = (url, method, data = null) => {
           payment_date_formatted: '10 Jun 2026',
           payment_id: 'pay_addon_1001',
           payment_status: 'paid'
+        },
+        {
+          addon_type: 'Hostel',
+          recipient_type: 'student',
+          student_count: 50,
+          teacher_count: null,
+          start_date_formatted: '01 Jul 2026',
+          end_date_formatted: '01 Jul 2027',
+          subtotal: 3000,
+          gst_amount: 540,
+          amount: 3540,
+          amount_formatted: '₹ 3,540.00',
+          subtotal_formatted: '₹ 3,000.00',
+          gst_amount_formatted: '₹ 540.00',
+          payment_date_formatted: '—',
+          payment_id: 'pay_addon_1002',
+          payment_status: 'pending'
         }
       ]
     }
@@ -1364,14 +1461,15 @@ export const getMockResponse = (url, method, data = null) => {
       const addonType = urlObj.searchParams.get('addon_type') || 'Transportation'
       const recipientType = urlObj.searchParams.get('recipient_type') || 'student'
       
-      const count = recipientType === 'teacher' ? 45 : 850
+      let count = recipientType === 'teacher' ? 45 : 850
+      if (addonType === 'Hostel' || addonType === 'hostel') count = 50
       let rate = 36
-      if (addonType === 'Hostel') rate = 60
+      if (addonType === 'Hostel' || addonType === 'hostel') rate = 60
       else if (addonType === 'Domain Services') rate = 7300
       else if (addonType === 'id card Type A') rate = 60
       else if (addonType === 'id card Type B') rate = 42
       else if (addonType === 'id card Type C') rate = 37
-      else if (addonType === 'Previous Year Backup') rate = 36
+      else if (addonType === 'Previous Year Backup' || addonType === 'previous_year') rate = 36
       
       const finalCount = addonType === 'Domain Services' ? 1 : count
       const subtotal = rate * finalCount
@@ -1403,14 +1501,15 @@ export const getMockResponse = (url, method, data = null) => {
 
   if (lowercaseUrl.includes('/client/addon/create-order') && method === 'POST') {
     const { addon_type, recipient_type } = data || {}
-    const count = recipient_type === 'teacher' ? 45 : 850
+    let count = recipient_type === 'teacher' ? 45 : 850
+    if (addon_type === 'Hostel' || addon_type === 'hostel') count = 50
     let rate = 36
-    if (addon_type === 'Hostel') rate = 60
+    if (addon_type === 'Hostel' || addon_type === 'hostel') rate = 60
     else if (addon_type === 'Domain Services') rate = 7300
     else if (addon_type === 'id card Type A') rate = 60
     else if (addon_type === 'id card Type B') rate = 42
     else if (addon_type === 'id card Type C') rate = 37
-    else if (addon_type === 'Previous Year Backup') rate = 36
+    else if (addon_type === 'Previous Year Backup' || addon_type === 'previous_year') rate = 36
     
     const finalCount = addon_type === 'Domain Services' ? 1 : count
     const subtotal = rate * finalCount
@@ -1430,14 +1529,15 @@ export const getMockResponse = (url, method, data = null) => {
 
   if (lowercaseUrl.includes('/client/addon/verify-payment') && method === 'POST') {
     const { addon_type, recipient_type } = data || {}
-    const count = recipient_type === 'teacher' ? 45 : 850
+    let count = recipient_type === 'teacher' ? 45 : 850
+    if (addon_type === 'Hostel' || addon_type === 'hostel') count = 50
     let rate = 36
-    if (addon_type === 'Hostel') rate = 60
+    if (addon_type === 'Hostel' || addon_type === 'hostel') rate = 60
     else if (addon_type === 'Domain Services') rate = 7300
     else if (addon_type === 'id card Type A') rate = 60
     else if (addon_type === 'id card Type B') rate = 42
     else if (addon_type === 'id card Type C') rate = 37
-    else if (addon_type === 'Previous Year Backup') rate = 36
+    else if (addon_type === 'Previous Year Backup' || addon_type === 'previous_year') rate = 36
     
     const finalCount = addon_type === 'Domain Services' ? 1 : count
     const subtotal = rate * finalCount
@@ -1470,12 +1570,318 @@ export const getMockResponse = (url, method, data = null) => {
 
     if (typeof window !== 'undefined') {
       if (!window.__mockAddonHistory) window.__mockAddonHistory = []
-      window.__mockAddonHistory.unshift(newPayment)
+      const existingIdx = window.__mockAddonHistory.findIndex(
+        p => p.addon_type === addon_type && p.payment_status === 'pending'
+      )
+      if (existingIdx !== -1) {
+        window.__mockAddonHistory[existingIdx] = {
+          ...window.__mockAddonHistory[existingIdx],
+          payment_status: 'paid',
+          payment_date_formatted: formatDate(today),
+          payment_id: newPayment.payment_id
+        }
+      } else {
+        window.__mockAddonHistory.unshift(newPayment)
+      }
     }
 
     return {
       success: true,
       message: 'Payment verified and service activated successfully.'
+    }
+  }
+
+  // --- Client Addon Cart Mocks ---
+  if (lowercaseUrl.includes('/client/addon/cart')) {
+    if (typeof window !== 'undefined' && !window.__mockAddonCart) {
+      window.__mockAddonCart = [];
+    }
+
+    // 1. GET /client/addon/cart
+    if (method === 'GET' && lowercaseUrl.endsWith('/client/addon/cart')) {
+      const items = window.__mockAddonCart || [];
+      const subtotal = items.reduce((acc, item) => acc + parseFloat(item.amount || 0), 0);
+      const gst = Math.round(subtotal * 18) / 100;
+      const total = subtotal + gst;
+      
+      const fmt = (v) => `₹ ${v.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+
+      return {
+        success: true,
+        data: {
+          items,
+          total_subtotal_formatted: fmt(subtotal),
+          total_gst_formatted: fmt(gst),
+          total_amount_formatted: fmt(total),
+          total_amount: total,
+          item_count: items.length
+        }
+      };
+    }
+
+    // 2. POST /client/addon/cart/add
+    if (method === 'POST' && lowercaseUrl.includes('/client/addon/cart/add')) {
+      const { addon_type, recipient_type } = data || {};
+      
+      // Determine student count & rate
+      let count = recipient_type === 'teacher' ? 45 : 850;
+      if (addon_type === 'Hostel' || addon_type === 'hostel') count = 50;
+      let rate = 36;
+      if (addon_type === 'Hostel' || addon_type === 'hostel') rate = 60;
+      else if (addon_type === 'Domain Services') rate = 7300;
+      else if (addon_type === 'id card Type A') rate = 60;
+      else if (addon_type === 'id card Type B') rate = 42;
+      else if (addon_type === 'id card Type C') rate = 37;
+      else if (addon_type === 'Previous Year Backup' || addon_type === 'previous_year') rate = 36;
+
+      const finalCount = addon_type === 'Domain Services' ? 1 : count;
+      const itemSubtotal = rate * finalCount;
+      
+      const today = new Date();
+      const nextYear = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate());
+      
+      const newCartItem = {
+        id: 'cart_item_' + Math.floor(Math.random() * 1000000),
+        addon_type,
+        recipient_type,
+        student_count: finalCount,
+        start_date: today.toISOString(),
+        end_date: nextYear.toISOString(),
+        amount: itemSubtotal
+      };
+
+      if (typeof window !== 'undefined') {
+        if (!window.__mockAddonCart) window.__mockAddonCart = [];
+        // Prevent duplicate items of the exact same type and recipient
+        const dupIdx = window.__mockAddonCart.findIndex(
+          item => item.addon_type === addon_type && item.recipient_type === recipient_type
+        );
+        if (dupIdx !== -1) {
+          return {
+            success: false,
+            message: `Service '${addon_type}' for ${recipient_type} is already in the cart!`
+          };
+        }
+        window.__mockAddonCart.push(newCartItem);
+      }
+
+      return {
+        success: true,
+        message: 'Item added to cart successfully.'
+      };
+    }
+
+    // 3. DELETE /client/addon/cart/remove/:id
+    if (method === 'DELETE' && lowercaseUrl.includes('/client/addon/cart/remove/')) {
+      const parts = lowercaseUrl.split('/remove/');
+      const cartItemId = parts[parts.length - 1];
+      
+      if (typeof window !== 'undefined' && window.__mockAddonCart) {
+        window.__mockAddonCart = window.__mockAddonCart.filter(item => item.id !== cartItemId && String(item.id) !== String(cartItemId));
+      }
+
+      return {
+        success: true,
+        message: 'Item removed from cart successfully.'
+      };
+    }
+
+    // 4. POST /client/addon/cart/clear
+    if (method === 'POST' && lowercaseUrl.includes('/client/addon/cart/clear')) {
+      if (typeof window !== 'undefined') {
+        window.__mockAddonCart = [];
+      }
+      return {
+        success: true,
+        message: 'Cart cleared successfully.'
+      };
+    }
+
+    // 5. POST /client/addon/cart/create-order
+    if (method === 'POST' && lowercaseUrl.includes('/client/addon/cart/create-order')) {
+      const items = window.__mockAddonCart || [];
+      const subtotal = items.reduce((acc, item) => acc + parseFloat(item.amount || 0), 0);
+      const gst = subtotal * 0.18;
+      const total = subtotal + gst;
+
+      return {
+        success: true,
+        simulated: true,
+        order_id: 'order_cart_' + Math.floor(Math.random() * 1000000),
+        amount: Math.round(total),
+        item_count: items.length,
+        currency: 'INR',
+        key: 'rzp_test_mockkey123'
+      };
+    }
+
+    // 6. POST /client/addon/cart/verify-payment
+    if (method === 'POST' && lowercaseUrl.includes('/client/addon/cart/verify-payment')) {
+      const items = window.__mockAddonCart || [];
+      const today = new Date();
+      const formatDate = (date) => {
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return `${String(date.getDate()).padStart(2, '0')} ${months[date.getMonth()]} ${date.getFullYear()}`;
+      };
+
+      if (typeof window !== 'undefined') {
+        if (!window.__mockAddonHistory) window.__mockAddonHistory = [];
+        
+        items.forEach(item => {
+          const subtotal = parseFloat(item.amount);
+          const gst = subtotal * 0.18;
+          const total = subtotal + gst;
+
+          const newPayment = {
+            addon_type: item.addon_type,
+            recipient_type: item.recipient_type,
+            student_count: item.student_count,
+            teacher_count: item.recipient_type === 'teacher' ? item.student_count : null,
+            start_date_formatted: formatDate(today),
+            end_date_formatted: formatDate(new Date(today.getFullYear() + 1, today.getMonth(), today.getDate())),
+            subtotal: subtotal,
+            gst_amount: gst,
+            amount: total,
+            amount_formatted: `₹ ${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+            subtotal_formatted: `₹ ${subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+            gst_amount_formatted: `₹ ${gst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+            payment_date_formatted: formatDate(today),
+            payment_id: 'pay_addon_' + Math.floor(Math.random() * 1000000),
+            payment_status: 'paid'
+          };
+          window.__mockAddonHistory.unshift(newPayment);
+        });
+
+        // Clear cart
+        window.__mockAddonCart = [];
+      }
+
+      return {
+        success: true,
+        message: 'Cart payment verified and services activated successfully.'
+      };
+    }
+  }
+
+  // --- Client Unified Checkout Mocks ---
+  if (lowercaseUrl.includes('/client/unified/create-order') && method === 'POST') {
+    const { cycle } = data || {}
+    const items = window.__mockAddonCart || []
+    
+    // 1. Subscription calc
+    let subAmount = 3000
+    if (cycle === 'annual') subAmount = 30000
+    else if (cycle === 'half_yearly' || cycle === 'half-yearly') subAmount = 15000
+    else if (cycle === 'quarterly') subAmount = 7500
+    else if (cycle === 'monthly') subAmount = 2500
+
+    // 2. Customizations calc
+    const pendingCusts = (window.__mockCustomizationRequests || []).filter(r => r.status === 'amount_set')
+    const custBaseTotal = pendingCusts.reduce((acc, req) => acc + parseFloat(req.amount || 0), 0)
+    const custTotal = Math.round(custBaseTotal * 1.18)
+
+    // 3. Addon cart calc
+    const addonBaseTotal = items.reduce((acc, item) => acc + parseFloat(item.amount || 0), 0)
+    const addonTotal = Math.round(addonBaseTotal * 1.18)
+
+    const totalAmount = subAmount + custTotal + addonTotal
+
+    return {
+      success: true,
+      simulated: true,
+      order_id: 'order_unified_' + Math.floor(Math.random() * 1000000),
+      amount: totalAmount,
+      currency: 'INR',
+      key: 'rzp_test_mockkey123',
+      client_name: 'Greenfield School',
+      client_email: 'info@greenfield.edu.in',
+      subscription: {
+        cycle: cycle || 'annual',
+        amount: subAmount
+      },
+      customization: {
+        request_ids: pendingCusts.map(r => r.id),
+        amount: custTotal
+      },
+      addon: {
+        items_count: items.length,
+        amount: addonTotal
+      }
+    }
+  }
+
+  if (lowercaseUrl.includes('/client/unified/verify-payment') && method === 'POST') {
+    const { subscription, customization, addon } = data || {}
+
+    // A. Verify Subscription
+    if (typeof window !== 'undefined') {
+      window.__mockSubscriptionPaid = true
+    }
+
+    // B. Verify Customizations
+    if (customization && customization.request_ids) {
+      customization.request_ids.forEach(reqId => {
+        if (window.__mockCustomizationRequests) {
+          const reqIdx = window.__mockCustomizationRequests.findIndex(r => r.id === Number(reqId))
+          if (reqIdx !== -1) {
+            const req = window.__mockCustomizationRequests[reqIdx]
+            window.__mockCustomizationRequests[reqIdx] = {
+              ...req,
+              status: 'success'
+            }
+            if (!window.__mockCustomizationPayments) window.__mockCustomizationPayments = []
+            window.__mockCustomizationPayments.push({
+              id: Math.max(...(window.__mockCustomizationPayments || []).map(p => p.id), 200) + 1,
+              razorpay_payment_id: 'pay_mock_' + Date.now(),
+              customization_text: req.customization_text,
+              amount: req.amount || 0,
+              status: 'success',
+              created_at: new Date().toISOString()
+            })
+          }
+        }
+      })
+    }
+
+    // C. Verify Addon Cart
+    const items = window.__mockAddonCart || []
+    const today = new Date()
+    const formatDate = (date) => {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      return `${String(date.getDate()).padStart(2, '0')} ${months[date.getMonth()]} ${date.getFullYear()}`
+    }
+    
+    if (typeof window !== 'undefined') {
+      if (!window.__mockAddonHistory) window.__mockAddonHistory = []
+      items.forEach(item => {
+        const subtotal = parseFloat(item.amount)
+        const gst = subtotal * 0.18
+        const total = subtotal + gst
+        const newPayment = {
+          addon_type: item.addon_type,
+          recipient_type: item.recipient_type,
+          student_count: item.student_count,
+          teacher_count: item.recipient_type === 'teacher' ? item.student_count : null,
+          start_date_formatted: formatDate(today),
+          end_date_formatted: formatDate(new Date(today.getFullYear() + 1, today.getMonth(), today.getDate())),
+          subtotal: subtotal,
+          gst_amount: gst,
+          amount: total,
+          amount_formatted: `₹ ${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+          subtotal_formatted: `₹ ${subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+          gst_amount_formatted: `₹ ${gst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+          payment_date_formatted: formatDate(today),
+          payment_id: 'pay_addon_' + Math.floor(Math.random() * 1000000),
+          payment_status: 'paid'
+        }
+        window.__mockAddonHistory.unshift(newPayment)
+      })
+      window.__mockAddonCart = []
+    }
+
+    return {
+      success: true,
+      message: 'Unified payment verified and all services successfully updated!'
     }
   }
 

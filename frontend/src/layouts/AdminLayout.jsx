@@ -19,10 +19,10 @@ const AdminLayout = () => {
     document.documentElement.classList.add('dark')
   }, [])
 
-  // Protect the route: if not authenticated as admin, redirect home
+  // Protect the route: if not authenticated as admin, redirect to admin login page
   useEffect(() => {
     if (ready && (!isAuthenticated || role !== 'admin')) {
-      navigate(ROUTES.HOME, { replace: true })
+      navigate(ROUTES.AUTH.ADMIN_LOGIN, { replace: true })
     }
   }, [ready, isAuthenticated, role, navigate])
 
@@ -33,7 +33,7 @@ const AdminLayout = () => {
       console.error('Logout API call failed', error)
     } finally {
       logout()                  // clear Zustand store + localStorage
-      navigate(`${ROUTES.AUTH.LOGIN}?role=admin`)     // redirect to admin login tab
+      navigate(ROUTES.AUTH.ADMIN_LOGIN)     // redirect to admin login page
     }
   }
 

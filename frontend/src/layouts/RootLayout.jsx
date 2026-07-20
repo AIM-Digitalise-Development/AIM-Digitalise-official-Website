@@ -703,7 +703,7 @@ const RootLayout = () => {
                     >
                       <a
                         role="menuitem"
-                        href={`${ROUTES.AUTH.LOGIN}?role=employee`}
+                        href={ROUTES.AUTH.EMPLOYEE_LOGIN}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => setIsFooterLoginMenuOpen(false)}
@@ -716,7 +716,7 @@ const RootLayout = () => {
                       </a>
                       <a
                         role="menuitem"
-                        href={`${ROUTES.AUTH.LOGIN}?role=admin`}
+                        href={ROUTES.AUTH.ADMIN_LOGIN}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => setIsFooterLoginMenuOpen(false)}

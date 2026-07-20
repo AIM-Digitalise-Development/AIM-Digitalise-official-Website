@@ -171,7 +171,11 @@ const ClientSubscription = () => {
           if (cyclesRes.data.monthly_subscription !== undefined) {
             setMonthlySubscription(cyclesRes.data.monthly_subscription)
           }
-          await calculateSubscriptionForCycle('annual', clientToken)
+          const cycleToCalc = statusRes?.data?.delivery_info?.last_payment_cycle
+            ? (statusRes.data.delivery_info.last_payment_cycle.toLowerCase() === 'annual' ? 'annual' : (statusRes.data.delivery_info.last_payment_cycle.toLowerCase() === 'half_yearly' ? 'half_yearly' : (statusRes.data.delivery_info.last_payment_cycle.toLowerCase() === 'quarterly' ? 'quarterly' : 'monthly')))
+            : 'annual'
+          setSelectedCycle(cycleToCalc)
+          await calculateSubscriptionForCycle(cycleToCalc, clientToken)
           setStudentCountWarning(null)
         } else {
           if (cyclesRes?.error_code === 'NO_STUDENTS_FOUND') {
@@ -371,7 +375,9 @@ const ClientSubscription = () => {
       totalWithGST,
       // Per-day for display
       perDayAmount,
-      cycleMonths
+      cycleMonths,
+      extraStudentsOverdue: calc.extra_students_overdue || 0,
+      isExtraStudentsPayment: calc.is_extra_students_payment || false
     }
 
     setBillData(bill)
@@ -465,6 +471,10 @@ const ClientSubscription = () => {
   }
 
   const handleCycleChange = (cycle) => {
+    if (deliveryInfo?.last_payment_cycle) {
+      setError('Cannot change billing cycle: Your active subscription cycle is locked.')
+      return
+    }
     if (hasZeroStudents && perPerson === 1) {
       setError('Cannot change payment cycle: No students found in your school database.')
       return
@@ -618,6 +628,7 @@ const ClientSubscription = () => {
             carryover_to: orderRes.carryover_to || null,
             carryover_days: orderRes.carryover_days || 0,
             student_count: orderRes.student_count || null,
+            is_extra_students_payment: orderRes.is_extra_students_payment || false,
           }, clientToken)
 
           if (verifyRes.success) {
@@ -657,6 +668,7 @@ const ClientSubscription = () => {
               carryover_to: orderRes.carryover_to || null,
               carryover_days: orderRes.carryover_days || 0,
               student_count: orderRes.student_count || null,
+              is_extra_students_payment: orderRes.is_extra_students_payment || false,
             }, clientToken)
 
             if (verifyRes.success) {
@@ -832,11 +844,28 @@ const ClientSubscription = () => {
                 <div className="address-block">
                   <h4>Bill To</h4>
                   <div className="client-highlight-name">{billData.clientName}</div>
-                  <p>
+                  <p style={{ lineHeight: '1.6' }}>
                     <strong>ID:</strong> {billData.clientId}<br/>
                     <strong>School:</strong> {billData.schoolName || '-'}<br/>
                     <strong>Product:</strong> {billData.productName || '-'}<br/>
-                    <strong>Billing Cycle:</strong> {billData.cycle}
+                    <strong>Billing Cycle:</strong> {billData.cycle}<br/>
+                    <strong>Students:</strong> {billData.studentCount}<br/>
+                    <strong>Billing Type:</strong>{' '}
+                    <span className={`badge ${billData.isExtraStudentsPayment ? 'badge-per-person' : (billData.perPerson === 1 ? 'badge-per-person' : 'badge-flat')}`} style={{ fontSize: '10px', padding: '2px 8px', textTransform: 'none' }}>
+                      {billData.isExtraStudentsPayment ? '👥 Extra Students (Pro-rated)' : (billData.perPerson === 1 ? '👥 Per Student' : '📦 Flat Rate')}
+                    </span>
+                    {billData.isExtraStudentsPayment ? (
+                      <span className="badge badge-regular" style={{ backgroundColor: '#fef3c7', color: '#d97706', marginLeft: '6px', fontSize: '10px', padding: '2px 8px', textTransform: 'none' }}>New Students Fee</span>
+                    ) : (
+                      <>
+                        {billData.isFirstPayment && (
+                          <span className="badge badge-first" style={{ marginLeft: '6px', fontSize: '10px', padding: '2px 8px', textTransform: 'none' }}>First Payment</span>
+                        )}
+                        {!billData.isFirstPayment && (
+                          <span className="badge badge-regular" style={{ marginLeft: '6px', fontSize: '10px', padding: '2px 8px', textTransform: 'none' }}>Regular Payment</span>
+                        )}
+                      </>
+                    )}
                   </p>
                 </div>
                 <div className="address-block">
@@ -876,7 +905,13 @@ const ClientSubscription = () => {
             <div style={{ marginBottom: '24px', padding: '16px', background: '#f8fafc', borderRadius: '4px', border: '1px dashed #c25e17', fontSize: '13px' }}>
               <strong style={{ color: '#c25e17', display: 'block', marginBottom: '6px' }}>Pricing & Billing Period Info:</strong>
               <p style={{ color: '#475569', margin: '4px 0', lineHeight: '1.5' }}>
-                <strong>Formula:</strong> {billData.perPerson === 1 ? `₹${billData.monthlySubscription || (billData.studentCount > 0 ? (billData.baseMonthlyAmount / billData.studentCount) : 10)} × ${billData.studentCount} students = ₹${billData.baseMonthlyAmount} per month` : `Flat Rate: ₹${billData.monthlySubscription || billData.baseMonthlyAmount} per month`}
+                <strong>Formula:</strong> {billData.isExtraStudentsPayment 
+                  ? `Extra Students Fee: ₹${billData.monthlySubscription || 10} per student/month (pro-rated) × ${billData.extraStudentsOverdue} student(s) = ₹${billData.totalAmount}`
+                  : (billData.perPerson === 1 
+                      ? `₹${billData.monthlySubscription || (billData.studentCount > 0 ? (billData.baseMonthlyAmount / billData.studentCount) : 10)} × ${billData.studentCount} students = ₹${billData.baseMonthlyAmount} per month` 
+                      : `Flat Rate: ₹${billData.monthlySubscription || billData.baseMonthlyAmount} per month`
+                    )
+                }
               </p>
               {billData.periodStart && billData.periodEnd && (
                 <p style={{ color: '#475569', margin: '4px 0', lineHeight: '1.5' }}>
@@ -897,37 +932,59 @@ const ClientSubscription = () => {
                 </tr>
               </thead>
               <tbody>
-                {/* Carryover Section */}
-                {billData.isFirstPayment && billData.carryoverAmount > 0 && (
+                {billData.isExtraStudentsPayment ? (
                   <tr>
                     <td className="cell-center">1</td>
                     <td>
-                      <div className="item-title">🔄 Carryover Subscription</div>
+                      <div className="item-title">👥 Extra Students Fee (Pro-rated)</div>
                       <div className="item-desc">
-                        Prated period: {billData.deliveryDate || 'Delivery'} to month end ({billData.carryoverDays}/{billData.daysInMonth} days)
-                        {billData.discountPercentage > 0 && ` (${billData.discountPercentage}% plan discount applied)`}
+                        Pro-rated fee for {billData.extraStudentsOverdue} new student(s) added during the current billing cycle.
+                        {billData.discountPercentage > 0 && ` (${billData.discountPercentage}% discount applied)`}
                       </div>
                     </td>
-                    <td className="cell-right">{(billData.carryoverFraction).toFixed(2)}</td>
-                    <td className="cell-right">{formatAmount(billData.discountedMonthlyAmount)}</td>
-                    <td className="cell-right" style={{ fontWeight: 'bold' }}>{formatAmount(billData.carryoverAmount)}</td>
+                    <td className="cell-right">{billData.extraStudentsOverdue}</td>
+                    <td className="cell-right">
+                      {billData.extraStudentsOverdue > 0 
+                        ? formatAmount(billData.totalAmount / billData.extraStudentsOverdue) 
+                        : '—'}
+                    </td>
+                    <td className="cell-right" style={{ fontWeight: 'bold' }}>{formatAmount(billData.totalAmount)}</td>
                   </tr>
+                ) : (
+                  <>
+                    {/* Carryover Section */}
+                    {billData.isFirstPayment && billData.carryoverAmount > 0 && (
+                      <tr>
+                        <td className="cell-center">1</td>
+                        <td>
+                          <div className="item-title">🔄 Carryover Subscription</div>
+                          <div className="item-desc">
+                            Prated period: {billData.deliveryDate || 'Delivery'} to month end ({billData.carryoverDays}/{billData.daysInMonth} days)
+                            {billData.discountPercentage > 0 && ` (${billData.discountPercentage}% plan discount applied)`}
+                          </div>
+                        </td>
+                        <td className="cell-right">{(billData.carryoverFraction).toFixed(2)}</td>
+                        <td className="cell-right">{formatAmount(billData.discountedMonthlyAmount)}</td>
+                        <td className="cell-right" style={{ fontWeight: 'bold' }}>{formatAmount(billData.carryoverAmount)}</td>
+                      </tr>
+                    )}
+                    
+                    {/* Regular Months Section */}
+                    <tr>
+                      <td className="cell-center">{billData.isFirstPayment && billData.carryoverAmount > 0 ? '2' : '1'}</td>
+                      <td>
+                        <div className="item-title">📆 {billData.cycle} Subscription Fee</div>
+                        <div className="item-desc">
+                          Academic management portal system fees for {billData.cycleMonths} month(s).
+                          {billData.discountPercentage > 0 && ` (${billData.discountPercentage}% discount applied)`}
+                        </div>
+                      </td>
+                      <td className="cell-right">{(billData.cycleMonths).toFixed(2)}</td>
+                      <td className="cell-right">{formatAmount(billData.discountedMonthlyAmount)}</td>
+                      <td className="cell-right" style={{ fontWeight: 'bold' }}>{formatAmount(billData.regularMonthsAmount)}</td>
+                    </tr>
+                  </>
                 )}
-                
-                {/* Regular Months Section */}
-                <tr>
-                  <td className="cell-center">{billData.isFirstPayment && billData.carryoverAmount > 0 ? '2' : '1'}</td>
-                  <td>
-                    <div className="item-title">📆 {billData.cycle} Subscription Fee</div>
-                    <div className="item-desc">
-                      Academic management portal system fees for {billData.cycleMonths} month(s).
-                      {billData.discountPercentage > 0 && ` (${billData.discountPercentage}% discount applied)`}
-                    </div>
-                  </td>
-                  <td className="cell-right">{(billData.cycleMonths).toFixed(2)}</td>
-                  <td className="cell-right">{formatAmount(billData.discountedMonthlyAmount)}</td>
-                  <td className="cell-right" style={{ fontWeight: 'bold' }}>{formatAmount(billData.regularMonthsAmount)}</td>
-                </tr>
               </tbody>
             </table>
 
@@ -1111,6 +1168,7 @@ const ClientSubscription = () => {
               paymentCycles={paymentCycles}
               selectedCycle={selectedCycle}
               onCycleChange={handleCycleChange}
+              isLocked={!!deliveryInfo?.last_payment_cycle}
             />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
