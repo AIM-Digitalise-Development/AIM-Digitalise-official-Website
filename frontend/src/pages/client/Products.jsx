@@ -909,6 +909,13 @@ const ClientProducts = () => {
     syncProducts()
   }, [clientToken, isClientAuthenticated, productsFetched])
 
+  // Safe debug log before any conditional early returns
+  useEffect(() => {
+    console.log('[DEBUG DATES] productData:', productData)
+    console.log('[DEBUG DATES] profileData:', profileData)
+    console.log('[DEBUG DATES] paymentStatus:', paymentStatus)
+  }, [productData, profileData, paymentStatus])
+
   // Dynamic sandbox price calculations based on slider student volume
   const estimates = useMemo(() => {
     const num = Number(calcStudents) || 0
@@ -983,19 +990,56 @@ const ClientProducts = () => {
   const productName = activeProduct?.product_name || activeProduct?.name || displayUser?.product_name || 'NEXGN Hotel Pro'
   const isInstitutePro = productName.toLowerCase().includes('institute pro')
 
+  const getOrderField = (obj, field) => {
+    if (!obj || typeof obj !== 'object') return null;
+    
+    // Check client_order or other standard keys directly
+    const orderObj = obj.client_order || 
+                     (Array.isArray(obj.client_orders) ? obj.client_orders[0] : obj.client_orders) ||
+                     obj.order ||
+                     (Array.isArray(obj.orders) ? obj.orders[0] : obj.orders);
+                     
+    if (orderObj && typeof orderObj === 'object' && orderObj[field]) {
+      return orderObj[field];
+    }
+    
+    return obj[field] || null;
+  };
+
   const activationDateStr = (() => {
-    const rawDate = activeProduct?.activated_at || displayUser?.activated_at
+    let rawDate = getOrderField(activeProduct, 'created_at') ||
+                  getOrderField(displayUser, 'created_at') ||
+                  getOrderField(paymentStatus?.delivery_info, 'created_at');
+
+    if (!rawDate || rawDate === activeProduct?.created_at || rawDate === displayUser?.created_at) {
+      rawDate = activeProduct?.activated_at || displayUser?.activated_at || rawDate;
+    }
+
     if (rawDate) {
       try {
         return new Date(rawDate).toISOString().split('T')[0]
       } catch {
-        return '2025-03-28'
+        return 'Pending'
       }
     }
-    return '2025-03-28'
+    return 'Pending'
   })()
 
-  const deliveryDateStr = '2025-07-31'
+  const deliveryDateStr = (() => {
+    const rawDate = getOrderField(activeProduct, 'delivery_date') ||
+                    getOrderField(displayUser, 'delivery_date') ||
+                    getOrderField(paymentStatus?.delivery_info, 'delivery_date') ||
+                    paymentStatus?.delivery_info?.delivery_date;
+
+    if (rawDate) {
+      try {
+        return new Date(rawDate).toISOString().split('T')[0]
+      } catch {
+        return 'Pending'
+      }
+    }
+    return 'Pending'
+  })()
 
   const securityDeposit = activeProduct?.processing_fee || displayUser?.processing_fee || 3299
   const subscriptionPrice = activeProduct?.monthly_subscription || displayUser?.monthly_subscription || 3299

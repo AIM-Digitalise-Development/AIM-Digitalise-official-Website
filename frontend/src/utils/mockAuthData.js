@@ -1035,7 +1035,11 @@ export const getMockResponse = (url, method, data = null) => {
         payment_status: 'Paid',
         total_students: 250,
         created_at: '2026-01-01',
-        activated_at: '2026-01-02'
+        activated_at: '2026-01-02',
+        client_order: {
+          created_at: '2025-03-28T10:00:00.000Z',
+          delivery_date: '2025-07-31T10:00:00.000Z'
+        }
       }
     }
   }
@@ -1061,7 +1065,11 @@ export const getMockResponse = (url, method, data = null) => {
         district: 'Kolkata',
         state: 'West Bengal',
         pincode: '700107',
-        address_line_1: '#139, Rajdanga Main Road'
+        address_line_1: '#139, Rajdanga Main Road',
+        client_order: {
+          created_at: '2025-03-28T10:00:00.000Z',
+          delivery_date: '2025-07-31T10:00:00.000Z'
+        }
       }
     }
   }
@@ -1080,7 +1088,11 @@ export const getMockResponse = (url, method, data = null) => {
           payment_status: 'Paid',
           total_students: 250,
           created_at: '2026-01-01',
-          activated_at: '2026-01-02'
+          activated_at: '2026-01-02',
+          client_order: {
+            created_at: '2025-03-28T10:00:00.000Z',
+            delivery_date: '2025-07-31T10:00:00.000Z'
+          }
         }
       ]
     }
