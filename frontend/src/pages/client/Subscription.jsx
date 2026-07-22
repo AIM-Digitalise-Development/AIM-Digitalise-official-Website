@@ -25,7 +25,7 @@ const cycleDisplayNames = {
 
 const ClientSubscription = () => {
   const { clientToken, isClientAuthenticated, profileData, productData, clientLogout } = useClientAuthStore()
-  
+
   // UI states
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -92,7 +92,7 @@ const ClientSubscription = () => {
     setError('')
     try {
       let zeroStudents = false
-      
+
       // 1. Fetch Student Count & Check Zero State
       const studentRes = await getClientStudentCount(clientToken).catch(err => {
         console.error('Failed to load student count:', err)
@@ -157,8 +157,8 @@ const ClientSubscription = () => {
 
       // 3. Fetch Billing Cycles (only if we have students or if flat rate)
       const activeProduct = Array.isArray(productData) ? productData[0] : productData
-      const currentPerPerson = activeProduct?.per_person !== undefined 
-        ? activeProduct.per_person 
+      const currentPerPerson = activeProduct?.per_person !== undefined
+        ? activeProduct.per_person
         : (profileData?.per_person !== undefined ? profileData.per_person : 1)
 
       if (!zeroStudents || currentPerPerson !== 1) {
@@ -329,10 +329,10 @@ const ClientSubscription = () => {
       }
     }
 
-    const perPersonValue = data.product?.per_person !== undefined 
-      ? data.product.per_person 
+    const perPersonValue = data.product?.per_person !== undefined
+      ? data.product.per_person
       : (perPerson !== undefined ? perPerson : 1)
-    
+
     const monthlySubscriptionValue = data.product?.monthly_subscription !== undefined
       ? data.product.monthly_subscription
       : (monthlySubscription !== undefined ? monthlySubscription : 0)
@@ -499,7 +499,7 @@ const ClientSubscription = () => {
   const refreshSubscriptionData = async () => {
     try {
       setLoadingSubscription(true)
-      
+
       const [statusRes, historyRes, studentRes, cyclesRes] = await Promise.all([
         getClientPaymentStatus(clientToken).catch(err => { console.error(err); return null; }),
         getClientPaymentHistory(clientToken).catch(err => { console.error(err); return null; }),
@@ -550,8 +550,8 @@ const ClientSubscription = () => {
       }
 
       const activeProduct = Array.isArray(productData) ? productData[0] : productData
-      const currentPerPerson = activeProduct?.per_person !== undefined 
-        ? activeProduct.per_person 
+      const currentPerPerson = activeProduct?.per_person !== undefined
+        ? activeProduct.per_person
         : (profileData?.per_person !== undefined ? profileData.per_person : 1)
 
       if (cyclesRes?.success && (studentRes?.data?.student_count > 0 || currentPerPerson !== 1)) {
@@ -560,7 +560,7 @@ const ClientSubscription = () => {
           await calculateSubscriptionForCycle(selectedCycle, clientToken)
         }
       }
-      
+
       setSuccess('✅ Payment completed successfully! Your records have been updated.')
       setTimeout(() => setSuccess(''), 7000)
     } catch (err) {
@@ -740,7 +740,8 @@ const ClientSubscription = () => {
         padding: '20px',
         overflow: 'auto'
       }} onClick={() => setShowBillModal(false)}>
-        <style dangerouslySetInnerHTML={{ __html: `
+        <style dangerouslySetInnerHTML={{
+          __html: `
           .bill-container { max-width: 850px; margin: 0 auto; padding: 40px; background: white; border: 1px solid #e2e8f0; border-radius: 4px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
           .bill-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
           .logo-circle { width: 85px; height: 85px; background: #c25e17; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 38px; font-weight: 800; }
@@ -819,20 +820,20 @@ const ClientSubscription = () => {
           padding: '30px',
           position: 'relative'
         }} onClick={(e) => e.stopPropagation()}>
-           {/* Bill Content */}
+          {/* Bill Content */}
           <div ref={billRef} className="bill-container">
             {/* Header */}
             <div className="bill-header">
               <div className="logo-circle">A</div>
               <div className="company-info">
                 <h2>AIM Digitalise</h2>
-#139, 3rd Floor, Rajdanga Main Road<br/>
-                Kolkata, West Bengal - 700107<br/>
-                GSTIN: 19ABCCA9672L1Z0<br/>
+                #139, 3rd Floor, Rajdanga Main Road<br />
+                Kolkata, West Bengal - 700107<br />
+                GSTIN: 19ABCCA9672L1Z0<br />
                 Email: support@aimdigitalise.com
               </div>
             </div>
-            
+
             <div className="invoice-divider-container">
               <div className="invoice-divider-line"></div>
               <div className="invoice-divider-text">PROFORMA INVOICE</div>
@@ -845,11 +846,11 @@ const ClientSubscription = () => {
                   <h4>Bill To</h4>
                   <div className="client-highlight-name">{billData.clientName}</div>
                   <p style={{ lineHeight: '1.6' }}>
-                    <strong>ID:</strong> {billData.clientId}<br/>
-                    <strong>School:</strong> {billData.schoolName || '-'}<br/>
-                    <strong>Product:</strong> {billData.productName || '-'}<br/>
-                    <strong>Billing Cycle:</strong> {billData.cycle}<br/>
-                    <strong>Students:</strong> {billData.studentCount}<br/>
+                    <strong>ID:</strong> {billData.clientId}<br />
+                    <strong>School:</strong> {billData.schoolName || '-'}<br />
+                    <strong>Product:</strong> {billData.productName || '-'}<br />
+                    <strong>Billing Cycle:</strong> {billData.cycle}<br />
+                    <strong>Students:</strong> {billData.studentCount}<br />
                     <strong>Billing Type:</strong>{' '}
                     <span className={`badge ${billData.isExtraStudentsPayment ? 'badge-per-person' : (billData.perPerson === 1 ? 'badge-per-person' : 'badge-flat')}`} style={{ fontSize: '10px', padding: '2px 8px', textTransform: 'none' }}>
                       {billData.isExtraStudentsPayment ? '👥 Extra Students (Pro-rated)' : (billData.perPerson === 1 ? '👥 Per Student' : '📦 Flat Rate')}
@@ -876,7 +877,7 @@ const ClientSubscription = () => {
                   </p>
                 </div>
               </div>
-              
+
               <div className="invoice-right-side">
                 <table className="meta-table">
                   <tbody>
@@ -905,12 +906,12 @@ const ClientSubscription = () => {
             <div style={{ marginBottom: '24px', padding: '16px', background: '#f8fafc', borderRadius: '4px', border: '1px dashed #c25e17', fontSize: '13px' }}>
               <strong style={{ color: '#c25e17', display: 'block', marginBottom: '6px' }}>Pricing & Billing Period Info:</strong>
               <p style={{ color: '#475569', margin: '4px 0', lineHeight: '1.5' }}>
-                <strong>Formula:</strong> {billData.isExtraStudentsPayment 
+                <strong>Formula:</strong> {billData.isExtraStudentsPayment
                   ? `Extra Students Fee: ₹${billData.monthlySubscription || 10} per student/month (pro-rated) × ${billData.extraStudentsOverdue} student(s) = ₹${billData.totalAmount}`
-                  : (billData.perPerson === 1 
-                      ? `₹${billData.monthlySubscription || (billData.studentCount > 0 ? (billData.baseMonthlyAmount / billData.studentCount) : 10)} × ${billData.studentCount} students = ₹${billData.baseMonthlyAmount} per month` 
-                      : `Flat Rate: ₹${billData.monthlySubscription || billData.baseMonthlyAmount} per month`
-                    )
+                  : (billData.perPerson === 1
+                    ? `₹${billData.monthlySubscription || (billData.studentCount > 0 ? (billData.baseMonthlyAmount / billData.studentCount) : 10)} × ${billData.studentCount} students = ₹${billData.baseMonthlyAmount} per month`
+                    : `Flat Rate: ₹${billData.monthlySubscription || billData.baseMonthlyAmount} per month`
+                  )
                 }
               </p>
               {billData.periodStart && billData.periodEnd && (
@@ -944,8 +945,8 @@ const ClientSubscription = () => {
                     </td>
                     <td className="cell-right">{billData.extraStudentsOverdue}</td>
                     <td className="cell-right">
-                      {billData.extraStudentsOverdue > 0 
-                        ? formatAmount(billData.totalAmount / billData.extraStudentsOverdue) 
+                      {billData.extraStudentsOverdue > 0
+                        ? formatAmount(billData.totalAmount / billData.extraStudentsOverdue)
                         : '—'}
                     </td>
                     <td className="cell-right" style={{ fontWeight: 'bold' }}>{formatAmount(billData.totalAmount)}</td>
@@ -968,7 +969,7 @@ const ClientSubscription = () => {
                         <td className="cell-right" style={{ fontWeight: 'bold' }}>{formatAmount(billData.carryoverAmount)}</td>
                       </tr>
                     )}
-                    
+
                     {/* Regular Months Section */}
                     <tr>
                       <td className="cell-center">{billData.isFirstPayment && billData.carryoverAmount > 0 ? '2' : '1'}</td>
@@ -995,7 +996,7 @@ const ClientSubscription = () => {
                 <p>All payments must be made in full before the activation of any services.</p>
                 <p style={{ fontSize: '10px', color: '#94a3b8', marginTop: '10px' }}>This is a computer generated invoice and does not require a physical signature.</p>
               </div>
-              
+
               <div className="summary-section">
                 <table className="summary-table">
                   <tbody>
@@ -1013,7 +1014,7 @@ const ClientSubscription = () => {
                     </tr>
                   </tbody>
                 </table>
-                
+
                 <div className="balance-due-bar">
                   <span>Balance Due</span>
                   <span>{formatAmount(billData.totalWithGST)}</span>
@@ -1021,7 +1022,7 @@ const ClientSubscription = () => {
               </div>
             </div>
           </div>
-          
+
           {/* Buttons */}
           <div className="modal-actions-bar">
             <button onClick={() => setShowBillModal(false)} className="btn-modal btn-modal-close">
@@ -1075,13 +1076,13 @@ const ClientSubscription = () => {
   }
 
   const schoolName = profileData?.company_name || profileData?.school_name || profileData?.organization || 'Academic Institute'
-  
+
   // Decide which screen structure to render
   const canPay = (hasZeroStudents && perPerson === 1) ? false : (showPayNow || (paymentStatus && !paymentStatus.has_previous_payments))
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-10 select-none" style={{ fontFamily: "'Inter', sans-serif" }}>
-      
+
       <ClientPageHeader title="Subscription" />
 
       <motion.div
@@ -1117,7 +1118,7 @@ const ClientSubscription = () => {
                 )}
               </div>
             </div>
-            
+
             <div className="pt-2">
               <button
                 onClick={fetchData}
@@ -1247,7 +1248,7 @@ const ClientSubscription = () => {
             <h3 className="text-[13px] font-bold text-gray-800 border-b border-slate-100 pb-2 flex items-center gap-1.5">
               <span>📦</span> Subscription Plan Logistics
             </h3>
-            
+
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 text-xs">
               <div className="space-y-1">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">First Payment Date</span>
@@ -1280,7 +1281,7 @@ const ClientSubscription = () => {
                 Total Paid: {paymentHistory.summary?.total_amount_formatted || '—'}
               </span>
             </div>
-            
+
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-[11px] font-semibold">
                 <thead>
@@ -1311,9 +1312,8 @@ const ClientSubscription = () => {
                         ₹ {parseFloat(payment.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="px-5 py-4 text-center">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                          payment.status === 'success' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'
-                        }`}>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${payment.status === 'success' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'
+                          }`}>
                           {payment.status}
                         </span>
                       </td>

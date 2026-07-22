@@ -614,7 +614,7 @@ export const getMockResponse = (url, method, data = null) => {
     if (lowercaseUrl.includes('/employee/leads/bulk-assign') && method === 'POST') {
       const { lead_ids, assigned_to, notes } = data || {}
       const targetEmp = MOCK_EMPLOYEES.find(e => e.id === Number(assigned_to)) || MOCK_EMPLOYEES[1]
-      
+
       let count = 0
       window.__mockLeads = leadsList.map(l => {
         if (lead_ids.includes(l.id)) {
@@ -971,7 +971,7 @@ export const getMockResponse = (url, method, data = null) => {
         filtered = filtered.filter(l => l.lead_priority === filterPriority)
       }
       if (filterSearch) {
-        filtered = filtered.filter(l => 
+        filtered = filtered.filter(l =>
           l.client_name?.toLowerCase().includes(filterSearch) ||
           l.client_email?.toLowerCase().includes(filterSearch) ||
           l.company_name?.toLowerCase().includes(filterSearch) ||
@@ -1144,7 +1144,7 @@ export const getMockResponse = (url, method, data = null) => {
     const cycle = data?.cycle || 'annual'
     const multipliers = { monthly: 1, quarterly: 3, 'half-yearly': 6, half_yearly: 6, yearly: 12, annual: 12 }
     const discounts = { monthly: 0, quarterly: 5, 'half-yearly': 10, half_yearly: 10, yearly: 15, annual: 15 }
-    
+
     const mult = multipliers[cycle] || 12
     const disc = discounts[cycle] || 15
 
@@ -1166,7 +1166,7 @@ export const getMockResponse = (url, method, data = null) => {
     const extraSubtotal = extraMonthly * mult * (1 - disc / 100)
     const extraGst = extraSubtotal * 0.18
     const extraTotal = extraSubtotal + extraGst
-    
+
     return {
       success: true,
       data: {
@@ -1460,7 +1460,7 @@ export const getMockResponse = (url, method, data = null) => {
       const urlObj = new URL(url, 'https://dummy.com')
       const addonType = urlObj.searchParams.get('addon_type') || 'Transportation'
       const recipientType = urlObj.searchParams.get('recipient_type') || 'student'
-      
+
       let count = recipientType === 'teacher' ? 45 : 850
       if (addonType === 'Hostel' || addonType === 'hostel') count = 50
       let rate = 36
@@ -1470,12 +1470,12 @@ export const getMockResponse = (url, method, data = null) => {
       else if (addonType === 'id card Type B') rate = 42
       else if (addonType === 'id card Type C') rate = 37
       else if (addonType === 'Previous Year Backup' || addonType === 'previous_year') rate = 36
-      
+
       const finalCount = addonType === 'Domain Services' ? 1 : count
       const subtotal = rate * finalCount
       const gst = Math.round(subtotal * 18) / 100
       const total = subtotal + gst
-      
+
       return {
         success: true,
         data: {
@@ -1510,7 +1510,7 @@ export const getMockResponse = (url, method, data = null) => {
     else if (addon_type === 'id card Type B') rate = 42
     else if (addon_type === 'id card Type C') rate = 37
     else if (addon_type === 'Previous Year Backup' || addon_type === 'previous_year') rate = 36
-    
+
     const finalCount = addon_type === 'Domain Services' ? 1 : count
     const subtotal = rate * finalCount
     const gst = subtotal * 0.18
@@ -1538,7 +1538,7 @@ export const getMockResponse = (url, method, data = null) => {
     else if (addon_type === 'id card Type B') rate = 42
     else if (addon_type === 'id card Type C') rate = 37
     else if (addon_type === 'Previous Year Backup' || addon_type === 'previous_year') rate = 36
-    
+
     const finalCount = addon_type === 'Domain Services' ? 1 : count
     const subtotal = rate * finalCount
     const gst = subtotal * 0.18
@@ -1603,7 +1603,7 @@ export const getMockResponse = (url, method, data = null) => {
       const subtotal = items.reduce((acc, item) => acc + parseFloat(item.amount || 0), 0);
       const gst = Math.round(subtotal * 18) / 100;
       const total = subtotal + gst;
-      
+
       const fmt = (v) => `₹ ${v.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
       return {
@@ -1622,7 +1622,7 @@ export const getMockResponse = (url, method, data = null) => {
     // 2. POST /client/addon/cart/add
     if (method === 'POST' && lowercaseUrl.includes('/client/addon/cart/add')) {
       const { addon_type, recipient_type } = data || {};
-      
+
       // Determine student count & rate
       let count = recipient_type === 'teacher' ? 45 : 850;
       if (addon_type === 'Hostel' || addon_type === 'hostel') count = 50;
@@ -1636,10 +1636,10 @@ export const getMockResponse = (url, method, data = null) => {
 
       const finalCount = addon_type === 'Domain Services' ? 1 : count;
       const itemSubtotal = rate * finalCount;
-      
+
       const today = new Date();
       const nextYear = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate());
-      
+
       const newCartItem = {
         id: 'cart_item_' + Math.floor(Math.random() * 1000000),
         addon_type,
@@ -1675,7 +1675,7 @@ export const getMockResponse = (url, method, data = null) => {
     if (method === 'DELETE' && lowercaseUrl.includes('/client/addon/cart/remove/')) {
       const parts = lowercaseUrl.split('/remove/');
       const cartItemId = parts[parts.length - 1];
-      
+
       if (typeof window !== 'undefined' && window.__mockAddonCart) {
         window.__mockAddonCart = window.__mockAddonCart.filter(item => item.id !== cartItemId && String(item.id) !== String(cartItemId));
       }
@@ -1726,7 +1726,7 @@ export const getMockResponse = (url, method, data = null) => {
 
       if (typeof window !== 'undefined') {
         if (!window.__mockAddonHistory) window.__mockAddonHistory = [];
-        
+
         items.forEach(item => {
           const subtotal = parseFloat(item.amount);
           const gst = subtotal * 0.18;
@@ -1767,7 +1767,7 @@ export const getMockResponse = (url, method, data = null) => {
   if (lowercaseUrl.includes('/client/unified/create-order') && method === 'POST') {
     const { cycle } = data || {}
     const items = window.__mockAddonCart || []
-    
+
     // 1. Subscription calc
     let subAmount = 3000
     if (cycle === 'annual') subAmount = 30000
@@ -1850,7 +1850,7 @@ export const getMockResponse = (url, method, data = null) => {
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
       return `${String(date.getDate()).padStart(2, '0')} ${months[date.getMonth()]} ${date.getFullYear()}`
     }
-    
+
     if (typeof window !== 'undefined') {
       if (!window.__mockAddonHistory) window.__mockAddonHistory = []
       items.forEach(item => {
@@ -2134,7 +2134,7 @@ export const getMockResponse = (url, method, data = null) => {
         filtered = filtered.filter(s => s.is_active === activeBool)
       }
       if (filterSearch) {
-        filtered = filtered.filter(s => 
+        filtered = filtered.filter(s =>
           s.title?.toLowerCase().includes(filterSearch) ||
           s.meeting_link?.toLowerCase().includes(filterSearch)
         )
@@ -2240,13 +2240,13 @@ export const getMockResponse = (url, method, data = null) => {
       const urlObj = new URL(url, 'https://dummy.com')
       const startDateStr = urlObj.searchParams.get('start_date') || new Date().toISOString().split('T')[0]
       const endDateStr = urlObj.searchParams.get('end_date') || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      
+
       const slot = (window.__mockDemoSlots || []).find(s => s.id === slotId)
       const dates = []
       if (slot) {
         const start = new Date(startDateStr)
         const end = new Date(endDateStr)
-        
+
         const dayMap = {
           0: 'sunday',
           1: 'monday',
@@ -2256,7 +2256,7 @@ export const getMockResponse = (url, method, data = null) => {
           5: 'friday',
           6: 'saturday'
         }
-        
+
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
           const dayOfWeek = d.getDay()
           const dayKey = dayMap[dayOfWeek]
@@ -2288,7 +2288,7 @@ export const getMockResponse = (url, method, data = null) => {
     const leadId = parseInt(bookSlotMatch[1])
     const { demo_slot_id, booking_date, notes } = data || {}
     const slot = (window.__mockDemoSlots || []).find(s => s.id === Number(demo_slot_id))
-    
+
     let updated = null
     window.__mockLeads = (window.__mockLeads || []).map(l => {
       if (l.id === leadId) {
@@ -2319,7 +2319,7 @@ export const getMockResponse = (url, method, data = null) => {
       }
       return l
     })
-    
+
     if (updated) {
       return {
         success: true,
@@ -2425,13 +2425,13 @@ export const getMockResponse = (url, method, data = null) => {
     const currentMonth = today.getMonth()
     const currentYear = today.getFullYear()
     const daysMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-    
+
     for (let i = 0; i < 60; i++) {
       const d = new Date(currentYear, currentMonth, today.getDate() + i)
       const dateStr = d.toISOString().split('T')[0]
       const dayOfWeek = d.getDay()
       const dayKey = daysMap[dayOfWeek]
-      
+
       const isActiveOnDay = slot ? (slot.all_days || slot[dayKey] === true) : false
       if (isActiveOnDay && slot.is_active) {
         const bookingsCount = (window.__mockLeads || []).filter(l => {
@@ -2439,7 +2439,7 @@ export const getMockResponse = (url, method, data = null) => {
           const bDate = l.demo_slot ? l.demo_slot.split(' ')[0] : ''
           return bDate === dateStr && l.demo_status === 'assigned'
         }).length
-        
+
         const maxAttendees = slot.max_attendees || 10
         dates.push({
           date: dateStr,
@@ -2489,7 +2489,7 @@ export const getMockResponse = (url, method, data = null) => {
       }
       return l
     })
-    
+
     if (updated) {
       return {
         success: true,
@@ -2831,7 +2831,7 @@ export const getMockResponse = (url, method, data = null) => {
   if (quoteMatch && method === 'POST') {
     const requestId = parseInt(quoteMatch[1], 10);
     const { amount, admin_notes } = data || {};
-    
+
     window.__mockClients.forEach(c => {
       c.customizations.forEach(cust => {
         if (cust.id === requestId) {

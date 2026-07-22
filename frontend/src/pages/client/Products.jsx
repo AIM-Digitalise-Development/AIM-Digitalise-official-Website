@@ -244,7 +244,7 @@ const ClientProducts = () => {
           []
 
         const filteredPending = pendingList.filter(req => {
-          const inHistory = custPayments.some(p => 
+          const inHistory = custPayments.some(p =>
             Number(p.customization_request_id) === Number(req.id) ||
             Number(p.request_id) === Number(req.id) ||
             Number(p.customization_id) === Number(req.id) ||
@@ -364,11 +364,11 @@ const ClientProducts = () => {
 
       const paidAddonList = addonPayments.filter(p => p.payment_status === 'paid' || p.payment_status === 'success' || !p.payment_status)
       const cartItems = cartRes?.success ? (cartRes.data?.items || []) : []
-      
+
       setPaidAddonCount(paidAddonList.length)
       setPendingAddonCount(cartItems.length)
       setPendingAddonRequests(cartItems)
-      
+
       const addTotal = cartItems.reduce((sum, req) => {
         const baseAmt =
           Number(req.subtotal) ||
@@ -378,7 +378,7 @@ const ClientProducts = () => {
           0
         return sum + baseAmt
       }, 0)
-      
+
       setPendingAddonTotal(Math.round(addTotal))
       setAddonServicesCount(paidAddonList.length)
     } catch (err) {
@@ -1019,9 +1019,9 @@ const ClientProducts = () => {
   })()
 
   const subDueAmount = (isSubscriptionOverdue || isNeverPaid)
-    ? (paymentStatus?.delivery_info?.total_due_amount 
-        ? Number(paymentStatus.delivery_info.total_due_amount) 
-        : cycleBasedFallback)
+    ? (paymentStatus?.delivery_info?.total_due_amount
+      ? Number(paymentStatus.delivery_info.total_due_amount)
+      : cycleBasedFallback)
     : 0
 
   const payBillAmount = subDueAmount + pendingCustomTotal + pendingAddonTotal
@@ -1180,8 +1180,8 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
     <td><div class="it">📆 Subscription Fee</div>
       <div class="id">Academic portal — ${cycleName} plan · ${subtitleStudentCount} students</div></td>
     <td class="tr">1.00</td>
-    <td class="tr">₹${baseAmount.toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
-    <td class="tr" style="font-weight:bold">₹${baseAmount.toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+    <td class="tr">₹${baseAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+    <td class="tr" style="font-weight:bold">₹${baseAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
   </tr></tbody></table>
   <div class="bs">
     <div class="ts">
@@ -1192,9 +1192,9 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
     </div>
     <div class="ss">
       <table class="st">
-        <tr><td>Sub Total</td><td>₹${baseAmount.toLocaleString('en-IN',{minimumFractionDigits:2})}</td></tr>
-        <tr><td>GST Tax (18%)</td><td>₹${gstAmount.toLocaleString('en-IN',{minimumFractionDigits:2})}</td></tr>
-        <tr class="tr-total"><td>Total</td><td>₹${totalPaid.toLocaleString('en-IN',{minimumFractionDigits:2})}</td></tr>
+        <tr><td>Sub Total</td><td>₹${baseAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>
+        <tr><td>GST Tax (18%)</td><td>₹${gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>
+        <tr class="tr-total"><td>Total</td><td>₹${totalPaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>
       </table>
       <div class="bb"><span>Balance Due</span><span>₹0.00</span></div>
     </div>
@@ -1221,9 +1221,6 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
     const apiCycle = selectedCycle === 'yearly' ? 'annual' : (selectedCycle === 'half-yearly' ? 'half_yearly' : selectedCycle)
 
     try {
-      // Ensure backend has the correct calculation state active before creating order
-      await calculateSubscription(apiCycle, clientToken).catch(() => null)
-
       const orderRes = await createUnifiedOrder(apiCycle, clientToken)
       if (!orderRes.success) {
         setPayError(orderRes.message || 'Failed to create unified payment order.')
@@ -1231,24 +1228,50 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
         return
       }
 
-      const unifiedSubscriptionPayload = (orderRes.subscription || subDueAmount > 0) ? {
-        cycle: orderRes.subscription?.cycle || orderRes.cycle || apiCycle,
-        amount: orderRes.subscription?.amount || orderRes.subscription?.total_amount || orderRes.amount || subDueAmount,
-        cycle_months: orderRes.subscription?.cycle_months || orderRes.cycle_months || (apiCycle === 'annual' ? 12 : (apiCycle === 'half_yearly' ? 6 : (apiCycle === 'quarterly' ? 3 : 1))),
-        is_first_payment: orderRes.subscription?.is_first_payment !== undefined 
-          ? orderRes.subscription.is_first_payment 
-          : (orderRes.is_first_payment !== undefined ? orderRes.is_first_payment : !hasMadePayment),
-        has_carryover: orderRes.subscription?.has_carryover !== undefined 
-          ? orderRes.subscription.has_carryover 
-          : (orderRes.has_carryover !== undefined ? orderRes.has_carryover : false),
-        carryover_from: orderRes.subscription?.carryover_from || orderRes.carryover_from || null,
-        carryover_to: orderRes.subscription?.carryover_to || orderRes.carryover_to || null,
-        carryover_days: orderRes.subscription?.carryover_days || orderRes.carryover_days || 0,
-        student_count: orderRes.subscription?.student_count || orderRes.student_count || (studentCountData?.student_count || null),
-        is_extra_students_payment: orderRes.subscription?.is_extra_students_payment !== undefined 
-          ? orderRes.subscription.is_extra_students_payment 
-          : (orderRes.is_extra_students_payment !== undefined ? orderRes.is_extra_students_payment : false),
-      } : null
+      // ✅ Build subscription payload from backend response — use subscription-specific amount,
+      // NOT the total orderRes.amount (which includes customization + addon too).
+      // When backend provides orderRes.subscription, use it directly.
+      // When backend doesn't provide it but subscription is due, build from local subDueAmount.
+      const unifiedSubscriptionPayload = (() => {
+        // Case 1: Backend explicitly returned subscription details
+        if (orderRes.subscription) {
+          return {
+            cycle: orderRes.subscription.cycle || apiCycle,
+            amount: orderRes.subscription.amount || orderRes.subscription.total_amount || subDueAmount,
+            cycle_months: orderRes.subscription.cycle_months || orderRes.cycle_months || (apiCycle === 'annual' ? 12 : (apiCycle === 'half_yearly' ? 6 : (apiCycle === 'quarterly' ? 3 : 1))),
+            is_first_payment: orderRes.subscription.is_first_payment !== undefined
+              ? orderRes.subscription.is_first_payment
+              : (orderRes.is_first_payment !== undefined ? orderRes.is_first_payment : !hasMadePayment),
+            has_carryover: orderRes.subscription.has_carryover !== undefined
+              ? orderRes.subscription.has_carryover
+              : (orderRes.has_carryover || false),
+            carryover_from: orderRes.subscription.carryover_from || orderRes.carryover_from || null,
+            carryover_to: orderRes.subscription.carryover_to || orderRes.carryover_to || null,
+            carryover_days: orderRes.subscription.carryover_days || orderRes.carryover_days || 0,
+            student_count: orderRes.subscription.student_count || orderRes.student_count || (studentCountData?.student_count || null),
+            is_extra_students_payment: orderRes.subscription.is_extra_students_payment !== undefined
+              ? orderRes.subscription.is_extra_students_payment
+              : (orderRes.is_extra_students_payment || false),
+          }
+        }
+        // Case 2: Backend didn't return subscription object but subscription IS due locally
+        if (subDueAmount > 0) {
+          return {
+            cycle: orderRes.cycle || apiCycle,
+            amount: subDueAmount,
+            cycle_months: orderRes.cycle_months || (apiCycle === 'annual' ? 12 : (apiCycle === 'half_yearly' ? 6 : (apiCycle === 'quarterly' ? 3 : 1))),
+            is_first_payment: orderRes.is_first_payment !== undefined ? orderRes.is_first_payment : !hasMadePayment,
+            has_carryover: orderRes.has_carryover || false,
+            carryover_from: orderRes.carryover_from || null,
+            carryover_to: orderRes.carryover_to || null,
+            carryover_days: orderRes.carryover_days || 0,
+            student_count: orderRes.student_count || (studentCountData?.student_count || null),
+            is_extra_students_payment: orderRes.is_extra_students_payment || false,
+          }
+        }
+        // Case 3: No subscription due
+        return null
+      })()
 
       if (orderRes.simulated) {
         let msg = `SIMULATION MODE - UNIFIED CHECKOUT\n\nTotal Amount: ₹${orderRes.amount}\n`
@@ -1290,6 +1313,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
         return
       }
 
+      // ─── Real Razorpay Payment ───
       await loadRazorpayScript()
       const options = {
         key: orderRes.key,
@@ -1299,6 +1323,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
         description: `Unified Payment - ${cycleName}`,
         order_id: orderRes.order_id,
         handler: async (response) => {
+          setPaySuccess('Verifying payment...')
           try {
             const verifyRes = await verifyUnifiedPayment({
               order_id: orderRes.order_id,
@@ -1312,12 +1337,16 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
 
             if (verifyRes.success) {
               setPaySuccess('✅ Unified payment verified successfully!')
+              // Reload all states
+              await Promise.all([
+                syncProfile(),
+                syncAllHistories(),
+                fetchEstimatesData(),
+                syncStudentCount()
+              ]).catch(() => null)
               setTimeout(() => {
                 setShowPayModal(false)
                 setPaySuccess('')
-                syncAllHistories()
-                fetchEstimatesData()
-                syncProfile()
               }, 2500)
             } else {
               setPayError(verifyRes.message || 'Verification failed.')
@@ -1615,11 +1644,10 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                             setSelectedCycle(opt.key)
                             setIsDropdownOpen(false)
                           }}
-                          className={`w-full text-left px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
-                            selectedCycle === opt.key
-                              ? 'bg-indigo-50 text-indigo-600'
-                              : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
-                          }`}
+                          className={`w-full text-left px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${selectedCycle === opt.key
+                            ? 'bg-indigo-50 text-indigo-600'
+                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                            }`}
                         >
                           {opt.label}
                         </button>
@@ -1722,21 +1750,19 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
           {/* Card 4: Pay Current Monthly Bill (Spans 2 columns) */}
           {(() => {
             return (
-              <div className={`rounded-3xl p-6 shadow-sm border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-transform hover:scale-[1.01] sm:col-span-2 ${
-                isPaidAndActive
-                  ? 'bg-emerald-50/30 border-emerald-100'
-                  : isOverdue
-                    ? 'bg-rose-50/40 border-rose-200'
-                    : 'bg-amber-50/40 border-amber-200'
-              }`}>
+              <div className={`rounded-3xl p-6 shadow-sm border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-transform hover:scale-[1.01] sm:col-span-2 ${isPaidAndActive
+                ? 'bg-emerald-50/30 border-emerald-100'
+                : isOverdue
+                  ? 'bg-rose-50/40 border-rose-200'
+                  : 'bg-amber-50/40 border-amber-200'
+                }`}>
                 <div className="flex items-center gap-4">
-                  <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold shadow-inner shrink-0 ${
-                    isPaidAndActive
-                      ? 'bg-emerald-50 text-emerald-600'
-                      : isOverdue
-                        ? 'bg-rose-100 text-rose-500'
-                        : 'bg-amber-100 text-amber-600'
-                  }`}>
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold shadow-inner shrink-0 ${isPaidAndActive
+                    ? 'bg-emerald-50 text-emerald-600'
+                    : isOverdue
+                      ? 'bg-rose-100 text-rose-500'
+                      : 'bg-amber-100 text-amber-600'
+                    }`}>
                     {isPaidAndActive ? '💳' : isOverdue ? '⚠️' : '🔔'}
                   </div>
 
@@ -1802,13 +1828,12 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                       navigate('/client/portal/subscription')
                     }
                   }}
-                  className={`px-5 py-3 font-extrabold rounded-xl text-xs shadow-md transition-all active:scale-95 whitespace-nowrap cursor-pointer shrink-0 ${
-                    isPaidAndActive
-                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 shadow-none border border-slate-200'
-                      : isOverdue
-                        ? 'bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white shadow-rose-200'
-                        : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-amber-200'
-                  }`}
+                  className={`px-5 py-3 font-extrabold rounded-xl text-xs shadow-md transition-all active:scale-95 whitespace-nowrap cursor-pointer shrink-0 ${isPaidAndActive
+                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 shadow-none border border-slate-200'
+                    : isOverdue
+                      ? 'bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white shadow-rose-200'
+                      : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-amber-200'
+                    }`}
                 >
                   {isPaidAndActive ? 'View Subscription' : isOverdue ? '⚡ Pay Now' : '🚀 Activate Now'}
                 </button>

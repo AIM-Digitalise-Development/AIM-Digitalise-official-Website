@@ -82,7 +82,7 @@ export const getClientCustomPaymentHistory = (token) =>
   clientPortalFetch('GET', '/client/customization/payment-history', null, token)
 
 export const createCustomizationPaymentOrder = (requestId, token, amount = null) =>
-  clientPortalFetch('POST', '/client/customization/create-payment-order', { 
+  clientPortalFetch('POST', '/client/customization/create-payment-order', {
     customization_request_id: requestId,
     ...(amount !== null ? { amount: Math.round(amount) } : {})
   }, token)
