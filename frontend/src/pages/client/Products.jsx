@@ -166,13 +166,13 @@ const ClientProducts = () => {
           const calc = res.data.calculation
           const baseRate = calc.student_count > 0 ? (calc.base_monthly_amount / calc.student_count) : 10
 
-          // extra_students_overdue is the dedicated field from backend
-          if (calc.extra_students_overdue && calc.extra_students_overdue > maxExtraStudents) {
-            maxExtraStudents = calc.extra_students_overdue
-          }
-          // When is_extra_students_payment=true, calc.student_count IS the new students count
-          else if (calc.is_extra_students_payment && calc.student_count > maxExtraStudents) {
-            maxExtraStudents = calc.student_count
+          // Prefer unpaid_students_count or extra_student_count from backend calculation details
+          const unpaidCount = Number(calc.unpaid_students_count || calc.extra_student_count || 0)
+          if (unpaidCount > maxExtraStudents) {
+            maxExtraStudents = unpaidCount
+          } else if (calc.extra_students_overdue && Number(calc.extra_students_overdue) > maxExtraStudents && !calc.unpaid_students_count && !calc.extra_student_count) {
+            // Fallback for mock environment where extra_students_overdue holds the student count
+            maxExtraStudents = Number(calc.extra_students_overdue)
           }
 
           // Map backend cycle names to local state keys
@@ -1145,6 +1145,14 @@ const ClientProducts = () => {
   const unpaidStudentsCount = (() => {
     // If fully paid and no overdue — zero new students pending
     if (hasMadePayment && !isSubscriptionOverdue) return 0
+
+    // Priority 0: Backend directly returns unpaid students count in paymentStatus/deliveryInfo
+    if (paymentStatus?.delivery_info?.unpaid_students_count !== undefined) {
+      return Number(paymentStatus.delivery_info.unpaid_students_count)
+    }
+    if (paymentStatus?.delivery_info?.extra_students_count !== undefined) {
+      return Number(paymentStatus.delivery_info.extra_students_count)
+    }
 
     // Priority 1: backend told us explicitly via calculateSubscription
     if (extraStudentsOverdue > 0) return extraStudentsOverdue

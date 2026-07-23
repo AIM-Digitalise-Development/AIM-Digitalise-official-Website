@@ -3,9 +3,18 @@ import { motion } from 'framer-motion'
 const StudentCountCard = ({ studentCount }) => {
   if (!studentCount) return null
 
-  const unpaidCount = studentCount.min_students !== undefined
-    ? Math.max(0, (studentCount.student_count || 0) - (studentCount.min_students || 0))
-    : 0
+  const unpaidCount = (() => {
+    if (studentCount.unpaid_students_count !== undefined) {
+      return Number(studentCount.unpaid_students_count)
+    }
+    if (studentCount.extra_students_count !== undefined) {
+      return Number(studentCount.extra_students_count)
+    }
+    if (studentCount.min_students !== undefined) {
+      return Math.max(0, (studentCount.student_count || 0) - (studentCount.min_students || 0))
+    }
+    return 0
+  })()
 
   return (
     <motion.div
