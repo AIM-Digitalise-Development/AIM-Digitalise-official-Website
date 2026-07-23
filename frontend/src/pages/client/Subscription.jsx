@@ -907,9 +907,9 @@ const ClientSubscription = () => {
               <strong style={{ color: '#c25e17', display: 'block', marginBottom: '6px' }}>Pricing & Billing Period Info:</strong>
               <p style={{ color: '#475569', margin: '4px 0', lineHeight: '1.5' }}>
                 <strong>Formula:</strong> {billData.isExtraStudentsPayment
-                  ? `Extra Students Fee: ₹${billData.monthlySubscription || 10} per student/month (pro-rated) × ${billData.extraStudentsOverdue} student(s) = ₹${billData.totalAmount}`
+                  ? `Extra Students Fee: ₹${billData.studentCount > 0 ? Math.round(billData.baseMonthlyAmount / billData.studentCount) : (billData.monthlySubscription || 10)} per student/month (pro-rated) × ${billData.extraStudentsOverdue} student(s) = ₹${billData.totalAmount}`
                   : (billData.perPerson === 1
-                    ? `₹${billData.monthlySubscription || (billData.studentCount > 0 ? (billData.baseMonthlyAmount / billData.studentCount) : 10)} × ${billData.studentCount} students = ₹${billData.baseMonthlyAmount} per month`
+                    ? `₹${billData.studentCount > 0 ? Math.round(billData.baseMonthlyAmount / billData.studentCount) : (billData.monthlySubscription || 10)} × ${billData.studentCount} students = ₹${billData.baseMonthlyAmount} per month`
                     : `Flat Rate: ₹${billData.monthlySubscription || billData.baseMonthlyAmount} per month`
                   )
                 }
