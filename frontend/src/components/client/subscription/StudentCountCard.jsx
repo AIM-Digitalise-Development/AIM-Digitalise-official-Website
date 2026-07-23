@@ -3,6 +3,10 @@ import { motion } from 'framer-motion'
 const StudentCountCard = ({ studentCount }) => {
   if (!studentCount) return null
 
+  const unpaidCount = studentCount.min_students !== undefined
+    ? Math.max(0, (studentCount.student_count || 0) - (studentCount.min_students || 0))
+    : 0
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -27,8 +31,14 @@ const StudentCountCard = ({ studentCount }) => {
           <div className="text-left sm:text-right space-y-1">
             <div className="text-2xl font-bold text-gray-800 tracking-tight flex items-baseline gap-1.5 sm:justify-end">
               {studentCount.student_count || 0}
-              <span className="text-[11px] text-gray-400 font-medium uppercase">Students</span>
+              <span className="text-[11px] text-gray-400 font-medium uppercase">Total Students</span>
             </div>
+            {unpaidCount > 0 && (
+              <div className="text-sm font-bold text-rose-600 tracking-tight flex items-baseline gap-1.5 sm:justify-end">
+                {unpaidCount}
+                <span className="text-[10px] text-rose-500 font-medium uppercase">Unpaid Students</span>
+              </div>
+            )}
             {studentCount.last_updated && (
               <p className="text-[10px] text-gray-400 font-mono">
                 Updated: {new Date(studentCount.last_updated).toLocaleString()}

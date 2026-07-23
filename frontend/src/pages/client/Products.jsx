@@ -91,6 +91,7 @@ const ClientProducts = () => {
     if (!isClientAuthenticated || !clientToken) return
     try {
       const res = await getClientStudentCount(clientToken)
+      console.log('[DEBUG] getClientStudentCount response:', res)
       if (res?.success && res?.data) {
         setStudentCountData(res.data)
         if (res.data.student_count) {
@@ -155,6 +156,7 @@ const ClientProducts = () => {
         calculateSubscription(cycle, clientToken).catch(() => null)
       )
       const results = await Promise.all(promises)
+      console.log('[DEBUG] calculateSubscription results:', results)
 
       const newRates = { ...cycleRates }
       let maxExtraStudents = 0
@@ -194,7 +196,9 @@ const ClientProducts = () => {
             totalAmount: computedSubtotal,
             totalAmountWithGst: calc.total_amount || 0,
             gstAmount: calc.gst_amount || 0,
-            isExtraStudentsPayment: calc.is_extra_students_payment || false
+            isExtraStudentsPayment: calc.is_extra_students_payment || false,
+            carryoverDays: calc.carryover_days || 0,
+            carryoverAmount: Number(carryoverAmt.toFixed(2))
           }
         }
       })
@@ -1570,6 +1574,19 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                     <td className="py-4">
                       <div className="font-bold text-slate-800">🎨 Customization Services</div>
                       <div className="text-slate-400 mt-0.5">Pending quote(s) payment</div>
+                      {pendingCustomRequests.length > 0 && (
+                        <div className="mt-2 flex flex-col gap-1.5 pl-3 border-l-2 border-indigo-100">
+                          {pendingCustomRequests.map((req, idx) => {
+                            const amt = Number(req.base_amount || req.amount || req.quote_amount || 0)
+                            return (
+                              <div key={idx} className="text-[10px] text-slate-500 font-medium leading-relaxed flex justify-between pr-4">
+                                <span>• Request #{req.id}: {req.customization_text}</span>
+                                <span className="font-mono text-slate-400 font-semibold ml-2">₹{amt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
                     </td>
                     <td className="text-right py-4 font-mono font-bold text-slate-700">
                       ₹{pendingCustomTotal.toLocaleString('en-IN')}
@@ -1581,6 +1598,19 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                     <td className="py-4">
                       <div className="font-bold text-slate-800">🔌 Add-on Services</div>
                       <div className="text-slate-400 mt-0.5">Pending add-on feature payment(s)</div>
+                      {pendingAddonRequests.length > 0 && (
+                        <div className="mt-2 flex flex-col gap-1.5 pl-3 border-l-2 border-indigo-100">
+                          {pendingAddonRequests.map((req, idx) => {
+                            const amt = Number(req.subtotal || req.base_amount || req.amount || req.price || 0)
+                            return (
+                              <div key={idx} className="text-[10px] text-slate-500 font-medium leading-relaxed flex justify-between pr-4">
+                                <span>• {req.addon_type} ({req.recipient_type || 'student'})</span>
+                                <span className="font-mono text-slate-400 font-semibold ml-2">₹{amt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
                     </td>
                     <td className="text-right py-4 font-mono font-bold text-slate-700">
                       ₹{pendingAddonTotal.toLocaleString('en-IN')}
@@ -1651,7 +1681,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
       <PayBillModal />
 
       {/* 1. Portal Heading & Info Section */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      <div className="bg-linear-to-r from-purple-100 via-indigo-100 to-violet-200 p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div className="space-y-1">
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">{companyName}</h1>
           <p className="text-sm font-bold text-slate-500">{productName}</p>
@@ -1677,11 +1707,25 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
               </span>
             </div>
             {/* Right portion: Student Count */}
-            <div className="md:text-right shrink-0">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Total Student Count</span>
-              <span className="text-2xl font-black text-[#2563eb] block mt-1 font-mono">
-                {studentCountData?.student_count !== undefined ? studentCountData.student_count : '0'}
-              </span>
+            <div className="md:text-right shrink-0 flex flex-col sm:items-end justify-center">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-0.5">Student Enrollment</span>
+              <div className="flex items-center gap-1.5 sm:justify-end">
+                <span className="text-2xl font-black text-slate-800 font-mono">
+                  {studentCountData?.student_count !== undefined ? studentCountData.student_count : '0'}
+                </span>
+                <span className="text-[10px] text-slate-400 font-semibold uppercase">Total</span>
+              </div>
+              <div className="mt-1 flex gap-1">
+                {unpaidStudentsCount > 0 ? (
+                  <span className="text-[10px] font-black text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full tracking-wide">
+                    ⚠️ {unpaidStudentsCount} Unpaid
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full tracking-wide">
+                    ✓ All Paid
+                  </span>
+                )}
+              </div>
             </div>
           </>
         ) : (
@@ -1702,12 +1746,12 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
         <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
 
           {/* Card 1: Security Deposit */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center gap-5 transition-transform hover:scale-[1.01]">
+          <div className="bg-linear-to-r from-red-100 via-rose-200 to-pink-300  rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center gap-5 transition-transform hover:scale-[1.01]">
             <div className="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center text-[#f97316] text-2xl font-bold shadow-inner">
               💰
             </div>
             <div className="space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Processing Fee</span>
+              <span className="text-[11px] font-bold text-slate-00 uppercase tracking-wider block">Processing Fee</span>
               <span className="text-lg font-black text-slate-800 block">
                 ₹ {Number(securityDeposit).toLocaleString('en-IN')}.00 <span className="text-[10px] font-medium text-slate-400 block mt-0.5"></span>
               </span>
@@ -1715,7 +1759,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
           </div>
 
           {/* Card 2: Subscription Plan Price */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center gap-5 relative transition-transform hover:scale-[1.01]">
+          <div className="bg-linear-to-r from-amber-100 via-orange-100 to-red-100 rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center gap-5 relative transition-transform hover:scale-[1.01]">
             {isNexgnSaas ? (
               <div className="absolute top-4 right-4 z-30">
                 <button
@@ -1766,23 +1810,28 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
             <div className="w-14 h-14 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-500 text-2xl font-bold shadow-inner">
               📝
             </div>
-            <div className="space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+            <div className="space-y-1 ">
+              <span className="text-[11px] font-bold text-slate-00 uppercase tracking-wider block">
                 {isInstitutePro ? 'Student Plan Price' : 'Subscription Plan Price'}
               </span>
               <span className="text-xl font-black text-slate-800 block">
                 ₹{Number(displayedPlanPrice).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 {displayedPlanPrice > 0 && (
-                  <span className="text-[9px] font-semibold text-slate-400 ml-1">+ GST</span>
+                  <span className="text-[9px] font-semibold text-slate-00 ml-1">+ GST</span>
                 )}
               </span>
               {isNexgnSaas && (
                 <>
-                  <span className="text-[9.5px] font-bold text-slate-400 block leading-tight">
+                  <span className="text-[9.5px] font-bold text-slate-00 block leading-tight">
                     ₹{Number(currentStudentRate).toLocaleString('en-IN')} × {subtitleStudentCount} students × {currentMultiplier} mo
+                    {cycleRates[selectedCycle]?.carryoverDays > 0 && (
+                      <span className="text-indigo-500 font-bold ml-1">
+                        + {cycleRates[selectedCycle].carryoverDays} days carryover
+                      </span>
+                    )}
                   </span>
                   <div className="mt-2 pt-2 border-t border-slate-100/70 flex justify-between items-center text-[10px] font-bold">
-                    <span className="text-slate-400 uppercase tracking-wider">Unpaid New Students</span>
+                    <span className="text-slate-00 uppercase tracking-wider">Unpaid New Students</span>
                     <span className={unpaidStudentsCount > 0 ? "text-rose-500 font-black font-mono text-xs" : "text-emerald-600 font-black font-mono text-xs"}>
                       {unpaidStudentsCount}
                     </span>
@@ -1803,46 +1852,46 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
           </div>
 
           {/* Card 3: Customization Added */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center gap-5 transition-transform hover:scale-[1.01]">
+          <div className="bg-linear-to-r from-gray-200 via-rose-50 to-orange-200 rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center gap-5 transition-transform hover:scale-[1.01]">
             <div className="w-14 h-14 rounded-full bg-violet-50 flex items-center justify-center text-violet-500 text-2xl font-bold shadow-inner">
               ⚙️
             </div>
             <div className="space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Customization Added</span>
+              <span className="text-[11px] font-bold text-slate-00 uppercase tracking-wider block">Customization Added</span>
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-black text-slate-800 block font-mono">
                   {paidCustomCount}
                 </span>
                 {pendingCustomCount > 0 && (
-                  <span className="text-xl font-bold text-rose-500 font-mono">
-                    + {pendingCustomCount}
+                  <span className="text-base font-black text-rose-500 font-mono ml-1">
+                    + {pendingCustomCount} customization{pendingCustomCount > 1 ? 's' : ''}
                   </span>
                 )}
               </div>
-              <span className="text-xs font-bold text-slate-500 block leading-tight">
+              <span className="text-xs font-bold text-slate-00 block leading-tight">
                 Pending Amount: ₹{pendingCustomTotal.toLocaleString('en-IN')}
               </span>
             </div>
           </div>
 
           {/* Card 5: Total Addon Feature Added */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center gap-5 transition-transform hover:scale-[1.01]">
+          <div className="bg-linear-to-r from-pink-200 via-purple-400 to-indigo-600 rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center gap-5 transition-transform hover:scale-[1.01]">
             <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 text-2xl font-bold shadow-inner">
               🧩
             </div>
             <div className="space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Total Addon Feature Added</span>
+              <span className="text-[11px] font-bold text-slate-00 uppercase tracking-wider block">Total Addon Feature Added</span>
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-black text-slate-800 block font-mono">
                   {paidAddonCount}
                 </span>
                 {pendingAddonCount > 0 && (
-                  <span className="text-xl font-bold text-rose-500 font-mono">
-                    + {pendingAddonCount}
+                  <span className="text-base font-black text-rose-500 font-mono ml-1">
+                    + {pendingAddonCount} add-on{pendingAddonCount > 1 ? 's' : ''}
                   </span>
                 )}
               </div>
-              <span className="text-xs font-bold text-slate-500 block leading-tight">
+              <span className="text-xs font-bold text-slate-00 block leading-tight">
                 Pending Amount: ₹{pendingAddonTotal.toLocaleString('en-IN')}
               </span>
             </div>
