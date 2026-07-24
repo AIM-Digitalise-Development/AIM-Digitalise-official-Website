@@ -1,27 +1,35 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useSupportStore } from '../../store/supportStore'
 import { useClientAuthStore } from '../../store/clientAuthStore'
 import ClientPageHeader from '../../components/client/ClientPageHeader'
 
 const ClientSupport = () => {
-  const { clientUser, profileData } = useClientAuthStore()
+  const { clientToken, clientUser, profileData, productData } = useClientAuthStore()
   const { tickets, ticketReplies, auditLogs, addTicket, addReply } = useSupportStore()
 
   const clientName = profileData?.client_name || clientUser?.client_name || clientUser?.name || 'Client'
   const schoolName = profileData?.company_name || profileData?.school_name || profileData?.organization || 'Academic Institute'
 
-  // Filter tickets for this client only
+  // Filter local tickets for this client only (as fallback)
   const clientTickets = tickets.filter(t => t.client.toLowerCase() === clientName.toLowerCase())
 
-  // States
+  // UI States
   const [activeTab, setActiveTab] = useState('active_tickets')
   const [clientSearch, setClientSearch] = useState('')
   const [severityFilter, setSeverityFilter] = useState('All')
   const [categoryFilter, setCategoryFilter] = useState('All')
 
+  // Dynamic API states
+  const [supportTickets, setSupportTickets] = useState([])
+  const [supportStats, setSupportStats] = useState({ total: 0, open: 0, in_progress: 0, resolved: 0 })
+  const [loadingSupportTickets, setLoadingSupportTickets] = useState(false)
+  const [submittingTicket, setSubmittingTicket] = useState(false)
+  const [newTicketAttachment, setNewTicketAttachment] = useState(null)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+
   // Form states
-  const [newProduct, setNewProduct] = useState('')
   const [newCategory, setNewCategory] = useState('')
   const [newSeverity, setNewSeverity] = useState('Low')
   const [newSubject, setNewSubject] = useState('')
@@ -32,14 +40,88 @@ const ClientSupport = () => {
   const [replyText, setReplyText] = useState('')
   const [activeReplyId, setActiveReplyId] = useState(null)
 
-  // Audit logs modal
+  // Audit logs and detail view modal states
   const [selectedLogsTicket, setSelectedLogsTicket] = useState(null)
+  const [selectedViewTicket, setSelectedViewTicket] = useState(null)
 
-  // Counts calculated specifically for this client
-  const totalTicketsCount = clientTickets.length
-  const openTicketsCount = clientTickets.filter(t => t.status === 'OPEN').length
-  const inProgressTicketsCount = clientTickets.filter(t => t.status === 'IN PROGRESS').length
-  const resolvedTicketsCount = clientTickets.filter(t => t.status === 'RESOLVED').length
+  // Fetch single ticket details (including live logs / comments)
+  const fetchTicketDetails = async (ticketId) => {
+    if (!clientToken || !ticketId) return
+    try {
+      const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.nexgn.in/api'
+      const response = await fetch(`${API_URL}/client/support-tickets/${ticketId}`, {
+        headers: { 'Authorization': `Bearer ${clientToken}` }
+      })
+      const result = await response.json()
+      if (result.success && result.data) {
+        // If we currently have this ticket opened in either logs modal or details modal, update them
+        setSelectedLogsTicket(prev => prev && (prev.id === ticketId || prev.ticket_id === ticketId) ? result.data : prev)
+        setSelectedViewTicket(prev => prev && (prev.id === ticketId || prev.ticket_id === ticketId) ? result.data : prev)
+      }
+    } catch (err) {
+      console.error('Fetch ticket details error:', err)
+    }
+  }
+
+  // Fetch Support Tickets from API
+  const fetchSupportTickets = async () => {
+    if (!clientToken) return
+    setLoadingSupportTickets(true)
+    setError('')
+    try {
+      let queryParams = new URLSearchParams()
+      
+      // Map tab keys
+      const statusType = activeTab === 'active_tickets' ? 'active' : (activeTab === 'resolved_tickets' ? 'resolved' : 'all')
+      queryParams.append('status_type', statusType)
+
+      if (clientSearch) queryParams.append('search', clientSearch)
+      if (severityFilter && severityFilter !== 'All') queryParams.append('severity', severityFilter)
+      if (categoryFilter && categoryFilter !== 'All') queryParams.append('category', categoryFilter)
+
+      const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.nexgn.in/api'
+      const response = await fetch(`${API_URL}/client/support-tickets?${queryParams.toString()}`, {
+        headers: { 'Authorization': `Bearer ${clientToken}` }
+      })
+      
+      if (response.status === 401) {
+        console.error('Session expired')
+        return
+      }
+
+      const result = await response.json()
+      if (result.success) {
+        setSupportTickets(result.data || [])
+      }
+    } catch (err) {
+      console.error('Support tickets fetch error:', err)
+    } finally {
+      setLoadingSupportTickets(false)
+    }
+  }
+
+  // Fetch Support Ticket Stats from API
+  const fetchSupportTicketStats = async () => {
+    if (!clientToken) return
+    try {
+      const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.nexgn.in/api'
+      const response = await fetch(`${API_URL}/client/support-tickets/stats`, {
+        headers: { 'Authorization': `Bearer ${clientToken}` }
+      })
+      const result = await response.json()
+      if (result.success) {
+        setSupportStats(result.data || { total: 0, open: 0, in_progress: 0, resolved: 0 })
+      }
+    } catch (err) {
+      console.error('Support ticket stats fetch error:', err)
+    }
+  }
+
+  // Sync tickets & stats on load and state change
+  useEffect(() => {
+    fetchSupportTickets()
+    fetchSupportTicketStats()
+  }, [clientToken, activeTab, clientSearch, severityFilter, categoryFilter])
 
   const handleSendReply = (ticketId) => {
     if (!replyText.trim()) return
@@ -53,55 +135,95 @@ const ClientSupport = () => {
     alert('Reply sent successfully!')
   }
 
-  const handleCreateTicket = (e) => {
+  const handleCreateTicket = async (e) => {
     e.preventDefault()
-    if (!newProduct || !newCategory || !newSubject || !newDescription) {
+    if (!newCategory || !newSubject || !newDescription) {
       alert('Please fill out all required fields.')
       return
     }
-    const createdTicket = {
-      id: `TK-${Math.floor(7000 + Math.random() * 999)}`,
-      client: clientName,
-      product: newProduct,
-      subject: newSubject,
-      category: newCategory,
-      severity: newSeverity,
-      dateLogged: new Date().toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      }) + `, ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`,
-      status: 'OPEN',
-      description: newDescription
+
+    setSubmittingTicket(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const formData = new FormData()
+      formData.append('category', newCategory)
+      formData.append('severity', newSeverity || 'Low')
+      formData.append('subject', newSubject)
+      formData.append('description', newDescription)
+      
+      if (newTicketAttachment) {
+        formData.append('attachment', newTicketAttachment)
+      }
+
+      const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.nexgn.in/api'
+      const response = await fetch(`${API_URL}/client/support-tickets`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${clientToken}`
+        },
+        body: formData
+      })
+
+      if (response.status === 401) {
+        console.error('Session expired')
+        setSubmittingTicket(false)
+        return
+      }
+
+      const result = await response.json()
+
+      if (result.success) {
+        alert('🎉 Support ticket submitted successfully!')
+        setIsCreateModalOpen(false)
+        setNewCategory('')
+        setNewSeverity('Low')
+        setNewSubject('')
+        setNewDescription('')
+        setNewTicketAttachment(null)
+        
+        await Promise.all([
+          fetchSupportTickets(),
+          fetchSupportTicketStats()
+        ])
+      } else {
+        alert(result.message || 'Failed to submit support ticket.')
+      }
+    } catch (err) {
+      console.error('Submit ticket error:', err)
+      alert('An error occurred while submitting support ticket.')
+    } finally {
+      setSubmittingTicket(false)
     }
-    addTicket(createdTicket)
-    
-    // Reset
-    setNewProduct('')
-    setNewCategory('')
-    setNewSeverity('Low')
-    setNewSubject('')
-    setNewDescription('')
-    
-    alert('Support Ticket submitted successfully!')
-    setIsCreateModalOpen(false)
-    setActiveTab('active_tickets')
   }
 
-  // Filter client tickets based on search, severity, and category
-  const filteredTickets = clientTickets.filter(t => {
-    const matchesSearch = 
+  // Filter client tickets based on search, severity, and category (for local/mock ticket support)
+  const localFilteredTickets = clientTickets.filter(t => {
+    const matchesSearch =
       t.subject.toLowerCase().includes(clientSearch.toLowerCase()) ||
       t.id.toLowerCase().includes(clientSearch.toLowerCase())
-      
+
     const matchesSeverity = severityFilter === 'All' || t.severity === severityFilter
     const matchesCategory = categoryFilter === 'All' || t.category === categoryFilter
-    
+
     return matchesSearch && matchesSeverity && matchesCategory
   })
 
-  const activeSupportTickets = filteredTickets.filter(t => t.status === 'OPEN' || t.status === 'IN PROGRESS')
-  const resolvedSupportTickets = filteredTickets.filter(t => t.status === 'RESOLVED')
+  // Use dynamic backend tickets if available, else local mock tickets
+  const filteredTickets = supportTickets.length > 0 ? supportTickets : localFilteredTickets
+  const activeSupportTickets = supportTickets.length > 0 
+    ? supportTickets.filter(t => (t.status || '').toUpperCase() === 'OPEN' || (t.status || '').toUpperCase() === 'IN PROGRESS')
+    : localFilteredTickets.filter(t => t.status === 'OPEN' || t.status === 'IN PROGRESS')
+
+  const resolvedSupportTickets = supportTickets.length > 0 
+    ? supportTickets.filter(t => (t.status || '').toUpperCase() === 'RESOLVED')
+    : localFilteredTickets.filter(t => t.status === 'RESOLVED')
+
+  const totalTicketsCount = supportStats.total || clientTickets.length
+  const openTicketsCount = supportStats.open !== undefined ? supportStats.open : clientTickets.filter(t => t.status === 'OPEN').length
+  const inProgressTicketsCount = supportStats.in_progress !== undefined ? supportStats.in_progress : clientTickets.filter(t => t.status === 'IN PROGRESS').length
+  const resolvedTicketsCount = supportStats.resolved !== undefined ? supportStats.resolved : clientTickets.filter(t => t.status === 'RESOLVED').length
 
   return (
     <>
@@ -110,7 +232,7 @@ const ClientSupport = () => {
       </Helmet>
 
       <div className="space-y-6 select-none text-slate-700 animate-fade-in" style={{ fontFamily: "'Inter', sans-serif" }}>
-        
+
         <ClientPageHeader title="Help & Support" />
 
         {/* Dynamic Metric Cards */}
@@ -176,7 +298,7 @@ const ClientSupport = () => {
 
         {/* Support Panel White Card Container */}
         <div className="bg-white rounded-3xl border border-slate-200/80 shadow-md p-6">
-          
+
           {/* Filters Row */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6 pb-6 border-b border-slate-100 items-end">
             {/* Search Input */}
@@ -236,31 +358,28 @@ const ClientSupport = () => {
           <div className="flex flex-wrap items-center gap-1 border-b border-slate-200/60 pb-3 mb-6">
             <button
               onClick={() => setActiveTab('active_tickets')}
-              className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${
-                activeTab === 'active_tickets'
+              className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${activeTab === 'active_tickets'
                   ? 'bg-white border-[#1a6b54] text-[#1a6b54] -mb-[13px] z-10'
                   : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
-              }`}
+                }`}
             >
               Active Tickets
             </button>
             <button
               onClick={() => setActiveTab('resolved_tickets')}
-              className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${
-                activeTab === 'resolved_tickets'
+              className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${activeTab === 'resolved_tickets'
                   ? 'bg-white border-[#1a6b54] text-[#1a6b54] -mb-[13px] z-10'
                   : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
-              }`}
+                }`}
             >
               Resolved Tickets
             </button>
             <button
               onClick={() => setActiveTab('all_history')}
-              className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${
-                activeTab === 'all_history'
+              className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${activeTab === 'all_history'
                   ? 'bg-white border-[#1a6b54] text-[#1a6b54] -mb-[13px] z-10'
                   : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
-              }`}
+                }`}
             >
               Ticket History
             </button>
@@ -294,32 +413,30 @@ const ClientSupport = () => {
                       <div className="flex items-center justify-between flex-wrap gap-2 text-[10px] font-bold">
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-slate-500 bg-slate-200 px-2 py-0.5 rounded">
-                            {t.id}
+                            {t.ticket_id || t.id}
                           </span>
-                          <span className={`px-2 py-0.5 rounded text-[9px] uppercase tracking-wider ${
-                            t.status === 'OPEN' ? 'bg-red-100 text-red-800 border border-red-200' : 'bg-amber-100 text-amber-800 border border-amber-200'
-                          }`}>
+                          <span className={`px-2 py-0.5 rounded text-[9px] uppercase tracking-wider ${t.status === 'OPEN' ? 'bg-red-100 text-red-800 border border-red-200' : 'bg-amber-100 text-amber-800 border border-amber-200'
+                            }`}>
                             {t.status}
                           </span>
-                          <span className={`px-2 py-0.5 rounded text-[9px] uppercase tracking-wider ${
-                            t.severity === 'Critical' || t.severity === 'High'
+                          <span className={`px-2 py-0.5 rounded text-[9px] uppercase tracking-wider ${t.severity === 'Critical' || t.severity === 'High'
                               ? 'bg-rose-50 text-rose-600 border border-rose-100'
                               : 'bg-amber-50 text-amber-600 border border-amber-100'
-                          }`}>
+                            }`}>
                             {t.severity} Severity
                           </span>
                         </div>
-                        <span className="text-slate-400 font-medium font-sans">📅 {t.dateLogged}</span>
+                        <span className="text-slate-400 font-medium font-sans">📅 {t.created_at ? new Date(t.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : t.dateLogged}</span>
                       </div>
 
                       {/* Ticket Title & Meta details */}
                       <div>
                         <h4 className="text-sm font-extrabold text-[#1a6b54] leading-snug">
-                          [{t.product}] {t.subject}
+                          [{t.product_name || t.product}] {t.subject}
                         </h4>
                         <p className="text-[10px] text-slate-400 font-semibold mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
                           <span>📁 Category: <strong>{t.category}</strong></span>
-                          <span>🛠️ Assignee: <strong className="text-slate-605">{t.assignee || 'Unassigned'}</strong></span>
+                          <span>🛠️ Assignee: <strong className="text-slate-605">{t.assignee_name || t.assignee || 'Unassigned'}</strong></span>
                         </p>
                       </div>
 
@@ -373,18 +490,25 @@ const ClientSupport = () => {
                         ) : (
                           <>
                             <button
-                              onClick={() => setActiveReplyId(t.id)}
-                              className="px-3 py-1.5 border border-slate-200 hover:border-slate-400 hover:bg-slate-50 text-slate-505 font-bold rounded-xl text-xs transition-colors flex items-center gap-1"
-                            >
-                              Add Reply
-                            </button>
-                            <button
                               type="button"
-                              onClick={() => setSelectedLogsTicket(t)}
-                              className="px-3 py-1.5 border border-slate-200 hover:border-slate-400 hover:bg-slate-50 text-slate-505 font-bold rounded-xl text-xs transition-colors flex items-center gap-1"
+                              onClick={() => {
+                                setSelectedViewTicket(t)
+                                fetchTicketDetails(t.ticket_id || t.id)
+                              }}
+                              className="px-3 py-1.5 bg-[#1a6b54] hover:bg-[#13503f] text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-1 cursor-pointer"
+                            >
+                              View Details
+                            </button>
+                            {/* <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedLogsTicket(t)
+                                fetchTicketDetails(t.ticket_id || t.id)
+                              }}
+                              className="px-3 py-1.5 border border-slate-200 hover:border-slate-400 hover:bg-slate-50 text-slate-500 font-bold rounded-xl text-xs transition-colors flex items-center gap-1"
                             >
                               Check Logs
-                            </button>
+                            </button> */}
                           </>
                         )}
                       </div>
@@ -392,8 +516,8 @@ const ClientSupport = () => {
                   ))
                 ) : (
                   <div className="text-center py-12 text-slate-400 bg-slate-50 border border-slate-200/60 rounded-2xl">
-                     <span className="text-3xl block">📁</span>
-                     <p className="font-bold mt-2">No active support tickets logged</p>
+                    <span className="text-3xl block">📁</span>
+                    <p className="font-bold mt-2">No active support tickets logged</p>
                   </div>
                 )}
               </div>
@@ -421,29 +545,28 @@ const ClientSupport = () => {
                       <div className="flex items-center justify-between flex-wrap gap-2 text-[10px] font-bold">
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-slate-500 bg-slate-200 px-2 py-0.5 rounded">
-                            {t.id}
+                            {t.ticket_id || t.id}
                           </span>
                           <span className="px-2 py-0.5 rounded text-[9px] uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-205">
                             {t.status}
                           </span>
-                          <span className={`px-2 py-0.5 rounded text-[9px] uppercase tracking-wider ${
-                            t.severity === 'Critical' || t.severity === 'High'
+                          <span className={`px-2 py-0.5 rounded text-[9px] uppercase tracking-wider ${t.severity === 'Critical' || t.severity === 'High'
                               ? 'bg-rose-50 text-rose-600 border border-rose-100'
                               : 'bg-amber-50 text-amber-600 border border-amber-100'
-                          }`}>
+                            }`}>
                             {t.severity} Severity
                           </span>
                         </div>
-                        <span className="text-slate-400 font-medium font-sans">📅 {t.dateLogged}</span>
+                        <span className="text-slate-400 font-medium font-sans">📅 {t.created_at ? new Date(t.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : t.dateLogged}</span>
                       </div>
 
                       <div>
                         <h4 className="text-sm font-extrabold text-[#1a6b54] leading-snug">
-                          [{t.product}] {t.subject}
+                          [{t.product_name || t.product}] {t.subject}
                         </h4>
                         <p className="text-[10px] text-slate-400 font-semibold mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
                           <span>📁 Category: <strong>{t.category}</strong></span>
-                          <span>🛠️ Assignee: <strong className="text-slate-605">{t.assignee || 'Unassigned'}</strong></span>
+                          <span>🛠️ Assignee: <strong className="text-slate-605">{t.assignee_name || t.assignee || 'Unassigned'}</strong></span>
                         </p>
                       </div>
 
@@ -468,11 +591,24 @@ const ClientSupport = () => {
                       <div className="flex justify-end items-center gap-2 pt-2.5 border-t border-slate-100">
                         <button
                           type="button"
-                          onClick={() => setSelectedLogsTicket(t)}
-                          className="px-3 py-1.5 border border-slate-200 hover:border-slate-400 hover:bg-slate-50 text-slate-505 font-bold rounded-xl text-xs transition-colors flex items-center gap-1"
+                          onClick={() => {
+                            setSelectedViewTicket(t)
+                            fetchTicketDetails(t.ticket_id || t.id)
+                          }}
+                          className="px-3 py-1.5 bg-[#1a6b54] hover:bg-[#13503f] text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-1 cursor-pointer"
+                        >
+                          View Details
+                        </button>
+                        {/* <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedLogsTicket(t)
+                            fetchTicketDetails(t.ticket_id || t.id)
+                          }}
+                          className="px-3 py-1.5 border border-slate-200 hover:border-slate-400 hover:bg-slate-50 text-slate-500 font-bold rounded-xl text-xs transition-colors flex items-center gap-1"
                         >
                           Check Logs
-                        </button>
+                        </button> */}
                       </div>
                     </div>
                   ))
@@ -518,49 +654,61 @@ const ClientSupport = () => {
                       {filteredTickets.length > 0 ? (
                         filteredTickets.map((t) => (
                           <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-5 py-4 font-mono font-bold text-slate-505">{t.id}</td>
+                            <td className="px-5 py-4 font-mono font-bold text-slate-505">{t.ticket_id || t.id}</td>
                             <td className="px-5 py-4">
                               <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-600 font-bold text-[9.5px] uppercase">
-                                {t.product}
+                                {t.product_name || t.product}
                               </span>
                             </td>
                             <td className="px-5 py-4 font-medium max-w-xs truncate">{t.subject}</td>
                             <td className="px-5 py-4 font-semibold text-slate-500">{t.category}</td>
                             <td className="px-5 py-4">
-                              <span className={`px-2 py-0.5 rounded border text-[9.5px] font-black uppercase tracking-wider ${
-                                t.severity === 'Critical' || t.severity === 'High'
+                              <span className={`px-2 py-0.5 rounded border text-[9.5px] font-black uppercase tracking-wider ${t.severity === 'Critical' || t.severity === 'High'
                                   ? 'bg-rose-50 text-rose-600 border-rose-100'
                                   : t.severity === 'Medium'
-                                  ? 'bg-amber-50 text-amber-600 border-amber-100'
-                                  : 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                              }`}>
+                                    ? 'bg-amber-50 text-amber-600 border-amber-100'
+                                    : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                }`}>
                                 {t.severity}
                               </span>
                             </td>
-                            <td className="px-5 py-4 font-bold text-slate-600">{t.assignee || 'Unassigned'}</td>
-                            <td className="px-5 py-4 font-medium text-slate-400 font-sans">{t.dateLogged.split(',')[0]}</td>
+                            <td className="px-5 py-4 font-bold text-slate-600">{t.assignee_name || t.assignee || 'Unassigned'}</td>
+                            <td className="px-5 py-4 font-medium text-slate-400 font-sans">
+                              {t.created_at ? new Date(t.created_at).toLocaleDateString() : (t.dateLogged ? t.dateLogged.split(',')[0] : '—')}
+                            </td>
                             <td className="px-5 py-4 text-center">
-                              <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase border tracking-wider ${
-                                t.status === 'RESOLVED'
-                                  ? 'bg-emerald-100 text-emerald-805 border border-emerald-200'
-                                  : t.status === 'IN PROGRESS'
-                                  ? 'bg-amber-100 text-amber-805 border border-amber-200'
-                                  : 'bg-red-100 text-red-805 border border-red-200'
-                              }`}>
+                              <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase border tracking-wider ${t.status === 'RESOLVED' || t.status === 'Closed'
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                  : t.status === 'IN PROGRESS' || t.status === 'In Progress'
+                                    ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                    : 'bg-red-100 text-red-800 border border-red-200'
+                                }`}>
                                 {t.status}
                               </span>
                             </td>
                             <td className="px-5 py-4 text-center">
-                              <button
-                                type="button"
-                                onClick={() => setSelectedLogsTicket(t)}
-                                className="px-2.5 py-1.5 rounded-lg border border-blue-200 hover:border-blue-500 hover:bg-blue-50 text-blue-600 font-bold cursor-pointer transition-all flex items-center gap-1 mx-auto"
-                              >
-                                <svg className="w-3.5 h-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                <span>Logs</span>
-                              </button>
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedViewTicket(t)
+                                    fetchTicketDetails(t.ticket_id || t.id)
+                                  }}
+                                  className="px-2.5 py-1.5 rounded-lg bg-[#1a6b54] hover:bg-[#13503f] text-white font-bold cursor-pointer transition-all flex items-center gap-1"
+                                >
+                                  <span>View</span>
+                                </button>
+                                {/* <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedLogsTicket(t)
+                                    fetchTicketDetails(t.ticket_id || t.id)
+                                  }}
+                                  className="px-2.5 py-1.5 rounded-lg border border-blue-200 hover:border-blue-500 hover:bg-blue-50 text-blue-600 font-bold cursor-pointer transition-all flex items-center gap-1"
+                                >
+                                  <span>Logs</span>
+                                </button> */}
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -588,7 +736,7 @@ const ClientSupport = () => {
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-2xl p-6 max-w-md w-full animate-fade-in text-slate-700">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <h3 className="text-base font-black text-slate-800 flex items-center gap-2">
-                <span>Audit Logs — {selectedLogsTicket.id}</span>
+                <span>Audit Logs — {selectedLogsTicket.ticket_id || selectedLogsTicket.id}</span>
               </h3>
               <button
                 onClick={() => setSelectedLogsTicket(null)}
@@ -597,12 +745,12 @@ const ClientSupport = () => {
                 ✕
               </button>
             </div>
-            
+
             <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1 text-xs">
-              {(auditLogs[selectedLogsTicket.id] || [
+              {(selectedLogsTicket.logs || selectedLogsTicket.audit_logs || selectedLogsTicket.history || selectedLogsTicket.status_history || auditLogs[selectedLogsTicket.id] || [
                 {
                   action: 'Ticket Created',
-                  date: selectedLogsTicket.dateLogged,
+                  date: selectedLogsTicket.created_at ? new Date(selectedLogsTicket.created_at).toLocaleString() : selectedLogsTicket.dateLogged,
                   description: 'System recorded ticket submission from client portal.'
                 },
                 ...(selectedLogsTicket.status !== 'OPEN' ? [{
@@ -610,29 +758,135 @@ const ClientSupport = () => {
                   date: '19 May 2025, 02:00 PM',
                   description: 'Assigned to Technical Desk Engineer.'
                 }] : []),
-                ...(selectedLogsTicket.status === 'RESOLVED' ? [{
+                ...(selectedLogsTicket.status === 'RESOLVED' || selectedLogsTicket.status === 'Closed' ? [{
                   action: 'Status Changed to Resolved',
                   date: '20 May 2025, 11:30 AM',
                   description: 'Issue resolved by technical desk. Resolution confirmed by client.'
                 }] : [])
               ]).map((log, logIdx) => (
                 <div key={logIdx} className={`border-l-2 pl-3 py-0.5 ${
-                  log.action.includes('Created') ? 'border-emerald-500' :
-                  log.action.includes('Resolved') ? 'border-green-500' : 'border-amber-500'
-                }`}>
-                  <p className="font-bold text-slate-800">{log.action}</p>
-                  <p className="text-[10px] text-slate-400 font-medium">{log.date}</p>
-                  <p className="text-slate-500 mt-1 leading-relaxed">{log.description}</p>
+                    (log.action || log.event || '').includes('Created') ? 'border-emerald-500' :
+                    (log.action || log.event || '').includes('Resolved') ? 'border-green-500' : 'border-amber-500'
+                  }`}>
+                  <p className="font-bold text-slate-800">{log.action || log.event || 'Activity'}</p>
+                  <p className="text-[10px] text-slate-400 font-medium">{log.created_at ? new Date(log.created_at).toLocaleString() : (log.date || log.time || '—')}</p>
+                  <p className="text-slate-500 mt-1 leading-relaxed">{log.description || log.details || log.notes || '—'}</p>
                 </div>
               ))}
             </div>
-            
+
             <div className="mt-6 flex justify-end">
               <button
                 onClick={() => setSelectedLogsTicket(null)}
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-colors cursor-pointer"
               >
                 Close Logs
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Details Modal */}
+      {selectedViewTicket && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-fade-in text-slate-700">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+              <h3 className="text-base font-black text-slate-800 flex items-center gap-2">
+                <span>Ticket Details — {selectedViewTicket.ticket_id || selectedViewTicket.id}</span>
+              </h3>
+              <button
+                onClick={() => setSelectedViewTicket(null)}
+                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-650 transition-colors font-bold text-sm cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs text-left">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200/60">
+                <div>
+                  <span className="font-bold text-slate-400 block uppercase text-[10px]">Product / Service</span>
+                  <span className="font-bold text-slate-700">{selectedViewTicket.product_name || selectedViewTicket.product || '—'}</span>
+                </div>
+                <div>
+                  <span className="font-bold text-slate-400 block uppercase text-[10px]">Subject</span>
+                  <span className="font-bold text-slate-700">{selectedViewTicket.subject || '—'}</span>
+                </div>
+                <div>
+                  <span className="font-bold text-slate-400 block uppercase text-[10px]">Category</span>
+                  <span className="font-bold text-slate-700">{selectedViewTicket.category || '—'}</span>
+                </div>
+                <div>
+                  <span className="font-bold text-slate-400 block uppercase text-[10px]">Severity</span>
+                  <span className="font-bold text-slate-700">{selectedViewTicket.severity || '—'}</span>
+                </div>
+                <div>
+                  <span className="font-bold text-slate-400 block uppercase text-[10px]">Assignee</span>
+                  <span className="font-bold text-slate-700">{selectedViewTicket.assignee_name || selectedViewTicket.assignee || 'Unassigned'}</span>
+                </div>
+                <div>
+                  <span className="font-bold text-slate-400 block uppercase text-[10px]">Date Logged</span>
+                  <span className="font-bold text-slate-700">
+                    {selectedViewTicket.created_at ? new Date(selectedViewTicket.created_at).toLocaleString() : selectedViewTicket.dateLogged}
+                  </span>
+                </div>
+                <div className="md:col-span-2">
+                  <span className="font-bold text-slate-400 block uppercase text-[10px] mb-1">Status</span>
+                  <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase border tracking-wider ${
+                    (selectedViewTicket.status || '').toUpperCase() === 'RESOLVED' || (selectedViewTicket.status || '').toUpperCase() === 'CLOSED'
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                      : (selectedViewTicket.status || '').toUpperCase() === 'IN PROGRESS'
+                        ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                        : 'bg-red-100 text-red-800 border border-red-200'
+                  }`}>
+                    {selectedViewTicket.status}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <span className="font-bold text-slate-400 block uppercase text-[10px] mb-1.5">Description</span>
+                <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl text-slate-700 leading-relaxed font-sans whitespace-pre-wrap">
+                  {selectedViewTicket.description}
+                </div>
+              </div>
+
+              {/* Attachment field */}
+              {(() => {
+                const attachmentUrl = selectedViewTicket.attachment_url || selectedViewTicket.attachment || selectedViewTicket.file_path
+                if (!attachmentUrl) return null
+                return (
+                  <div>
+                    <span className="font-bold text-slate-400 block uppercase text-[10px] mb-1.5">Attachment</span>
+                    <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="text-xl shrink-0">📎</span>
+                        <div className="min-w-0 text-left">
+                          <p className="font-bold text-slate-700 text-xs truncate">Attached File</p>
+                          <p className="text-[10px] text-slate-400 truncate max-w-sm">{attachmentUrl.split('/').pop()}</p>
+                        </div>
+                      </div>
+                      <a
+                        href={attachmentUrl.startsWith('http') ? attachmentUrl : `https://api.nexgn.in/${attachmentUrl}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-4 py-2 bg-[#1a6b54] hover:bg-[#13503f] text-white rounded-xl font-bold transition-all text-xs cursor-pointer shrink-0"
+                      >
+                        Download / View
+                      </a>
+                    </div>
+                  </div>
+                )
+              })()}
+            </div>
+
+            <div className="mt-6 flex justify-end border-t border-slate-100 pt-4">
+              <button
+                onClick={() => setSelectedViewTicket(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+              >
+                Close Details
               </button>
             </div>
           </div>
@@ -671,24 +925,15 @@ const ClientSupport = () => {
                   />
                 </div>
 
-                {/* Product / Service */}
+                {/* Product / Service (Locked) */}
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Product / Service</label>
-                  <select
-                    value={newProduct}
-                    onChange={(e) => setNewProduct(e.target.value)}
-                    required
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-teal-500 cursor-pointer"
-                  >
-                    <option value="">Choose product...</option>
-                    <option value="School MS">School MS</option>
-                    <option value="College Portal">College Portal</option>
-                    <option value="GST Billing Tool">GST Billing Tool</option>
-                    <option value="CRM Enterprise">CRM Enterprise</option>
-                    <option value="E-Commerce Hub">E-Commerce Hub</option>
-                    <option value="NEXGN Institute Pro">NEXGN Institute Pro</option>
-                    <option value="Android Mobile App">Android Mobile App</option>
-                  </select>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Product / Service (Locked)</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={productData?.[0]?.product_name || productData?.[0]?.name || clientUser?.product_name || profileData?.product_name || 'NEXGN Institute Pro'}
+                    className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-500 cursor-not-allowed"
+                  />
                 </div>
 
                 {/* Issue Category */}
@@ -756,6 +1001,7 @@ const ClientSupport = () => {
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Attachments (Optional)</label>
                 <input
                   type="file"
+                  onChange={(e) => setNewTicketAttachment(e.target.files[0] || null)}
                   className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 file:cursor-pointer cursor-pointer"
                 />
               </div>
