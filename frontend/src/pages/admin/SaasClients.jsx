@@ -37,7 +37,10 @@ const AdminSaasClients = () => {
   const [statusFilter, setStatusFilter] = useState('All')
   const [selectedClientDetails, setSelectedClientDetails] = useState(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
-  const [dossierTab, setDossierTab] = useState('profile')
+  const [dossierTab, setDossierTab] = useState('profile')
+  const [copiedClientId, setCopiedClientId] = useState(false)
+  const [liveStudentCount, setLiveStudentCount] = useState(null)
+  const [fetchingStudentCount, setFetchingStudentCount] = useState(false)
 
   const handleDownloadInvoice = (payment, clientDetails) => {
     const today = new Date(payment.created_at || Date.now())
@@ -219,6 +222,7 @@ const AdminSaasClients = () => {
     const q = clientSearch.toLowerCase()
     const matchesSearch =
       (c.client_name || '').toLowerCase().includes(q) ||
+      (c.company_name || '').toLowerCase().includes(q) ||
       (c.email || '').toLowerCase().includes(q) ||
       (c.client_id || '').toString().includes(q) ||
       (c.product_name || '').toLowerCase().includes(q) ||
@@ -226,6 +230,23 @@ const AdminSaasClients = () => {
 
     return matchesProduct && matchesStatus && matchesSearch
   })
+
+  // ── LIVE STUDENT COUNT ─────────────────────────────────────────────
+  const fetchLiveStudentCount = async (clientId) => {
+    setLiveStudentCount(null)
+    setFetchingStudentCount(true)
+    try {
+      const res = await getAdminClientById(clientId)
+      if (res.data?.success) {
+        const d = res.data.data
+        setLiveStudentCount(d.total_students != null ? d.total_students : d.student_count != null ? d.student_count : null)
+      }
+    } catch (_) {
+      setLiveStudentCount(null)
+    } finally {
+      setFetchingStudentCount(false)
+    }
+  }
 
   // ── DELIVERY MODAL ─────────────────────────────────────────────────────────
   const [deliveryModal, setDeliveryModal] = useState(false)
@@ -686,7 +707,7 @@ const AdminSaasClients = () => {
                     <table className="w-full text-left border-collapse text-xs">
                       <thead>
                         <tr className="border-b border-slate-200 bg-slate-50 text-slate-400 font-bold uppercase tracking-wider">
-                          <th className="px-5 py-4">Client ID</th>
+                          <th className="px-5 py-4">Delivery Date</th>
                           <th className="px-5 py-4">Client Details</th>
                           <th className="px-5 py-4">Product</th>
                           <th className="px-5 py-4">Partner</th>
@@ -699,7 +720,11 @@ const AdminSaasClients = () => {
                       <tbody className="divide-y divide-slate-100 text-slate-700">
                         {filteredClients.map(c => (
                           <tr key={c.id} className="hover:bg-slate-50/50">
-                            <td className="px-5 py-4 font-mono font-bold text-slate-500">{c.client_id || '—'}</td>
+                            <td className="px-5 py-4">
+                              {c.delivery_date || c.valid_until
+                                ? <span className="font-mono font-bold text-slate-700 text-[11px]">{formatDate(c.delivery_date || c.valid_until)}</span>
+                                : <span className="text-slate-300 font-bold">—</span>}
+                            </td>
                             <td className="px-5 py-4">
                               <p className="font-bold text-slate-800 text-sm">{c.company_name || '—'}</p>
                               <p className="text-[10px] text-slate-400">{c.client_name || ''}</p>
@@ -1148,7 +1173,18 @@ const AdminSaasClients = () => {
                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Client Details Dossier</span>
                   <h3 className="text-lg font-black text-slate-900 leading-tight">{selectedClientDetails.company_name || selectedClientDetails.school_name}</h3>
                   <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
-                    <span className="text-[10px] text-blue-600 font-bold font-mono tracking-wider">{selectedClientDetails.client_id}</span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(selectedClientDetails.client_id || '')
+                        setCopiedClientId(true)
+                        setTimeout(() => setCopiedClientId(false), 2000)
+                      }}
+                      title="Click to copy Client ID"
+                      className="flex items-center gap-1 text-[10px] text-blue-600 font-bold font-mono tracking-wider bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-lg hover:bg-blue-100 transition-all cursor-pointer"
+                    >
+                      {selectedClientDetails.client_id}
+                      <span className="text-[9px] ml-0.5">{copiedClientId ? '✅' : '📋'}</span>
+                    </button>
                     <span className="text-slate-300">•</span>
                     <span className="text-[10px] text-slate-500 font-medium">Connected Person: <strong className="text-slate-700">{selectedClientDetails.client_name}</strong></span>
                     <span className="text-slate-300">•</span>
@@ -1179,7 +1215,10 @@ const AdminSaasClients = () => {
                     ].map((t) => (
                       <button
                         key={t.id}
-                        onClick={() => setDossierTab(t.id)}
+                        onClick={() => {
+                          setDossierTab(t.id)
+                          if (t.id === 'school') fetchLiveStudentCount(selectedClientDetails.id)
+                        }}
                         className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer border ${
                           dossierTab === t.id
                             ? 'bg-[#1e3e6b] text-white border-[#1e3e6b] shadow-sm'
@@ -1295,8 +1334,21 @@ const AdminSaasClients = () => {
                                 <p className="text-slate-800 font-medium mt-1">{selectedClientDetails.school_session || '—'}</p>
                               </div>
                               <div>
-                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Total Students</span>
-                                <p className="text-slate-800 font-medium mt-1">{selectedClientDetails.total_students != null ? selectedClientDetails.total_students : selectedClientDetails.student_count || '—'}</p>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Total Students (Live)</span>
+                                <div className="flex items-center gap-2 mt-1">
+                                   {fetchingStudentCount ? (
+                                     <span className="text-slate-400 text-[10px] animate-pulse">⏳ Fetching...</span>
+                                   ) : liveStudentCount != null ? (
+                                     <span className="text-emerald-700 font-black text-sm">{liveStudentCount.toLocaleString('en-IN')}</span>
+                                   ) : (
+                                     <span className="text-slate-800 font-medium">{selectedClientDetails.total_students != null ? selectedClientDetails.total_students : selectedClientDetails.student_count || '—'}</span>
+                                   )}
+                                   <button
+                                     onClick={() => fetchLiveStudentCount(selectedClientDetails.id)}
+                                     title="Refresh live count"
+                                     className="text-[9px] px-1.5 py-0.5 rounded border border-slate-200 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-600 text-slate-400 font-bold cursor-pointer transition-all"
+                                   >↺</button>
+                                 </div>
                               </div>
                               <div className="col-span-2">
                                 <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Residence Address</span>
@@ -1496,7 +1548,21 @@ const AdminSaasClients = () => {
                   </div>
 
               {/* Footer */}
-              <div className="px-6 py-4 flex justify-end bg-slate-50 border-t border-slate-200">
+              <div className="px-6 py-4 flex items-center justify-between bg-slate-50 border-t border-slate-200 gap-3">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => alert(`🌐 School Link for ${selectedClientDetails.company_name || selectedClientDetails.school_name}\n\nThe school portal link will be available here soon.`)}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold cursor-pointer transition-all shadow-sm"
+                  >
+                    🌐 School Link
+                  </button>
+                  <button
+                    onClick={() => alert(`🪪 School ID Card for ${selectedClientDetails.company_name || selectedClientDetails.school_name}\n\nID card generation will be available here soon.`)}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-[11px] font-bold cursor-pointer transition-all shadow-sm"
+                  >
+                    🪪 School ID Card
+                  </button>
+                </div>
                 <button
                   onClick={() => setShowDetailsModal(false)}
                   className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 cursor-pointer transition-all"
