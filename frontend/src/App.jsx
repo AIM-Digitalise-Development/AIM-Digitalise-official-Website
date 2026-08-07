@@ -125,7 +125,7 @@ function App() {
             <Route path="leads" element={<AdminLeads />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="saas-clients" element={<AdminSaasClients />} />
-            <Route path="products" element={<Navigate to="/admin/settings" replace />} />
+            <Route path="products" element={<AdminProducts />} />
             <Route path="settings" element={<AdminSettings />} />
             <Route path="subscribed-clients" element={<AdminSubscribedClients />} />
             <Route path="analytics" element={<AdminAnalytics />} />

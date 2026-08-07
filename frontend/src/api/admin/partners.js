@@ -206,3 +206,19 @@ export const getAdminAddonPayments = (filters = {}) => {
 // GET /api/admin/addon/stats
 export const getAdminAddonStats = () =>
   adminFetch('GET', '/admin/addon/stats')
+
+// ─── Country Taxes & Country Prices ───────────────────────────────────────────
+// GET /api/admin/country-taxes
+export const getAdminCountryTaxes = () =>
+  adminFetch('GET', '/admin/country-taxes')
+
+// PUT /api/admin/country-taxes/{id}
+// body: { tax_name, tax_rate, is_active }
+export const updateAdminCountryTax = (id, data) =>
+  adminFetch('PUT', `/admin/country-taxes/${id}`, data)
+
+// POST /api/admin/products/{productId}/country-price
+// body: { country_code, currency, processing_fee, monthly_subscription }
+export const updateProductCountryPrice = (productId, data) =>
+  adminFetch('POST', `/admin/products/${productId}/country-price`, data)
+

@@ -35,5 +35,5 @@ export const verifyPayment = (payload) =>
  * Fetch available subcategories with their products
  * GET /public/subcategories-with-products
  */
-export const fetchSubcategoriesWithProducts = () =>
-  client.get('/public/subcategories-with-products').then((r) => r.data)
+export const fetchSubcategoriesWithProducts = (country) =>
+  client.get('/public/subcategories-with-products' + (country ? `?country=${country}` : '')).then((r) => r.data)

@@ -17,6 +17,9 @@ import {
   updateSubCategory,
   toggleSubCategoryStatus,
   deleteSubCategory,
+  getAdminCountryTaxes,
+  updateAdminCountryTax,
+  updateProductCountryPrice,
 } from '../../api/admin/partners'
 
 // ─── Shared style helpers ─────────────────────────────────────────────────────
@@ -40,6 +43,7 @@ const EMPTY_PRODUCT = {
 const EMPTY_CATEGORY    = { name: '', description: '', is_active: true }
 const EMPTY_SUBCATEGORY = { name: '', category_id: '', description: '', is_active: true }
 const EMPTY_DISCOUNTS   = { monthly_discount: 0, quarterly_discount: 0, half_yearly_discount: 0, annual_discount: 0 }
+const EMPTY_COUNTRY_PRICE = { country_code: 'NP', currency: 'NPR', processing_fee: 0, monthly_subscription: 0 }
 
 const AdminProducts = ({ isEmbedded = false }) => {
   // ── Flash ─────────────────────────────────────────────────────────────────
@@ -57,6 +61,10 @@ const AdminProducts = ({ isEmbedded = false }) => {
   const [categories,      setCategories]      = useState([])
   const [subCategories,   setSubCategories]   = useState([])
   const [filteredSubCats, setFilteredSubCats] = useState([])
+
+  // Country taxes states
+  const [countryTaxes,    setCountryTaxes]    = useState([])
+  const [taxesLoading,    setTaxesLoading]    = useState(false)
 
   // Filters
   const [filters, setFilters] = useState({ active: '', category_id: '', sub_category_id: '', search: '' })
@@ -100,10 +108,26 @@ const AdminProducts = ({ isEmbedded = false }) => {
     } catch (err) { console.error('[fetchSubCategories]', err) }
   }
 
+  const fetchCountryTaxes = async () => {
+    setTaxesLoading(true)
+    try {
+      const res = await getAdminCountryTaxes()
+      if (res.data?.success) {
+        setCountryTaxes(Array.isArray(res.data.data) ? res.data.data : [])
+      } else {
+        flashError(res.data?.message || 'Failed to fetch country taxes')
+      }
+    } catch (err) {
+      console.error('[fetchCountryTaxes]', err)
+      flashError(err.message || 'Error loading country taxes')
+    } finally { setTaxesLoading(false) }
+  }
+
   useEffect(() => {
     fetchProducts()
     fetchCategories()
     fetchSubCategories()
+    fetchCountryTaxes()
   }, [])
 
   const applyFilters = () => fetchProducts()
@@ -212,6 +236,84 @@ const AdminProducts = ({ isEmbedded = false }) => {
       else flashError(res.data?.message || 'Failed to update discounts')
     } catch (err) { flashError(err.message) }
     finally { setDiscountSaving(false) }
+  }
+
+  // ── COUNTRY TAX MODAL ──────────────────────────────────────────────────────
+  const [showTaxModal, setShowTaxModal] = useState(false)
+  const [selectedTax, setSelectedTax] = useState(null)
+  const [taxForm, setTaxForm] = useState({ tax_name: '', tax_rate: 0, is_active: true })
+  const [taxSaving, setTaxSaving] = useState(false)
+
+  const openEditTax = (tax) => {
+    setSelectedTax(tax)
+    setTaxForm({
+      tax_name: tax.tax_name || '',
+      tax_rate: Number(tax.tax_rate) || 0,
+      is_active: tax.is_active ?? true,
+    })
+    setShowTaxModal(true)
+  }
+
+  const handleSaveTax = async (e) => {
+    e.preventDefault()
+    if (!taxForm.tax_name.trim()) { flashError('Tax name is required'); return }
+    setTaxSaving(true)
+    try {
+      const res = await updateAdminCountryTax(selectedTax.id, taxForm)
+      if (res.data?.success) {
+        flashSuccess('Country tax configuration updated successfully!')
+        setShowTaxModal(false)
+        fetchCountryTaxes()
+      } else {
+        flashError(res.data?.message || 'Failed to update country tax')
+      }
+    } catch (err) {
+      flashError(err.message || 'Error updating tax configuration')
+    } finally {
+      setTaxSaving(false)
+    }
+  }
+
+  // ── COUNTRY PRICE OVERRIDE MODAL ───────────────────────────────────────────
+  const [showCountryPriceModal, setShowCountryPriceModal] = useState(false)
+  const [countryPriceForm, setCountryPriceForm] = useState(EMPTY_COUNTRY_PRICE)
+  const [countryPriceSaving, setCountryPriceSaving] = useState(false)
+
+  const openCountryPriceModal = (product) => {
+    setSelectedProduct(product)
+    setCountryPriceForm({
+      country_code: 'NP',
+      currency: 'NPR',
+      processing_fee: 0,
+      monthly_subscription: 0,
+    })
+    setShowCountryPriceModal(true)
+  }
+
+  const handleCountryChangeInForm = (code) => {
+    let curr = 'INR'
+    if (code === 'NP') curr = 'NPR'
+    if (code === 'BT') curr = 'BTN'
+    setCountryPriceForm(f => ({ ...f, country_code: code, currency: curr }))
+  }
+
+  const handleSaveCountryPrice = async (e) => {
+    e.preventDefault()
+    setCountryPriceSaving(true)
+    try {
+      const res = await updateProductCountryPrice(selectedProduct.id, countryPriceForm)
+      if (res.data?.success) {
+        flashSuccess(`Country price for ${countryPriceForm.country_code} saved!`)
+        setShowCountryPriceModal(false)
+        fetchProducts()
+      } else {
+        flashError(res.data?.message || 'Failed to update country pricing override')
+      }
+    } catch (err) {
+      flashError(err.message || 'Error updating product country pricing override')
+    } finally {
+      setCountryPriceSaving(false)
+    }
   }
 
   // ── CATEGORY MODAL ─────────────────────────────────────────────────────────
@@ -466,6 +568,88 @@ const AdminProducts = ({ isEmbedded = false }) => {
         </div>
       )}
 
+      {/* ══ COUNTRY PRICE OVERRIDE MODAL ════════════════════════════════════════ */}
+      {showCountryPriceModal && selectedProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 border border-slate-200/80">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-black text-slate-800 flex items-center gap-2"><span className="text-[#ff6600]">🌐</span> Country Pricing</h3>
+              <button onClick={() => setShowCountryPriceModal(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 text-xl cursor-pointer">×</button>
+            </div>
+            <div className="mb-4 p-3 rounded-xl bg-slate-50 border border-slate-100">
+              <p className="text-xs text-slate-400 font-semibold">Product</p>
+              <p className="text-sm font-black text-slate-800">{selectedProduct.name}</p>
+              <p className="text-[10px] text-slate-400">Base: ₹{selectedProduct.processing_fee} processing · ₹{selectedProduct.monthly_subscription}/mo</p>
+            </div>
+            <form onSubmit={handleSaveCountryPrice} className="space-y-4">
+              <Field label="Select Country *">
+                <select value={countryPriceForm.country_code} onChange={e => handleCountryChangeInForm(e.target.value)} className={inputCls} required>
+                  <option value="NP">Nepal (NPR)</option>
+                  <option value="BT">Bhutan (BTN)</option>
+                  <option value="IN">India (INR)</option>
+                </select>
+              </Field>
+              <div className="grid grid-cols-2 gap-4">
+                <Field label={`Processing Fee (${countryPriceForm.currency})`}>
+                  <input type="number" min="0" step="0.01" value={countryPriceForm.processing_fee} onChange={e => setCountryPriceForm(f => ({...f, processing_fee: Number(e.target.value)}))} className={inputCls} required />
+                </Field>
+                <Field label={`Monthly Fee (${countryPriceForm.currency})`}>
+                  <input type="number" min="0" step="0.01" value={countryPriceForm.monthly_subscription} onChange={e => setCountryPriceForm(f => ({...f, monthly_subscription: Number(e.target.value)}))} className={inputCls} required />
+                </Field>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowCountryPriceModal(false)} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-500 hover:bg-slate-50 cursor-pointer">Cancel</button>
+                <button type="submit" disabled={countryPriceSaving} className="flex-1 py-2.5 rounded-xl bg-[#ff6600] text-white text-sm font-bold hover:bg-[#e05a00] disabled:opacity-50 cursor-pointer">
+                  {countryPriceSaving ? 'Saving...' : 'Save Pricing'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ══ COUNTRY TAX EDIT MODAL ═══════════════════════════════════════════ */}
+      {showTaxModal && selectedTax && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 border border-slate-200/80">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-black text-slate-800 flex items-center gap-2"><span className="text-[#38b34a]">⚖️</span> Edit Country Tax</h3>
+              <button onClick={() => setShowTaxModal(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 text-xl cursor-pointer">×</button>
+            </div>
+            <div className="mb-4 p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-400 font-semibold">Country:</span>
+                <span className="font-bold text-slate-800">{selectedTax.country_name} ({selectedTax.country_code})</span>
+              </div>
+              <div className="flex justify-between mt-1">
+                <span className="text-slate-400 font-semibold">Currency:</span>
+                <span className="font-bold text-slate-800">{selectedTax.currency} ({selectedTax.currency_symbol})</span>
+              </div>
+            </div>
+            <form onSubmit={handleSaveTax} className="space-y-4">
+              <Field label="Tax System Name *">
+                <input value={taxForm.tax_name} onChange={e => setTaxForm(f => ({...f, tax_name: e.target.value}))} required placeholder="e.g. VAT" className={inputCls} />
+              </Field>
+              <Field label="Tax Rate (%) *">
+                <input type="number" min="0" max="100" step="0.01" value={taxForm.tax_rate} onChange={e => setTaxForm(f => ({...f, tax_rate: Number(e.target.value)}))} required className={inputCls} />
+              </Field>
+              <Field label="Status">
+                <select value={taxForm.is_active} onChange={e => setTaxForm(f => ({...f, is_active: e.target.value === 'true'}))} className={inputCls}>
+                  <option value="true">Active</option>
+                  <option value="false">Inactive</option>
+                </select>
+              </Field>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowTaxModal(false)} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-500 hover:bg-slate-50 cursor-pointer">Cancel</button>
+                <button type="submit" disabled={taxSaving} className="flex-1 py-2.5 rounded-xl bg-[#38b34a] text-white text-sm font-bold hover:bg-[#2d9a3e] disabled:opacity-50 cursor-pointer">
+                  {taxSaving ? 'Saving...' : 'Save Tax Config'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* ══ SUB-CATEGORY MODAL ════════════════════════════════════════════════════ */}
       {showSubCatModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
@@ -532,6 +716,7 @@ const AdminProducts = ({ isEmbedded = false }) => {
               { id: 'products',       label: 'Products & Pricing' },
               { id: 'categories',     label: 'Categories'         },
               { id: 'subcategories',  label: 'Sub-Categories'      },
+              { id: 'taxes',          label: 'Country Taxes'       },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -626,6 +811,9 @@ const AdminProducts = ({ isEmbedded = false }) => {
                                 </button>
                                 <button onClick={() => openDiscountModal(p)} className="px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-600 border border-purple-200/60 rounded-xl font-bold transition-all hover:scale-105 active:scale-95 text-[10px] cursor-pointer shadow-sm">
                                   🏷️ Discounts
+                                </button>
+                                <button onClick={() => openCountryPriceModal(p)} className="px-2.5 py-1.5 bg-[#fef3c7] hover:bg-[#fde68a] text-[#d97706] border border-[#f59e0b]/40 rounded-xl font-bold transition-all hover:scale-105 active:scale-95 text-[10px] cursor-pointer shadow-sm">
+                                  🌐 Country Pricing
                                 </button>
                                 <button onClick={() => handleToggleProductStatus(p.id)} className={`px-2.5 py-1.5 rounded-xl font-bold transition-all hover:scale-105 active:scale-95 text-[10px] cursor-pointer border shadow-sm ${
                                   p.is_active
@@ -750,6 +938,63 @@ const AdminProducts = ({ isEmbedded = false }) => {
                       </div>
                     )
                   })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── TAB: TAXES ────────────────────────────────────────────────────── */}
+          {activePageTab === 'taxes' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">⚖️ Country Tax Configurations</h3>
+                <button onClick={fetchCountryTaxes} disabled={taxesLoading} className="px-4 py-2 border border-slate-200 hover:border-[#38b34a] hover:text-[#38b34a] bg-white rounded-xl text-xs font-bold disabled:opacity-50 cursor-pointer shadow-sm">
+                  {taxesLoading ? 'Refreshing...' : '↺ Refresh Taxes'}
+                </button>
+              </div>
+
+              {taxesLoading ? (
+                <div className="text-center py-12 text-slate-400 font-bold"><span className="inline-block animate-spin mr-2">🔄</span>Loading taxes...</div>
+              ) : countryTaxes.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 font-bold italic">No country tax configurations found.</div>
+              ) : (
+                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50 text-slate-400 font-bold uppercase tracking-wider">
+                          <th className="px-5 py-3">Country</th>
+                          <th className="px-5 py-3">Code</th>
+                          <th className="px-5 py-3">Tax Name</th>
+                          <th className="px-5 py-3">Tax Rate</th>
+                          <th className="px-5 py-3">Currency</th>
+                          <th className="px-5 py-3 text-center">Status</th>
+                          <th className="px-5 py-3 text-center">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700">
+                        {countryTaxes.map(tax => (
+                          <tr key={tax.id} className="hover:bg-slate-50/60 transition-colors">
+                            <td className="px-5 py-3 font-bold text-slate-800 text-sm">{tax.country_name}</td>
+                            <td className="px-5 py-3 font-mono font-bold text-slate-500">{tax.country_code}</td>
+                            <td className="px-5 py-3 font-bold text-slate-700">{tax.tax_name}</td>
+                            <td className="px-5 py-3 font-black text-slate-800">{tax.tax_rate}%</td>
+                            <td className="px-5 py-3 font-semibold text-slate-500">{tax.currency} ({tax.currency_symbol})</td>
+                            <td className="px-5 py-3 text-center">
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${tax.is_active ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-rose-100 text-rose-800 border-rose-200'}`}>
+                                {tax.is_active ? 'Active' : 'Inactive'}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3 text-center">
+                              <button onClick={() => openEditTax(tax)} className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200/60 rounded-xl font-bold transition-all hover:scale-105 active:scale-95 text-[10px] cursor-pointer shadow-sm">
+                                ⚖️ Edit Tax Config
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </div>

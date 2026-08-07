@@ -249,11 +249,46 @@ const SaasBasedSoftware = () => {
   const [activeCategory, setActiveCategory] = useState(initialPlan.category)
   const [activePlanId, setActivePlanId] = useState(initialPlan.id)
 
+  const [detectedCountry, setDetectedCountry] = useState('IN')
+
+  const getTaxIdLabel = () => {
+    if (detectedCountry === 'IN') return 'GSTIN'
+    if (detectedCountry === 'NP') return 'PAN/VAT Number'
+    if (detectedCountry === 'BT') return 'TPN (Taxpayer Number)'
+    return 'GSTIN'
+  }
+
+  const getTaxIdPlaceholder = () => {
+    if (detectedCountry === 'IN') return 'Enter GSTIN'
+    if (detectedCountry === 'NP') return 'Enter PAN/VAT Number'
+    if (detectedCountry === 'BT') return 'Enter TPN'
+    return 'Enter GSTIN'
+  }
+
+  // Auto-detect visitor country using Geo-IP lookup
+  useEffect(() => {
+    fetch('https://ipapi.co/json/')
+      .then(res => res.json())
+      .then(data => {
+        const code = data.country_code
+        if (['IN', 'NP', 'BT'].includes(code)) {
+          setDetectedCountry(code)
+        } else {
+          setDetectedCountry('IN')
+        }
+      })
+      .catch(err => {
+        console.error('GeoIP lookup failed, defaulting to IN:', err)
+        setDetectedCountry('IN')
+      })
+  }, [])
+
   const [partners, setPartners] = useState([])
   const [paymentStep, setPaymentStep] = useState('idle')
   const [checkoutData, setCheckoutData] = useState(emptyCheckout())
   const [apiError, setApiError] = useState('')
   const [successData, setSuccessData] = useState(null)
+  const [validationErrors, setValidationErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [customProcessingFee, setCustomProcessingFee] = useState(0)
   const [customMonthlySubscription, setCustomMonthlySubscription] = useState(0)
@@ -267,7 +302,7 @@ const SaasBasedSoftware = () => {
   // Fetch Subcategories and Products from backend
   useEffect(() => {
     setLoadingProducts(true)
-    purchaseApi.fetchSubcategoriesWithProducts()
+    purchaseApi.fetchSubcategoriesWithProducts(detectedCountry)
       .then(result => {
         if (result.success && result.data?.length) {
           const allProducts = []
@@ -283,10 +318,14 @@ const SaasBasedSoftware = () => {
             return 'nexgn'
           }
 
-          const formatSecurityDeposit = (fee) => `₹${fee}/-`
-          const formatMonthlySubscription = (sub, perPerson) => {
-            if (perPerson === true || perPerson === 1) return `₹${sub}/-/student/month`
-            return `₹${sub}/-`
+          const formatSecurityDeposit = (fee, pObj) => {
+            const symbol = pObj.tax?.currency_symbol || '₹'
+            return `${symbol}${fee}/-`
+          }
+          const formatMonthlySubscription = (sub, perPerson, pObj) => {
+            const symbol = pObj.tax?.currency_symbol || '₹'
+            if (perPerson === true || perPerson === 1) return `${symbol}${sub}/-/student/month`
+            return `${symbol}${sub}/-`
           }
 
           result.data.forEach(sub => {
@@ -296,8 +335,8 @@ const SaasBasedSoftware = () => {
                   ...p,
                   category: mapCategory(p.sub_category_name || sub.name, p.sub_category_id || sub.id),
                   categoryLabel: (p.sub_category_name || sub.name || '').toUpperCase(),
-                  securityDeposit: formatSecurityDeposit(p.processing_fee),
-                  monthlySubscription: formatMonthlySubscription(p.monthly_subscription, p.per_person),
+                  securityDeposit: formatSecurityDeposit(p.processing_fee, p),
+                  monthlySubscription: formatMonthlySubscription(p.monthly_subscription, p.per_person, p),
                 })
               })
             }
@@ -317,7 +356,7 @@ const SaasBasedSoftware = () => {
       })
       .catch(err => console.error('Failed to load products from API:', err))
       .finally(() => setLoadingProducts(false))
-  }, [])
+  }, [detectedCountry])
 
   useEffect(() => {
     if (activePlan) {
@@ -367,12 +406,14 @@ const SaasBasedSoftware = () => {
     setActivePlanId(id)
     setPaymentStep('idle')
     setApiError('')
+    setValidationErrors({})
     setSuccessData(null)
   }
 
   const handleActivateClick = () => {
     setPaymentStep('form')
     setApiError('')
+    setValidationErrors({})
     setSuccessData(null)
     setTimeout(() => {
       if (nameInputRef.current) nameInputRef.current.focus()
@@ -392,6 +433,7 @@ const SaasBasedSoftware = () => {
     e.preventDefault()
     setIsSubmitting(true)
     setApiError('')
+    setValidationErrors({})
     setPaymentStep('processing')
 
     const payload = {
@@ -406,8 +448,17 @@ const SaasBasedSoftware = () => {
       product_id: activePlan.id,
       product_name: activePlan.name,
       product_category: activePlan.category,
-      processing_fee: Math.round(customProcessingFee * 1.18),
+      country_code: detectedCountry,
+      processing_fee: Math.round(customProcessingFee * (1 + (activePlan.tax?.tax_rate || 18) / 100)),
       monthly_subscription: customMonthlySubscription,
+    }
+
+    if (detectedCountry === 'IN') {
+      payload.gstin = checkoutData.gstin || null
+      payload.vat_pan_number = null
+    } else {
+      payload.gstin = null
+      payload.vat_pan_number = checkoutData.gstin || null
     }
 
     if (isInstitutePro) {
@@ -415,10 +466,8 @@ const SaasBasedSoftware = () => {
       payload.school_short_name = checkoutData.school_short_name
       payload.school_session = checkoutData.school_session
       payload.total_students = parseInt(checkoutData.total_students, 10)
-      if (checkoutData.gstin) payload.gstin = checkoutData.gstin
     } else {
       payload.company_name = checkoutData.company_name || null
-      if (checkoutData.gstin) payload.gstin = checkoutData.gstin
     }
 
     if (!checkoutData.partner_id) {
@@ -494,15 +543,20 @@ const SaasBasedSoftware = () => {
     } catch (err) {
       console.error('Order creation error response:', err.response?.data)
       const errData = err.response?.data
-      let errorDetail
-      if (errData?.errors && typeof errData.errors === 'object') {
-        errorDetail = Object.entries(errData.errors)
-          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
-          .join(' | ')
+      if (err.response?.status === 422 && errData?.errors && typeof errData.errors === 'object') {
+        setValidationErrors(errData.errors)
+        setApiError(errData.message || 'Validation failed. Please correct the highlighted fields.')
       } else {
-        errorDetail = errData?.message || err.message || 'Something went wrong'
+        let errorDetail
+        if (errData?.errors && typeof errData.errors === 'object') {
+          errorDetail = Object.entries(errData.errors)
+            .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+            .join(' | ')
+        } else {
+          errorDetail = errData?.message || err.message || 'Something went wrong'
+        }
+        setApiError('Server error: ' + errorDetail)
       }
-      setApiError('Server error: ' + errorDetail)
       setPaymentStep('form')
       setIsSubmitting(false)
     }
@@ -959,10 +1013,10 @@ const SaasBasedSoftware = () => {
                               {activePlan.name}
                             </h3>
                             <p className="text-xs text-aim-copy-muted mt-0.5">
-                              One-Time Setup Fee: <span className="font-black text-aim-gold">{activePlan.securityDeposit} + 18% GST</span>
+                              One-Time Setup Fee: <span className="font-black text-aim-gold">{activePlan.securityDeposit} + {activePlan.tax?.tax_label || '18% GST'}</span>
                               &nbsp;·&nbsp;Then {isInstitutePro
-                                ? `₹${(10 * (parseInt(checkoutData.total_students, 10) || 0)).toLocaleString('en-IN')}/mo (${checkoutData.total_students || 0} students)`
-                                : (activePlan.monthlySubscription.startsWith('₹') ? '' : '₹') + activePlan.monthlySubscription + (activePlan.monthlySubscription.includes('month') ? '' : '/mo')
+                                ? `${activePlan.tax?.currency_symbol || '₹'}${((activePlan.monthly_subscription || 10) * (parseInt(checkoutData.total_students, 10) || 0)).toLocaleString()}/mo (${checkoutData.total_students || 0} students)`
+                                : activePlan.monthlySubscription
                               }
                             </p>
                           </div>
@@ -1096,6 +1150,13 @@ const SaasBasedSoftware = () => {
                                           placeholder="e.g. STMARY"
                                           className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                         />
+                                        {validationErrors.school_short_name && (
+                                          <p className="text-[10px] text-red-500 font-bold mt-1">
+                                            {Array.isArray(validationErrors.school_short_name)
+                                              ? validationErrors.school_short_name[0]
+                                              : validationErrors.school_short_name}
+                                          </p>
+                                        )}
                                       </div>
                                       <div className="space-y-1">
                                         <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
@@ -1114,14 +1175,14 @@ const SaasBasedSoftware = () => {
                                       </div>
                                       <div className="space-y-1 sm:col-span-2">
                                         <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                          GSTIN <span className="text-aim-copy-muted normal-case font-normal">(optional)</span>
+                                          {getTaxIdLabel()} <span className="text-aim-copy-muted normal-case font-normal">(optional)</span>
                                         </label>
                                         <input
                                           type="text"
                                           name="gstin"
                                           value={checkoutData.gstin}
                                           onChange={handleCheckoutChange}
-                                          placeholder="22AAAAA0000A1Z5"
+                                          placeholder={getTaxIdPlaceholder()}
                                           className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                         />
                                       </div>
@@ -1217,14 +1278,14 @@ const SaasBasedSoftware = () => {
                                   ) : (
                                     <div className="space-y-1">
                                       <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                        GSTIN <span className="text-aim-copy-muted normal-case font-normal">(optional)</span>
+                                        {getTaxIdLabel()} <span className="text-aim-copy-muted normal-case font-normal">(optional)</span>
                                       </label>
                                       <input
                                         type="text"
                                         name="gstin"
                                         value={checkoutData.gstin}
                                         onChange={handleCheckoutChange}
-                                        placeholder="22AAAAA0000A1Z5"
+                                        placeholder={getTaxIdPlaceholder()}
                                         className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                       />
                                     </div>
@@ -1262,20 +1323,26 @@ const SaasBasedSoftware = () => {
                           </div>
 
 
-                          {/* ── Order Summary with 18% GST calculation ── */}
+                          {/* ── Order Summary with dynamic tax calculation ── */}
                           <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2 text-xs mb-4">
                             <div className="flex justify-between items-center text-aim-copy-muted">
                               <span>Base Setup Fee</span>
-                              <span className="font-semibold text-white">₹{customProcessingFee.toLocaleString('en-IN')}</span>
+                              <span className="font-semibold text-white">
+                                {activePlan.tax?.currency_symbol || '₹'}{customProcessingFee.toLocaleString()}
+                              </span>
                             </div>
                             <div className="flex justify-between items-center text-aim-copy-muted">
-                              <span>GST (18%)</span>
-                              <span className="font-semibold text-aim-gold">+ ₹{Math.round(customProcessingFee * 0.18).toLocaleString('en-IN')}</span>
+                              <span>{activePlan.tax?.tax_label || 'GST (18%)'}</span>
+                              <span className="font-semibold text-aim-gold">
+                                + {activePlan.tax?.currency_symbol || '₹'}{Math.round(customProcessingFee * ((activePlan.tax?.tax_rate || 18) / 100)).toLocaleString()}
+                              </span>
                             </div>
                             <div className="border-t border-white/10 my-2"></div>
                             <div className="flex justify-between items-center font-bold text-sm">
-                              <span className="text-white">Total Amount (incl. GST)</span>
-                              <span className="text-aim-gold font-black">₹{Math.round(customProcessingFee * 1.18).toLocaleString('en-IN')}</span>
+                              <span className="text-white">Total Amount (incl. tax)</span>
+                              <span className="text-aim-gold font-black">
+                                {activePlan.tax?.currency_symbol || '₹'}{Math.round(customProcessingFee * (1 + (activePlan.tax?.tax_rate || 18) / 100)).toLocaleString()}
+                              </span>
                             </div>
                           </div>
 
@@ -1296,7 +1363,7 @@ const SaasBasedSoftware = () => {
                                   <span>Opening Payment Gateway…</span>
                                 </>
                               ) : (
-                                <span>Pay ₹{Math.round(customProcessingFee * 1.18).toLocaleString('en-IN')} (incl. 18% GST) via Razorpay</span>
+                                <span>Pay {activePlan.tax?.currency_symbol || '₹'}{Math.round(customProcessingFee * (1 + (activePlan.tax?.tax_rate || 18) / 100)).toLocaleString()} (incl. {activePlan.tax?.tax_label || '18% GST'}) via Razorpay</span>
                               )}
                             </Button>
                             <p className="text-center text-[11px] text-aim-copy-muted mt-2">

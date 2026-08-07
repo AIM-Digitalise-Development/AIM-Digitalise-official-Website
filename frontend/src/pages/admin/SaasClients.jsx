@@ -242,7 +242,8 @@ const AdminSaasClients = () => {
       const res = await getAdminClientById(clientId)
       if (res.data?.success) {
         const d = res.data.data
-        setLiveStudentCount(d.total_students != null ? d.total_students : d.student_count != null ? d.student_count : null)
+        setSelectedClientDetails(d)
+        setLiveStudentCount(d.live_upload_student_count != null ? d.live_upload_student_count : null)
       }
     } catch (_) {
       setLiveStudentCount(null)
@@ -1347,7 +1348,7 @@ const AdminSaasClients = () => {
                             <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-3.5 block font-sans">Organization Metrics</h4>
                             <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-[11px]">
                               <div>
-                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Software Link</span>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">School Link</span>
                                 <p className="text-slate-800 font-medium mt-1">
                                   {selectedClientDetails.software_link || selectedClientDetails.school_link ? (
                                     <a
@@ -1375,8 +1376,10 @@ const AdminSaasClients = () => {
                                 </p>
                               </div>
                               <div>
-                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Short Name</span>
-                                <p className="text-slate-800 font-medium mt-1">{selectedClientDetails.school_short_name || '—'}</p>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Database Name</span>
+                                <p className="text-slate-800 font-mono font-bold mt-1 text-xs">
+                                  {selectedClientDetails.database_name || selectedClientDetails.db_name || (selectedClientDetails.school_short_name ? `aim_${selectedClientDetails.school_short_name.toLowerCase().replace(/\s+/g, '')}` : '—')}
+                                </p>
                               </div>
                               {isSaasClient(selectedClientDetails) && (
                                 <div>
@@ -1391,10 +1394,14 @@ const AdminSaasClients = () => {
                                 <div className="flex items-center gap-2 mt-1">
                                    {fetchingStudentCount ? (
                                      <span className="text-slate-400 text-[10px] animate-pulse">⏳ Fetching...</span>
-                                   ) : liveStudentCount != null ? (
-                                     <span className="text-emerald-700 font-black text-sm">{liveStudentCount.toLocaleString('en-IN')}</span>
                                    ) : (
-                                     <span className="text-slate-800 font-medium">{selectedClientDetails?.total_students ?? selectedClientDetails?.student_count ?? '—'}</span>
+                                     <span className="text-slate-800 font-bold text-sm">
+                                       <span className="text-emerald-700 font-black">
+                                         {liveStudentCount ?? selectedClientDetails.live_upload_student_count ?? 0}
+                                       </span>
+                                       <span className="text-slate-400 mx-1">/</span>
+                                       <span>{selectedClientDetails.total_students ?? selectedClientDetails.student_count ?? '—'}</span>
+                                     </span>
                                    )}
                                    <button
                                      onClick={() => fetchLiveStudentCount(selectedClientDetails.id)}
@@ -1603,18 +1610,40 @@ const AdminSaasClients = () => {
               {/* Footer */}
               <div className="px-6 py-4 flex items-center justify-between bg-slate-50 border-t border-slate-200 gap-3">
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => alert(`🪪 Teacher ID for ${selectedClientDetails.company_name || selectedClientDetails.school_name}\n\nTeacher ID card generation will be available here soon.`)}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold cursor-pointer transition-all shadow-sm"
-                  >
-                    🪪 Teacher ID
-                  </button>
-                  <button
-                    onClick={() => alert(`🪪 School ID Card for ${selectedClientDetails.company_name || selectedClientDetails.school_name}\n\nID card generation will be available here soon.`)}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-[11px] font-bold cursor-pointer transition-all shadow-sm"
-                  >
-                    🪪 School ID Card
-                  </button>
+                  {selectedClientDetails.school_short_name ? (
+                    <a
+                      href={`https://nexgn.in/institute-pro/${selectedClientDetails.school_short_name.toLowerCase().replace(/\s+/g, '')}/test_teachers.php`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold cursor-pointer transition-all shadow-sm"
+                    >
+                      🪪 Teacher ID
+                    </a>
+                  ) : (
+                    <button
+                      onClick={() => alert('School short name is missing. Cannot open Teacher ID card link.')}
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600/50 text-white/80 text-[11px] font-bold cursor-not-allowed transition-all shadow-sm"
+                    >
+                      🪪 Teacher ID
+                    </button>
+                  )}
+                  {selectedClientDetails.school_short_name ? (
+                    <a
+                      href={`https://nexgn.in/institute-pro/${selectedClientDetails.school_short_name.toLowerCase().replace(/\s+/g, '')}/test.php`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-[11px] font-bold cursor-pointer transition-all shadow-sm"
+                    >
+                      🪪 School ID Card
+                    </a>
+                  ) : (
+                    <button
+                      onClick={() => alert('School short name is missing. Cannot open School ID Card link.')}
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-violet-600/50 text-white/80 text-[11px] font-bold cursor-not-allowed transition-all shadow-sm"
+                    >
+                      🪪 School ID Card
+                    </button>
+                  )}
                 </div>
                 <button
                   onClick={() => setShowDetailsModal(false)}
