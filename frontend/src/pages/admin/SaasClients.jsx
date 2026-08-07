@@ -37,9 +37,12 @@ const AdminSaasClients = () => {
   const [statusFilter, setStatusFilter] = useState('All')
   const [selectedClientDetails, setSelectedClientDetails] = useState(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
-  const [dossierTab, setDossierTab] = useState('profile')
-  const [copiedClientId, setCopiedClientId] = useState(false)
-  const [liveStudentCount, setLiveStudentCount] = useState(null)
+  const [dossierTab, setDossierTab] = useState('profile')
+
+  const [copiedClientId, setCopiedClientId] = useState(false)
+
+  const [liveStudentCount, setLiveStudentCount] = useState(null)
+
   const [fetchingStudentCount, setFetchingStudentCount] = useState(false)
 
   const handleDownloadInvoice = (payment, clientDetails) => {
@@ -707,7 +710,7 @@ const AdminSaasClients = () => {
                     <table className="w-full text-left border-collapse text-xs">
                       <thead>
                         <tr className="border-b border-slate-200 bg-slate-50 text-slate-400 font-bold uppercase tracking-wider">
-                          <th className="px-5 py-4">Delivery Date</th>
+                          <th className="px-5 py-4">Client-ID</th>
                           <th className="px-5 py-4">Client Details</th>
                           <th className="px-5 py-4">Product</th>
                           <th className="px-5 py-4">Partner</th>
@@ -720,16 +723,38 @@ const AdminSaasClients = () => {
                       <tbody className="divide-y divide-slate-100 text-slate-700">
                         {filteredClients.map(c => (
                           <tr key={c.id} className="hover:bg-slate-50/50">
+                           
                             <td className="px-5 py-4">
-                              {c.delivery_date || c.valid_until
-                                ? <span className="font-mono font-bold text-slate-700 text-[11px]">{formatDate(c.delivery_date || c.valid_until)}</span>
-                                : <span className="text-slate-300 font-bold">—</span>}
-                            </td>
+  {/* ID Section */}
+  {c.id ? (
+    <div className="font-mono font-bold text-slate-700 text-[11px]">
+      {c.client_id}
+    </div>
+  ) : (
+    <div className="text-slate-300 font-bold">—</div>
+  )}
+
+  {/* Date Section */}
+  {c.activated_at || c.valid_until ? (
+    <div className="font-mono font-bold text-slate-700 text-[11px]">
+      {formatDate(c.activated_at || c.delivery_date)}
+    </div>
+  ) : (
+    <div className="text-slate-300 font-bold">—</div>
+  )}
+</td>
+
                             <td className="px-5 py-4">
                               <p className="font-bold text-slate-800 text-sm">{c.company_name || '—'}</p>
                               <p className="text-[10px] text-slate-400">{c.client_name || ''}</p>
                             </td>
-                            <td className="px-5 py-4 font-semibold text-slate-700">{c.product_name || '—'}</td>
+                            <td className="px-5 py-4 font-semibold text-slate-700">
+                              <div>{c.product_name || '—'}</div>
+                              <div className="text-[10px] text-slate-400 mt-1 font-medium flex items-center gap-1">
+                                <span>Tentitive Stu/users:</span>
+                                <span className="font-bold text-slate-600">{c.total_students ?? c.student_count ?? '—'}</span>
+                              </div>
+                            </td>
                             <td className="px-5 py-4 text-slate-500">{c.partner_name || '—'}</td>
                             <td className="px-5 py-4 text-right font-black text-slate-800">
                               ₹{Number(c.processing_fee || 0).toLocaleString('en-IN')}
@@ -1209,7 +1234,7 @@ const AdminSaasClients = () => {
                   <div className="grid grid-cols-2 gap-2 bg-slate-50 border-b border-slate-200 px-6 py-3 z-10 shrink-0">
                     {[
                       { id: 'profile', label: 'Company Profile', icon: '🏢' },
-                      { id: 'school', label: 'School Metrics', icon: '🏫' },
+                      { id: 'school', label: 'Organization Metrics', icon: '🏫' },
                       { id: 'product', label: 'Product & Logistics', icon: '📦' },
                       { id: 'ledger', label: 'Payments Ledger', icon: '💳' },
                     ].map((t) => (
@@ -1319,29 +1344,57 @@ const AdminSaasClients = () => {
                         >
                           {/* School Registry Section */}
                           <div>
-                            <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-3.5 block font-sans">School Registration Metrics</h4>
+                            <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-3.5 block font-sans">Organization Metrics</h4>
                             <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-[11px]">
                               <div>
-                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">School Name</span>
-                                <p className="text-slate-800 font-medium mt-1">{selectedClientDetails.school_name || '—'}</p>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Software Link</span>
+                                <p className="text-slate-800 font-medium mt-1">
+                                  {selectedClientDetails.software_link || selectedClientDetails.school_link ? (
+                                    <a
+                                      href={(selectedClientDetails.software_link || selectedClientDetails.school_link).startsWith('http') 
+                                        ? (selectedClientDetails.software_link || selectedClientDetails.school_link) 
+                                        : `https://${selectedClientDetails.software_link || selectedClientDetails.school_link}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-600 hover:text-blue-800 hover:underline font-bold transition-all inline-flex items-center gap-1"
+                                    >
+                                      {selectedClientDetails.software_link || selectedClientDetails.school_link}
+                                    </a>
+                                  ) : selectedClientDetails.school_short_name ? (
+                                    <a
+                                      href={`https://nexgn.in/institute-pro/${selectedClientDetails.school_short_name.toLowerCase().replace(/\s+/g, '')}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-600 hover:text-blue-800 hover:underline font-bold transition-all inline-flex items-center gap-1"
+                                    >
+                                      {`https://nexgn.in/institute-pro/${selectedClientDetails.school_short_name.toLowerCase().replace(/\s+/g, '')}`}
+                                    </a>
+                                  ) : (
+                                    <span className="text-slate-400 italic">—</span>
+                                  )}
+                                </p>
                               </div>
                               <div>
                                 <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Short Name</span>
                                 <p className="text-slate-800 font-medium mt-1">{selectedClientDetails.school_short_name || '—'}</p>
                               </div>
+                              {isSaasClient(selectedClientDetails) && (
+                                <div>
+                                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Academic Session</span>
+                                  <p className="text-slate-800 font-medium mt-1">{selectedClientDetails.school_session || '—'}</p>
+                                </div>
+                              )}
                               <div>
-                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Academic Session</span>
-                                <p className="text-slate-800 font-medium mt-1">{selectedClientDetails.school_session || '—'}</p>
-                              </div>
-                              <div>
-                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Total Students (Live)</span>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">
+                                  {isSaasClient(selectedClientDetails) ? 'Total Students (Live)' : 'Total Employ (Live)'}
+                                </span>
                                 <div className="flex items-center gap-2 mt-1">
                                    {fetchingStudentCount ? (
                                      <span className="text-slate-400 text-[10px] animate-pulse">⏳ Fetching...</span>
                                    ) : liveStudentCount != null ? (
                                      <span className="text-emerald-700 font-black text-sm">{liveStudentCount.toLocaleString('en-IN')}</span>
                                    ) : (
-                                     <span className="text-slate-800 font-medium">{selectedClientDetails.total_students != null ? selectedClientDetails.total_students : selectedClientDetails.student_count || '—'}</span>
+                                     <span className="text-slate-800 font-medium">{selectedClientDetails?.total_students ?? selectedClientDetails?.student_count ?? '—'}</span>
                                    )}
                                    <button
                                      onClick={() => fetchLiveStudentCount(selectedClientDetails.id)}
@@ -1551,10 +1604,10 @@ const AdminSaasClients = () => {
               <div className="px-6 py-4 flex items-center justify-between bg-slate-50 border-t border-slate-200 gap-3">
                 <div className="flex gap-2">
                   <button
-                    onClick={() => alert(`🌐 School Link for ${selectedClientDetails.company_name || selectedClientDetails.school_name}\n\nThe school portal link will be available here soon.`)}
+                    onClick={() => alert(`🪪 Teacher ID for ${selectedClientDetails.company_name || selectedClientDetails.school_name}\n\nTeacher ID card generation will be available here soon.`)}
                     className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold cursor-pointer transition-all shadow-sm"
                   >
-                    🌐 School Link
+                    🪪 Teacher ID
                   </button>
                   <button
                     onClick={() => alert(`🪪 School ID Card for ${selectedClientDetails.company_name || selectedClientDetails.school_name}\n\nID card generation will be available here soon.`)}
