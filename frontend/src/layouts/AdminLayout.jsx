@@ -48,7 +48,6 @@ const AdminLayout = () => {
     { route: ROUTES.ADMIN.DEMO, label: 'Demo Slots', icon: 'demo', color: '#6366f1' },
     { route: ROUTES.ADMIN.SAAS_CLIENTS, label: 'SaaS Based Client', icon: 'clients', color: '#38b34a' },
     { route: ROUTES.ADMIN.SUBSCRIBED_CLIENTS, label: 'Subscribed Client', icon: 'subscription', color: '#ef4444' },
-    { route: ROUTES.ADMIN.PRODUCTS, label: 'Product Management', icon: 'products', color: '#ff6600' },
     { route: ROUTES.ADMIN.USERS, label: 'General Client', icon: 'general_client', color: '#f97316' },
     { route: ROUTES.ADMIN.ANALYTICS, label: 'Accounts', icon: 'accounts', color: '#ec4899' },
     { route: ROUTES.ADMIN.PG_KYC, label: 'PG-KYC', icon: 'pg_kyc', color: '#8b5cf6' },
