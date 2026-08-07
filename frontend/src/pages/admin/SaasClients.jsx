@@ -25,6 +25,20 @@ const AdminSaasClients = () => {
   const flashSuccess = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(null), 3500) }
   const flashError = (msg) => { setError(msg); setTimeout(() => setError(null), 4000) }
 
+  const getStatusBadgeClass = (status) => {
+    const normalized = status ? status.toLowerCase() : '';
+    if (normalized === 'active') {
+      return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    } else if (normalized === 'inactive') {
+      return 'bg-rose-50 text-rose-700 border-rose-200';
+    } else if (normalized === 'delivered') {
+      return 'bg-blue-50 text-blue-700 border-blue-200';
+    } else if (normalized === 'not delivered') {
+      return 'bg-amber-50 text-amber-700 border-amber-200';
+    }
+    return 'bg-slate-50 text-slate-600 border-slate-200';
+  }
+
   // ── Active Tab ─────────────────────────────────────────────────────────────
   const [activePageTab, setActivePageTab] = useState('show_clients')
 
@@ -203,7 +217,7 @@ const AdminSaasClients = () => {
       const res = await getAdminClients()
       if (res.data?.success) {
         const all = Array.isArray(res.data.data?.all_clients) ? res.data.data.all_clients : []
-        const filtered = all.filter(c => isSaasClient(c))
+        const filtered = all.filter(c => isSaasClient(c) && c.activated_at != null)
         setClients(filtered)
         setSummary({
           total_clients: filtered.length,
@@ -220,7 +234,9 @@ const AdminSaasClients = () => {
 
   const filteredClients = clients.filter(c => {
     const matchesProduct = productFilter === 'All' || c.product_category === productFilter
-    const matchesStatus = statusFilter === 'All' || (statusFilter === 'ACTIVE' ? c.is_active : !c.is_active)
+    const itemStatus = c.status || (c.is_active ? 'Active' : 'Inactive');
+    const matchesStatus = statusFilter === 'All' || 
+      itemStatus.toLowerCase() === statusFilter.toLowerCase();
 
     const q = clientSearch.toLowerCase()
     const matchesSearch =
@@ -690,8 +706,10 @@ const AdminSaasClients = () => {
                     className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 transition-all font-semibold"
                   >
                     <option value="All">All Statuses</option>
-                    <option value="ACTIVE">ACTIVE</option>
-                    <option value="INACTIVE">INACTIVE</option>
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="Delivered">Delivered</option>
+                    <option value="Not Delivered">Not Delivered</option>
                   </select>
                 </div>
               </div>
@@ -725,10 +743,10 @@ const AdminSaasClients = () => {
                         {filteredClients.map(c => (
                           <tr key={c.id} className="hover:bg-slate-50/50">
                            
-                            <td className="px-5 py-4">
+                            <td className="px-5 py-4 whitespace-nowrap">
   {/* ID Section */}
   {c.id ? (
-    <div className="font-mono font-bold text-slate-700 text-[11px]">
+    <div className="font-mono font-bold text-blue-600 text-[11px]">
       {c.client_id}
     </div>
   ) : (
@@ -737,7 +755,7 @@ const AdminSaasClients = () => {
 
   {/* Date Section */}
   {c.activated_at || c.valid_until ? (
-    <div className="font-mono font-bold text-slate-700 text-[11px]">
+    <div className="font-mono font-semibold text-slate-500 text-[10px] whitespace-nowrap mt-0.5">
       {formatDate(c.activated_at || c.delivery_date)}
     </div>
   ) : (
@@ -752,7 +770,7 @@ const AdminSaasClients = () => {
                             <td className="px-5 py-4 font-semibold text-slate-700">
                               <div>{c.product_name || '—'}</div>
                               <div className="text-[10px] text-slate-400 mt-1 font-medium flex items-center gap-1">
-                                <span>Tentitive Stu/users:</span>
+                                <span>Tentitive users:</span>
                                 <span className="font-bold text-slate-600">{c.total_students ?? c.student_count ?? '—'}</span>
                               </div>
                             </td>
@@ -784,9 +802,8 @@ const AdminSaasClients = () => {
                               />
                             </td>
                             <td className="px-5 py-4 text-center">
-                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${c.is_active ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-rose-100 text-rose-800 border-rose-200'
-                                }`}>
-                                {c.is_active ? 'Active' : 'Inactive'}
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border whitespace-nowrap ${getStatusBadgeClass(c.status || (c.is_active ? 'Active' : 'Inactive'))}`}>
+                                {c.status || (c.is_active ? 'Active' : 'Inactive')}
                               </span>
                             </td>
                             <td className="px-5 py-4 text-center">
@@ -1214,12 +1231,10 @@ const AdminSaasClients = () => {
                     <span className="text-slate-300">•</span>
                     <span className="text-[10px] text-slate-500 font-medium">Connected Person: <strong className="text-slate-700">{selectedClientDetails.client_name}</strong></span>
                     <span className="text-slate-300">•</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border uppercase ${
-                      selectedClientDetails.is_active
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : 'bg-rose-50 text-rose-700 border-rose-200'
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border uppercase whitespace-nowrap ${
+                      getStatusBadgeClass(selectedClientDetails.status || (selectedClientDetails.is_active ? 'Active' : 'Inactive'))
                     }`}>
-                      {selectedClientDetails.is_active ? 'Active' : 'Inactive'}
+                      {selectedClientDetails.status || (selectedClientDetails.is_active ? 'Active' : 'Inactive')}
                     </span>
                   </div>
                 </div>
@@ -1381,6 +1396,12 @@ const AdminSaasClients = () => {
                                   {selectedClientDetails.database_name || selectedClientDetails.db_name || (selectedClientDetails.school_short_name ? `aim_${selectedClientDetails.school_short_name.toLowerCase().replace(/\s+/g, '')}` : '—')}
                                 </p>
                               </div>
+                              <div>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">User ID</span>
+                                <p className="text-slate-800 font-medium mt-1 select-text">
+                                  {selectedClientDetails.external_admin_email || 'N/A'}
+                                </p>
+                              </div>
                               {isSaasClient(selectedClientDetails) && (
                                 <div>
                                   <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Academic Session</span>
@@ -1395,12 +1416,8 @@ const AdminSaasClients = () => {
                                    {fetchingStudentCount ? (
                                      <span className="text-slate-400 text-[10px] animate-pulse">⏳ Fetching...</span>
                                    ) : (
-                                     <span className="text-slate-800 font-bold text-sm">
-                                       <span className="text-emerald-700 font-black">
-                                         {liveStudentCount ?? selectedClientDetails.live_upload_student_count ?? 0}
-                                       </span>
-                                       <span className="text-slate-400 mx-1">/</span>
-                                       <span>{selectedClientDetails.total_students ?? selectedClientDetails.student_count ?? '—'}</span>
+                                     <span className="text-emerald-700 font-black text-sm">
+                                       {liveStudentCount ?? selectedClientDetails.live_upload_student_count ?? 0}
                                      </span>
                                    )}
                                    <button
@@ -1408,10 +1425,18 @@ const AdminSaasClients = () => {
                                      title="Refresh live count"
                                      className="text-[9px] px-1.5 py-0.5 rounded border border-slate-200 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-600 text-slate-400 font-bold cursor-pointer transition-all"
                                    >↺</button>
-                                 </div>
+                                </div>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Total Teachers (Live)</span>
+                                <p className="text-slate-800 font-bold text-sm mt-1">
+                                  <span className="text-blue-700 font-black">
+                                    {selectedClientDetails.live_teacher_count ?? 0}
+                                  </span>
+                                </p>
                               </div>
                               <div className="col-span-2">
-                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Residence Address</span>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Client Address</span>
                                 <p className="text-slate-800 font-medium mt-1 leading-relaxed">
                                   {selectedClientDetails.address
                                     ? `${selectedClientDetails.address}, ${selectedClientDetails.district || ''}, ${selectedClientDetails.state || ''} - ${selectedClientDetails.pin_code || ''}`
@@ -1445,16 +1470,24 @@ const AdminSaasClients = () => {
                                 <p className="text-slate-800 font-medium mt-1">{selectedClientDetails.product_name}</p>
                               </div>
                               <div>
+                                 <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Registration Date</span>
+                                <p className="text-slate-800 font-medium mt-1">{formatDate(selectedClientDetails.created_at)}</p>
+                                
+                              </div>
+                              <div>
                                 <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Setup Processing Fee</span>
                                 <p className="text-slate-800 font-medium mt-1">{formatCurrency(selectedClientDetails.processing_fee)}</p>
+                                
+                              </div>
+                              
+                              <div>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Next Payment Date</span>
+                                <p className="text-slate-800 font-medium mt-1">{formatDate(selectedClientDetails.next_payment_date)}</p>
                               </div>
                               <div>
-                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Monthly Subscription</span>
-                                <p className="text-slate-800 font-medium mt-1">{formatCurrency(selectedClientDetails.monthly_subscription)}/mo</p>
-                              </div>
-                              <div>
-                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Delivery Limit Date</span>
-                                <p className="text-slate-800 font-medium mt-1">{formatDate(selectedClientDetails.delivery_date || selectedClientDetails.valid_until)}</p>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Delivery Date</span>
+                                <p className="text-slate-800 font-medium mt-1">{formatDate(selectedClientDetails.delivery_date)}</p>
+                                
                               </div>
                               <div>
                                 <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Delivery Offset Days</span>
@@ -1483,6 +1516,43 @@ const AdminSaasClients = () => {
                                   <span className="text-slate-400 text-[10px]">days</span>
                                 </div>
                               </div>
+
+                              {selectedClientDetails.latest_payment ? (
+                                <div className="col-span-2 mt-2 p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans mb-2">Latest Subscription Payment</span>
+                                  <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-[10px] text-slate-700">
+                                    <div>
+                                      <span className="text-slate-450 font-medium">Invoice ID:</span> <strong className="text-slate-800 font-mono">{selectedClientDetails.latest_payment.invoice_id || '—'}</strong>
+                                    </div>
+                                    <div>
+                                      <span className="text-slate-450 font-medium">Payment ID:</span> <strong className="text-slate-800 font-mono">{selectedClientDetails.latest_payment.payment_id || '—'}</strong>
+                                    </div>
+                                    <div>
+                                      <span className="text-slate-450 font-medium">Billing Cycle:</span> <strong className="text-slate-800 uppercase">{selectedClientDetails.latest_payment.cycle || '—'}</strong>
+                                    </div>
+                                    <div>
+                                      <span className="text-slate-450 font-medium">Amount:</span> <strong className="text-emerald-700">{formatCurrency(selectedClientDetails.latest_payment.amount)}</strong>
+                                    </div>
+                                    <div>
+                                      <span className="text-slate-450 font-medium">Status:</span> <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-emerald-50 text-emerald-700 border border-emerald-250 uppercase">{selectedClientDetails.latest_payment.payment_status || 'paid'}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-slate-450 font-medium">Payment Date:</span> <strong className="text-slate-800">{selectedClientDetails.latest_payment.payment_date ? formatDate(selectedClientDetails.latest_payment.payment_date) : '—'}</strong>
+                                    </div>
+                                    <div className="col-span-2">
+                                      <span className="text-slate-455 font-medium">Paid Period:</span> <strong className="text-slate-850 font-mono">{formatDate(selectedClientDetails.latest_payment.period_start)} to {formatDate(selectedClientDetails.latest_payment.period_end)}</strong>
+                                    </div>
+                                    <div className="col-span-2">
+                                      <span className="text-slate-450 font-medium">Student Count at Billing:</span> <strong className="text-slate-800">{selectedClientDetails.latest_payment.student_count || '—'}</strong>
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="col-span-2 mt-2 p-3 bg-slate-50 border border-slate-100 rounded-xl text-center">
+                                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans mb-1">Latest Subscription Payment</span>
+                                  <p className="text-slate-550 font-semibold italic text-slate-400 text-[10px]">No payments yet</p>
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -1617,14 +1687,14 @@ const AdminSaasClients = () => {
                       rel="noopener noreferrer"
                       className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold cursor-pointer transition-all shadow-sm"
                     >
-                      🪪 Teacher ID
+                      🪪 Teacher ID Card
                     </a>
                   ) : (
                     <button
                       onClick={() => alert('School short name is missing. Cannot open Teacher ID card link.')}
                       className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600/50 text-white/80 text-[11px] font-bold cursor-not-allowed transition-all shadow-sm"
                     >
-                      🪪 Teacher ID
+                      🪪 Teacher ID Card
                     </button>
                   )}
                   {selectedClientDetails.school_short_name ? (
@@ -1634,14 +1704,14 @@ const AdminSaasClients = () => {
                       rel="noopener noreferrer"
                       className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-[11px] font-bold cursor-pointer transition-all shadow-sm"
                     >
-                      🪪 School ID Card
+                      🪪 Student ID Card
                     </a>
                   ) : (
                     <button
                       onClick={() => alert('School short name is missing. Cannot open School ID Card link.')}
                       className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-violet-600/50 text-white/80 text-[11px] font-bold cursor-not-allowed transition-all shadow-sm"
                     >
-                      🪪 School ID Card
+                      🪪 Student ID Card
                     </button>
                   )}
                 </div>
