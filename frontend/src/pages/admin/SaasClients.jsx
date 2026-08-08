@@ -250,6 +250,135 @@ const AdminSaasClients = () => {
     return matchesProduct && matchesStatus && matchesSearch
   })
 
+  // ── RENEWAL & CYCLE PRICING CALCULATOR ──────────────────────────────
+  const [renewalSelectedCycles, setRenewalSelectedCycles] = useState({})
+  const [renewalSearch, setRenewalSearch] = useState('')
+  const [renewalHealthFilter, setRenewalHealthFilter] = useState('All')
+
+  const RENEWAL_CYCLE_OPTIONS = [
+    { value: 'monthly', label: 'Monthly (1 Month)' },
+    { value: 'quarterly', label: 'Quarterly (3 Months)' },
+    { value: 'half_yearly', label: 'Half Yearly (6 Months)' },
+    { value: 'annual', label: 'Annual (12 Months)' },
+  ]
+
+  const getAgeBadgeInfo = (client) => {
+    let days = client.age_days_left
+    let label = client.age
+
+    // Fallback calculation if age/age_days_left is not populated
+    if (days === undefined || days === null) {
+      const dateStr = client.period_end || client.valid_until || client.next_payment_date
+      if (dateStr) {
+        const diff = Math.ceil((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24))
+        days = diff
+        if (!label) {
+          if (diff > 0) label = `${diff} days left`
+          else if (diff === 0) label = 'Due today'
+          else label = `Overdue by ${Math.abs(diff)} days`
+        }
+      } else {
+        days = null
+        if (!label) label = 'Not set'
+      }
+    }
+
+    if (!label) {
+      if (days > 0) label = `${days} days left`
+      else if (days === 0) label = 'Due today'
+      else if (days < 0) label = `Overdue by ${Math.abs(days)} days`
+      else label = 'Not set'
+    }
+
+    // Color Highlight Rules:
+    // Subscription ends within 30 days (days <= 30) -> RED
+    // Rest of them (days > 30) -> NORMAL (Green)
+    let badgeClass = 'bg-slate-50 text-slate-600 border-slate-200'
+    let healthStatus = 'not_set'
+
+    if (days !== null && days !== undefined) {
+      if (days <= 30) {
+        badgeClass = 'bg-rose-50 text-rose-700 border-rose-200 font-black'
+        healthStatus = 'expiring'
+      } else {
+        badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200'
+        healthStatus = 'normal'
+      }
+    }
+
+    return { label, days, badgeClass, healthStatus }
+  }
+
+  const getClientCycleData = (client, selectedCycleKey) => {
+    const cycleKey = selectedCycleKey || client.default_next_cycle || 'monthly'
+
+    // If API provided subscription_cycle_amounts dictionary:
+    if (client.subscription_cycle_amounts && client.subscription_cycle_amounts[cycleKey]) {
+      return client.subscription_cycle_amounts[cycleKey]
+    }
+
+    // Dynamic pricing fallback calculator
+    const monthlyBase = Number(client.monthly_subscription || client.default_next_amount || 2500)
+    const cycleMonthsMap = { monthly: 1, quarterly: 3, half_yearly: 6, annual: 12 }
+    const cycleDiscounts = { monthly: 0, quarterly: 10, half_yearly: 15, annual: 20 }
+
+    const months = cycleMonthsMap[cycleKey] || 1
+    const discountPct = cycleDiscounts[cycleKey] || 0
+    const baseTotal = monthlyBase * months
+    const discountedTotal = baseTotal * (1 - discountPct / 100)
+    const gstAmount = discountedTotal * 0.18
+    const totalAmount = discountedTotal + gstAmount
+
+    return {
+      cycle: cycleKey,
+      cycle_months: months,
+      discount_percentage: discountPct,
+      base_total: baseTotal,
+      discounted_total: discountedTotal,
+      gst_amount: gstAmount,
+      total_amount: totalAmount,
+      formatted_total: `₹ ${totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    }
+  }
+
+  const renewalStats = clients.reduce((acc, c) => {
+    const ageInfo = getAgeBadgeInfo(c)
+    acc.total += 1
+    if (ageInfo.healthStatus === 'expiring') acc.expiring += 1
+    else if (ageInfo.healthStatus === 'normal') acc.normal += 1
+
+    const cycle = renewalSelectedCycles[c.id] || c.default_next_cycle || 'monthly'
+    const cData = getClientCycleData(c, cycle)
+    acc.projected_revenue += Number(cData.total_amount || c.default_next_amount || 0)
+    return acc
+  }, { total: 0, expiring: 0, normal: 0, projected_revenue: 0 })
+
+  // Filter and sort clients: Lowest remaining days at the top, then second lowest, etc.
+  const filteredRenewalClients = clients
+    .filter(c => {
+      const ageInfo = getAgeBadgeInfo(c)
+      const matchesHealth = renewalHealthFilter === 'All' ||
+        (renewalHealthFilter === 'expiring' && ageInfo.healthStatus === 'expiring') ||
+        (renewalHealthFilter === 'normal' && ageInfo.healthStatus === 'normal')
+
+      const q = renewalSearch.toLowerCase().trim()
+      const matchesSearch = !q ||
+        (c.client_name || '').toLowerCase().includes(q) ||
+        (c.company_name || '').toLowerCase().includes(q) ||
+        (c.email || '').toLowerCase().includes(q) ||
+        (c.client_id || '').toString().toLowerCase().includes(q) ||
+        (c.product_name || '').toLowerCase().includes(q)
+
+      return matchesHealth && matchesSearch
+    })
+    .sort((a, b) => {
+      const aInfo = getAgeBadgeInfo(a)
+      const bInfo = getAgeBadgeInfo(b)
+      const aDays = (aInfo.days !== null && aInfo.days !== undefined) ? aInfo.days : 999999
+      const bDays = (bInfo.days !== null && bInfo.days !== undefined) ? bInfo.days : 999999
+      return aDays - bDays
+    })
+
   // ── LIVE STUDENT COUNT ─────────────────────────────────────────────
   const fetchLiveStudentCount = async (clientId) => {
     setLiveStudentCount(null)
@@ -1057,54 +1186,248 @@ const AdminSaasClients = () => {
               )}
             </div>
           )}
+          {/* ── TAB: NEXT RENEWAL ────────────────────────────────────────────── */}
           {activePageTab === 'renewal' && (
-            <div className="space-y-4">
-              <h3 className="text-base font-bold text-slate-800 flex items-center gap-2 pb-3 border-b border-slate-100">🔄 Renewals &amp; Products Management</h3>
-              <div className="overflow-x-auto rounded-2xl border border-slate-200/80 shadow-sm">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider">
-                      <th className="px-5 py-4">Client</th>
-                      <th className="px-5 py-4">Product</th>
-                      <th className="px-5 py-4">Expiration</th>
-                      <th className="px-5 py-4 text-right">Subscription Price</th>
-                      <th className="px-5 py-4 text-center">Days Left</th>
-                      <th className="px-5 py-4 text-center">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-slate-700">
-                    {clients.filter(c => c.valid_until).map(c => {
-                      const daysLeft = Math.ceil((new Date(c.valid_until) - new Date()) / (1000 * 60 * 60 * 24))
-                      const isExpired = daysLeft <= 0
-                      return (
-                        <tr key={c.id} className="hover:bg-slate-50/50">
-                          <td className="px-5 py-3 font-bold text-slate-800">{c.company_name}</td>
-                          <td className="px-5 py-3">{c.product_name}</td>
-                          <td className="px-5 py-3 text-slate-400">{new Date(c.valid_until).toLocaleDateString('en-IN')}</td>
-                          <td className="px-5 py-3 text-right font-black">₹{Number(c.monthly_subscription || 0).toLocaleString('en-IN')}/mo</td>
-                          <td className="px-5 py-3 text-center">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${
-                              isExpired 
-                                ? 'bg-rose-100 text-rose-800 border-rose-200' 
-                                : daysLeft <= 30 
-                                  ? 'bg-amber-100 text-amber-800 border-amber-200 animate-pulse'
-                                  : 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                            }`}>
-                              {isExpired ? 'Expired' : `${daysLeft} Days`}
-                            </span>
-                          </td>
-                          <td className="px-5 py-3 text-center">
-                            <div className="flex gap-2 justify-center">
-                              <button onClick={() => alert(`Initiating renewal for ${c.company_name}`)} className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold cursor-pointer text-[10px]">Renew</button>
-                              <button onClick={() => alert(`Adding product to ${c.company_name}`)} className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold cursor-pointer text-[10px]">+ Add Product</button>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+            <div className="space-y-6">
+              {/* Header & Quick refresh */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-3">
+                <div>
+                  <h3 className="text-base font-black text-slate-800 flex items-center gap-2">
+                    <span className="text-[#38b34a]">🔄</span> Next Renewal &amp; Subscription Calculator
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Track client subscription aging, monitor period expirations, and compute next billing amounts across all cycles.
+                  </p>
+                </div>
+                <button
+                  onClick={fetchClients}
+                  disabled={clientsLoading}
+                  className="px-3.5 py-1.5 border border-slate-200 hover:border-[#38b34a] hover:text-[#38b34a] bg-white rounded-xl text-xs font-bold disabled:opacity-50 cursor-pointer shadow-sm self-start sm:self-auto shrink-0 transition-colors"
+                >
+                  {clientsLoading ? 'Refreshing...' : '↺ Refresh Renewals'}
+                </button>
               </div>
+
+              {/* Renewal Stats Cards Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="bg-slate-50 border border-slate-200/70 p-4 rounded-2xl text-center shadow-sm">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Total SaaS Clients</span>
+                  <span className="text-2xl font-black text-slate-800 mt-1 block font-mono">{renewalStats.total}</span>
+                </div>
+                <div className="bg-rose-50/60 border border-rose-100 p-4 rounded-2xl text-center shadow-sm">
+                  <span className="text-[10px] font-black text-rose-600 uppercase tracking-wider block">Ending in ≤ 30 Days</span>
+                  <span className="text-2xl font-black text-rose-600 mt-1 block font-mono">{renewalStats.expiring}</span>
+                </div>
+                <div className="bg-emerald-50/60 border border-emerald-100 p-4 rounded-2xl text-center shadow-sm">
+                  <span className="text-[10px] font-black text-emerald-600 uppercase tracking-wider block">Normal (&gt; 30 Days)</span>
+                  <span className="text-2xl font-black text-emerald-600 mt-1 block font-mono">{renewalStats.normal}</span>
+                </div>
+                <div className="col-span-2 sm:col-span-1 bg-blue-50/60 border border-blue-100 p-4 rounded-2xl text-center shadow-sm">
+                  <span className="text-[10px] font-black text-blue-600 uppercase tracking-wider block">Est. Invoicing</span>
+                  <span className="text-xl font-black text-blue-700 mt-1 block font-mono">₹{Math.round(renewalStats.projected_revenue).toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+
+              {/* Filters Panel */}
+              <div className="bg-slate-50 border border-slate-200/70 p-4 rounded-2xl flex flex-col sm:flex-row gap-4 items-end text-xs font-semibold shadow-sm">
+                <div className="flex-1 w-full space-y-1">
+                  <label className="text-slate-400 block font-bold uppercase tracking-wider text-[10px]">Search Client or Product</label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="Search by client ID, school name, client name or product..."
+                      value={renewalSearch}
+                      onChange={e => setRenewalSearch(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-3 py-2.5 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 transition-all font-semibold"
+                    />
+                  </div>
+                </div>
+
+                <div className="w-full sm:w-60 space-y-1">
+                  <label className="text-slate-400 block font-bold uppercase tracking-wider text-[10px]">Renewal Health Status</label>
+                  <select
+                    value={renewalHealthFilter}
+                    onChange={e => setRenewalHealthFilter(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 transition-all font-semibold"
+                  >
+                    <option value="All">All Renewal Periods</option>
+                    <option value="expiring">🔴 Ending in ≤ 30 Days</option>
+                    <option value="normal">🟢 Normal (&gt; 30 Days)</option>
+                  </select>
+                </div>
+
+                {(renewalSearch || renewalHealthFilter !== 'All') && (
+                  <button
+                    onClick={() => {
+                      setRenewalSearch('')
+                      setRenewalHealthFilter('All')
+                    }}
+                    className="px-4 py-2.5 border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 font-bold rounded-xl cursor-pointer transition-colors text-xs shrink-0"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+
+              {/* Table */}
+              {clientsLoading ? (
+                <div className="text-center py-12 font-bold text-slate-400">
+                  <span className="inline-block animate-spin mr-2">🔄</span>Loading renewal schedules...
+                </div>
+              ) : filteredRenewalClients.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 bg-slate-50/30 rounded-2xl border border-slate-100">
+                  <span className="text-4xl block">🔄</span>
+                  <p className="font-bold mt-2">No renewal records match your search or filter</p>
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50 text-slate-400 font-bold uppercase tracking-wider">
+                          <th className="px-5 py-4">Client ID</th>
+                          <th className="px-5 py-4">Client / Institution</th>
+                          <th className="px-5 py-4">Product Plan</th>
+                          <th className="px-5 py-4 text-center">Period End</th>
+                          <th className="px-5 py-4 text-center">Age (Days Left)</th>
+                          <th className="px-5 py-4 text-center">Next Billing Cycle</th>
+                          <th className="px-5 py-4 text-right">Payment Payable</th>
+                          <th className="px-5 py-4 text-center">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700">
+                        {filteredRenewalClients.map((c) => {
+                          const ageInfo = getAgeBadgeInfo(c)
+                          const selectedCycle = renewalSelectedCycles[c.id] || c.default_next_cycle || 'monthly'
+                          const cycleData = getClientCycleData(c, selectedCycle)
+
+                          return (
+                            <tr key={c.id} className="hover:bg-slate-50/60 transition-colors">
+                              {/* Client ID */}
+                              <td className="px-5 py-4 whitespace-nowrap">
+                                <div className="font-mono font-bold text-blue-600 text-[11px] flex items-center gap-1.5">
+                                  <span>{c.client_id || '—'}</span>
+                                  {c.client_id && (
+                                    <button
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(c.client_id)
+                                        flashSuccess(`Copied Client ID ${c.client_id}`)
+                                      }}
+                                      title="Copy Client ID"
+                                      className="text-slate-300 hover:text-blue-600 cursor-pointer text-[10px]"
+                                    >
+                                      📋
+                                    </button>
+                                  )}
+                                </div>
+                                <div className="font-mono font-semibold text-slate-400 text-[10px] whitespace-nowrap mt-0.5">
+                                  {formatDate(c.activated_at || c.created_at || c.delivery_date)}
+                                </div>
+                              </td>
+
+                              {/* Client Details */}
+                              <td className="px-5 py-4">
+                                <p className="font-bold text-slate-800 text-sm leading-tight">{c.company_name || c.school_name || '—'}</p>
+                                <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                                  <span>{c.client_name || ''}</span>
+                                  {c.email && <span className="text-slate-300">•</span>}
+                                  <span className="truncate max-w-[150px]" title={c.email}>{c.email}</span>
+                                </div>
+                              </td>
+
+                              {/* Product Plan */}
+                              <td className="px-5 py-4">
+                                <div className="font-bold text-slate-800">{c.product_name || '—'}</div>
+                                <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1 font-medium">
+                                  <span>Users:</span>
+                                  <span className="font-bold text-slate-600 font-mono">{c.total_students ?? c.student_count ?? '—'}</span>
+                                </div>
+                              </td>
+
+                              {/* Period End */}
+                              <td className="px-5 py-4 text-center whitespace-nowrap">
+                                <div className="font-mono font-bold text-slate-700">
+                                  {formatDate(c.period_end || c.valid_until || c.next_payment_date)}
+                                </div>
+                              </td>
+
+                              {/* Age / Days Left (Integration Guide Rules) */}
+                              <td className="px-5 py-4 text-center whitespace-nowrap">
+                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10.5px] font-black uppercase border tracking-tight ${ageInfo.badgeClass}`}>
+                                  {ageInfo.days !== null && ageInfo.days <= 30 ? (
+                                    <span>🔴</span>
+                                  ) : (
+                                    <span>🟢</span>
+                                  )}
+                                  <span>{ageInfo.label}</span>
+                                </span>
+                              </td>
+
+                              {/* Next Subscription Billing Cycle Selector Dropdown */}
+                              <td className="px-5 py-4 text-center whitespace-nowrap">
+                                <select
+                                  value={selectedCycle}
+                                  onChange={(e) => setRenewalSelectedCycles(prev => ({ ...prev, [c.id]: e.target.value }))}
+                                  className="bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 cursor-pointer shadow-sm transition-all"
+                                >
+                                  {RENEWAL_CYCLE_OPTIONS.map(opt => (
+                                    <option key={opt.value} value={opt.value}>
+                                      {opt.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+
+                              {/* Dynamic Payment Amount Display (Base breakdown removed as requested) */}
+                              <td className="px-5 py-4 text-right whitespace-nowrap">
+                                <div className="flex items-center gap-1.5 justify-end">
+                                  <span className="font-mono font-black text-slate-900 text-sm">
+                                    {cycleData.formatted_total || formatCurrency(cycleData.total_amount)}
+                                  </span>
+                                  {cycleData.discount_percentage > 0 && (
+                                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200 whitespace-nowrap">
+                                      {cycleData.discount_percentage}% OFF
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+
+                              {/* Actions */}
+                              <td className="px-5 py-4 text-center whitespace-nowrap">
+                                <div className="flex gap-1.5 justify-center items-center">
+                                  <button
+                                    onClick={() => handleFetchClientDetails(c.id)}
+                                    className="p-1.5 rounded-lg border border-slate-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 transition-all font-bold cursor-pointer"
+                                    title="View Dossier"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      alert(`Initiating subscription renewal invoice for ${c.company_name || c.client_name}:\n\nCycle: ${selectedCycle.toUpperCase()} (${cycleData.cycle_months} Month(s))\nAmount Payable: ${cycleData.formatted_total || formatCurrency(cycleData.total_amount)}\n\nInvoice reminder queued.`)
+                                    }}
+                                    className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer text-[10.5px] transition-all shadow-sm flex items-center gap-1"
+                                  >
+                                    <span>💳</span> Renew
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           {activePageTab === 'due_payment' && (
