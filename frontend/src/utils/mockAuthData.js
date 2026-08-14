@@ -447,6 +447,250 @@ export const getMockResponse = (url, method, data = null) => {
     }
   }
 
+  // General Clients & Quotations Mocks
+  if (typeof window !== 'undefined') {
+    if (!window.__mockGeneralClients) {
+      window.__mockGeneralClients = [
+        {
+          id: 1,
+          client_id: 'GC-2026-001',
+          client_name: 'Sharma Tech Solutions',
+          company_name: 'Sharma Tech Pvt Ltd',
+          email: 'contact@sharmatech.com',
+          contact_number: '+91 9876543210',
+          alt_contact_number: '+91 9876543211',
+          address: '45, MG Road, Sector 14',
+          district: 'Gurugram',
+          state: 'Haryana',
+          pin_code: '122001',
+          country_code: 'IN',
+          gst_type: 'Intra-State',
+          gstin: '07AAAAA0000A1Z5',
+          lead_source: 'Website',
+          referred_by: 'Direct',
+          software_requirements: 'Custom ERP and Billing Portal with WhatsApp Integration',
+          quotations_count: 1,
+          quotations: [
+            {
+              id: 101,
+              quotation_number: 'AIM-20260813-001',
+              quotation_date: '2026-08-10',
+              payment_terms: 'Due on Receipt',
+              gst_type: 'Intra-State',
+              subtotal: 45000,
+              cgst: 4050,
+              sgst: 4050,
+              tax_total: 8100,
+              grand_total: 53100,
+              uuid: 'quotation-uuid-101',
+              status: 'sent',
+              items: [
+                {
+                  id: 1,
+                  product_id: 1,
+                  product_name: 'Custom ERP Software',
+                  hsn: '9983',
+                  qty: 1,
+                  unit: 'Unit',
+                  selling_price: 45000,
+                  discount_percentage: 0,
+                  description: 'Complete corporate informative dynamic website with admin panel.'
+                }
+              ]
+            }
+          ]
+        },
+        {
+          id: 2,
+          client_id: 'GC-2026-002',
+          client_name: 'Himalayan Traders',
+          company_name: 'Himalayan Traders LLC',
+          email: 'info@himalayantraders.np',
+          contact_number: '+977 9801234567',
+          alt_contact_number: '',
+          address: 'Durbar Marg',
+          district: 'Kathmandu',
+          state: 'Bagmati',
+          pin_code: '44600',
+          country_code: 'NP',
+          gst_type: 'Inter-State',
+          gstin: '301234567',
+          lead_source: 'Partner',
+          referred_by: 'Kathmandu Branch',
+          software_requirements: 'Inventory & POS Software for Retail Chain',
+          quotations_count: 0,
+          quotations: []
+        }
+      ]
+    }
+
+    if (!window.__mockCountryTaxes) {
+      window.__mockCountryTaxes = [
+        { id: 1, country_code: 'IN', country_name: 'India', currency: 'INR', currency_symbol: '₹', tax_id_label: 'GSTIN', tax_name: 'GST', tax_rate: 18, is_active: true },
+        { id: 2, country_code: 'NP', country_name: 'Nepal', currency: 'NPR', currency_symbol: 'NRs', tax_id_label: 'PAN/VAT', tax_name: 'VAT', tax_rate: 13, is_active: true },
+        { id: 3, country_code: 'BT', country_name: 'Bhutan', currency: 'BTN', currency_symbol: 'Nu', tax_id_label: 'BIT', tax_name: 'Sales Tax', tax_rate: 7, is_active: true }
+      ]
+    }
+  }
+
+  // GET /admin/general-clients/:id
+  const singleClientMatch = lowercaseUrl.match(/\/admin\/general-clients\/(\d+)$/)
+  if (singleClientMatch && method === 'GET') {
+    const clientId = parseInt(singleClientMatch[1], 10)
+    const clientItem = (window.__mockGeneralClients || []).find(c => c.id === clientId)
+    if (clientItem) {
+      return { success: true, data: clientItem }
+    }
+    return { success: false, message: 'Client not found' }
+  }
+
+  // POST /admin/general-clients/:id/quotations
+  const createQuotationMatch = lowercaseUrl.match(/\/admin\/general-clients\/(\d+)\/quotations$/)
+  if (createQuotationMatch && method === 'POST') {
+    const clientId = parseInt(createQuotationMatch[1], 10)
+    const clientItem = (window.__mockGeneralClients || []).find(c => c.id === clientId)
+    const newQuotation = {
+      id: Math.floor(Date.now() + Math.random() * 1000),
+      uuid: `quotation-${Date.now()}`,
+      quotation_number: data?.quotation_number || `AIM-${Date.now()}`,
+      quotation_date: data?.quotation_date || new Date().toISOString().substring(0, 10),
+      po_number: data?.po_number || '',
+      po_date: data?.po_date || '',
+      discount_description: data?.discount_description || '',
+      payment_terms: data?.payment_terms || 'Due on Receipt',
+      gst_type: data?.gst_type || 'Intra-State',
+      gstin: data?.gstin || '',
+      anexture: data?.anexture || 'NO',
+      items: data?.items || [],
+      status: 'draft'
+    }
+    if (clientItem) {
+      if (!clientItem.quotations) clientItem.quotations = []
+      clientItem.quotations.unshift(newQuotation)
+      clientItem.quotations_count = clientItem.quotations.length
+    }
+    return { success: true, data: newQuotation, message: 'Quotation created successfully' }
+  }
+
+  // POST /admin/quotations/:id/send
+  if (lowercaseUrl.includes('/admin/quotations/') && lowercaseUrl.includes('/send')) {
+    const uuidMatch = lowercaseUrl.match(/\/admin\/quotations\/(\d+)\/send/)
+    const qId = uuidMatch ? uuidMatch[1] : '101'
+    return {
+      success: true,
+      message: 'Quotation sent successfully',
+      payment_url: `${window.location.origin}/general-quotation-pay.html?uuid=quotation-uuid-${qId}`
+    }
+  }
+
+  // GET /admin/general-clients & POST /admin/general-clients & DELETE /admin/general-clients/:id
+  if (lowercaseUrl.includes('/admin/general-clients')) {
+    const deleteGenClientMatch = lowercaseUrl.match(/\/admin\/general-clients\/(\d+)$/)
+    if (deleteGenClientMatch && method === 'DELETE') {
+      const cId = parseInt(deleteGenClientMatch[1], 10)
+      if (window.__mockGeneralClients) {
+        window.__mockGeneralClients = window.__mockGeneralClients.filter(c => c.id !== cId)
+      }
+      return { success: true, message: 'General client deleted successfully' }
+    }
+    if (method === 'POST') {
+      const newGenClient = {
+        id: Math.floor(Date.now() + Math.random() * 1000),
+        client_id: `GC-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
+        client_name: data?.client_name || 'New Client',
+        company_name: data?.company_name || '',
+        email: data?.email || '',
+        contact_number: data?.contact_number || '',
+        alt_contact_number: data?.alt_contact_number || '',
+        address: data?.address || '',
+        district: data?.district || '',
+        state: data?.state || '',
+        pin_code: data?.pin_code || '',
+        country_code: data?.country_code || 'IN',
+        gst_type: data?.gst_type || 'Intra-State',
+        gstin: data?.gstin || '',
+        lead_source: data?.lead_source || 'Website',
+        referred_by: data?.referred_by || 'Direct',
+        software_requirements: data?.software_requirements || '',
+        quotations_count: 0,
+        quotations: []
+      }
+      if (window.__mockGeneralClients) {
+        window.__mockGeneralClients.unshift(newGenClient)
+      }
+      return { success: true, data: newGenClient, message: 'General client created successfully' }
+    }
+    return {
+      success: true,
+      data: window.__mockGeneralClients || []
+    }
+  }
+
+  // GET /admin/country-taxes & PUT /admin/country-taxes/:id
+  if (lowercaseUrl.includes('/admin/country-taxes')) {
+    const updateTaxMatch = lowercaseUrl.match(/\/admin\/country-taxes\/(\d+)$/)
+    if (updateTaxMatch && method === 'PUT') {
+      const taxId = parseInt(updateTaxMatch[1], 10)
+      let updatedItem = null
+      if (window.__mockCountryTaxes) {
+        window.__mockCountryTaxes = window.__mockCountryTaxes.map(t => {
+          if (t.id === taxId) {
+            updatedItem = {
+              ...t,
+              tax_name: data?.tax_name ?? t.tax_name,
+              tax_rate: data?.tax_rate ?? t.tax_rate,
+              is_active: data?.is_active ?? t.is_active
+            }
+            return updatedItem
+          }
+          return t
+        })
+      }
+      return { success: true, data: updatedItem || data, message: 'Country tax updated' }
+    }
+    return { success: true, data: window.__mockCountryTaxes || [] }
+  }
+
+  // POST /admin/products/:id/country-price
+  if (lowercaseUrl.includes('/country-price')) {
+    return {
+      success: true,
+      message: 'Country price updated successfully',
+      data: { ...data }
+    }
+  }
+
+  // GET /public/subcategories-with-products
+  if (lowercaseUrl.includes('/public/subcategories-with-products')) {
+    return {
+      success: true,
+      data: [
+        {
+          id: 1,
+          name: 'Web & ERP Solutions',
+          products: [
+            { id: 1, name: 'Corporate Informative Website', processing_fee: 15000, monthly_subscription: 1500, currency: 'INR', description: 'Complete corporate dynamic website with admin login details.' },
+            { id: 2, name: 'School Management ERP Suite', processing_fee: 35000, monthly_subscription: 3500, currency: 'INR', description: 'Complete School ERP with Fee Management, Attendance, and Exam Portal.' },
+            { id: 3, name: 'Hospital & Clinic POS Software', processing_fee: 28000, monthly_subscription: 2500, currency: 'INR', description: 'OPD, Pharmacy, Billing, and Patient EMR system.' }
+          ]
+        }
+      ]
+    }
+  }
+
+  // GET /admin/clients (Subscription clients)
+  if (lowercaseUrl.includes('/admin/clients')) {
+    return {
+      success: true,
+      data: {
+        all_clients: [
+          { id: 1, name: 'Greenfield School', email: 'greenfield@school.com', plan: 'Silver Plan', is_active: true },
+          { id: 2, name: 'Apex Retailers', email: 'apex@retail.com', plan: 'Gold Plan', is_active: true }
+        ]
+      }
+    }
+  }
+
   // 2. Employee Auth Mocks
   if (lowercaseUrl.includes('/login') && !lowercaseUrl.includes('/client/') && !lowercaseUrl.includes('/partner/')) {
     const employeeInfo = {
