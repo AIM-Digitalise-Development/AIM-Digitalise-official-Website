@@ -26,6 +26,7 @@ import SaasBasedSoftware from './pages/website/SaasBasedSoftware'
 import DigitalMarketing from './pages/website/DigitalMarketing'
 import DigitalSignature from './pages/website/DigitalSignature'
 import Users from './pages/website/Users'
+import GeneralQuotationPay from './pages/website/GeneralQuotationPay'
 import AdminLogin from './pages/website/AdminLogin'
 import EmployeeLogin from './pages/website/EmployeeLogin'
 import AdminDashboard from './pages/admin/Dashboard'
@@ -178,6 +179,10 @@ function App() {
           {/* ── Client portal & login (standalone, no header/footer) ── */}
           <Route path={ROUTES.CLIENT.LOGIN} element={<ClientLogin />} />
           
+          {/* ── Public Quotation Payment Page (standalone, no header/footer) ── */}
+          <Route path="/general-quotation-pay" element={<GeneralQuotationPay />} />
+          <Route path="/general-quotation-pay.html" element={<GeneralQuotationPay />} />
+
           {/* ── General Login (standalone, no header/footer) ── */}
           <Route path={ROUTES.AUTH.ADMIN_LOGIN} element={<AdminLogin />} />
           <Route path={ROUTES.AUTH.EMPLOYEE_LOGIN} element={<EmployeeLogin />} />

@@ -1,10 +1,20 @@
+import { Helmet } from 'react-helmet-async'
 import ContactForm from '../../components/website/contact/ContactForm'
 import OfficeInfo from '../../components/website/contact/OfficeInfo'
 import MapLocation from '../../components/website/contact/MapLocation'
 
 const Contact = () => {
   return (
-    <div className="page-shell animate-fade-in">
+    <>
+      <Helmet>
+        <title>Contact AIM Digitalise | Let’s Build Something Better</title>
+        <meta
+          name="description"
+          content="Have a project in mind? Contact AIM Digitalise for SaaS-based software, website, and digital marketing solutions tailored to your business needs and goals."
+        />
+        <link rel="canonical" href="https://aimdigitalise.com/contact" />
+      </Helmet>
+      <div className="page-shell animate-fade-in">
       {/* Compact Title Section */}
       <section className="relative pt-10 pb-6 border-b border-white/10 overflow-hidden">
         <div className="ambient-glows" aria-hidden />
@@ -36,7 +46,8 @@ const Contact = () => {
           </div>
         </div>
       </section>
-    </div>
+      </div>
+    </>
   )
 }
 

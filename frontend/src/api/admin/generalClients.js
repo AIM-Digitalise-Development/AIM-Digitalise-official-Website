@@ -19,6 +19,28 @@ export const createQuotation = (clientId, data) =>
 export const sendQuotation = (quotationId) =>
   client.post(`/admin/quotations/${quotationId}/send`)
 
+// Admin Invoice Download Link Generator
+export const getAdminInvoiceDownloadUrl = (quotationId) => {
+  const token = localStorage.getItem('admin_token') || localStorage.getItem('access_token') || ''
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.nexgn.in/api'
+  return `${baseUrl}/admin/quotations/${quotationId}/download-invoice?token=${token}`
+}
+
+// Public Quotation & Payment Endpoints (/api/public/...)
+export const getPublicQuotation = (uuid) =>
+  client.get(`/public/general-quotations/${uuid}`)
+
+export const createPublicQuotationOrder = (uuid) =>
+  client.post(`/public/general-quotations/${uuid}/create-order`)
+
+export const verifyPublicQuotationPayment = (uuid, paymentData) =>
+  client.post(`/public/general-quotations/${uuid}/verify-payment`, paymentData)
+
+export const getPublicInvoiceDownloadUrl = (uuid) => {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.nexgn.in/api'
+  return `${baseUrl}/public/general-quotations/${uuid}/download-invoice`
+}
+
 // Country Taxes & Product Pricing Overrides APIs
 export const getCountryTaxes = () =>
   client.get('/admin/country-taxes')
@@ -34,3 +56,8 @@ export const getPublicProductsForCountry = (countryCode = 'IN') =>
 
 export const getSubscriptionClients = () =>
   client.get('/admin/clients')
+
+export const getDuePayments = () =>
+  client.get('/admin/due-payments')
+
+

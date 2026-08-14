@@ -128,8 +128,8 @@ const Career = () => {
   return (
     <>
       <Helmet>
-        <title>AIM Digitalise | Careers</title>
-        <meta name="description" content="Build the future of digital systems. We are hiring sales executives, presales specialists, backend developers, mobile developers, digital marketers, and designers." />
+        <title>AIM Digitalise Careers | Build Your Future in Technology</title>
+        <meta name="description" content="Join AIM Digitalise to build your career in technology, gain real-world experience, work on innovative projects, and grow your skills with a forward-thinking." />
       </Helmet>
 
       <div className="page-shell bg-aim-navy">

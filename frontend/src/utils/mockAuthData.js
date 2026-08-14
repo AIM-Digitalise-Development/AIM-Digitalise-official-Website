@@ -583,6 +583,99 @@ export const getMockResponse = (url, method, data = null) => {
     }
   }
 
+  // PUBLIC QUOTATION ENDPOINTS (/public/general-quotations/...)
+  if (lowercaseUrl.includes('/public/general-quotations/')) {
+    const parts = lowercaseUrl.split('/public/general-quotations/')[1] || ''
+    const [rawUuid, action] = parts.split('/')
+    const uuid = rawUuid ? rawUuid.split('?')[0] : ''
+
+    // Find quotation in mock database
+    let foundQuotation = null
+    let foundClient = null
+
+    if (window.__mockGeneralClients) {
+      for (const clientItem of window.__mockGeneralClients) {
+        if (clientItem.quotations) {
+          const match = clientItem.quotations.find(q => q.uuid === uuid || `quotation-uuid-${q.id}` === uuid || `quotation-${q.id}` === uuid)
+          if (match) {
+            foundQuotation = match
+            foundClient = clientItem
+            break
+          }
+        }
+      }
+    }
+
+    if (!foundQuotation) {
+      foundClient = (window.__mockGeneralClients && window.__mockGeneralClients[0]) || {
+        client_name: 'Test Client',
+        company_name: 'Test Enterprise',
+        email: 'client@example.com',
+        contact_number: '+91 9876543210',
+        address: 'MG Road',
+        state: 'Haryana',
+        gst_type: 'Intra-State',
+        gstin: '07AAAAA0000A1Z5'
+      }
+      foundQuotation = {
+        id: 101,
+        uuid: uuid || 'quotation-uuid-101',
+        quotation_number: 'AIM-20260813-001',
+        quotation_date: '2026-08-10',
+        payment_terms: 'Due on Receipt',
+        gst_type: foundClient.gst_type || 'Intra-State',
+        subtotal: 45000,
+        cgst: 4050,
+        sgst: 4050,
+        tax_total: 8100,
+        grand_total: 53100,
+        status: 'sent',
+        items: [
+          {
+            id: 1,
+            product_name: 'Custom ERP Software Suite',
+            hsn: '9983',
+            unit: 'Unit',
+            qty: 1,
+            selling_price: 45000,
+            discount_percentage: 0,
+            description: 'Complete corporate informative dynamic website with admin panel and database.'
+          }
+        ]
+      }
+    }
+
+    if (action === 'create-order') {
+      return {
+        success: true,
+        order_id: `order_mock_${Date.now()}`,
+        key: 'rzp_test_mockkey123',
+        amount: Math.round(Number(foundQuotation.grand_total || 53100) * 100),
+        currency: 'INR',
+        quotation: foundQuotation
+      }
+    }
+
+    if (action === 'verify-payment') {
+      foundQuotation.status = 'paid'
+      foundQuotation.paid_at = new Date().toISOString()
+      return {
+        success: true,
+        message: 'Payment verified successfully! Tax Invoice PDF has been sent to client email.',
+        quotation: foundQuotation
+      }
+    }
+
+    // Default: GET /public/general-quotations/{uuid}
+    return {
+      success: true,
+      data: {
+        ...foundQuotation,
+        client: foundClient
+      }
+    }
+  }
+
   // GET /admin/general-clients & POST /admin/general-clients & DELETE /admin/general-clients/:id
   if (lowercaseUrl.includes('/admin/general-clients')) {
     const deleteGenClientMatch = lowercaseUrl.match(/\/admin\/general-clients\/(\d+)$/)

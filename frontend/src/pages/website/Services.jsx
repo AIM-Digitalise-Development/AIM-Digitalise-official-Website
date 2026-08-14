@@ -62,8 +62,8 @@ const Services = () => {
   return (
     <>
       <Helmet>
-        <title>AIM Digitalise | Our Services</title>
-        <meta name="description" content="Explore our -grade technical solutions: custom software development, cloud systems, and AI model integrations." />
+        <title>AIM Digitalise | Custom Website Development Services</title>
+        <meta name="description" content="Build a powerful online presence with AIM Digitalise custom websites—fast, responsive, user-friendly, and designed to engage visitors and grow your business." />
       </Helmet>
 
       <div className="page-shell">

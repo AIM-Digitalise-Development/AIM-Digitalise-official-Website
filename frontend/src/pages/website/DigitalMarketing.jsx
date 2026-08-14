@@ -61,8 +61,8 @@ const DigitalMarketing = () => {
   return (
     <>
       <Helmet>
-        <title>AIM Digitalise | Digital Marketing Services</title>
-        <meta name="description" content="Accelerate your brand growth with AIM Digitalise's elite digital marketing services, covering SEO optimization, Google Ads, SMM, and analytics." />
+        <title>AIM Digitalise | Digital Marketing for Business Growth</title>
+        <meta name="description" content="Grow your brand with AIM Digitalise through SEO, social media, content, and performance marketing strategies built to reach the right audience and drive results." />
       </Helmet>
 
       <div className="page-shell bg-aim-navy">

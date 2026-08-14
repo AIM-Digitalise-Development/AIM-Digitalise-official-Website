@@ -187,8 +187,8 @@ const Portfolio = () => {
   return (
     <>
       <Helmet>
-        <title>AIM Digitalise | Our Portfolio</title>
-        <meta name="description" content="Browse our case studies: web platforms, graphic designs, native mobile apps, custom enterprise software, and hyper-targeted digital marketing strategies." />
+        <title>AIM Digitalise Portfolio | Our Software &amp; Digital Work</title>
+        <meta name="description" content="Explore AIM Digitalise’s portfolio of innovative software and digital projects, built to solve business challenges, improve efficiency, and deliver results." />
       </Helmet>
 
       <div className="page-shell bg-aim-navy">

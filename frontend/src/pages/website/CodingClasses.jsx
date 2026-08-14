@@ -50,8 +50,8 @@ const CodingClasses = () => {
   return (
     <>
       <Helmet>
-        <title>AIM Digitalise | Professional Coding Classes</title>
-        <meta name="description" content="Upskill your team or accelerate your career with professional development bootcamps in React, Cloud DevOps, AI Systems, and Software Architecture." />
+        <title>AIM Digitalise | Coding Classes &amp; Programming Courses</title>
+        <meta name="description" content="Learn coding with AIM Digitalise through practical programming classes that build real-world skills, boost problem-solving, and prepare you for a tech career." />
       </Helmet>
 
       <div className="page-shell bg-aim-navy">

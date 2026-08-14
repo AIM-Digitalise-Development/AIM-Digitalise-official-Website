@@ -66,8 +66,8 @@ const DigitalSignature = () => {
   return (
     <>
       <Helmet>
-        <title>AIM Digitalise | Digital Signature Certificates (DSC)</title>
-        <meta name="description" content="Secure your business operations with Class 3 Digital Signature Certificates (DSC) and DGFT tokens from AIM Digitalise. Quick paperless registration." />
+        <title>AIM Digitalise | Secure Digital Signature Solutions</title>
+        <meta name="description" content="Simplify document signing with AIM Digitalise digital signature solutions—secure, fast, paperless, and designed to streamline business workflows and approvals." />
       </Helmet>
 
       <div className="page-shell bg-aim-navy">

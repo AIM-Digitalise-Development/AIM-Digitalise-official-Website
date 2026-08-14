@@ -11,8 +11,15 @@ import {
   setCustomizationAmount,
   updateCustomizationStatus,
   getAdminClientById,
+  getAdminDuePayments,
 } from '../../api/admin/partners'
 import { isSaasClient } from '../../utils/subscription'
+
+const countryFlags = {
+  IN: '🇮🇳',
+  NP: '🇳🇵',
+  BT: '🇧🇹',
+}
 
 // ─── Shared style helpers ─────────────────────────────────────────────────────
 const inputCls = 'w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 transition-all bg-white disabled:bg-slate-50 disabled:text-slate-400'
@@ -423,6 +430,7 @@ const AdminSaasClients = () => {
   useEffect(() => {
     if (activePageTab === 'subscriptions') fetchSubscriptions()
     if (activePageTab === 'customization') fetchCustomizationRequestsData(customizationFilters)
+    if (activePageTab === 'due_payment') fetchDuePayments()
   }, [activePageTab])
 
   // ── CUSTOMIZATION ──────────────────────────────────────────────────────────
@@ -587,6 +595,35 @@ const AdminSaasClients = () => {
     return (s.client_name || '').toLowerCase().includes(q) || (s.product_name || '').toLowerCase().includes(q) || (s.billing_cycle || '').toLowerCase().includes(q)
   })
 
+  // ── DUE PAYMENTS ───────────────────────────────────────────────────────────
+  const [duePaymentsClients, setDuePaymentsClients] = useState([])
+  const [duePaymentsSummary, setDuePaymentsSummary] = useState(null)
+  const [loadingDuePayments, setLoadingDuePayments] = useState(false)
+  const [dueSearchQuery, setDueSearchQuery] = useState('')
+  const [dueStatusFilter, setDueStatusFilter] = useState('all') // 'all' | 'due' | 'paid'
+  const [selectedDueClientModal, setSelectedDueClientModal] = useState(null)
+  const [copiedDueClientId, setCopiedDueClientId] = useState(false)
+
+  const fetchDuePayments = async () => {
+    setLoadingDuePayments(true)
+    try {
+      const res = await getAdminDuePayments()
+      if (res.data?.success && res.data.data) {
+        setDuePaymentsClients(res.data.data.clients || [])
+        setDuePaymentsSummary(res.data.data.summary || null)
+      } else if (res.data?.success && res.data.clients) {
+        setDuePaymentsClients(res.data.clients || [])
+        setDuePaymentsSummary(res.data.summary || null)
+      } else {
+        flashError(res.data?.message || 'Failed to fetch due payments')
+      }
+    } catch (err) {
+      flashError(err.message || 'Error fetching due payments')
+    } finally {
+      setLoadingDuePayments(false)
+    }
+  }
+
   // ─────────────────────────────────────────────────────────────────────────────
   // RENDER
   // ─────────────────────────────────────────────────────────────────────────────
@@ -731,6 +768,7 @@ const AdminSaasClients = () => {
           <div className="w-40 flex justify-end">
             {activePageTab === 'show_clients' && <button onClick={fetchClients} disabled={clientsLoading} className="px-4 py-2 border border-slate-200 hover:border-[#38b34a] hover:text-[#38b34a] bg-white rounded-xl text-xs font-bold disabled:opacity-50 cursor-pointer shadow-sm">{clientsLoading ? 'Loading...' : '↺ Refresh'}</button>}
             {activePageTab === 'subscriptions' && <button onClick={fetchSubscriptions} disabled={subscriptionsLoading} className="px-4 py-2 border border-slate-200 hover:border-blue-400 hover:text-blue-600 bg-white rounded-xl text-xs font-bold disabled:opacity-50 cursor-pointer shadow-sm">{subscriptionsLoading ? 'Loading...' : '↺ Refresh'}</button>}
+            {activePageTab === 'due_payment' && <button onClick={fetchDuePayments} disabled={loadingDuePayments} className="px-4 py-2 border border-slate-200 hover:border-blue-400 hover:text-blue-600 bg-white rounded-xl text-xs font-bold disabled:opacity-50 cursor-pointer shadow-sm">{loadingDuePayments ? 'Loading...' : '↺ Refresh Dues'}</button>}
           </div>
         </div>
 
@@ -1430,43 +1468,306 @@ const AdminSaasClients = () => {
               )}
             </div>
           )}
+          {/* ── TAB: DUE PAYMENT ────────────────────────────────────────────────── */}
           {activePageTab === 'due_payment' && (
-            <div className="space-y-4">
-              <h3 className="text-base font-bold text-slate-800 flex items-center gap-2 pb-3 border-b border-slate-100">⚠️ Outstanding Client Payments</h3>
-              <div className="overflow-x-auto rounded-2xl border border-slate-200/80 shadow-sm">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider">
-                      <th className="px-5 py-4">Client ID</th>
-                      <th className="px-5 py-4">Client</th>
-                      <th className="px-5 py-4 text-right">Outstanding</th>
-                      <th className="px-5 py-4">Due Date</th>
-                      <th className="px-5 py-4">Unpaid Cycles</th>
-                      <th className="px-5 py-4 text-center">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-slate-700">
-                    {clients.filter(c => Number(c.total_due_amount) > 0).map(c => (
-                      <tr key={c.id} className="hover:bg-slate-50/50">
-                        <td className="px-5 py-3 font-mono font-bold text-slate-500">{c.client_id}</td>
-                        <td className="px-5 py-3 font-bold text-slate-800">{c.company_name}</td>
-                        <td className="px-5 py-3 text-right font-black text-rose-600">₹{Number(c.total_due_amount || 0).toLocaleString('en-IN')}</td>
-                        <td className="px-5 py-3 text-slate-400">{c.valid_until ? new Date(c.valid_until).toLocaleDateString('en-IN') : '—'}</td>
-                        <td className="px-5 py-3">
-                          {c.unpaid_months?.map(m => (
-                            <span key={m} className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 border border-rose-200 font-bold text-[9px] mr-1 inline-block">
-                              {m}
-                            </span>
-                          ))}
-                        </td>
-                        <td className="px-5 py-3 text-center">
-                          <button onClick={() => triggerMockReminder(c)} className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded font-bold cursor-pointer text-[10px]">Send Reminder</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <div className="space-y-6">
+              {/* Header Title / Context */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
+                <div>
+                  <h3 className="text-base font-black text-slate-800 flex items-center gap-2 font-sans">
+                    <span className="text-blue-600">💳</span> Subscription Clients — Due Payments & Balances
+                  </h3>
+                  <p className="text-xs font-semibold text-slate-400 mt-0.5">
+                    All SaaS subscription clients who have paid at least the initial processing fee. View last payment amount, due/paid status stamp, extra students dues, cart addons, customizations, and total due amounts.
+                  </p>
+                </div>
               </div>
+
+              {/* Summary Metrics Grid */}
+              {duePaymentsSummary && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                  {/* Total Clients */}
+                  <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-md flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-sans">
+                        Total SaaS Clients
+                      </span>
+                      <span className="text-3xl font-black text-blue-600 mt-1.5 block">
+                        {loadingDuePayments ? '...' : (duePaymentsSummary.total_clients || 0)}
+                      </span>
+                      <span className="text-[10.5px] font-semibold text-slate-400 mt-1 block">
+                        Paid processing fee / active setup
+                      </span>
+                    </div>
+                    <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center border border-blue-100 text-xl">👥</div>
+                  </div>
+
+                  {/* Pending Dues */}
+                  <div className="bg-white rounded-2xl p-5 border border-rose-200 shadow-md flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest block font-sans">
+                        Clients With Dues
+                      </span>
+                      <span className="text-3xl font-black text-rose-600 mt-1.5 block">
+                        {loadingDuePayments ? '...' : (duePaymentsSummary.due_clients_count || 0)}
+                      </span>
+                      <span className="text-[10.5px] font-bold text-rose-500 mt-1 block">
+                        Total Due: {duePaymentsSummary.total_dues_amount_formatted || '₹ 0.00'}
+                      </span>
+                    </div>
+                    <div className="w-12 h-12 rounded-xl bg-rose-50 flex items-center justify-center border border-rose-100 text-xl">⚠️</div>
+                  </div>
+
+                  {/* Fully Paid */}
+                  <div className="bg-white rounded-2xl p-5 border border-emerald-200 shadow-md flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest block font-sans">
+                        Fully Paid Clients
+                      </span>
+                      <span className="text-3xl font-black text-emerald-600 mt-1.5 block">
+                        {loadingDuePayments ? '...' : (duePaymentsSummary.paid_clients_count || 0)}
+                      </span>
+                      <span className="text-[10.5px] font-semibold text-emerald-600 mt-1 block">
+                        All dues clear (₹ 0.00 balance)
+                      </span>
+                    </div>
+                    <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center border border-emerald-100 text-xl">✅</div>
+                  </div>
+
+                  {/* Breakdown */}
+                  <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-md">
+                    <span className="text-[10px] font-black text-[#1e3e6b] uppercase tracking-wider block mb-2 font-sans">
+                      Dues Breakdown
+                    </span>
+                    <div className="space-y-1 text-xs text-slate-600 font-semibold">
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400">📦 Subscriptions:</span>
+                        <span className="font-mono font-bold text-slate-800">
+                          ₹ {(duePaymentsSummary.breakdown?.subscription_dues || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400">👥 Extra Students:</span>
+                        <span className="font-mono font-bold text-amber-600">
+                          ₹ {(duePaymentsSummary.breakdown?.extra_students_dues || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400">🛒 Cart Addons:</span>
+                        <span className="font-mono font-bold text-purple-600">
+                          ₹ {(duePaymentsSummary.breakdown?.addons_dues || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400">⚙️ Customizations:</span>
+                        <span className="font-mono font-bold text-blue-600">
+                          ₹ {(duePaymentsSummary.breakdown?.customization_dues || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Search & Filter Bar */}
+              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div className="relative w-full md:flex-1">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Search Due Payments by Client Name, ID, School, Email, or State..."
+                    value={dueSearchQuery}
+                    onChange={(e) => setDueSearchQuery(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-700 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 transition-all font-semibold"
+                  />
+                </div>
+
+                {/* Status Pills */}
+                <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200 shrink-0">
+                  <button
+                    onClick={() => setDueStatusFilter('all')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      dueStatusFilter === 'all'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-500 hover:bg-slate-50'
+                    }`}
+                  >
+                    All ({duePaymentsClients.length})
+                  </button>
+                  <button
+                    onClick={() => setDueStatusFilter('due')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      dueStatusFilter === 'due'
+                        ? 'bg-rose-600 text-white shadow-sm'
+                        : 'text-slate-500 hover:bg-slate-50'
+                    }`}
+                  >
+                    ⚠️ DUE ({duePaymentsClients.filter(c => c.due_stamp === 'DUE').length})
+                  </button>
+                  <button
+                    onClick={() => setDueStatusFilter('paid')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      dueStatusFilter === 'paid'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-slate-500 hover:bg-slate-50'
+                    }`}
+                  >
+                    ✅ PAID ({duePaymentsClients.filter(c => c.due_stamp === 'PAID').length})
+                  </button>
+                </div>
+              </div>
+
+              {/* Main Due Payments Table */}
+              {loadingDuePayments ? (
+                <div className="p-16 flex flex-col items-center justify-center text-slate-400 gap-3">
+                  <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-xs font-bold">Loading Due Payments & Balances...</span>
+                </div>
+              ) : duePaymentsClients.length === 0 ? (
+                <div className="p-16 flex flex-col items-center justify-center text-center space-y-3 bg-slate-50 rounded-2xl border border-slate-200/80">
+                  <span className="text-4xl">💳</span>
+                  <p className="text-slate-800 font-bold text-sm font-sans">No Subscription Clients Found</p>
+                  <p className="text-slate-400 text-xs max-w-sm font-sans">
+                    Subscription clients with paid processing fees or setup will be listed here automatically.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-2xl border border-slate-200/80 shadow-sm bg-white">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider">
+                        <th className="px-6 py-4">Client Info & ID</th>
+                        <th className="px-6 py-4">Plan & Status</th>
+                        <th className="px-6 py-4 text-center">Stamp</th>
+                        <th className="px-6 py-4 text-right">Total Due Amount</th>
+                        <th className="px-6 py-4 text-center">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                      {duePaymentsClients
+                        .filter(c => {
+                          const q = dueSearchQuery.toLowerCase().trim()
+                          const matchesSearch = !q ||
+                            (c.client_name || '').toLowerCase().includes(q) ||
+                            (c.client_id || '').toString().toLowerCase().includes(q) ||
+                            (c.school_name || '').toLowerCase().includes(q) ||
+                            (c.company_name || '').toLowerCase().includes(q) ||
+                            (c.email || '').toLowerCase().includes(q) ||
+                            (c.state || '').toLowerCase().includes(q)
+
+                          const matchesFilter = dueStatusFilter === 'all' ||
+                            (dueStatusFilter === 'due' && c.due_stamp === 'DUE') ||
+                            (dueStatusFilter === 'paid' && c.due_stamp === 'PAID')
+
+                          return matchesSearch && matchesFilter
+                        })
+                        .map((c) => (
+                          <tr key={c.id} className="hover:bg-slate-50/60 transition-colors">
+                            {/* 1. Client Info & ID */}
+                            <td className="px-6 py-4">
+                              <p className="font-bold text-slate-900 text-sm leading-tight">
+                                {c.company_name || c.school_name || c.client_name || '—'}
+                              </p>
+                              <div className="font-mono font-bold text-blue-600 text-[11px] flex items-center gap-1.5 mt-1">
+                                <span>{c.client_id || '—'}</span>
+                                {c.client_id && (
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(c.client_id)
+                                      flashSuccess(`Copied Client ID ${c.client_id}`)
+                                    }}
+                                    title="Copy Client ID"
+                                    className="text-slate-300 hover:text-blue-600 cursor-pointer text-[10px]"
+                                  >
+                                    📋
+                                  </button>
+                                )}
+                              </div>
+                              {c.school_name && c.company_name && c.school_name !== c.company_name && (
+                                <div className="text-[10px] text-slate-400 mt-0.5">
+                                  🏫 {c.school_name}
+                                </div>
+                              )}
+                            </td>
+
+                            {/* 2. Plan & Status */}
+                            <td className="px-6 py-4">
+                              <div className="font-bold text-slate-800">{c.product_name || 'Standard Plan'}</div>
+                              <span
+                                className={`inline-flex items-center gap-1 mt-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border tracking-tight ${
+                                  c.is_expired
+                                    ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                }`}
+                              >
+                                {c.is_expired ? '🔴' : '🟢'} {c.age_formatted || (c.is_expired ? 'Expired' : 'Active')}
+                              </span>
+                            </td>
+
+                            {/* 3. Stamp */}
+                            <td className="px-6 py-4 text-center whitespace-nowrap">
+                              <span
+                                className={`inline-flex items-center justify-center px-4 py-1.5 rounded-full font-black text-xs uppercase tracking-wider border shadow-sm ${
+                                  c.due_stamp === 'DUE'
+                                    ? 'bg-rose-50 text-rose-700 border-rose-300'
+                                    : 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                                }`}
+                              >
+                                {c.due_stamp === 'DUE' ? '⚠️ DUE' : '✅ PAID'}
+                              </span>
+                            </td>
+
+                            {/* 4. Total Due Amount */}
+                            <td className="px-6 py-4 text-right whitespace-nowrap">
+                              <div
+                                className={`font-mono font-black text-base ${
+                                  c.total_due_amount > 0 ? 'text-rose-600' : 'text-emerald-600'
+                                }`}
+                              >
+                                {c.total_due_amount_formatted}
+                              </div>
+                              {c.subscription_due?.is_due && (
+                                <div className="text-[9.5px] font-bold text-rose-500 mt-0.5">
+                                  Incl. Sub: {c.subscription_due.amount_formatted}
+                                </div>
+                              )}
+                            </td>
+
+                            {/* 5. Actions (Eye button for Details + Reminder) */}
+                            <td className="px-6 py-4 text-center whitespace-nowrap">
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  onClick={() => setSelectedDueClientModal(c)}
+                                  className="px-3 py-1.5 rounded-xl bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-500 text-slate-700 hover:text-blue-600 transition-all font-bold cursor-pointer shadow-sm flex items-center gap-1.5 text-xs"
+                                  title="View Full Client & Dues Dossier"
+                                >
+                                  <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
+                                  <span>Details</span>
+                                </button>
+                                {c.due_stamp === 'DUE' && (
+                                  <button
+                                    onClick={() => triggerMockReminder(c)}
+                                    className="p-1.5 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-amber-600 transition-all font-bold cursor-pointer text-xs shadow-sm"
+                                    title="Send Payment Reminder"
+                                  >
+                                    ✉️
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
           {activePageTab === 'payment_report' && (
@@ -2041,6 +2342,372 @@ const AdminSaasClients = () => {
                 <button
                   onClick={() => setShowDetailsModal(false)}
                   className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 cursor-pointer transition-all"
+                >
+                  Close Panel
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ══ CLIENT DUE DETAILS MODAL (SIDE DRAWER) ════════════════════════════ */}
+      <AnimatePresence>
+        {selectedDueClientModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-end">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.4 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900"
+              onClick={() => setSelectedDueClientModal(null)}
+            />
+
+            {/* Slide-over panel */}
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'tween', duration: 0.3 }}
+              className="relative w-full max-w-xl h-full shadow-2xl flex flex-col justify-between overflow-hidden z-10 bg-white border-l border-slate-200 font-sans"
+            >
+              {/* Header */}
+              <div className="px-6 py-5 flex items-center justify-between bg-slate-50 border-b border-slate-200">
+                <div>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                    Client Details &amp; Dues Dossier
+                  </span>
+                  <h3 className="text-lg font-black text-slate-900 leading-tight">
+                    {selectedDueClientModal.company_name || selectedDueClientModal.school_name || selectedDueClientModal.client_name}
+                  </h3>
+                  <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(selectedDueClientModal.client_id || '')
+                        setCopiedDueClientId(true)
+                        setTimeout(() => setCopiedDueClientId(false), 2000)
+                      }}
+                      title="Click to copy Client ID"
+                      className="flex items-center gap-1 text-[10px] text-blue-600 font-bold font-mono tracking-wider bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-lg hover:bg-blue-100 transition-all cursor-pointer"
+                    >
+                      {selectedDueClientModal.client_id}
+                      <span className="text-[9px] ml-0.5">{copiedDueClientId ? '✅' : '📋'}</span>
+                    </button>
+                    <span className="text-slate-300">•</span>
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      Person: <strong className="text-slate-700">{selectedDueClientModal.client_name}</strong>
+                    </span>
+                    <span className="text-slate-300">•</span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[9px] font-black border uppercase whitespace-nowrap ${
+                        selectedDueClientModal.due_stamp === 'DUE'
+                          ? 'bg-rose-50 text-rose-700 border-rose-200'
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      }`}
+                    >
+                      {selectedDueClientModal.due_stamp === 'DUE' ? '⚠️ DUE' : '✅ PAID'}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedDueClientModal(null)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all cursor-pointer ml-3 flex-shrink-0"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Scrollable Body */}
+              <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 bg-white">
+                {/* Account Dues Status Banner */}
+                <div
+                  className={`p-4 rounded-2xl flex items-center justify-between border ${
+                    selectedDueClientModal.due_stamp === 'DUE'
+                      ? 'bg-rose-50/80 border-rose-200'
+                      : 'bg-emerald-50/80 border-emerald-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-2xl">
+                      {selectedDueClientModal.due_stamp === 'DUE' ? '⚠️' : '✅'}
+                    </span>
+                    <div>
+                      <span className="text-[9px] font-black uppercase tracking-wider block text-slate-500">
+                        Account Balance Status
+                      </span>
+                      <span
+                        className={`font-black text-sm ${
+                          selectedDueClientModal.due_stamp === 'DUE' ? 'text-rose-700' : 'text-emerald-700'
+                        }`}
+                      >
+                        {selectedDueClientModal.due_stamp === 'DUE' ? 'DUE PENDING' : 'ALL DUES CLEAR'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">
+                      Total Outstanding Balance
+                    </span>
+                    <span
+                      className={`font-mono font-black text-xl ${
+                        selectedDueClientModal.total_due_amount > 0 ? 'text-rose-600' : 'text-emerald-600'
+                      }`}
+                    >
+                      {selectedDueClientModal.total_due_amount_formatted}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 1. Contact & Location Profile */}
+                <div>
+                  <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-3.5 block font-sans">
+                    1. Contact &amp; Location Profile
+                  </h4>
+                  <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-[11px] bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+                    <div>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Contact Person</span>
+                      <p className="text-slate-800 font-bold mt-0.5">{selectedDueClientModal.client_name || '—'}</p>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Phone Number</span>
+                      <p className="text-slate-800 font-mono font-bold mt-0.5 select-text">📞 {selectedDueClientModal.contact_number || '—'}</p>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Email Address</span>
+                      <p className="text-slate-800 font-medium mt-0.5 truncate select-text" title={selectedDueClientModal.email}>
+                        ✉️ {selectedDueClientModal.email || '—'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">School / Company</span>
+                      <p className="text-slate-800 font-medium mt-0.5">
+                        🏫 {selectedDueClientModal.school_name || selectedDueClientModal.company_name || '—'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Country</span>
+                      <p className="text-slate-800 font-bold mt-0.5 flex items-center gap-1">
+                        <span>{countryFlags[selectedDueClientModal.country_code] || '🌐'}</span>
+                        <span>{selectedDueClientModal.country_code || 'IN'}</span>
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">State &amp; District</span>
+                      <p className="text-slate-800 font-medium mt-0.5">
+                        {selectedDueClientModal.district ? `${selectedDueClientModal.district}, ` : ''}{selectedDueClientModal.state || 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Subscription Plan & Last Payment */}
+                <div>
+                  <h4 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-3.5 block font-sans">
+                    2. Subscription Plan &amp; Payment History
+                  </h4>
+                  <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-[11px] bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+                    <div>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Product / Plan</span>
+                      <p className="text-slate-800 font-bold mt-0.5">{selectedDueClientModal.product_name || 'Standard Plan'}</p>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Validity / Period End</span>
+                      <p
+                        className={`font-black mt-0.5 ${
+                          selectedDueClientModal.is_expired ? 'text-rose-600' : 'text-emerald-600'
+                        }`}
+                      >
+                        {selectedDueClientModal.age_formatted || 'Active'}
+                        {selectedDueClientModal.period_end && (
+                          <span className="text-[10px] font-normal text-slate-400 ml-1">
+                            ({formatDate(selectedDueClientModal.period_end)})
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Last Payment Amount</span>
+                      <p className="font-mono font-black text-slate-900 mt-0.5">
+                        {selectedDueClientModal.last_subscription_payment?.has_sub_payment
+                          ? selectedDueClientModal.last_subscription_payment.amount_formatted
+                          : 'No plan paid for yet'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Last Payment Date</span>
+                      <p className="text-slate-700 font-semibold mt-0.5">
+                        {selectedDueClientModal.last_subscription_payment?.payment_date || 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Billing Cycle</span>
+                      <p className="text-slate-700 font-semibold mt-0.5 capitalize">
+                        {selectedDueClientModal.last_subscription_payment?.cycle || 'Processing fee paid'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Subscription Due</span>
+                      <p
+                        className={`font-mono font-black mt-0.5 ${
+                          selectedDueClientModal.subscription_due?.is_due ? 'text-rose-600' : 'text-emerald-600'
+                        }`}
+                      >
+                        {selectedDueClientModal.subscription_due?.amount_formatted || '₹ 0.00'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Extra Students Billing */}
+                <div>
+                  <h4 className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-3.5 block font-sans">
+                    3. Extra Students Billing
+                  </h4>
+                  <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-[11px] bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+                    <div>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Live Students Count</span>
+                      <p className="font-mono font-bold text-slate-800 mt-0.5">{selectedDueClientModal.extra_students_due?.live_student_count || 0}</p>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Paid Students Limit</span>
+                      <p className="font-mono font-bold text-slate-800 mt-0.5">{selectedDueClientModal.extra_students_due?.paid_student_count || 0}</p>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Unpaid Extra Students</span>
+                      <p
+                        className={`font-mono font-black mt-0.5 ${
+                          (selectedDueClientModal.extra_students_due?.extra_student_count || 0) > 0
+                            ? 'text-amber-600'
+                            : 'text-slate-600'
+                        }`}
+                      >
+                        +{(selectedDueClientModal.extra_students_due?.extra_student_count || 0)} students
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Extra Students Amount Due</span>
+                      <p
+                        className={`font-mono font-black mt-0.5 ${
+                          selectedDueClientModal.extra_students_due?.is_due ? 'text-rose-600' : 'text-emerald-600'
+                        }`}
+                      >
+                        {selectedDueClientModal.extra_students_due?.amount_formatted || '₹ 0.00'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Addons in Add-To-Cart */}
+                <div>
+                  <div className="flex items-center justify-between mb-3.5">
+                    <h4 className="text-[10px] font-black text-purple-600 uppercase tracking-widest block font-sans">
+                      4. Addons in Add-To-Cart ({selectedDueClientModal.addons_cart_due?.item_count || 0})
+                    </h4>
+                    {selectedDueClientModal.addons_cart_due?.is_due && (
+                      <span className="font-mono font-black text-purple-600 text-xs">
+                        Total: {selectedDueClientModal.addons_cart_due.amount_formatted}
+                      </span>
+                    )}
+                  </div>
+                  {selectedDueClientModal.addons_cart_due?.items?.length > 0 ? (
+                    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase text-[9px]">
+                            <th className="px-3 py-2">Addon Type</th>
+                            <th className="px-3 py-2">Recipient</th>
+                            <th className="px-3 py-2 text-right">Subtotal</th>
+                            <th className="px-3 py-2 text-right">GST</th>
+                            <th className="px-3 py-2 text-right">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 font-medium text-slate-700 text-[10.5px]">
+                          {selectedDueClientModal.addons_cart_due.items.map((item, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50/50">
+                              <td className="px-3 py-2 font-bold text-purple-700">{item.addon_type}</td>
+                              <td className="px-3 py-2">
+                                <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[9px] font-bold">
+                                  {item.recipient_type || 'All'}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-right font-mono">₹{parseFloat(item.subtotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                              <td className="px-3 py-2 text-right font-mono text-slate-400">+₹{parseFloat(item.gst_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                              <td className="px-3 py-2 text-right font-mono font-black text-slate-900">₹{parseFloat(item.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-slate-400 italic text-xs font-sans bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                      No pending addon items in cart.
+                    </p>
+                  )}
+                </div>
+
+                {/* 5. Customization Requests */}
+                <div>
+                  <div className="flex items-center justify-between mb-3.5">
+                    <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest block font-sans">
+                      5. Customization Requests ({selectedDueClientModal.customization_due?.item_count || 0})
+                    </h4>
+                    {selectedDueClientModal.customization_due?.is_due && (
+                      <span className="font-mono font-black text-blue-600 text-xs">
+                        Total: {selectedDueClientModal.customization_due.amount_formatted}
+                      </span>
+                    )}
+                  </div>
+                  {selectedDueClientModal.customization_due?.items?.length > 0 ? (
+                    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase text-[9px]">
+                            <th className="px-3 py-2">Customization Scope</th>
+                            <th className="px-3 py-2">Status</th>
+                            <th className="px-3 py-2 text-right">Base</th>
+                            <th className="px-3 py-2 text-right">Total (incl. GST)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 font-medium text-slate-700 text-[10.5px]">
+                          {selectedDueClientModal.customization_due.items.map((item, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50/50">
+                              <td className="px-3 py-2 font-bold text-slate-800 max-w-xs">{item.text}</td>
+                              <td className="px-3 py-2">
+                                <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-[9px] font-bold capitalize">
+                                  {item.status || 'Pending'}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-right font-mono">₹{parseFloat(item.base_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                              <td className="px-3 py-2 text-right font-mono font-black text-rose-600">₹{parseFloat(item.total_amount_with_gst || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-slate-400 italic text-xs font-sans bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                      No pending customization dues.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 flex items-center justify-between bg-slate-50 border-t border-slate-200 gap-3">
+                <div>
+                  {selectedDueClientModal.due_stamp === 'DUE' && (
+                    <button
+                      onClick={() => triggerMockReminder(selectedDueClientModal)}
+                      className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold cursor-pointer text-xs transition-all shadow-sm flex items-center gap-1.5"
+                    >
+                      <span>✉️</span> Send Payment Reminder
+                    </button>
+                  )}
+                </div>
+                <button
+                  onClick={() => setSelectedDueClientModal(null)}
+                  className="px-5 py-2 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 cursor-pointer transition-all shadow-sm"
                 >
                   Close Panel
                 </button>

@@ -23,8 +23,8 @@ const Home = () => {
     <>
       {/* SEO Optimization */}
       <Helmet>
-        <title>AIM Digitalise | Enterprise Software Engineering & IT Consulting</title>
-        <meta name="description" content="AIM Digitalise designs, builds, and scales custom software systems, cloud architectures, and intelligence-driven AI platforms for global enterprises." />
+        <title>India's No. 1 Trusted Software Company | AIM Digitalise</title>
+        <meta name="description" content="AIM Digitalise delivers smart software and digital solutions that simplify business, improve efficiency, and turn ideas into meaningful growth." />
         <meta name="keywords" content="IT consulting, software engineering, cloud architecture, custom software development, AI integrations, DevOps" />
         <link rel="canonical" href="https://aimdigitalise.com/" />
       </Helmet>

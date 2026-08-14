@@ -470,8 +470,8 @@ const MonthlySubscription = () => {
   return (
     <>
       <Helmet>
-        <title>AIM Digitalise | Monthly Subscription Plans</title>
-        <meta name="description" content="India's 1st monthly subscription based website and software with 100% data security & ownership. Clean layouts, quick activation." />
+        <title>AIM Digitalise | SaaS Software Solutions for Business</title>
+        <meta name="description" content="Explore scalable SaaS software solutions from AIM Digitalise, built to simplify operations, automate workflows, improve efficiency, and support business growth." />
         <meta name="keywords" content="monthly subscription website, dynamic website price, saas software billing, android mobile app development, e-commerce website packages, India" />
         <link rel="canonical" href="https://aimdigitalise.com/subscription" />
       </Helmet>

@@ -222,3 +222,10 @@ export const updateAdminCountryTax = (id, data) =>
 export const updateProductCountryPrice = (productId, data) =>
   adminFetch('POST', `/admin/products/${productId}/country-price`, data)
 
+// ─── Due Payments ─────────────────────────────────────────────────────────────
+// GET /api/admin/due-payments
+export const getAdminDuePayments = () =>
+  adminFetch('GET', '/admin/due-payments')
+
+
+

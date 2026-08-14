@@ -17,10 +17,10 @@ const About = () => {
     <>
       {/* SEO */}
       <Helmet>
-        <title>AIM Digitalise | About Us</title>
+        <title>About AIM Digitalise: Software &amp; Digital Solutions</title>
         <meta
           name="description"
-          content="Learn about AIM Digitalise Pvt. Ltd. – one of India's largest performance digital marketing agencies founded in 2020. Our mission, vision, certifications, awards, and leadership team."
+          content="Know about AIM Digitalise, a technology-driven company creating smart software and digital solutions that help businesses grow faster and innovate."
         />
         <meta
           name="keywords"
