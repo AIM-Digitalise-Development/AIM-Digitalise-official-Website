@@ -179,6 +179,7 @@ export default function AdminLogin() {
                       onChange={(e) => setEmail(e.target.value)}
                       required
                       autoFocus
+                      autoComplete="email"
                       className="w-full bg-aim-navy/40 border border-white/10 rounded-xl pl-11 pr-4 py-3.5 text-sm text-white placeholder-aim-copy-muted focus:outline-none focus:border-aim-purple/50 focus:ring-1 focus:ring-aim-purple/25 transition-all shadow-inner"
                     />
                   </div>
@@ -200,6 +201,7 @@ export default function AdminLogin() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
+                      autoComplete="current-password"
                       className="w-full bg-aim-navy/40 border border-white/10 rounded-xl pl-11 pr-4 py-3.5 text-sm text-white placeholder-aim-copy-muted focus:outline-none focus:border-aim-purple/50 focus:ring-1 focus:ring-aim-purple/25 transition-all shadow-inner"
                     />
                   </div>

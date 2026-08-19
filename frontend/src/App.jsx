@@ -109,6 +109,8 @@ function App() {
               <Route path={ROUTES.CUSTOM_DEVELOPMENT} element={<CustomDevelopment />} />
               <Route path={ROUTES.SERVICES} element={<CustomDevelopment />} />
               <Route path={ROUTES.SAAS_SOFTWARE} element={<SaasBasedSoftware />} />
+              <Route path="/saas-based-software" element={<SaasBasedSoftware />} />
+              <Route path="/services/saas-based-software" element={<SaasBasedSoftware />} />
               <Route path="/subscription" element={<SaasBasedSoftware />} />
               <Route path={ROUTES.DIGITAL_MARKETING} element={<DigitalMarketing />} />
               <Route path={ROUTES.DIGITAL_SIGNATURE} element={<DigitalSignature />} />

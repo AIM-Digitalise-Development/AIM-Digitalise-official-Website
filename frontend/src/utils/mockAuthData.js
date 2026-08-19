@@ -447,8 +447,73 @@ export const getMockResponse = (url, method, data = null) => {
     }
   }
 
-  // General Clients & Quotations Mocks
+  // General Services & Clients Mocks
   if (typeof window !== 'undefined') {
+    if (!window.__mockGeneralServices) {
+      window.__mockGeneralServices = [
+        {
+          id: 1,
+          name: 'Corporate Informative Website',
+          hsn: '998314',
+          unit: 'Unit',
+          selling_price: 25000,
+          category: 'Web Development',
+          description: 'Complete dynamic corporate website with CMS, inquiry form, social media integration, mobile responsiveness, and basic SEO.',
+          is_active: true
+        },
+        {
+          id: 2,
+          name: 'Custom ERP & Billing Portal',
+          hsn: '998313',
+          unit: 'Unit',
+          selling_price: 45000,
+          category: 'Software',
+          description: 'Enterprise ERP software with GST billing, multi-user role management, inventory control, and payment gateway integration.',
+          is_active: true
+        },
+        {
+          id: 3,
+          name: 'WhatsApp Business API Integration',
+          hsn: '998315',
+          unit: 'Setup',
+          selling_price: 12000,
+          category: 'API Integration',
+          description: 'Automated WhatsApp messaging bot, order confirmation alerts, OTP verification, and broadcast marketing panel.',
+          is_active: true
+        },
+        {
+          id: 4,
+          name: 'E-Commerce Online Store with PG',
+          hsn: '998314',
+          unit: 'Unit',
+          selling_price: 35000,
+          category: 'E-Commerce',
+          description: 'Full-featured online shop with product catalog, shopping cart, Razorpay checkout, shipment tracking, and customer portal.',
+          is_active: true
+        },
+        {
+          id: 5,
+          name: 'Mobile App Development (Android + iOS)',
+          hsn: '998313',
+          unit: 'Unit',
+          selling_price: 65000,
+          category: 'Mobile App',
+          description: 'Cross-platform mobile application with push notifications, offline sync, real-time analytics, and app store deployment.',
+          is_active: true
+        },
+        {
+          id: 6,
+          name: 'Annual Cloud Hosting & Maintenance (AMC)',
+          hsn: '998316',
+          unit: 'Year',
+          selling_price: 15000,
+          category: 'Maintenance',
+          description: '1-Year comprehensive server maintenance, SSL certificate, 99.9% uptime SLA, automated daily backups, and priority support.',
+          is_active: true
+        }
+      ]
+    }
+
     if (!window.__mockGeneralClients) {
       window.__mockGeneralClients = [
         {
@@ -456,6 +521,7 @@ export const getMockResponse = (url, method, data = null) => {
           client_id: 'GC-2026-001',
           client_name: 'Sharma Tech Solutions',
           company_name: 'Sharma Tech Pvt Ltd',
+          contact_person: 'Mr. Rohit Sharma',
           email: 'contact@sharmatech.com',
           contact_number: '+91 9876543210',
           alt_contact_number: '+91 9876543211',
@@ -468,7 +534,12 @@ export const getMockResponse = (url, method, data = null) => {
           gstin: '07AAAAA0000A1Z5',
           lead_source: 'Website',
           referred_by: 'Direct',
-          software_requirements: 'Custom ERP and Billing Portal with WhatsApp Integration',
+          sold_by_name: 'Rahul Verma',
+          branch_name: 'Head Office (Gurugram)',
+          status: 'Quotation Sent',
+          next_followup_date: '2026-08-25',
+          reg_date: '2026-08-10',
+          software_requirements: 'Custom ERP & Billing Portal, WhatsApp Business API Integration',
           quotations_count: 1,
           quotations: [
             {
@@ -477,24 +548,35 @@ export const getMockResponse = (url, method, data = null) => {
               quotation_date: '2026-08-10',
               payment_terms: 'Due on Receipt',
               gst_type: 'Intra-State',
-              subtotal: 45000,
-              cgst: 4050,
-              sgst: 4050,
-              tax_total: 8100,
-              grand_total: 53100,
+              subtotal: 57000,
+              cgst: 5130,
+              sgst: 5130,
+              tax_total: 10260,
+              grand_total: 67260,
               uuid: 'quotation-uuid-101',
               status: 'sent',
               items: [
                 {
                   id: 1,
-                  product_id: 1,
-                  product_name: 'Custom ERP Software',
-                  hsn: '9983',
+                  product_id: 2,
+                  product_name: 'Custom ERP & Billing Portal',
+                  hsn: '998313',
                   qty: 1,
                   unit: 'Unit',
                   selling_price: 45000,
                   discount_percentage: 0,
-                  description: 'Complete corporate informative dynamic website with admin panel.'
+                  description: 'Enterprise ERP software with GST billing, multi-user role management, inventory control, and payment gateway integration.'
+                },
+                {
+                  id: 2,
+                  product_id: 3,
+                  product_name: 'WhatsApp Business API Integration',
+                  hsn: '998315',
+                  qty: 1,
+                  unit: 'Setup',
+                  selling_price: 12000,
+                  discount_percentage: 0,
+                  description: 'Automated WhatsApp messaging bot, order confirmation alerts, OTP verification, and broadcast marketing panel.'
                 }
               ]
             }
@@ -505,6 +587,7 @@ export const getMockResponse = (url, method, data = null) => {
           client_id: 'GC-2026-002',
           client_name: 'Himalayan Traders',
           company_name: 'Himalayan Traders LLC',
+          contact_person: 'Mr. Pasang Sherpa',
           email: 'info@himalayantraders.np',
           contact_number: '+977 9801234567',
           alt_contact_number: '',
@@ -517,7 +600,39 @@ export const getMockResponse = (url, method, data = null) => {
           gstin: '301234567',
           lead_source: 'Partner',
           referred_by: 'Kathmandu Branch',
-          software_requirements: 'Inventory & POS Software for Retail Chain',
+          sold_by_name: 'Anil Shrestha',
+          branch_name: 'Kathmandu Branch',
+          status: 'Pursuing to Purchase',
+          next_followup_date: '2026-08-28',
+          reg_date: '2026-08-14',
+          software_requirements: 'Corporate Informative Website, Annual Cloud Hosting & Maintenance (AMC)',
+          quotations_count: 0,
+          quotations: []
+        },
+        {
+          id: 3,
+          client_id: 'GC-2026-003',
+          client_name: 'Apex Global Logistics',
+          company_name: 'Apex Logistics Inc.',
+          contact_person: 'Ms. Sunita Roy',
+          email: 'admin@apexglobal.in',
+          contact_number: '+91 9988776655',
+          alt_contact_number: '+91 9988776650',
+          address: 'Connaught Place',
+          district: 'Central Delhi',
+          state: 'Delhi',
+          pin_code: '110001',
+          country_code: 'IN',
+          gst_type: 'Intra-State',
+          gstin: '07BBBBB1111B2Z8',
+          lead_source: 'Referral',
+          referred_by: 'Delhi HQ',
+          sold_by_name: 'Pooja Mehta',
+          branch_name: 'Head Office (Gurugram)',
+          status: 'Attended',
+          next_followup_date: '2026-08-30',
+          reg_date: '2026-08-18',
+          software_requirements: 'Corporate Informative Website, E-Commerce Online Store with PG',
           quotations_count: 0,
           quotations: []
         }
@@ -533,6 +648,70 @@ export const getMockResponse = (url, method, data = null) => {
     }
   }
 
+  // ==========================================
+  // GENERAL SERVICES API ENDPOINTS
+  // ==========================================
+  if (lowercaseUrl.includes('/admin/general-services')) {
+    const singleServiceMatch = lowercaseUrl.match(/\/admin\/general-services\/(\d+)$/)
+    if (singleServiceMatch) {
+      const sId = parseInt(singleServiceMatch[1], 10)
+      if (method === 'GET') {
+        const item = (window.__mockGeneralServices || []).find(s => s.id === sId)
+        return item ? { success: true, data: item } : { success: false, message: 'Service not found' }
+      }
+      if (method === 'PUT') {
+        let updated = null
+        if (window.__mockGeneralServices) {
+          window.__mockGeneralServices = window.__mockGeneralServices.map(s => {
+            if (s.id === sId) {
+              updated = {
+                ...s,
+                name: data?.name || data?.service_name || s.name,
+                hsn: data?.hsn || data?.hsn_sac || s.hsn,
+                unit: data?.unit || s.unit,
+                selling_price: data?.selling_price !== undefined ? Number(data.selling_price) : (data?.price !== undefined ? Number(data.price) : s.selling_price),
+                category: data?.category || s.category,
+                description: data?.description !== undefined ? data.description : s.description,
+                is_active: data?.is_active !== undefined ? data.is_active : s.is_active
+              }
+              return updated
+            }
+            return s
+          })
+        }
+        return { success: true, data: updated, message: 'General service updated successfully' }
+      }
+      if (method === 'DELETE') {
+        if (window.__mockGeneralServices) {
+          window.__mockGeneralServices = window.__mockGeneralServices.filter(s => s.id !== sId)
+        }
+        return { success: true, message: 'General service deleted successfully' }
+      }
+    }
+
+    if (method === 'POST') {
+      const newService = {
+        id: Math.floor(Date.now() + Math.random() * 1000),
+        name: data?.name || data?.service_name || 'New Service',
+        hsn: data?.hsn || data?.hsn_sac || '9983',
+        unit: data?.unit || 'Unit',
+        selling_price: data?.selling_price !== undefined ? Number(data.selling_price) : (data?.price !== undefined ? Number(data.price) : 0),
+        category: data?.category || 'General',
+        description: data?.description || '',
+        is_active: data?.is_active !== undefined ? data.is_active : true
+      }
+      if (window.__mockGeneralServices) {
+        window.__mockGeneralServices.unshift(newService)
+      }
+      return { success: true, data: newService, message: 'General service created successfully' }
+    }
+
+    return {
+      success: true,
+      data: window.__mockGeneralServices || []
+    }
+  }
+
   // GET /admin/general-clients/:id
   const singleClientMatch = lowercaseUrl.match(/\/admin\/general-clients\/(\d+)$/)
   if (singleClientMatch && method === 'GET') {
@@ -540,6 +719,18 @@ export const getMockResponse = (url, method, data = null) => {
     const clientItem = (window.__mockGeneralClients || []).find(c => c.id === clientId)
     if (clientItem) {
       return { success: true, data: clientItem }
+    }
+    return { success: false, message: 'Client not found' }
+  }
+
+  // PATCH /admin/general-clients/:id/status
+  const statusMatch = lowercaseUrl.match(/\/admin\/general-clients\/(\d+)\/status$/)
+  if (statusMatch && (method === 'PATCH' || method === 'PUT')) {
+    const clientId = parseInt(statusMatch[1], 10)
+    const clientItem = (window.__mockGeneralClients || []).find(c => c.id === clientId)
+    if (clientItem) {
+      clientItem.status = data?.status || clientItem.status
+      return { success: true, data: clientItem, message: `Status updated to ${clientItem.status}` }
     }
     return { success: false, message: 'Client not found' }
   }
@@ -568,6 +759,9 @@ export const getMockResponse = (url, method, data = null) => {
       if (!clientItem.quotations) clientItem.quotations = []
       clientItem.quotations.unshift(newQuotation)
       clientItem.quotations_count = clientItem.quotations.length
+      if (clientItem.status === 'Attended') {
+        clientItem.status = 'Quotation Sent'
+      }
     }
     return { success: true, data: newQuotation, message: 'Quotation created successfully' }
   }
@@ -576,6 +770,18 @@ export const getMockResponse = (url, method, data = null) => {
   if (lowercaseUrl.includes('/admin/quotations/') && lowercaseUrl.includes('/send')) {
     const uuidMatch = lowercaseUrl.match(/\/admin\/quotations\/(\d+)\/send/)
     const qId = uuidMatch ? uuidMatch[1] : '101'
+    if (window.__mockGeneralClients) {
+      for (const clientItem of window.__mockGeneralClients) {
+        if (clientItem.quotations) {
+          const matchQ = clientItem.quotations.find(q => String(q.id) === String(qId))
+          if (matchQ) {
+            matchQ.status = 'sent'
+            clientItem.status = 'Quotation Sent'
+            break
+          }
+        }
+      }
+    }
     return {
       success: true,
       message: 'Quotation sent successfully',
@@ -659,6 +865,9 @@ export const getMockResponse = (url, method, data = null) => {
     if (action === 'verify-payment') {
       foundQuotation.status = 'paid'
       foundQuotation.paid_at = new Date().toISOString()
+      if (foundClient) {
+        foundClient.status = 'Order Closed'
+      }
       return {
         success: true,
         message: 'Payment verified successfully! Tax Invoice PDF has been sent to client email.',
@@ -676,22 +885,61 @@ export const getMockResponse = (url, method, data = null) => {
     }
   }
 
-  // GET /admin/general-clients & POST /admin/general-clients & DELETE /admin/general-clients/:id
+  // GET /admin/general-clients & POST /admin/general-clients & PUT/DELETE /admin/general-clients/:id
   if (lowercaseUrl.includes('/admin/general-clients')) {
-    const deleteGenClientMatch = lowercaseUrl.match(/\/admin\/general-clients\/(\d+)$/)
-    if (deleteGenClientMatch && method === 'DELETE') {
-      const cId = parseInt(deleteGenClientMatch[1], 10)
+    const singleGenClientMatch = lowercaseUrl.match(/\/admin\/general-clients\/(\d+)$/)
+    if (singleGenClientMatch && method === 'DELETE') {
+      const cId = parseInt(singleGenClientMatch[1], 10)
       if (window.__mockGeneralClients) {
         window.__mockGeneralClients = window.__mockGeneralClients.filter(c => c.id !== cId)
       }
       return { success: true, message: 'General client deleted successfully' }
     }
+
+    if (singleGenClientMatch && method === 'PUT') {
+      const cId = parseInt(singleGenClientMatch[1], 10)
+      let updatedClient = null
+      if (window.__mockGeneralClients) {
+        window.__mockGeneralClients = window.__mockGeneralClients.map(c => {
+          if (c.id === cId) {
+            updatedClient = {
+              ...c,
+              client_name: data?.client_name ?? c.client_name,
+              company_name: data?.company_name ?? c.company_name,
+              contact_person: data?.contact_person ?? c.contact_person,
+              email: data?.email ?? c.email,
+              contact_number: data?.contact_number ?? c.contact_number,
+              alt_contact_number: data?.alt_contact_number ?? c.alt_contact_number,
+              address: data?.address ?? c.address,
+              district: data?.district ?? c.district,
+              state: data?.state ?? c.state,
+              pin_code: data?.pin_code ?? c.pin_code,
+              country_code: data?.country_code ?? c.country_code,
+              gst_type: data?.gst_type ?? c.gst_type,
+              gstin: data?.gstin ?? c.gstin,
+              lead_source: data?.lead_source ?? c.lead_source,
+              referred_by: data?.referred_by ?? c.referred_by,
+              sold_by_name: data?.sold_by_name ?? c.sold_by_name,
+              branch_name: data?.branch_name ?? c.branch_name,
+              status: data?.status ?? c.status,
+              next_followup_date: data?.next_followup_date ?? c.next_followup_date,
+              software_requirements: data?.software_requirements ?? c.software_requirements,
+            }
+            return updatedClient
+          }
+          return c
+        })
+      }
+      return { success: true, data: updatedClient, message: 'General client updated successfully' }
+    }
+
     if (method === 'POST') {
       const newGenClient = {
         id: Math.floor(Date.now() + Math.random() * 1000),
         client_id: `GC-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
         client_name: data?.client_name || 'New Client',
         company_name: data?.company_name || '',
+        contact_person: data?.contact_person || data?.client_name || '',
         email: data?.email || '',
         contact_number: data?.contact_number || '',
         alt_contact_number: data?.alt_contact_number || '',
@@ -704,6 +952,11 @@ export const getMockResponse = (url, method, data = null) => {
         gstin: data?.gstin || '',
         lead_source: data?.lead_source || 'Website',
         referred_by: data?.referred_by || 'Direct',
+        sold_by_name: data?.sold_by_name || 'Admin Sales Team',
+        branch_name: data?.branch_name || 'Head Office (Gurugram)',
+        status: data?.status || 'Attended',
+        next_followup_date: data?.next_followup_date || '',
+        reg_date: new Date().toISOString().substring(0, 10),
         software_requirements: data?.software_requirements || '',
         quotations_count: 0,
         quotations: []
@@ -713,11 +966,13 @@ export const getMockResponse = (url, method, data = null) => {
       }
       return { success: true, data: newGenClient, message: 'General client created successfully' }
     }
+
     return {
       success: true,
       data: window.__mockGeneralClients || []
     }
   }
+
 
   // GET /admin/country-taxes & PUT /admin/country-taxes/:id
   if (lowercaseUrl.includes('/admin/country-taxes')) {

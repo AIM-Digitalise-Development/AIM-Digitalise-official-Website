@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async' // Install: npm install react-helmet
 
 // Critical components (above the fold - NO lazy loading)
 import HeroSection from '../../components/website/home/HeroSection'
+import NexgnInstituteSection from '../../components/website/home/NexgnInstituteSection'
 import FeaturesGrid from '../../components/website/home/FeaturesGrid'
 // import AboutCompanySection from '../../components/website/home/AboutCompanySection'
 import NxtGenErpSection from '../../components/website/home/NxtGenErpSection'
@@ -31,6 +32,7 @@ const Home = () => {
 
       {/* Critical Content - Loads Immediately */}
       <HeroSection />
+      <NexgnInstituteSection />
       <FeaturesGrid />
       {/* <AboutCompanySection /> */}
       <NxtGenErpSection />

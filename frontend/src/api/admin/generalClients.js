@@ -10,8 +10,30 @@ export const getGeneralClientById = (id) =>
 export const createGeneralClient = (data) =>
   client.post('/admin/general-clients', data)
 
+export const updateGeneralClient = (id, data) =>
+  client.put(`/admin/general-clients/${id}`, data)
+
+export const updateGeneralClientStatus = (id, status) =>
+  client.patch(`/admin/general-clients/${id}/status`, { status })
+
 export const deleteGeneralClient = (id) =>
   client.delete(`/admin/general-clients/${id}`)
+
+// General Services Catalog API endpoints (/admin/general-services)
+export const getGeneralServices = () =>
+  client.get('/admin/general-services')
+
+export const getGeneralServiceById = (id) =>
+  client.get(`/admin/general-services/${id}`)
+
+export const createGeneralService = (data) =>
+  client.post('/admin/general-services', data)
+
+export const updateGeneralService = (id, data) =>
+  client.put(`/admin/general-services/${id}`, data)
+
+export const deleteGeneralService = (id) =>
+  client.delete(`/admin/general-services/${id}`)
 
 export const createQuotation = (clientId, data) =>
   client.post(`/admin/general-clients/${clientId}/quotations`, data)
@@ -59,5 +81,6 @@ export const getSubscriptionClients = () =>
 
 export const getDuePayments = () =>
   client.get('/admin/due-payments')
+
 
 
