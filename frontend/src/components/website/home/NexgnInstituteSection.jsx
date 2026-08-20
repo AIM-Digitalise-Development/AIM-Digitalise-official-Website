@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { ROUTES } from '../../../constants/routes'
 import nexgnBrochurePdf from '../../../assets/doc/Inside page.pdf'
 import nexgnBrochurePdf2 from '../../../assets/doc/Front page.pdf'
 import nexgnProposalLetterPdf from '../../../assets/doc/NEXGN Proposal Letter.pdf'
-import nexgnLogo from '../../../assets/images/nexgnlogo.png'
 
 // Newly added portal screenshot images
 import admin1 from '../../../assets/images/admin1.png'
@@ -51,10 +49,56 @@ const PREVIEW_GALLERY = {
   },
 }
 
+const NEXGN_DOCUMENTS = [
+  {
+    id: 'proposal',
+    title: 'NEXGN Proposal Letter',
+    fullTitle: 'NEXGN Official Institutional Proposal Letter',
+    subtitle: 'Scope of digitization, institutional offerings, commercials & enterprise roadmap',
+    badge: 'Official Proposal',
+    badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+    icon: '📑',
+    accentColor: 'from-emerald-500 to-teal-400',
+    size: '275 KB',
+    file: nexgnProposalLetterPdf,
+    filename: 'NEXGN_Proposal_Letter.pdf',
+    description: 'Official letter outlining features, pricing tiers, institutional onboarding, and support terms.',
+  },
+  {
+    id: 'front',
+    title: 'NEXGN Brochure (Part 1: Front Page)',
+    fullTitle: 'NEXGN Institute Brochure – Front Cover & Overview',
+    subtitle: 'Executive presentation, visual architecture & core feature highlights',
+    badge: 'Brochure Part 1',
+    badgeColor: 'bg-amber-500/20 text-aim-gold border-aim-gold/30',
+    icon: '📰',
+    accentColor: 'from-aim-gold to-amber-400',
+    size: '7.9 MB',
+    file: nexgnBrochurePdf2,
+    filename: 'NEXGN_Brochure_Part1_Front.pdf',
+    description: 'Executive overview showcasing modern dashboard interfaces and key system value propositions.',
+  },
+  {
+    id: 'inside',
+    title: 'NEXGN Brochure (Part 2: Inside Page)',
+    fullTitle: 'NEXGN Institute Brochure – Detailed Inside Modules',
+    subtitle: 'Comprehensive module breakdown: fees, attendance, examinations, and portals',
+    badge: 'Brochure Part 2',
+    badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+    icon: '📖',
+    accentColor: 'from-purple-600 to-indigo-500',
+    size: '7.3 MB',
+    file: nexgnBrochurePdf,
+    filename: 'NEXGN_Brochure_Part2_Inside.pdf',
+    description: 'In-depth specification of student lifecycle, fee automation, SMS/WhatsApp integrations, and parent app.',
+  },
+]
+
 const NexgnInstituteSection = () => {
   const [showContactModal, setShowContactModal] = useState(false)
   const [showPreviewModal, setShowPreviewModal] = useState(false)
-  const [showBrochureModal, setShowBrochureModal] = useState(false)
+  const [showDocModal, setShowDocModal] = useState(false)
+  const [activeDocTab, setActiveDocTab] = useState('proposal') // 'proposal' | 'front' | 'inside' | 'all'
   const [activePortalTab, setActivePortalTab] = useState('admin')
   const [activeImageIndex, setActiveImageIndex] = useState(0)
 
@@ -64,15 +108,21 @@ const NexgnInstituteSection = () => {
     setShowPreviewModal(true)
   }
 
-  const handleDownloadDoc = (brochureNum = 1) => {
-    const link = document.createElement('a')
-    if (brochureNum === 1 || brochureNum === '1') {
-      link.href = nexgnProposalLetterPdf
-      link.download = 'NEXGN_Institute_Brochure_1.pdf'
-    } else {
-      link.href = nexgnBrochurePdf
-      link.download = 'NEXGN_Institute_Brochure_2.pdf'
+  const handleOpenDocModal = (docId = 'proposal') => {
+    setActiveDocTab(docId)
+    setShowDocModal(true)
+  }
+
+  const handleDownloadDoc = (docIdOrNum = 'proposal') => {
+    let doc = NEXGN_DOCUMENTS.find((d) => d.id === docIdOrNum)
+    if (!doc) {
+      if (docIdOrNum === 1 || docIdOrNum === '1') doc = NEXGN_DOCUMENTS[1] // front
+      else if (docIdOrNum === 2 || docIdOrNum === '2') doc = NEXGN_DOCUMENTS[2] // inside
+      else doc = NEXGN_DOCUMENTS[0] // proposal
     }
+    const link = document.createElement('a')
+    link.href = doc.file
+    link.download = doc.filename
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -80,6 +130,7 @@ const NexgnInstituteSection = () => {
 
   const currentGallery = PREVIEW_GALLERY[activePortalTab] || PREVIEW_GALLERY.admin
   const currentImage = currentGallery.images[activeImageIndex] || currentGallery.images[0]
+  const currentDoc = NEXGN_DOCUMENTS.find((d) => d.id === activeDocTab) || NEXGN_DOCUMENTS[0]
 
   return (
     <section className="relative py-20 bg-aim-navy overflow-hidden border-b border-white/5">
@@ -131,7 +182,7 @@ const NexgnInstituteSection = () => {
             </div>
 
             <div className="space-y-6">
-              {/* Product Title & Image Preview Button */}
+              {/* Product Title & Action Buttons */}
               <div className="space-y-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -148,15 +199,25 @@ const NexgnInstituteSection = () => {
                     </div>
                   </div>
 
-                  {/* 🖼️ IMAGE PREVIEW BUTTON */}
-                  <button
-                    onClick={() => handleOpenPreview('admin')}
-                    className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-aim-gold/20 via-amber-500/20 to-aim-gold/20 hover:from-aim-gold hover:to-amber-400 text-aim-gold hover:text-aim-navy border border-aim-gold/40 hover:border-transparent text-xs font-black uppercase tracking-wider transition-all duration-300 shadow-md hover:shadow-aim-gold/30 hover:scale-105 flex items-center gap-1.5 cursor-pointer shrink-0"
-                    title="Click to preview Admin, Teacher & Student portal screenshots"
-                  >
-                    <span className="text-sm">🖼️</span>
-                    <span>Image Preview</span>
-                  </button>
+                  {/* Top Action Preview Buttons */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleOpenDocModal('proposal')}
+                      className="px-3 py-2 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-all hover:scale-105 flex items-center gap-1.5 cursor-pointer shrink-0"
+                      title="Preview NEXGN Proposal Letter (PDF)"
+                    >
+                      <span>📑</span>
+                      <span>Proposal</span>
+                    </button>
+                    <button
+                      onClick={() => handleOpenPreview('admin')}
+                      className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-aim-gold/20 via-amber-500/20 to-aim-gold/20 hover:from-aim-gold hover:to-amber-400 text-aim-gold hover:text-aim-navy border border-aim-gold/40 hover:border-transparent text-xs font-black uppercase tracking-wider transition-all duration-300 shadow-md hover:shadow-aim-gold/30 hover:scale-105 flex items-center gap-1.5 cursor-pointer shrink-0"
+                      title="Click to preview Admin, Teacher & Student portal screenshots"
+                    >
+                      <span className="text-sm">🖼️</span>
+                      <span>UI Preview</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -224,41 +285,99 @@ const NexgnInstituteSection = () => {
                 ))}
               </div>
 
-              {/* 2 Brochure Downloads & Preview Trigger */}
-              <div className="space-y-2 pt-2 border-t border-white/10">
+              {/* 3 Official Documents & Downloads */}
+              <div className="space-y-2.5 pt-2 border-t border-white/10">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest block">
-                    Official Brochures & Downloads:
+                    Official Proposal & Brochures (3 Files):
                   </span>
                   <button
-                    onClick={() => setShowBrochureModal(true)}
+                    onClick={() => handleOpenDocModal('all')}
                     className="text-[10px] font-bold text-aim-gold hover:underline flex items-center gap-1 cursor-pointer"
                   >
                     <span>👁️</span>
-                    <span>Preview Both</span>
+                    <span>Preview All 3</span>
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {/* Brochure 1 Download */}
-                  <button
-                    onClick={() => handleDownloadDoc(1)}
-                    className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold transition-all cursor-pointer hover:border-aim-gold/40 shadow-sm group/btn"
-                    title="Download NEXGN Brochure 1 (PDF)"
-                  >
-                    <span className="text-aim-gold group-hover/btn:scale-110 transition-transform">📥</span>
-                    <span>Download Brochure 1</span>
-                  </button>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {/* Proposal Letter */}
+                  <div className="p-2.5 rounded-xl bg-white/[0.04] border border-emerald-500/20 hover:border-emerald-500/40 transition-all flex flex-col justify-between gap-2 group/card">
+                    <div>
+                      <div className="flex items-center justify-between text-[10px] font-bold text-emerald-400 mb-1">
+                        <span>📑 Proposal Letter</span>
+                        <span className="text-slate-400 font-mono text-[9px]">275 KB</span>
+                      </div>
+                      <p className="text-[10px] text-slate-300 truncate">Official Proposal</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 pt-1">
+                      <button
+                        onClick={() => handleOpenDocModal('proposal')}
+                        className="flex-1 py-1 px-2 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-300 text-[10px] font-bold text-center transition-colors cursor-pointer"
+                      >
+                        👁️ Preview
+                      </button>
+                      <button
+                        onClick={() => handleDownloadDoc('proposal')}
+                        className="p-1 rounded-lg bg-white/5 hover:bg-white/15 text-white text-[10px] transition-colors cursor-pointer"
+                        title="Download NEXGN Proposal Letter (PDF)"
+                      >
+                        📥
+                      </button>
+                    </div>
+                  </div>
 
-                  {/* Brochure 2 Download */}
-                  <button
-                    onClick={() => handleDownloadDoc(2)}
-                    className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-amber-300 text-xs font-bold transition-all cursor-pointer hover:border-aim-gold/40 shadow-sm group/btn"
-                    title="Download NEXGN Brochure 2 (PDF)"
-                  >
-                    <span className="text-amber-400 group-hover/btn:scale-110 transition-transform">📥</span>
-                    <span>Download Brochure 2</span>
-                  </button>
+                  {/* Brochure 1 (Front) */}
+                  <div className="p-2.5 rounded-xl bg-white/[0.04] border border-aim-gold/20 hover:border-aim-gold/40 transition-all flex flex-col justify-between gap-2 group/card">
+                    <div>
+                      <div className="flex items-center justify-between text-[10px] font-bold text-aim-gold mb-1">
+                        <span>📰 Brochure Part 1</span>
+                        <span className="text-slate-400 font-mono text-[9px]">7.9 MB</span>
+                      </div>
+                      <p className="text-[10px] text-slate-300 truncate">Front Page Overview</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 pt-1">
+                      <button
+                        onClick={() => handleOpenDocModal('front')}
+                        className="flex-1 py-1 px-2 rounded-lg bg-aim-gold/15 hover:bg-aim-gold/30 text-aim-gold text-[10px] font-bold text-center transition-colors cursor-pointer"
+                      >
+                        👁️ Preview
+                      </button>
+                      <button
+                        onClick={() => handleDownloadDoc('front')}
+                        className="p-1 rounded-lg bg-white/5 hover:bg-white/15 text-white text-[10px] transition-colors cursor-pointer"
+                        title="Download NEXGN Brochure Part 1 (PDF)"
+                      >
+                        📥
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Brochure 2 (Inside) */}
+                  <div className="p-2.5 rounded-xl bg-white/[0.04] border border-purple-500/20 hover:border-purple-500/40 transition-all flex flex-col justify-between gap-2 group/card">
+                    <div>
+                      <div className="flex items-center justify-between text-[10px] font-bold text-purple-300 mb-1">
+                        <span>📖 Brochure Part 2</span>
+                        <span className="text-slate-400 font-mono text-[9px]">7.3 MB</span>
+                      </div>
+                      <p className="text-[10px] text-slate-300 truncate">Inside Full Modules</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 pt-1">
+                      <button
+                        onClick={() => handleOpenDocModal('inside')}
+                        className="flex-1 py-1 px-2 rounded-lg bg-purple-500/15 hover:bg-purple-500/30 text-purple-300 text-[10px] font-bold text-center transition-colors cursor-pointer"
+                      >
+                        👁️ Preview
+                      </button>
+                      <button
+                        onClick={() => handleDownloadDoc('inside')}
+                        className="p-1 rounded-lg bg-white/5 hover:bg-white/15 text-white text-[10px] transition-colors cursor-pointer"
+                        title="Download NEXGN Brochure Part 2 (PDF)"
+                      >
+                        📥
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -292,7 +411,7 @@ const NexgnInstituteSection = () => {
             </div>
 
             <div className="space-y-6">
-              {/* Product Title & Image Preview Button */}
+              {/* Product Title & Action Buttons */}
               <div className="space-y-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -309,15 +428,25 @@ const NexgnInstituteSection = () => {
                     </div>
                   </div>
 
-                  {/* 🖼️ IMAGE PREVIEW BUTTON */}
-                  <button
-                    onClick={() => handleOpenPreview('admin')}
-                    className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-purple-500/20 via-indigo-500/20 to-purple-500/20 hover:from-purple-600 hover:to-indigo-600 text-purple-300 hover:text-white border border-purple-500/40 hover:border-transparent text-xs font-black uppercase tracking-wider transition-all duration-300 shadow-md hover:shadow-purple-500/30 hover:scale-105 flex items-center gap-1.5 cursor-pointer shrink-0"
-                    title="Click to preview Enterprise ERP UI screenshots"
-                  >
-                    <span className="text-sm">🖼️</span>
-                    <span>Image Preview</span>
-                  </button>
+                  {/* Top Action Preview Buttons */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleOpenDocModal('proposal')}
+                      className="px-3 py-2 rounded-2xl bg-purple-500/15 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30 text-xs font-bold transition-all hover:scale-105 flex items-center gap-1.5 cursor-pointer shrink-0"
+                      title="Preview NEXGN Proposal Letter (PDF)"
+                    >
+                      <span>📑</span>
+                      <span>Proposal</span>
+                    </button>
+                    <button
+                      onClick={() => handleOpenPreview('admin')}
+                      className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-purple-500/20 via-indigo-500/20 to-purple-500/20 hover:from-purple-600 hover:to-indigo-600 text-purple-300 hover:text-white border border-purple-500/40 hover:border-transparent text-xs font-black uppercase tracking-wider transition-all duration-300 shadow-md hover:shadow-purple-500/30 hover:scale-105 flex items-center gap-1.5 cursor-pointer shrink-0"
+                      title="Click to preview Enterprise ERP UI screenshots"
+                    >
+                      <span className="text-sm">🖼️</span>
+                      <span>UI Preview</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -346,41 +475,99 @@ const NexgnInstituteSection = () => {
                 ))}
               </div>
 
-              {/* 2 Brochure Downloads & Preview Trigger */}
-              <div className="space-y-2 pt-2 border-t border-white/10">
+              {/* 3 Official Documents & Downloads */}
+              <div className="space-y-2.5 pt-2 border-t border-white/10">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest block">
-                    Enterprise Brochures & Downloads:
+                    Enterprise Proposal & Brochures (3 Files):
                   </span>
                   <button
-                    onClick={() => setShowBrochureModal(true)}
+                    onClick={() => handleOpenDocModal('all')}
                     className="text-[10px] font-bold text-purple-400 hover:underline flex items-center gap-1 cursor-pointer"
                   >
                     <span>👁️</span>
-                    <span>Preview Both</span>
+                    <span>Preview All 3</span>
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {/* Brochure 1 Download */}
-                  <button
-                    onClick={() => handleDownloadDoc(1)}
-                    className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold transition-all cursor-pointer hover:border-purple-500/40 shadow-sm group/btn"
-                    title="Download NEXGN Brochure 1 (PDF)"
-                  >
-                    <span className="text-purple-400 group-hover/btn:scale-110 transition-transform">📥</span>
-                    <span>Download Brochure 1</span>
-                  </button>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {/* Proposal Letter */}
+                  <div className="p-2.5 rounded-xl bg-white/[0.04] border border-emerald-500/20 hover:border-emerald-500/40 transition-all flex flex-col justify-between gap-2 group/card">
+                    <div>
+                      <div className="flex items-center justify-between text-[10px] font-bold text-emerald-400 mb-1">
+                        <span>📑 Proposal Letter</span>
+                        <span className="text-slate-400 font-mono text-[9px]">275 KB</span>
+                      </div>
+                      <p className="text-[10px] text-slate-300 truncate">Official Proposal</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 pt-1">
+                      <button
+                        onClick={() => handleOpenDocModal('proposal')}
+                        className="flex-1 py-1 px-2 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-300 text-[10px] font-bold text-center transition-colors cursor-pointer"
+                      >
+                        👁️ Preview
+                      </button>
+                      <button
+                        onClick={() => handleDownloadDoc('proposal')}
+                        className="p-1 rounded-lg bg-white/5 hover:bg-white/15 text-white text-[10px] transition-colors cursor-pointer"
+                        title="Download NEXGN Proposal Letter (PDF)"
+                      >
+                        📥
+                      </button>
+                    </div>
+                  </div>
 
-                  {/* Brochure 2 Download */}
-                  <button
-                    onClick={() => handleDownloadDoc(2)}
-                    className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-purple-300 text-xs font-bold transition-all cursor-pointer hover:border-purple-500/40 shadow-sm group/btn"
-                    title="Download NEXGN Brochure 2 (PDF)"
-                  >
-                    <span className="text-indigo-400 group-hover/btn:scale-110 transition-transform">📥</span>
-                    <span>Download Brochure 2</span>
-                  </button>
+                  {/* Brochure 1 (Front) */}
+                  <div className="p-2.5 rounded-xl bg-white/[0.04] border border-purple-500/20 hover:border-purple-500/40 transition-all flex flex-col justify-between gap-2 group/card">
+                    <div>
+                      <div className="flex items-center justify-between text-[10px] font-bold text-purple-300 mb-1">
+                        <span>📰 Brochure Part 1</span>
+                        <span className="text-slate-400 font-mono text-[9px]">7.9 MB</span>
+                      </div>
+                      <p className="text-[10px] text-slate-300 truncate">Front Page Overview</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 pt-1">
+                      <button
+                        onClick={() => handleOpenDocModal('front')}
+                        className="flex-1 py-1 px-2 rounded-lg bg-purple-500/15 hover:bg-purple-500/30 text-purple-300 text-[10px] font-bold text-center transition-colors cursor-pointer"
+                      >
+                        👁️ Preview
+                      </button>
+                      <button
+                        onClick={() => handleDownloadDoc('front')}
+                        className="p-1 rounded-lg bg-white/5 hover:bg-white/15 text-white text-[10px] transition-colors cursor-pointer"
+                        title="Download NEXGN Brochure Part 1 (PDF)"
+                      >
+                        📥
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Brochure 2 (Inside) */}
+                  <div className="p-2.5 rounded-xl bg-white/[0.04] border border-indigo-500/20 hover:border-indigo-500/40 transition-all flex flex-col justify-between gap-2 group/card">
+                    <div>
+                      <div className="flex items-center justify-between text-[10px] font-bold text-indigo-300 mb-1">
+                        <span>📖 Brochure Part 2</span>
+                        <span className="text-slate-400 font-mono text-[9px]">7.3 MB</span>
+                      </div>
+                      <p className="text-[10px] text-slate-300 truncate">Inside Full Modules</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 pt-1">
+                      <button
+                        onClick={() => handleOpenDocModal('inside')}
+                        className="flex-1 py-1 px-2 rounded-lg bg-indigo-500/15 hover:bg-indigo-500/30 text-indigo-300 text-[10px] font-bold text-center transition-colors cursor-pointer"
+                      >
+                        👁️ Preview
+                      </button>
+                      <button
+                        onClick={() => handleDownloadDoc('inside')}
+                        className="p-1 rounded-lg bg-white/5 hover:bg-white/15 text-white text-[10px] transition-colors cursor-pointer"
+                        title="Download NEXGN Brochure Part 2 (PDF)"
+                      >
+                        📥
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -401,18 +588,18 @@ const NexgnInstituteSection = () => {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════ */}
-      {/* 📖 2 BROCHURES PREVIEW MODAL (With download button on bottom right)  */}
+      {/* 📑 OFFICIAL DOCUMENTATION & PROPOSAL PREVIEW MODAL */}
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       <AnimatePresence>
-        {showBrochureModal && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-6">
+        {showDocModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-2 sm:p-4 lg:p-6">
             {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-black/85 backdrop-blur-xl"
-              onClick={() => setShowBrochureModal(false)}
+              onClick={() => setShowDocModal(false)}
             />
 
             {/* Modal Box */}
@@ -421,134 +608,204 @@ const NexgnInstituteSection = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 20 }}
               transition={{ duration: 0.25 }}
-              className="relative w-full max-w-6xl bg-aim-navy-card/95 border border-white/20 rounded-3xl overflow-hidden shadow-2xl z-10 flex flex-col max-h-[92vh]"
+              className="relative w-full max-w-6xl bg-aim-navy-card/95 border border-white/20 rounded-3xl overflow-hidden shadow-2xl z-10 flex flex-col max-h-[94vh]"
             >
               {/* Modal Top Header */}
-              <div className="px-6 py-4 border-b border-white/10 bg-slate-900/80 flex items-center justify-between gap-4 shrink-0">
+              <div className="px-6 py-4 border-b border-white/10 bg-slate-900/80 flex flex-wrap items-center justify-between gap-4 shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-aim-gold/20 border border-aim-gold/40 flex items-center justify-center text-xl">
-                    📚
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-xl shadow-inner">
+                    📑
                   </div>
                   <div>
                     <h3 className="text-lg font-black text-white flex items-center gap-2">
-                      <span>NEXGN Official Documentation & Brochures</span>
+                      <span>NEXGN Official Documents & Proposal Preview</span>
                       <span className="px-2.5 py-0.5 rounded-full bg-aim-gold/20 text-aim-gold text-[10px] font-black uppercase border border-aim-gold/30">
-                        2 Files Available
+                        3 Files
                       </span>
                     </h3>
                     <p className="text-xs text-aim-copy-muted">
-                      Preview the comprehensive product brochure and institutional proposal letter.
+                      Preview and download the official Proposal Letter, Brochure Front Page, and Inside Detailed Modules.
                     </p>
                   </div>
                 </div>
 
                 {/* Close Button */}
                 <button
-                  onClick={() => setShowBrochureModal(false)}
+                  onClick={() => setShowDocModal(false)}
                   className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white font-bold flex items-center justify-center transition-colors cursor-pointer text-sm"
                 >
                   ✕
                 </button>
               </div>
 
-              {/* 2-Brochures Grid Container with Previews & Single Bottom Right Download Button */}
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-950/90 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-                {/* ── BROCHURE 1: NEXGN Proposal Letter.pdf ── */}
-                <div className="relative rounded-2xl border border-white/15 bg-aim-navy/95 p-4 sm:p-5 flex flex-col justify-between shadow-xl overflow-hidden group">
-                  <div className="space-y-3">
-                    {/* Header */}
-                    <div className="flex items-start justify-between gap-2 border-b border-white/10 pb-3">
-                      <div>
-                        <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-aim-gold text-[10px] font-black uppercase border border-aim-gold/30 inline-block mb-1">
-                          Brochure 1 of 2
-                        </span>
-                        <h4 className="text-base font-black text-white">NEXGN Institute Brochure 1</h4>
-                        <p className="text-[11px] text-slate-400">Institutional overview, features specification & offerings</p>
+              {/* Document Selector Tabs */}
+              <div className="px-6 py-3 bg-aim-navy-light/80 border-b border-white/10 flex flex-wrap items-center justify-between gap-3 shrink-0">
+                <div className="flex flex-wrap gap-2">
+                  {NEXGN_DOCUMENTS.map((doc) => (
+                    <button
+                      key={doc.id}
+                      onClick={() => setActiveDocTab(doc.id)}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 border ${
+                        activeDocTab === doc.id
+                          ? 'bg-gradient-to-r from-aim-gold to-amber-400 text-aim-navy border-aim-gold shadow-lg shadow-aim-gold/20 font-black'
+                          : 'bg-white/5 hover:bg-white/10 text-slate-300 border-white/10'
+                      }`}
+                    >
+                      <span>{doc.icon}</span>
+                      <span>{doc.title}</span>
+                      <span
+                        className={`text-[9px] px-1.5 py-0.5 rounded-md font-mono ${
+                          activeDocTab === doc.id ? 'bg-aim-navy/20 text-aim-navy font-bold' : 'bg-white/10 text-slate-400'
+                        }`}
+                      >
+                        {doc.size}
+                      </span>
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setActiveDocTab('all')}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 border ${
+                      activeDocTab === 'all'
+                        ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white border-purple-400 shadow-lg shadow-purple-500/20 font-black'
+                        : 'bg-white/5 hover:bg-white/10 text-slate-300 border-white/10'
+                    }`}
+                  >
+                    <span>🗂️</span>
+                    <span>View All 3 Previews</span>
+                  </button>
+                </div>
+
+                {activeDocTab !== 'all' && (
+                  <button
+                    onClick={() => handleDownloadDoc(currentDoc.id)}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-aim-gold to-amber-400 text-aim-navy font-black text-xs uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>📥</span>
+                    <span>Download This Document</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Modal Body: Single View or All 3 Grid View */}
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-950/90 flex flex-col">
+                {activeDocTab === 'all' ? (
+                  /* ── 3-CARDS GRID VIEW ── */
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
+                    {NEXGN_DOCUMENTS.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="relative rounded-2xl border border-white/15 bg-aim-navy/95 p-4 flex flex-col justify-between shadow-xl overflow-hidden group hover:border-aim-gold/40 transition-colors"
+                      >
+                        <div className="space-y-3">
+                          {/* Header */}
+                          <div className="flex items-start justify-between gap-2 border-b border-white/10 pb-2.5">
+                            <div>
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border inline-block mb-1 ${doc.badgeColor}`}>
+                                {doc.badge}
+                              </span>
+                              <h4 className="text-sm font-black text-white">{doc.title}</h4>
+                              <p className="text-[11px] text-slate-400 line-clamp-2">{doc.subtitle}</p>
+                            </div>
+                            <span className="text-2xl">{doc.icon}</span>
+                          </div>
+
+                          {/* PDF Preview Frame */}
+                          <div className="relative w-full h-64 sm:h-72 rounded-xl overflow-hidden border border-white/10 bg-slate-900 shadow-inner">
+                            <iframe
+                              src={`${doc.file}#toolbar=0&navpanes=0&scrollbar=0`}
+                              title={`${doc.title} Preview`}
+                              className="w-full h-full rounded-xl"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Bottom Bar with Actions */}
+                        <div className="pt-3 mt-3 border-t border-white/10 flex items-center justify-between gap-2">
+                          <button
+                            onClick={() => setActiveDocTab(doc.id)}
+                            className="text-[11px] font-bold text-aim-gold hover:underline flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>🔍</span>
+                            <span>Full View</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleDownloadDoc(doc.id)}
+                            className="px-3 py-2 rounded-xl bg-gradient-to-r from-aim-gold to-amber-400 hover:from-amber-400 hover:to-aim-gold text-aim-navy font-black text-xs uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+                          >
+                            <span>📥</span>
+                            <span>Download</span>
+                          </button>
+                        </div>
                       </div>
-                      <span className="text-2xl">📑</span>
+                    ))}
+                  </div>
+                ) : (
+                  /* ── SINGLE DOCUMENT FULL PREVIEW VIEW ── */
+                  <div className="flex-1 flex flex-col space-y-4">
+                    {/* Top Info Strip */}
+                    <div className="bg-aim-navy/90 border border-white/10 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-xl">
+                          {currentDoc.icon}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-base font-black text-white">{currentDoc.fullTitle}</h4>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${currentDoc.badgeColor}`}>
+                              {currentDoc.badge}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-300">{currentDoc.description}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={currentDoc.file}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-slate-200 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <span>🔗</span>
+                          <span>Open in New Tab</span>
+                        </a>
+                        <button
+                          onClick={() => handleDownloadDoc(currentDoc.id)}
+                          className="px-4 py-2 rounded-xl bg-gradient-to-r from-aim-gold to-amber-400 text-aim-navy font-black text-xs uppercase tracking-wider shadow-md hover:scale-105 transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          <span>📥</span>
+                          <span>Download PDF ({currentDoc.size})</span>
+                        </button>
+                      </div>
                     </div>
 
-                    {/* PDF Preview Frame / Viewer */}
-                    <div className="relative w-full h-64 sm:h-72 lg:h-80 rounded-xl overflow-hidden border border-white/10 bg-slate-900 shadow-inner">
+                    {/* PDF Embedded Viewer Container */}
+                    <div className="flex-1 min-h-[500px] lg:min-h-[620px] rounded-2xl overflow-hidden border border-white/15 bg-slate-900 shadow-2xl relative">
                       <iframe
-                        src={`${nexgnBrochurePdf2}#toolbar=0&navpanes=0&scrollbar=0`}
-                        title="NEXGN Brochure 1 Preview"
-                        className="w-full h-full rounded-xl"
+                        key={currentDoc.id}
+                        src={`${currentDoc.file}#toolbar=1&navpanes=1&scrollbar=1`}
+                        title={currentDoc.title}
+                        className="w-full h-full min-h-[500px] lg:min-h-[620px] rounded-2xl bg-white"
                       />
                     </div>
                   </div>
-
-                  {/* Bottom Bar with Exactly ONE Download Button on Bottom Right */}
-                  <div className="pt-3 mt-3 border-t border-white/10 flex items-center justify-between gap-2">
-                    <div className="text-[11px] text-slate-400">
-                      <span>Format: </span><strong className="text-white font-mono">PDF (275 KB)</strong>
-                    </div>
-
-                    {/* 📥 SINGLE BOTTOM RIGHT DOWNLOAD BUTTON */}
-                    <button
-                      onClick={() => handleDownloadDoc(1)}
-                      className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-aim-gold to-amber-400 hover:from-amber-400 hover:to-aim-gold text-aim-navy font-black text-xs uppercase tracking-wider shadow-lg shadow-aim-gold/20 hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
-                    >
-                      <span>📥</span>
-                      <span>Download Brochure 1</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* ── BROCHURE 2: Inside page.pdf ── */}
-                <div className="relative rounded-2xl border border-white/15 bg-aim-navy/95 p-4 sm:p-5 flex flex-col justify-between shadow-xl overflow-hidden group">
-                  <div className="space-y-3">
-                    {/* Header */}
-                    <div className="flex items-start justify-between gap-2 border-b border-white/10 pb-3">
-                      <div>
-                        <span className="px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-black uppercase border border-purple-500/30 inline-block mb-1">
-                          Brochure 2 of 2
-                        </span>
-                        <h4 className="text-base font-black text-white">NEXGN Institute Brochure 2</h4>
-                        <p className="text-[11px] text-slate-400">Complete multi-page product modules & visual breakdown</p>
-                      </div>
-                      <span className="text-2xl">📖</span>
-                    </div>
-
-                    {/* PDF Preview Frame / Viewer */}
-                    <div className="relative w-full h-64 sm:h-72 lg:h-80 rounded-xl overflow-hidden border border-white/10 bg-slate-900 shadow-inner">
-                      <iframe
-                        src={`${nexgnBrochurePdf}#toolbar=0&navpanes=0&scrollbar=0`}
-                        title="NEXGN Brochure 2 Preview"
-                        className="w-full h-full rounded-xl"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Bottom Bar with Exactly ONE Download Button on Bottom Right */}
-                  <div className="pt-3 mt-3 border-t border-white/10 flex items-center justify-between gap-2">
-                    <div className="text-[11px] text-slate-400">
-                      <span>Format: </span><strong className="text-white font-mono">PDF (7.2 MB)</strong>
-                    </div>
-
-                    {/* 📥 SINGLE BOTTOM RIGHT DOWNLOAD BUTTON */}
-                    <button
-                      onClick={() => handleDownloadDoc(2)}
-                      className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-indigo-600 hover:to-purple-600 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-purple-600/20 hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
-                    >
-                      <span>📥</span>
-                      <span>Download Brochure 2</span>
-                    </button>
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* Modal Bottom Footer */}
-              <div className="px-6 py-3.5 bg-slate-900/90 border-t border-white/10 flex items-center justify-between shrink-0">
-                <span className="text-xs text-slate-400">
-                  AIM Digitalise Pvt. Ltd. · All Official Rights Reserved
-                </span>
-                <button
-                  onClick={() => setShowBrochureModal(false)}
-                  className="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
-                >
-                  Close
-                </button>
+              <div className="px-6 py-3.5 bg-slate-900/90 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 shrink-0">
+                <div className="flex items-center gap-3 text-xs text-slate-400">
+                  <span>AIM Digitalise Pvt. Ltd. · Official Proposal & Product Materials</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowDocModal(false)}
+                    className="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
+                  >
+                    Close Viewer
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>
@@ -620,15 +877,17 @@ const NexgnInstituteSection = () => {
                         setActivePortalTab(tab.id)
                         setActiveImageIndex(0)
                       }}
-                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 border ${activePortalTab === tab.id
-                        ? 'bg-gradient-to-r from-aim-gold to-amber-400 text-aim-navy border-aim-gold shadow-lg shadow-aim-gold/20'
-                        : 'bg-white/5 hover:bg-white/10 text-slate-300 border-white/10'
-                        }`}
+                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 border ${
+                        activePortalTab === tab.id
+                          ? 'bg-gradient-to-r from-aim-gold to-amber-400 text-aim-navy border-aim-gold shadow-lg shadow-aim-gold/20'
+                          : 'bg-white/5 hover:bg-white/10 text-slate-300 border-white/10'
+                      }`}
                     >
                       <span>{tab.label}</span>
                       <span
-                        className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold ${activePortalTab === tab.id ? 'bg-aim-navy/20 text-aim-navy' : 'bg-white/10 text-slate-400'
-                          }`}
+                        className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold ${
+                          activePortalTab === tab.id ? 'bg-aim-navy/20 text-aim-navy' : 'bg-white/10 text-slate-400'
+                        }`}
                       >
                         {tab.count}
                       </span>
@@ -642,10 +901,11 @@ const NexgnInstituteSection = () => {
                     <button
                       key={idx}
                       onClick={() => setActiveImageIndex(idx)}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeImageIndex === idx
-                        ? 'bg-white text-slate-900 shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                        }`}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        activeImageIndex === idx
+                          ? 'bg-white text-slate-900 shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
                     >
                       Screen {idx + 1}
                     </button>
@@ -730,19 +990,25 @@ const NexgnInstituteSection = () => {
               <div className="px-6 py-4 bg-aim-navy-card border-t border-white/10 flex flex-wrap items-center justify-between gap-3 shrink-0">
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setShowBrochureModal(true)}
-                    className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-slate-300 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
-                  >
-                    <span>📚</span>
-                    <span>View 2 Brochures</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleDownloadDoc('proposal')}
-                    className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-amber-300 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
+                    onClick={() => {
+                      setShowPreviewModal(false)
+                      handleOpenDocModal('proposal')
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/30 border border-emerald-500/30 text-xs font-bold text-emerald-300 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
                   >
                     <span>📑</span>
                     <span>Proposal Letter</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowPreviewModal(false)
+                      handleOpenDocModal('front')
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-slate-300 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>📚</span>
+                    <span>View Brochures</span>
                   </button>
                 </div>
 
