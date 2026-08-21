@@ -6,6 +6,7 @@ export const ROUTES = {
   SERVICES: '/services', // keep temporarily if needed or just rename it. Let's do the rename.
   CUSTOM_DEVELOPMENT: '/custom-development',
   SAAS_SOFTWARE: '/saas-software',
+  SCHOOL_COLLEGE_SAAS: '/school-college-saas',
   DIGITAL_MARKETING: '/digital-marketing',
   DIGITAL_SIGNATURE: '/digital-signature',
   CODING_CLASSES: '/coding-classes',

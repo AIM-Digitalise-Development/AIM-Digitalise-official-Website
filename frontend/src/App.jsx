@@ -23,6 +23,7 @@ import CodingClasses from './pages/website/CodingClasses'
 import Portfolio from './pages/website/Portfolio'
 import Career from './pages/website/Career'
 import SaasBasedSoftware from './pages/website/SaasBasedSoftware'
+import SchoolCollegeSaas from './pages/website/SchoolCollegeSaas'
 import DigitalMarketing from './pages/website/DigitalMarketing'
 import DigitalSignature from './pages/website/DigitalSignature'
 import Users from './pages/website/Users'
@@ -112,6 +113,10 @@ function App() {
               <Route path="/saas-based-software" element={<SaasBasedSoftware />} />
               <Route path="/services/saas-based-software" element={<SaasBasedSoftware />} />
               <Route path="/subscription" element={<SaasBasedSoftware />} />
+              <Route path={ROUTES.SCHOOL_COLLEGE_SAAS} element={<SchoolCollegeSaas />} />
+              <Route path="/school-college-saas" element={<SchoolCollegeSaas />} />
+              <Route path="/school-collage-saas" element={<SchoolCollegeSaas />} />
+              <Route path="/school-college-erp" element={<SchoolCollegeSaas />} />
               <Route path={ROUTES.DIGITAL_MARKETING} element={<DigitalMarketing />} />
               <Route path={ROUTES.DIGITAL_SIGNATURE} element={<DigitalSignature />} />
               <Route path={ROUTES.CODING_CLASSES} element={<CodingClasses />} />
