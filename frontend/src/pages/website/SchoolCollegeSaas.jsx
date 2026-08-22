@@ -524,138 +524,7 @@ const SchoolCollegeSaas = () => {
             SECTION 2: Designed for Schools & Colleges
             10 features each (9 checkpoints + 1 "See More" button)
         ══════════════════════════════════════════════════════════ */}
-        <section className="py-20 relative overflow-hidden bg-slate-950/90 border-b border-white/10">
-          <div className="container-custom relative z-10 space-y-12">
-            <div className="text-center max-w-3xl mx-auto space-y-3">
-              <div className="inline-flex items-center justify-center px-6 py-3 rounded-2xl bg-white/[0.05] border border-aim-gold/40 shadow-2xl backdrop-blur-md">
-                <img src={nexgnLogo} alt="NEXGN" className="h-16 sm:h-20 md:h-24 w-auto object-contain" />
-              </div>
-              <h2 className="text-3xl sm:text-4xl font-black text-white">
-                Designed for <span className="text-aim-gold">Schools</span> &amp; <span className="text-purple-400">Colleges</span>
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-400">Choose the edition optimized for your academic level, board compliance, and student operations.</p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-
-              {/* ── SCHOOL CARD ── */}
-              <div className="rounded-3xl bg-aim-navy-card/95 border border-amber-500/30 p-7 sm:p-9 flex flex-col gap-6 shadow-2xl hover:border-aim-gold transition-all duration-300">
-                <div className="space-y-5 flex-1">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-3xl">🏫</div>
-                      <div>
-                        <p className="text-xs font-bold text-aim-gold uppercase tracking-wider">Product Edition</p>
-                        <h3 className="text-xl font-black text-white">SCHOOL MANAGEMENT SOFTWARE</h3>
-                        <p className="text-xs font-bold text-aim-gold uppercase tracking-wider">K-12, High Schools &amp; Coaching Academies</p>
-                      </div>
-                    </div>
-                    <span className="px-3 py-1 rounded-full bg-aim-gold text-aim-navy text-[10px] font-black uppercase tracking-wider shrink-0">Most Popular</span>
-                  </div>
-
-                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                    Engineered for CBSE, ICSE, and State Board schools. Automates daily classroom roll calls with instant parent SMS, CBSE report cards, parent WhatsApp diary, live bus GPS tracking, and installment fee collections.
-                  </p>
-
-                  {/* 9 features + See More button (10 total) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {[
-                      'Daily 10-Second Attendance Roll Call',
-                      'CBSE / ICSE Board Report Cards',
-                      'Parent WhatsApp & SMS Diary',
-                      'Live GPS School Bus Fleet Tracking',
-                      'Installment Fee Engine & Receipts',
-                      'Premium Library & Student ID Cards',
-                      'Student TC & Admission Generator',
-                      'Online Exam & Mock Test Portal',
-                      'Teacher Payroll & Biometric Sync',
-                    ].map((item, i) => (
-                      <div key={i} className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/5 text-xs text-slate-200">
-                        <span className="text-aim-gold font-bold flex-shrink-0">✓</span>
-                        <span className="truncate">{item}</span>
-                      </div>
-                    ))}
-
-                    {/* 10th item: See More */}
-                    <button
-                      onClick={() => setFeatureModal('school')}
-                      className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-xs font-black text-aim-gold uppercase tracking-wider transition-all cursor-pointer hover:scale-[1.02]"
-                    >
-                      ⚡ See More Features (+25) →
-                    </button>
-                  </div>
-                </div>
-
-                <div className="border-t border-white/10 pt-5">
-                  <Link
-                    to="/saas-software?plan=15"
-                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-aim-gold via-amber-400 to-aim-gold text-aim-navy font-black text-xs sm:text-sm uppercase tracking-wider text-center shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <span>🚀</span><span>Activate School Plan (₹10/Student)</span><span>→</span>
-                  </Link>
-                </div>
-              </div>
-
-              {/* ── COLLEGE CARD ── */}
-              <div className="rounded-3xl bg-aim-navy-card/95 border border-purple-500/30 p-7 sm:p-9 flex flex-col gap-6 shadow-2xl hover:border-purple-400 transition-all duration-300">
-                <div className="space-y-5 flex-1">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-14 h-14 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-3xl">🏛️</div>
-                      <div>
-                        <p className="text-xs font-bold text-purple-400 uppercase tracking-wider">Product Edition</p>
-                        <h3 className="text-xl font-black text-white">COLLEGE MANAGEMENT SOFTWARE</h3>
-                        <p className="text-xs font-bold text-purple-400 uppercase tracking-wider">Degree Colleges, Universities &amp; Institutes</p>
-                      </div>
-                    </div>
-                    <span className="px-3 py-1 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[10px] font-black uppercase tracking-wider shrink-0">Enterprise Suite</span>
-                  </div>
-
-                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                    Customized for higher education colleges and university groups. Powers semester-wise CBCS/CGPA grading, HOD &amp; Dean administration, hostel bed allocation, campus placement drives, and NAAC/UGC compliance exports.
-                  </p>
-
-                  {/* 9 features + See More button (10 total) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {[
-                      'Semester CBCS / CGPA Grading System',
-                      'HOD, Dean & Faculty Administration',
-                      'Hostel Bed & Mess Billing Engine',
-                      'Campus Placement Drive Tracker',
-                      'Multi-Branch Financial Audit & Tally',
-                      'UGC & NAAC Compliance Reports',
-                      'Research Paper & Thesis Library',
-                      'Student Elective & Credit Manager',
-                      'Online University Exam Portal',
-                    ].map((item, i) => (
-                      <div key={i} className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/5 text-xs text-slate-200">
-                        <span className="text-purple-400 font-bold flex-shrink-0">✓</span>
-                        <span className="truncate">{item}</span>
-                      </div>
-                    ))}
-
-                    {/* 10th item: See More */}
-                    <button
-                      onClick={() => setFeatureModal('college')}
-                      className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-xs font-black text-purple-300 uppercase tracking-wider transition-all cursor-pointer hover:scale-[1.02]"
-                    >
-                      ⚡ See More Features (+25) →
-                    </button>
-                  </div>
-                </div>
-
-                <div className="border-t border-white/10 pt-5">
-                  <Link
-                    to="/saas-software?plan=15"
-                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 text-white font-black text-xs sm:text-sm uppercase tracking-wider text-center shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2 cursor-pointer border border-purple-500/30"
-                  >
-                    <span>🚀</span><span>Activate College Suite</span><span>→</span>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        
 
         {/* ══════════════════════════════════════════════════════════
             SECTION 3: 12 Master Operational Modules
@@ -721,6 +590,139 @@ const SchoolCollegeSaas = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-20 relative overflow-hidden bg-slate-950/90 border-b border-white/10">
+          <div className="container-custom relative z-10 space-y-12">
+            <div className="text-center max-w-3xl mx-auto space-y-3">
+              <div className="inline-flex items-center justify-center px-6 py-3 rounded-2xl bg-white/[0.05] border border-aim-gold/40 shadow-2xl backdrop-blur-md">
+                <img src={nexgnLogo} alt="NEXGN" className="h-16 sm:h-20 md:h-24 w-auto object-contain" />
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-black text-white">
+                Designed for <span className="text-aim-gold">Schools</span> &amp; <span className="text-purple-400">Colleges</span>
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-400">Choose the edition optimized for your academic level, board compliance, and student operations.</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+
+              {/* ── SCHOOL CARD ── */}
+              <div className="rounded-3xl bg-aim-navy-card/95 border border-amber-500/30 p-7 sm:p-9 flex flex-col gap-6 shadow-2xl hover:border-aim-gold transition-all duration-300">
+                <div className="space-y-5 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-3xl">🏫</div>
+                      <div>
+                        <p className="text-xs font-bold text-aim-gold uppercase tracking-wider">Product Edition: Nexgn Institute Pro</p>
+                        <h3 className="text-xl font-black text-white">SCHOOL MANAGEMENT SOFTWARE</h3>
+                        <p className="text-xs font-bold text-aim-gold uppercase tracking-wider">K-12, High Schools &amp; Coaching Academies</p>
+                      </div>
+                    </div>
+                    <span className="px-3 py-1 rounded-full bg-aim-gold text-aim-navy text-[10px] font-black uppercase tracking-wider shrink-0">Most Popular</span>
+                  </div>
+
+                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                    Engineered for CBSE, ICSE, and State Board schools. Automates daily classroom roll calls with instant parent SMS, CBSE report cards, parent WhatsApp diary, live bus GPS tracking, and installment fee collections.
+                  </p>
+
+                  {/* 9 features + See More button (10 total) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {[
+                      'Daily 10-Second Attendance Roll Call',
+                      'CBSE / ICSE Board Report Cards',
+                      'Parent WhatsApp & SMS Diary',
+                      'Live GPS School Bus Fleet Tracking',
+                      'Installment Fee Engine & Receipts',
+                      'Premium Library & Student ID Cards',
+                      'Student TC & Admission Generator',
+                      'Online Exam & Mock Test Portal',
+                      'Teacher Payroll & Biometric Sync',
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/5 text-xs text-slate-200">
+                        <span className="text-aim-gold font-bold flex-shrink-0">✓</span>
+                        <span className="truncate">{item}</span>
+                      </div>
+                    ))}
+
+                    {/* 10th item: See More */}
+                    <button
+                      onClick={() => setFeatureModal('school')}
+                      className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-xs font-black text-aim-gold uppercase tracking-wider transition-all cursor-pointer hover:scale-[1.02]"
+                    >
+                      ⚡ See More Features (+25) →
+                    </button>
+                  </div>
+                </div>
+
+                <div className="border-t border-white/10 pt-5">
+                  <Link
+                    to="/saas-software?plan=15"
+                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-aim-gold via-amber-400 to-aim-gold text-aim-navy font-black text-xs sm:text-sm uppercase tracking-wider text-center shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span>🚀</span><span>Activate School Plan (₹10/Student)</span><span>→</span>
+                  </Link>
+                </div>
+              </div>
+
+              {/* ── COLLEGE CARD ── */}
+              <div className="rounded-3xl bg-aim-navy-card/95 border border-purple-500/30 p-7 sm:p-9 flex flex-col gap-6 shadow-2xl hover:border-purple-400 transition-all duration-300">
+                <div className="space-y-5 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-14 h-14 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-3xl">🏛️</div>
+                      <div>
+                        <p className="text-xs font-bold text-purple-400 uppercase tracking-wider">Product Edition: Nexgn Institute Pro Plus</p>
+                        <h3 className="text-xl font-black text-white">COLLEGE MANAGEMENT SOFTWARE</h3>
+                        <p className="text-xs font-bold text-purple-400 uppercase tracking-wider">Degree Colleges, Universities &amp; Institutes</p>
+                      </div>
+                    </div>
+                    <span className="px-3 py-1 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[10px] font-black uppercase tracking-wider shrink-0">Enterprise Suite</span>
+                  </div>
+
+                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                    Customized for higher education colleges and university groups. Powers semester-wise CBCS/CGPA grading, HOD &amp; Dean administration, hostel bed allocation, campus placement drives, and NAAC/UGC compliance exports.
+                  </p>
+
+                  {/* 9 features + See More button (10 total) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {[
+                      'Semester CBCS / CGPA Grading System',
+                      'HOD, Dean & Faculty Administration',
+                      'Hostel Bed & Mess Billing Engine',
+                      'Campus Placement Drive Tracker',
+                      'Multi-Branch Financial Audit & Tally',
+                      'UGC & NAAC Compliance Reports',
+                      'Research Paper & Thesis Library',
+                      'Student Elective & Credit Manager',
+                      'Online University Exam Portal',
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/5 text-xs text-slate-200">
+                        <span className="text-purple-400 font-bold flex-shrink-0">✓</span>
+                        <span className="truncate">{item}</span>
+                      </div>
+                    ))}
+
+                    {/* 10th item: See More */}
+                    <button
+                      onClick={() => setFeatureModal('college')}
+                      className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-xs font-black text-purple-300 uppercase tracking-wider transition-all cursor-pointer hover:scale-[1.02]"
+                    >
+                      ⚡ See More Features (+25) →
+                    </button>
+                  </div>
+                </div>
+
+                <div className="border-t border-white/10 pt-5">
+                  <Link
+                    to="/saas-software?plan=15"
+                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 text-white font-black text-xs sm:text-sm uppercase tracking-wider text-center shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2 cursor-pointer border border-purple-500/30"
+                  >
+                    <span>🚀</span><span>Activate College Suite</span><span>→</span>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
