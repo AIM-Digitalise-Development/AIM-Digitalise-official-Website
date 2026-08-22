@@ -616,8 +616,9 @@ const SchoolCollegeSaas = () => {
                     <div className="flex items-center gap-3">
                       <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-3xl">🏫</div>
                       <div>
-                        <p className="text-xs font-bold text-aim-gold uppercase tracking-wider">Product Edition: Nexgn Institute Pro</p>
-                        <h3 className="text-xl font-black text-white">SCHOOL MANAGEMENT SOFTWARE</h3>
+                        <p className="text-xs font-bold text-aim-gold uppercase tracking-wider">Nexgn Institute Pro</p>
+                        <div className="h-4" />
+                        <h3 className="text-xl font-black text-white">SCHOOL MANAGEMENT<br />Cloud Software</h3>
                         <p className="text-xs font-bold text-aim-gold uppercase tracking-wider">K-12, High Schools &amp; Coaching Academies</p>
                       </div>
                     </div>
@@ -674,8 +675,9 @@ const SchoolCollegeSaas = () => {
                     <div className="flex items-center gap-3">
                       <div className="w-14 h-14 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-3xl">🏛️</div>
                       <div>
-                        <p className="text-xs font-bold text-purple-400 uppercase tracking-wider">Product Edition: Nexgn Institute Pro Plus</p>
-                        <h3 className="text-xl font-black text-white">COLLEGE MANAGEMENT SOFTWARE</h3>
+                        <p className="text-xs font-bold text-purple-400 uppercase tracking-wider">Nexgn Institute Pro Plus</p>
+                        <div className="h-4" />
+                        <h3 className="text-xl font-black text-white">COLLEGE MANAGEMENT<br />Cloud Software</h3>
                         <p className="text-xs font-bold text-purple-400 uppercase tracking-wider">Degree Colleges, Universities &amp; Institutes</p>
                       </div>
                     </div>
