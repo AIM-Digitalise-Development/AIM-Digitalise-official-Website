@@ -111,6 +111,7 @@ const RootLayout = () => {
         { name: 'Our Success Story', path: `${ROUTES.ABOUT}#success-story`, desc: 'Take a look at our timeline, achievements & satisfaction rate.' },
       ]
     },
+    { name: 'School & College SaaS', path: ROUTES.SCHOOL_COLLEGE_SAAS },
     {
       name: 'Services',
       path: ROUTES.CUSTOM_DEVELOPMENT,
@@ -122,7 +123,6 @@ const RootLayout = () => {
         { name: 'Coding Classes', path: ROUTES.CODING_CLASSES, desc: 'Learn programming, design principles & architecture.' },
       ]
     },
-    { name: 'School & College SaaS', path: ROUTES.SCHOOL_COLLEGE_SAAS },
     { name: 'Portfolio', path: ROUTES.PORTFOLIO },
     { name: 'Career', path: ROUTES.CAREER },
     { name: 'Contact Us', path: ROUTES.CONTACT },

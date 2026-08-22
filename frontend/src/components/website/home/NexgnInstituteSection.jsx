@@ -273,7 +273,7 @@ const NexgnInstituteSection = () => {
                   { icon: '📅', text: 'Smart Attendance & Timetable' },
                   { icon: '📊', text: 'Exam Gradebooks & Report Cards' },
                   { icon: '💬', text: 'Parent SMS & WhatsApp Alerts' },
-                  { icon: '📚', text: 'Digital Library & ID Card Maker' },
+                  { icon: '📚', text: 'Premium Library & ID Card Maker' },
                 ].map((feat, i) => (
                   <div
                     key={i}

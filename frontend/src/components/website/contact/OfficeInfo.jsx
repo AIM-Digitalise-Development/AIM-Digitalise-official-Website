@@ -9,7 +9,7 @@ const offices = [
     label: 'Branch Office',
     region: 'India',
     regionClass: 'bg-aim-gold/10 text-aim-gold border-aim-gold/20',
-    address: '21/1F, Fern Road, 1st Floor Lalvilla, Ballygunge Kolkata - 700019',
+    address: '1st Flore MI Store,Thakurganj Road, Paschimpalli,Kishanganj Bihar - 855107',
   },
   {
     label: 'Corporate Office Nepal',

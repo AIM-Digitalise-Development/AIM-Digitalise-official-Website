@@ -186,7 +186,7 @@ const subscriptionPlans = [
     securityDeposit: '₹1000/-',
     monthlySubscription: '₹10/-/student/month',
     description: `Our "NEXGN Institute Pro" is an all-in-one school, college, and training center management app. Controls student databases, fee collection registers with payment link dispatch, class timetables, exam scorecard generation, and parent notifications.`,
-    customization: `Custom exam grading rubrics, parent portal access, digital library catalogue, dynamic ID card generation, and online admission application portals.`,
+    customization: `Custom exam grading rubrics, parent portal access, Primium library catalogue, dynamic ID card generation, and online admission application portals.`,
     complimentary: `Get the Employee Self-Service (ESS) software absolutely free for one year, complete with individual employee logins for attendance and leave management. After the first year, the price will be ₹199/month, instead of ₹27,500 on a monthly subscriptions basis.`,
     support: `Dedicated Relationship Manager will be Assigned`
   },
