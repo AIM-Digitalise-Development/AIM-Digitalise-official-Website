@@ -159,7 +159,7 @@ const NxtGenErpSection = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </Button>
-              <Link to="/saas-software?plan=15">
+              <Link to="/saas-software?plan=15&register=true">
                 <Button variant="secondary" size="lg" className="cursor-pointer">
                   <span>Buy Now</span>
                 </Button>

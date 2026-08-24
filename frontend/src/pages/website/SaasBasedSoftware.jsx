@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Helmet } from 'react-helmet-async'
 import Button from '../../components/ui/Button'
@@ -240,9 +240,11 @@ const emptyCheckout = (partnerId = '') => ({
 })
 
 const SaasBasedSoftware = () => {
-  const queryParams = new URLSearchParams(window.location.search)
+  const location = useLocation()
+  const queryParams = new URLSearchParams(location.search)
   const initialPlanId = parseInt(queryParams.get('plan'), 10) || 9
   const initialPlan = subscriptionPlans.find(p => p.id === initialPlanId) || subscriptionPlans.find(p => p.id === 9)
+  const shouldInitialRegister = queryParams.get('register') === 'true' || queryParams.get('action') === 'register' || queryParams.get('open') === 'form'
 
   const [products, setProducts] = useState(subscriptionPlans)
   const [loadingProducts, setLoadingProducts] = useState(true)
@@ -284,7 +286,7 @@ const SaasBasedSoftware = () => {
   }, [])
 
   const [partners, setPartners] = useState([])
-  const [paymentStep, setPaymentStep] = useState('idle')
+  const [paymentStep, setPaymentStep] = useState(shouldInitialRegister ? 'form' : 'idle')
   const [checkoutData, setCheckoutData] = useState(emptyCheckout())
   const [apiError, setApiError] = useState('')
   const [successData, setSuccessData] = useState(null)
@@ -357,6 +359,29 @@ const SaasBasedSoftware = () => {
       .catch(err => console.error('Failed to load products from API:', err))
       .finally(() => setLoadingProducts(false))
   }, [detectedCountry])
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const paramId = parseInt(params.get('plan'), 10)
+    const shouldRegister = params.get('register') === 'true' || params.get('action') === 'register' || params.get('open') === 'form'
+
+    if (paramId) {
+      const matched = products.find(p => p.id === paramId)
+      if (matched) {
+        setActivePlanId(matched.id)
+        setActiveCategory(matched.category)
+      }
+    }
+    if (shouldRegister) {
+      setPaymentStep('form')
+      setApiError('')
+      setValidationErrors({})
+      setSuccessData(null)
+      setTimeout(() => {
+        if (nameInputRef.current) nameInputRef.current.focus()
+      }, 400)
+    }
+  }, [location.search, products])
 
   useEffect(() => {
     if (activePlan) {

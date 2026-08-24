@@ -4,12 +4,15 @@ import { Helmet } from 'react-helmet-async'
 import { Link } from 'react-router-dom'
 import useUIStore from '../../store/uiStore'
 import nexgnLogo from '../../assets/images/nexgnlogo.png'
-import nexgnVideo from '../../assets/videos/nexgn.mp4'
+import nexgnVideo from '../../assets/videos/craete_a_video_where_kids_tea.mp4'
 
 // Official Documents
-import nexgnProposalLetterPdf from '../../assets/doc/NEXGN Proposal Letter.pdf'
-import nexgnBrochurePdf2 from '../../assets/doc/Front page.pdf'
-import nexgnBrochurePdf from '../../assets/doc/Inside page.pdf'
+import officialBrochureImg from '../../assets/doc/OfficialBrochure.jpg'
+import officialBrochureImg1 from '../../assets/doc/Official Brochure1.jpg'
+import nexgnBrochureFrontPdf from '../../assets/doc/Front page.pdf'
+import nexgnBrochureInsidePdf from '../../assets/doc/Inside page.pdf'
+import dciImg from '../../assets/doc/DCI.jpg'
+import dciImg1 from '../../assets/doc/DCI1.jpg'
 
 // ─────────────────────────────────────────────────────────────
 // DATA: Detailed 25+ modules for the "See More" Feature Modal
@@ -229,30 +232,45 @@ const OFFICIAL_DOCUMENTS = [
     id: 'proposal',
     title: 'NEXGN Official Brochure',
     badge: 'Official Brochure',
-    size: '275 KB',
-    file: nexgnProposalLetterPdf,
-    filename: 'NEXGN_Proposal_Letter.pdf',
-    desc: 'Official institutional letter detailing software scope, commercial pricing terms, onboarding timeline, and SLA commitments.',
+    size: '550 KB (2 Pages)',
+    type: 'image',
+    pages: [
+      { name: 'Page 1', file: officialBrochureImg, filename: 'NEXGN_Official_Brochure_Page1.jpg', type: 'image' },
+      { name: 'Page 2', file: officialBrochureImg1, filename: 'NEXGN_Official_Brochure_Page2.jpg', type: 'image' },
+    ],
+    file: officialBrochureImg,
+    filename: 'NEXGN_Official_Brochure.jpg',
+    desc: 'Official institutional brochure detailing software scope, commercial pricing terms, onboarding timeline, and SLA commitments.',
     badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
   },
   {
     id: 'front',
     title: 'NEXGN Features Brochure',
-    badge: 'Brochure Part 1',
-    size: '7.9 MB',
-    file: nexgnBrochurePdf2,
+    badge: 'Features Brochure',
+    size: '15.2 MB (2 Parts)',
+    type: 'pdf',
+    pages: [
+      { name: 'Part 1: Front Page', file: nexgnBrochureFrontPdf, filename: 'NEXGN_Brochure_Part1_Front.pdf', type: 'pdf' },
+      { name: 'Part 2: Inside Page', file: nexgnBrochureInsidePdf, filename: 'NEXGN_Brochure_Part2_Inside.pdf', type: 'pdf' },
+    ],
+    file: nexgnBrochureFrontPdf,
     filename: 'NEXGN_Brochure_Part1_Front.pdf',
-    desc: 'Executive product overview, core architecture presentation, and flagship feature highlights for board review.',
+    desc: 'Executive product overview, core architecture presentation, and detailed 25+ inside module breakdown for board review.',
     badgeColor: 'bg-amber-500/20 text-aim-gold border-aim-gold/30',
   },
   {
     id: 'inside',
     title: 'NEXGN DCI Brochure',
-    badge: 'Brochure Part 2',
-    size: '7.3 MB',
-    file: nexgnBrochurePdf,
-    filename: 'NEXGN_Brochure_Part2_Inside.pdf',
-    desc: 'Complete detailed module breakdown covering fees, admissions, gradebook, RFID attendance, GPS transport, and mobile apps.',
+    badge: 'DCI Brochure',
+    size: '390 KB (2 Pages)',
+    type: 'image',
+    pages: [
+      { name: 'Page 1', file: dciImg, filename: 'NEXGN_DCI_Brochure_Page1.jpg', type: 'image' },
+      { name: 'Page 2', file: dciImg1, filename: 'NEXGN_DCI_Brochure_Page2.jpg', type: 'image' },
+    ],
+    file: dciImg,
+    filename: 'NEXGN_DCI_Brochure.jpg',
+    desc: 'Digital Campus Infrastructure (DCI) specifications covering smart gate RFID, biometric sync, fee automation, and mobile apps.',
     badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
   },
 ]
@@ -286,8 +304,10 @@ const FAQS = [
 const SchoolCollegeSaas = () => {
   const [openFaq, setOpenFaq] = useState(0)
   const [activePreviewDocId, setActivePreviewDocId] = useState('proposal')
+  const [activeDocPageIndex, setActiveDocPageIndex] = useState(0)
   const openAppointmentModal = useUIStore((state) => state.openAppointmentModal)
   const currentPreviewDoc = OFFICIAL_DOCUMENTS.find((d) => d.id === activePreviewDocId) || OFFICIAL_DOCUMENTS[0]
+  const currentPage = currentPreviewDoc.pages?.[activeDocPageIndex] || currentPreviewDoc.pages?.[0] || { file: currentPreviewDoc.file, filename: currentPreviewDoc.filename, name: 'Document', type: currentPreviewDoc.type }
 
   // Video player state
   const videoRef = useRef(null)
@@ -313,14 +333,42 @@ const SchoolCollegeSaas = () => {
   const [featureModal, setFeatureModal] = useState(null) // 'school' | 'college' | null
 
   // ── Handlers ──
-  const handleDownloadDoc = (docId) => {
+  const handleSelectDoc = (docId) => {
+    setActivePreviewDocId(docId)
+    setActiveDocPageIndex(0)
+  }
+
+  const handleDownloadDoc = (docId, pageIndex = null) => {
     const doc = OFFICIAL_DOCUMENTS.find((d) => d.id === docId) || OFFICIAL_DOCUMENTS[0]
-    const link = document.createElement('a')
-    link.href = doc.file
-    link.download = doc.filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    if (pageIndex !== null && doc.pages?.[pageIndex]) {
+      const p = doc.pages[pageIndex]
+      const link = document.createElement('a')
+      link.href = p.file
+      link.download = p.filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      return
+    }
+    if (doc.pages && doc.pages.length) {
+      doc.pages.forEach((p, idx) => {
+        setTimeout(() => {
+          const link = document.createElement('a')
+          link.href = p.file
+          link.download = p.filename
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+        }, idx * 200)
+      })
+    } else {
+      const link = document.createElement('a')
+      link.href = doc.file
+      link.download = doc.filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
   }
 
   const openProposalModal = () => {
@@ -428,7 +476,7 @@ const SchoolCollegeSaas = () => {
                   </button>
 
                   <Link
-                    to="/saas-software?plan=15"
+                    to="/saas-software?plan=15&register=true"
                     className="px-6 py-3.5 rounded-2xl bg-purple-600/90 hover:bg-purple-600 text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-purple-600/25 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border border-purple-500/40"
                   >
                     <span>⚡</span><span>SaaS Cloud Software</span>
@@ -524,7 +572,7 @@ const SchoolCollegeSaas = () => {
             SECTION 2: Designed for Schools & Colleges
             10 features each (9 checkpoints + 1 "See More" button)
         ══════════════════════════════════════════════════════════ */}
-        
+
 
         {/* ══════════════════════════════════════════════════════════
             SECTION 3: 12 Master Operational Modules
@@ -598,8 +646,8 @@ const SchoolCollegeSaas = () => {
         <section className="py-20 relative overflow-hidden bg-slate-950/90 border-b border-white/10">
           <div className="container-custom relative z-10 space-y-12">
             <div className="text-center max-w-3xl mx-auto space-y-3">
-              <div className="inline-flex items-center justify-center px-6 py-3 rounded-2xl bg-white/[0.05] border border-aim-gold/40 shadow-2xl backdrop-blur-md">
-                <img src={nexgnLogo} alt="NEXGN" className="h-16 sm:h-20 md:h-24 w-auto object-contain" />
+              <div className="inline-flex items-center justify-center px-6 py-3 rounded-2xl  ">
+                <img src={nexgnLogo} alt="NEXGN" className="h-16 sm:h-40 md:h-24 w-auto object-contain" />
               </div>
               <h2 className="text-3xl sm:text-4xl font-black text-white">
                 Designed for <span className="text-aim-gold">Schools</span> &amp; <span className="text-purple-400">Colleges</span>
@@ -660,7 +708,7 @@ const SchoolCollegeSaas = () => {
 
                 <div className="border-t border-white/10 pt-5">
                   <Link
-                    to="/saas-software?plan=15"
+                    to="/saas-software?plan=15&register=true"
                     className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-aim-gold via-amber-400 to-aim-gold text-aim-navy font-black text-xs sm:text-sm uppercase tracking-wider text-center shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <span>🚀</span><span>Activate School Plan (₹10/Student)</span><span>→</span>
@@ -719,7 +767,7 @@ const SchoolCollegeSaas = () => {
 
                 <div className="border-t border-white/10 pt-5">
                   <Link
-                    to="/saas-software?plan=15"
+                    to="/saas-software?plan=15&register=true"
                     className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 text-white font-black text-xs sm:text-sm uppercase tracking-wider text-center shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2 cursor-pointer border border-purple-500/30"
                   >
                     <span>🚀</span><span>Activate College Suite</span><span>→</span>
@@ -749,7 +797,7 @@ const SchoolCollegeSaas = () => {
                   return (
                     <div
                       key={doc.id}
-                      onClick={() => setActivePreviewDocId(doc.id)}
+                      onClick={() => handleSelectDoc(doc.id)}
                       className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer flex flex-col gap-3 ${isSelected ? 'bg-aim-navy border-aim-gold shadow-xl shadow-aim-gold/10 scale-[1.02]' : 'bg-aim-navy-card/90 border-white/10 hover:border-white/25 hover:bg-white/[0.04]'}`}
                     >
                       <div className="space-y-1.5">
@@ -762,7 +810,7 @@ const SchoolCollegeSaas = () => {
                       </div>
                       <div className="flex items-center gap-2 pt-2 border-t border-white/10">
                         <button
-                          onClick={(e) => { e.stopPropagation(); setActivePreviewDocId(doc.id) }}
+                          onClick={(e) => { e.stopPropagation(); handleSelectDoc(doc.id) }}
                           className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer text-center ${isSelected ? 'bg-aim-gold text-aim-navy font-black' : 'bg-white/10 text-white hover:bg-white/20'}`}
                         >
                           👁️ View Online
@@ -779,32 +827,68 @@ const SchoolCollegeSaas = () => {
                 })}
               </div>
 
-              {/* Right: Embedded PDF viewer */}
+              {/* Right: Embedded PDF / Image viewer */}
               <div className="lg:col-span-7 flex flex-col rounded-3xl overflow-hidden border border-white/15 bg-aim-navy-card/95 shadow-2xl">
-                <div className="px-4 py-3 bg-slate-900 border-b border-white/10 flex items-center justify-between">
+                <div className="px-4 py-3 bg-slate-900 border-b border-white/10 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm">📑</span>
+                    <span className="text-sm">{currentPage.type === 'image' ? '🖼️' : '📑'}</span>
                     <span className="text-xs font-bold text-white truncate">{currentPreviewDoc.title}</span>
                   </div>
+
+                  {/* Page Selector Tabs if multi-page */}
+                  {currentPreviewDoc.pages && currentPreviewDoc.pages.length > 1 && (
+                    <div className="flex items-center gap-1.5 bg-black/40 p-1 rounded-xl border border-white/10">
+                      {currentPreviewDoc.pages.map((p, pIdx) => (
+                        <button
+                          key={pIdx}
+                          onClick={() => setActiveDocPageIndex(pIdx)}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${activeDocPageIndex === pIdx
+                            ? 'bg-aim-gold text-aim-navy font-black shadow'
+                            : 'text-slate-300 hover:text-white hover:bg-white/10'
+                            }`}
+                        >
+                          {p.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-2">
-                    <a href={currentPreviewDoc.file} target="_blank" rel="noopener noreferrer" className="px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 text-[11px] font-bold text-slate-200">
+                    <a
+                      href={currentPage.file}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 text-[11px] font-bold text-slate-200"
+                    >
                       🔗 Open Fullscreen
                     </a>
                     <button
-                      onClick={() => currentPreviewDoc.id === 'proposal' ? openProposalModal() : handleDownloadDoc(currentPreviewDoc.id)}
-                      className="px-3 py-1 rounded bg-gradient-to-r from-aim-gold to-amber-400 text-aim-navy text-[11px] font-black uppercase"
+                      onClick={() => currentPreviewDoc.id === 'proposal' ? openProposalModal() : handleDownloadDoc(currentPreviewDoc.id, activeDocPageIndex)}
+                      className="px-3 py-1 rounded bg-gradient-to-r from-aim-gold to-amber-400 text-aim-navy text-[11px] font-black uppercase cursor-pointer hover:scale-105 transition-all"
                     >
                       📥 Download
                     </button>
                   </div>
                 </div>
-                <div className="flex-1 min-h-[460px] bg-slate-950 p-2 sm:p-3">
-                  <iframe
-                    key={currentPreviewDoc.id}
-                    src={`${currentPreviewDoc.file}#toolbar=1&navpanes=0&scrollbar=1`}
-                    title={currentPreviewDoc.title}
-                    className="w-full h-full min-h-[460px] rounded-xl bg-white shadow-inner"
-                  />
+
+                <div className="flex-1 min-h-[460px] max-h-[620px] bg-slate-950 p-2 sm:p-3 flex items-center justify-center overflow-hidden">
+                  {currentPage.type === 'image' ? (
+                    <div className="w-full h-full min-h-[460px] max-h-[600px] overflow-y-auto flex items-center justify-center p-2 bg-black/40 rounded-xl">
+                      <img
+                        key={`${currentPreviewDoc.id}-${activeDocPageIndex}`}
+                        src={currentPage.file}
+                        alt={`${currentPreviewDoc.title} - ${currentPage.name}`}
+                        className="max-h-[560px] w-auto max-w-full object-contain rounded-lg shadow-2xl transition-transform duration-300 hover:scale-[1.01]"
+                      />
+                    </div>
+                  ) : (
+                    <iframe
+                      key={`${currentPreviewDoc.id}-${activeDocPageIndex}`}
+                      src={`${currentPage.file}#toolbar=1&navpanes=0&scrollbar=1`}
+                      title={`${currentPreviewDoc.title} - ${currentPage.name}`}
+                      className="w-full h-full min-h-[460px] rounded-xl bg-white shadow-inner"
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -875,7 +959,7 @@ const SchoolCollegeSaas = () => {
               </p>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-3.5">
-              <Link to="/saas-software?plan=15" className="px-8 py-4 rounded-2xl bg-gradient-to-r from-aim-gold via-amber-400 to-aim-gold text-aim-navy font-black text-xs sm:text-sm uppercase tracking-wider shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
+              <Link to="/saas-software?plan=15&register=true" className="px-8 py-4 rounded-2xl bg-gradient-to-r from-aim-gold via-amber-400 to-aim-gold text-aim-navy font-black text-xs sm:text-sm uppercase tracking-wider shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
                 <span>⚡</span><span>Activate Your Plan</span><span>→</span>
               </Link>
               <a
@@ -1106,7 +1190,7 @@ const SchoolCollegeSaas = () => {
                     📑 Get Proposal PDF
                   </button>
                   <Link
-                    to="/saas-software?plan=15"
+                    to="/saas-software?plan=15&register=true"
                     className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-aim-gold to-amber-400 text-aim-navy font-black text-xs uppercase tracking-wider hover:scale-105 transition-all shadow-lg"
                   >
                     🚀 Activate Plan

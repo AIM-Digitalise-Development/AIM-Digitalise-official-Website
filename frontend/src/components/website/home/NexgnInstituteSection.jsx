@@ -1,9 +1,14 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import nexgnBrochurePdf from '../../../assets/doc/Inside page.pdf'
-import nexgnBrochurePdf2 from '../../../assets/doc/Front page.pdf'
-import nexgnProposalLetterPdf from '../../../assets/doc/NEXGN Proposal Letter.pdf'
+
+// Official Documents & Brochures
+import officialBrochureImg from '../../../assets/doc/OfficialBrochure.jpg'
+import officialBrochureImg1 from '../../../assets/doc/Official Brochure1.jpg'
+import nexgnBrochureFrontPdf from '../../../assets/doc/Front page.pdf'
+import nexgnBrochureInsidePdf from '../../../assets/doc/Inside page.pdf'
+import dciImg from '../../../assets/doc/DCI.jpg'
+import dciImg1 from '../../../assets/doc/DCI1.jpg'
 
 // Newly added portal screenshot images
 import admin1 from '../../../assets/images/admin1.png'
@@ -52,45 +57,60 @@ const PREVIEW_GALLERY = {
 const NEXGN_DOCUMENTS = [
   {
     id: 'proposal',
-    title: 'NEXGN Proposal Letter',
-    fullTitle: 'NEXGN Official Institutional Proposal Letter',
-    subtitle: 'Scope of digitization, institutional offerings, commercials & enterprise roadmap',
-    badge: 'Official Proposal',
+    title: 'NEXGN Official Brochure',
+    fullTitle: 'NEXGN Official Institutional Brochure (2 Pages)',
+    subtitle: 'Official overview, scope of digitization, commercials & enterprise roadmap',
+    badge: 'Official Brochure',
     badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
     icon: '📑',
     accentColor: 'from-emerald-500 to-teal-400',
-    size: '275 KB',
-    file: nexgnProposalLetterPdf,
-    filename: 'NEXGN_Proposal_Letter.pdf',
-    description: 'Official letter outlining features, pricing tiers, institutional onboarding, and support terms.',
+    size: '550 KB (2 Pages)',
+    type: 'image',
+    pages: [
+      { name: 'Page 1', file: officialBrochureImg, filename: 'NEXGN_Official_Brochure_Page1.jpg', type: 'image' },
+      { name: 'Page 2', file: officialBrochureImg1, filename: 'NEXGN_Official_Brochure_Page2.jpg', type: 'image' },
+    ],
+    file: officialBrochureImg,
+    filename: 'NEXGN_Official_Brochure.jpg',
+    description: 'Official brochure outlining software features, pricing tiers, institutional onboarding, and governance terms.',
   },
   {
     id: 'front',
-    title: 'NEXGN Brochure (Part 1: Front Page)',
-    fullTitle: 'NEXGN Institute Brochure – Front Cover & Overview',
-    subtitle: 'Executive presentation, visual architecture & core feature highlights',
-    badge: 'Brochure Part 1',
+    title: 'NEXGN Features Brochure',
+    fullTitle: 'NEXGN Features Brochure (Front & Inside Modules)',
+    subtitle: 'Executive presentation, visual architecture & complete 25+ module breakdown',
+    badge: 'Features Brochure',
     badgeColor: 'bg-amber-500/20 text-aim-gold border-aim-gold/30',
     icon: '📰',
     accentColor: 'from-aim-gold to-amber-400',
-    size: '7.9 MB',
-    file: nexgnBrochurePdf2,
+    size: '15.2 MB (2 Parts)',
+    type: 'pdf',
+    pages: [
+      { name: 'Part 1: Front Page', file: nexgnBrochureFrontPdf, filename: 'NEXGN_Brochure_Part1_Front.pdf', type: 'pdf' },
+      { name: 'Part 2: Inside Page', file: nexgnBrochureInsidePdf, filename: 'NEXGN_Brochure_Part2_Inside.pdf', type: 'pdf' },
+    ],
+    file: nexgnBrochureFrontPdf,
     filename: 'NEXGN_Brochure_Part1_Front.pdf',
-    description: 'Executive overview showcasing modern dashboard interfaces and key system value propositions.',
+    description: 'Executive overview showcasing modern dashboard interfaces, key value propositions, and inside modules.',
   },
   {
     id: 'inside',
-    title: 'NEXGN Brochure (Part 2: Inside Page)',
-    fullTitle: 'NEXGN Institute Brochure – Detailed Inside Modules',
-    subtitle: 'Comprehensive module breakdown: fees, attendance, examinations, and portals',
-    badge: 'Brochure Part 2',
+    title: 'NEXGN DCI Brochure',
+    fullTitle: 'NEXGN Digital Campus Infrastructure (DCI) Brochure (2 Pages)',
+    subtitle: 'Comprehensive DCI specifications, biometric gate RFID, fee automation, and apps',
+    badge: 'DCI Brochure',
     badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
     icon: '📖',
     accentColor: 'from-purple-600 to-indigo-500',
-    size: '7.3 MB',
-    file: nexgnBrochurePdf,
-    filename: 'NEXGN_Brochure_Part2_Inside.pdf',
-    description: 'In-depth specification of student lifecycle, fee automation, SMS/WhatsApp integrations, and parent app.',
+    size: '390 KB (2 Pages)',
+    type: 'image',
+    pages: [
+      { name: 'Page 1', file: dciImg, filename: 'NEXGN_DCI_Brochure_Page1.jpg', type: 'image' },
+      { name: 'Page 2', file: dciImg1, filename: 'NEXGN_DCI_Brochure_Page2.jpg', type: 'image' },
+    ],
+    file: dciImg,
+    filename: 'NEXGN_DCI_Brochure.jpg',
+    description: 'In-depth DCI specifications: student lifecycle, biometric gate sync, parent communication apps, and smart attendance.',
   },
 ]
 
@@ -99,6 +119,7 @@ const NexgnInstituteSection = () => {
   const [showPreviewModal, setShowPreviewModal] = useState(false)
   const [showDocModal, setShowDocModal] = useState(false)
   const [activeDocTab, setActiveDocTab] = useState('proposal') // 'proposal' | 'front' | 'inside' | 'all'
+  const [activeDocPageIndex, setActiveDocPageIndex] = useState(0)
   const [activePortalTab, setActivePortalTab] = useState('admin')
   const [activeImageIndex, setActiveImageIndex] = useState(0)
 
@@ -110,27 +131,54 @@ const NexgnInstituteSection = () => {
 
   const handleOpenDocModal = (docId = 'proposal') => {
     setActiveDocTab(docId)
+    setActiveDocPageIndex(0)
     setShowDocModal(true)
   }
 
-  const handleDownloadDoc = (docIdOrNum = 'proposal') => {
+  const handleDownloadDoc = (docIdOrNum = 'proposal', pageIndex = null) => {
     let doc = NEXGN_DOCUMENTS.find((d) => d.id === docIdOrNum)
     if (!doc) {
-      if (docIdOrNum === 1 || docIdOrNum === '1') doc = NEXGN_DOCUMENTS[1] // front
-      else if (docIdOrNum === 2 || docIdOrNum === '2') doc = NEXGN_DOCUMENTS[2] // inside
-      else doc = NEXGN_DOCUMENTS[0] // proposal
+      if (docIdOrNum === 1 || docIdOrNum === '1' || docIdOrNum === 'front') doc = NEXGN_DOCUMENTS[1]
+      else if (docIdOrNum === 2 || docIdOrNum === '2' || docIdOrNum === 'inside') doc = NEXGN_DOCUMENTS[2]
+      else doc = NEXGN_DOCUMENTS[0]
     }
-    const link = document.createElement('a')
-    link.href = doc.file
-    link.download = doc.filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+
+    if (pageIndex !== null && doc.pages?.[pageIndex]) {
+      const p = doc.pages[pageIndex]
+      const link = document.createElement('a')
+      link.href = p.file
+      link.download = p.filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      return
+    }
+
+    if (doc.pages && doc.pages.length) {
+      doc.pages.forEach((p, idx) => {
+        setTimeout(() => {
+          const link = document.createElement('a')
+          link.href = p.file
+          link.download = p.filename
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+        }, idx * 200)
+      })
+    } else {
+      const link = document.createElement('a')
+      link.href = doc.file
+      link.download = doc.filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
   }
 
   const currentGallery = PREVIEW_GALLERY[activePortalTab] || PREVIEW_GALLERY.admin
   const currentImage = currentGallery.images[activeImageIndex] || currentGallery.images[0]
   const currentDoc = NEXGN_DOCUMENTS.find((d) => d.id === activeDocTab) || NEXGN_DOCUMENTS[0]
+  const currentDocPage = currentDoc.pages?.[activeDocPageIndex] || currentDoc.pages?.[0] || { file: currentDoc.file, filename: currentDoc.filename, name: 'Page 1', type: currentDoc.type }
 
   return (
     <section className="relative py-20 bg-aim-navy overflow-hidden border-b border-white/5">
@@ -289,7 +337,7 @@ const NexgnInstituteSection = () => {
               <div className="space-y-2.5 pt-2 border-t border-white/10">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest block">
-                    Official Proposal & Brochures (3 Files):
+                    Official Brochure & Documentation (3 Sets):
                   </span>
                   <button
                     onClick={() => handleOpenDocModal('all')}
@@ -301,14 +349,14 @@ const NexgnInstituteSection = () => {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {/* Proposal Letter */}
+                  {/* Official Brochure (2 Images) */}
                   <div className="p-2.5 rounded-xl bg-white/[0.04] border border-emerald-500/20 hover:border-emerald-500/40 transition-all flex flex-col justify-between gap-2 group/card">
                     <div>
                       <div className="flex items-center justify-between text-[10px] font-bold text-emerald-400 mb-1">
-                        <span>📑 Proposal Letter</span>
-                        <span className="text-slate-400 font-mono text-[9px]">275 KB</span>
+                        <span>📑 Official Brochure</span>
+                        <span className="text-slate-400 font-mono text-[9px]">550 KB</span>
                       </div>
-                      <p className="text-[10px] text-slate-300 truncate">Official Proposal</p>
+                      <p className="text-[10px] text-slate-300 truncate">Official 2-Page Brochure</p>
                     </div>
                     <div className="flex items-center gap-1.5 pt-1">
                       <button
@@ -320,21 +368,21 @@ const NexgnInstituteSection = () => {
                       <button
                         onClick={() => handleDownloadDoc('proposal')}
                         className="p-1 rounded-lg bg-white/5 hover:bg-white/15 text-white text-[10px] transition-colors cursor-pointer"
-                        title="Download NEXGN Proposal Letter (PDF)"
+                        title="Download NEXGN Official Brochure (Images)"
                       >
                         📥
                       </button>
                     </div>
                   </div>
 
-                  {/* Brochure 1 (Front) */}
+                  {/* Features Brochure (2 PDFs) */}
                   <div className="p-2.5 rounded-xl bg-white/[0.04] border border-aim-gold/20 hover:border-aim-gold/40 transition-all flex flex-col justify-between gap-2 group/card">
                     <div>
                       <div className="flex items-center justify-between text-[10px] font-bold text-aim-gold mb-1">
-                        <span>📰 Brochure Part 1</span>
-                        <span className="text-slate-400 font-mono text-[9px]">7.9 MB</span>
+                        <span>📰 Features Brochure</span>
+                        <span className="text-slate-400 font-mono text-[9px]">15.2 MB</span>
                       </div>
-                      <p className="text-[10px] text-slate-300 truncate">Front Page Overview</p>
+                      <p className="text-[10px] text-slate-300 truncate">Front & Inside Modules</p>
                     </div>
                     <div className="flex items-center gap-1.5 pt-1">
                       <button
@@ -346,21 +394,21 @@ const NexgnInstituteSection = () => {
                       <button
                         onClick={() => handleDownloadDoc('front')}
                         className="p-1 rounded-lg bg-white/5 hover:bg-white/15 text-white text-[10px] transition-colors cursor-pointer"
-                        title="Download NEXGN Brochure Part 1 (PDF)"
+                        title="Download NEXGN Features Brochure (PDFs)"
                       >
                         📥
                       </button>
                     </div>
                   </div>
 
-                  {/* Brochure 2 (Inside) */}
+                  {/* DCI Brochure (2 Images) */}
                   <div className="p-2.5 rounded-xl bg-white/[0.04] border border-purple-500/20 hover:border-purple-500/40 transition-all flex flex-col justify-between gap-2 group/card">
                     <div>
                       <div className="flex items-center justify-between text-[10px] font-bold text-purple-300 mb-1">
-                        <span>📖 Brochure Part 2</span>
-                        <span className="text-slate-400 font-mono text-[9px]">7.3 MB</span>
+                        <span>📖 DCI Brochure</span>
+                        <span className="text-slate-400 font-mono text-[9px]">390 KB</span>
                       </div>
-                      <p className="text-[10px] text-slate-300 truncate">Inside Full Modules</p>
+                      <p className="text-[10px] text-slate-300 truncate">Digital Campus 2-Page</p>
                     </div>
                     <div className="flex items-center gap-1.5 pt-1">
                       <button
@@ -372,7 +420,7 @@ const NexgnInstituteSection = () => {
                       <button
                         onClick={() => handleDownloadDoc('inside')}
                         className="p-1 rounded-lg bg-white/5 hover:bg-white/15 text-white text-[10px] transition-colors cursor-pointer"
-                        title="Download NEXGN Brochure Part 2 (PDF)"
+                        title="Download NEXGN DCI Brochure (Images)"
                       >
                         📥
                       </button>
@@ -385,7 +433,7 @@ const NexgnInstituteSection = () => {
             {/* Bottom Action Button: Redirects to SaaS based software */}
             <div className="pt-6 mt-6 border-t border-white/10">
               <Link
-                to="/saas-software?plan=15"
+                to="/saas-software?plan=15&register=true"
                 className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-aim-gold via-amber-400 to-aim-gold text-aim-navy font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-aim-gold/20 hover:shadow-aim-gold/40 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
               >
                 <span>🚀</span>
@@ -479,7 +527,7 @@ const NexgnInstituteSection = () => {
               <div className="space-y-2.5 pt-2 border-t border-white/10">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest block">
-                    Enterprise Proposal & Brochures (3 Files):
+                    Enterprise Brochure & Documentation (3 Sets):
                   </span>
                   <button
                     onClick={() => handleOpenDocModal('all')}
@@ -491,14 +539,14 @@ const NexgnInstituteSection = () => {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {/* Proposal Letter */}
+                  {/* Official Brochure */}
                   <div className="p-2.5 rounded-xl bg-white/[0.04] border border-emerald-500/20 hover:border-emerald-500/40 transition-all flex flex-col justify-between gap-2 group/card">
                     <div>
                       <div className="flex items-center justify-between text-[10px] font-bold text-emerald-400 mb-1">
-                        <span>📑 Proposal Letter</span>
-                        <span className="text-slate-400 font-mono text-[9px]">275 KB</span>
+                        <span>📑 Official Brochure</span>
+                        <span className="text-slate-400 font-mono text-[9px]">550 KB</span>
                       </div>
-                      <p className="text-[10px] text-slate-300 truncate">Official Proposal</p>
+                      <p className="text-[10px] text-slate-300 truncate">Official 2-Page Brochure</p>
                     </div>
                     <div className="flex items-center gap-1.5 pt-1">
                       <button
@@ -510,21 +558,21 @@ const NexgnInstituteSection = () => {
                       <button
                         onClick={() => handleDownloadDoc('proposal')}
                         className="p-1 rounded-lg bg-white/5 hover:bg-white/15 text-white text-[10px] transition-colors cursor-pointer"
-                        title="Download NEXGN Proposal Letter (PDF)"
+                        title="Download NEXGN Official Brochure (Images)"
                       >
                         📥
                       </button>
                     </div>
                   </div>
 
-                  {/* Brochure 1 (Front) */}
+                  {/* Features Brochure */}
                   <div className="p-2.5 rounded-xl bg-white/[0.04] border border-purple-500/20 hover:border-purple-500/40 transition-all flex flex-col justify-between gap-2 group/card">
                     <div>
                       <div className="flex items-center justify-between text-[10px] font-bold text-purple-300 mb-1">
-                        <span>📰 Brochure Part 1</span>
-                        <span className="text-slate-400 font-mono text-[9px]">7.9 MB</span>
+                        <span>📰 Features Brochure</span>
+                        <span className="text-slate-400 font-mono text-[9px]">15.2 MB</span>
                       </div>
-                      <p className="text-[10px] text-slate-300 truncate">Front Page Overview</p>
+                      <p className="text-[10px] text-slate-300 truncate">Front & Inside Modules</p>
                     </div>
                     <div className="flex items-center gap-1.5 pt-1">
                       <button
@@ -536,21 +584,21 @@ const NexgnInstituteSection = () => {
                       <button
                         onClick={() => handleDownloadDoc('front')}
                         className="p-1 rounded-lg bg-white/5 hover:bg-white/15 text-white text-[10px] transition-colors cursor-pointer"
-                        title="Download NEXGN Brochure Part 1 (PDF)"
+                        title="Download NEXGN Features Brochure (PDFs)"
                       >
                         📥
                       </button>
                     </div>
                   </div>
 
-                  {/* Brochure 2 (Inside) */}
+                  {/* DCI Brochure */}
                   <div className="p-2.5 rounded-xl bg-white/[0.04] border border-indigo-500/20 hover:border-indigo-500/40 transition-all flex flex-col justify-between gap-2 group/card">
                     <div>
                       <div className="flex items-center justify-between text-[10px] font-bold text-indigo-300 mb-1">
-                        <span>📖 Brochure Part 2</span>
-                        <span className="text-slate-400 font-mono text-[9px]">7.3 MB</span>
+                        <span>📖 DCI Brochure</span>
+                        <span className="text-slate-400 font-mono text-[9px]">390 KB</span>
                       </div>
-                      <p className="text-[10px] text-slate-300 truncate">Inside Full Modules</p>
+                      <p className="text-[10px] text-slate-300 truncate">Digital Campus 2-Page</p>
                     </div>
                     <div className="flex items-center gap-1.5 pt-1">
                       <button
@@ -562,7 +610,7 @@ const NexgnInstituteSection = () => {
                       <button
                         onClick={() => handleDownloadDoc('inside')}
                         className="p-1 rounded-lg bg-white/5 hover:bg-white/15 text-white text-[10px] transition-colors cursor-pointer"
-                        title="Download NEXGN Brochure Part 2 (PDF)"
+                        title="Download NEXGN DCI Brochure (Images)"
                       >
                         📥
                       </button>
@@ -572,16 +620,16 @@ const NexgnInstituteSection = () => {
               </div>
             </div>
 
-            {/* Bottom Action Button: Triggers Contact Phone Modal */}
+            {/* Bottom Action Button: Redirects to SaaS based software and opens Institute Pro registration form */}
             <div className="pt-6 mt-6 border-t border-white/10">
-              <button
-                onClick={() => setShowContactModal(true)}
+              <Link
+                to="/saas-software?plan=15&register=true"
                 className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-purple-600/20 hover:shadow-purple-600/40 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
               >
                 <span>⚡</span>
                 <span>Activate Your Plan</span>
                 <span className="text-base font-bold">→</span>
-              </button>
+              </Link>
             </div>
           </motion.div>
         </div>
@@ -644,7 +692,10 @@ const NexgnInstituteSection = () => {
                   {NEXGN_DOCUMENTS.map((doc) => (
                     <button
                       key={doc.id}
-                      onClick={() => setActiveDocTab(doc.id)}
+                      onClick={() => {
+                        setActiveDocTab(doc.id)
+                        setActiveDocPageIndex(0)
+                      }}
                       className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 border ${
                         activeDocTab === doc.id
                           ? 'bg-gradient-to-r from-aim-gold to-amber-400 text-aim-navy border-aim-gold shadow-lg shadow-aim-gold/20 font-black'
@@ -663,7 +714,10 @@ const NexgnInstituteSection = () => {
                     </button>
                   ))}
                   <button
-                    onClick={() => setActiveDocTab('all')}
+                    onClick={() => {
+                      setActiveDocTab('all')
+                      setActiveDocPageIndex(0)
+                    }}
                     className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 border ${
                       activeDocTab === 'all'
                         ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white border-purple-400 shadow-lg shadow-purple-500/20 font-black'
@@ -709,20 +763,28 @@ const NexgnInstituteSection = () => {
                             <span className="text-2xl">{doc.icon}</span>
                           </div>
 
-                          {/* PDF Preview Frame */}
-                          <div className="relative w-full h-64 sm:h-72 rounded-xl overflow-hidden border border-white/10 bg-slate-900 shadow-inner">
-                            <iframe
-                              src={`${doc.file}#toolbar=0&navpanes=0&scrollbar=0`}
-                              title={`${doc.title} Preview`}
-                              className="w-full h-full rounded-xl"
-                            />
+                          {/* Preview Frame (Image or PDF) */}
+                          <div className="relative w-full h-64 sm:h-72 rounded-xl overflow-hidden border border-white/10 bg-slate-900 shadow-inner flex items-center justify-center p-1">
+                            {doc.type === 'image' ? (
+                              <img
+                                src={doc.pages?.[0]?.file || doc.file}
+                                alt={`${doc.title} Preview`}
+                                className="w-full h-full object-contain rounded-lg"
+                              />
+                            ) : (
+                              <iframe
+                                src={`${doc.pages?.[0]?.file || doc.file}#toolbar=0&navpanes=0&scrollbar=0`}
+                                title={`${doc.title} Preview`}
+                                className="w-full h-full rounded-xl"
+                              />
+                            )}
                           </div>
                         </div>
 
                         {/* Bottom Bar with Actions */}
                         <div className="pt-3 mt-3 border-t border-white/10 flex items-center justify-between gap-2">
                           <button
-                            onClick={() => setActiveDocTab(doc.id)}
+                            onClick={() => { setActiveDocTab(doc.id); setActiveDocPageIndex(0) }}
                             className="text-[11px] font-bold text-aim-gold hover:underline flex items-center gap-1 cursor-pointer"
                           >
                             <span>🔍</span>
@@ -760,9 +822,28 @@ const NexgnInstituteSection = () => {
                         </div>
                       </div>
 
+                      {/* Page Switcher if Multi-page */}
+                      {currentDoc.pages && currentDoc.pages.length > 1 && (
+                        <div className="flex items-center gap-1.5 bg-black/40 p-1 rounded-xl border border-white/10">
+                          {currentDoc.pages.map((p, pIdx) => (
+                            <button
+                              key={pIdx}
+                              onClick={() => setActiveDocPageIndex(pIdx)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                activeDocPageIndex === pIdx
+                                  ? 'bg-aim-gold text-aim-navy font-black shadow'
+                                  : 'text-slate-300 hover:text-white hover:bg-white/10'
+                              }`}
+                            >
+                              {p.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
                       <div className="flex items-center gap-2">
                         <a
-                          href={currentDoc.file}
+                          href={currentDocPage.file}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-slate-200 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer"
@@ -771,23 +852,32 @@ const NexgnInstituteSection = () => {
                           <span>Open in New Tab</span>
                         </a>
                         <button
-                          onClick={() => handleDownloadDoc(currentDoc.id)}
+                          onClick={() => handleDownloadDoc(currentDoc.id, activeDocPageIndex)}
                           className="px-4 py-2 rounded-xl bg-gradient-to-r from-aim-gold to-amber-400 text-aim-navy font-black text-xs uppercase tracking-wider shadow-md hover:scale-105 transition-all cursor-pointer flex items-center gap-1.5"
                         >
                           <span>📥</span>
-                          <span>Download PDF ({currentDoc.size})</span>
+                          <span>Download ({currentDocPage.name})</span>
                         </button>
                       </div>
                     </div>
 
-                    {/* PDF Embedded Viewer Container */}
-                    <div className="flex-1 min-h-[500px] lg:min-h-[620px] rounded-2xl overflow-hidden border border-white/15 bg-slate-900 shadow-2xl relative">
-                      <iframe
-                        key={currentDoc.id}
-                        src={`${currentDoc.file}#toolbar=1&navpanes=1&scrollbar=1`}
-                        title={currentDoc.title}
-                        className="w-full h-full min-h-[500px] lg:min-h-[620px] rounded-2xl bg-white"
-                      />
+                    {/* Embedded Viewer Container (Image or PDF) */}
+                    <div className="flex-1 min-h-[500px] lg:min-h-[620px] rounded-2xl overflow-y-auto border border-white/15 bg-slate-900 shadow-2xl flex items-center justify-center p-3">
+                      {currentDocPage.type === 'image' ? (
+                        <img
+                          key={`${currentDoc.id}-${activeDocPageIndex}`}
+                          src={currentDocPage.file}
+                          alt={`${currentDoc.title} - ${currentDocPage.name}`}
+                          className="max-h-[580px] w-auto max-w-full object-contain rounded-xl shadow-2xl transition-transform duration-300 hover:scale-[1.01]"
+                        />
+                      ) : (
+                        <iframe
+                          key={`${currentDoc.id}-${activeDocPageIndex}`}
+                          src={`${currentDocPage.file}#toolbar=1&navpanes=1&scrollbar=1`}
+                          title={`${currentDoc.title} - ${currentDocPage.name}`}
+                          className="w-full h-full min-h-[500px] lg:min-h-[620px] rounded-xl bg-white shadow-inner"
+                        />
+                      )}
                     </div>
                   </div>
                 )}
@@ -1020,7 +1110,7 @@ const NexgnInstituteSection = () => {
                     Close Preview
                   </button>
                   <Link
-                    to="/saas-software?plan=15"
+                    to="/saas-software?plan=15&register=true"
                     onClick={() => setShowPreviewModal(false)}
                     className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-aim-gold to-amber-400 text-aim-navy font-black text-xs uppercase tracking-wider shadow-lg shadow-aim-gold/20 hover:scale-105 transition-all cursor-pointer flex items-center gap-1.5"
                   >
