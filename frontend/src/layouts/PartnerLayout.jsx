@@ -16,6 +16,15 @@ const navItems = [
     ),
   },
   {
+    path: ROUTES.PARTNER.NETWORK,
+    label: 'My Network',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+      </svg>
+    ),
+  },
+  {
     path: ROUTES.PARTNER.LEADS,
     label: 'Lead Management',
     icon: (
@@ -53,7 +62,7 @@ const navItems = [
   },
   {
     path: ROUTES.PARTNER.PAYOUTS,
-    label: 'Payout',
+    label: 'Commissions & Payouts',
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -99,20 +108,6 @@ const PartnerLayout = () => {
   }
 
   const isActive = (path) => location.pathname === path
-
-  const getPartnerTypeLabel = (user) => {
-    if (user?.partner_type) {
-      const pt = user.partner_type.toLowerCase()
-      if (pt.includes('premium')) return 'Premium Partner'
-      if (pt.includes('master')) return 'Master Partner'
-      if (pt.includes('associate')) return 'Associate Partner'
-      return user.partner_type.charAt(0).toUpperCase() + user.partner_type.slice(1) + ' Partner'
-    }
-    if (user?.name?.toLowerCase().includes('hadid') || user?.partner_name?.toLowerCase().includes('hadid')) {
-      return 'Premium Partner'
-    }
-    return 'Associate Partner'
-  }
 
   return (
     <div className="flex h-screen w-screen bg-[#0f1117] overflow-hidden select-none">
@@ -183,12 +178,12 @@ const PartnerLayout = () => {
                   {(partnerUser.name || partnerUser.partner_name || 'P').charAt(0).toUpperCase()}
                 </span>
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-white text-xs font-semibold truncate">
                   {partnerUser.name || partnerUser.partner_name || 'Partner'}
                 </p>
                 <p className="text-aim-copy-muted text-[10px] truncate">
-                  {partnerUser.organization || partnerUser.organization_name || ''}
+                  {partnerUser.organization || partnerUser.organization_name || 'AIM Partner'}
                 </p>
               </div>
             </div>
@@ -231,32 +226,20 @@ const PartnerLayout = () => {
         </div>
       </aside>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        {/* Top bar */}
-        <header className="h-16 border-b border-white/5 bg-aim-navy/50 backdrop-blur flex items-center px-6 shrink-0">
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center">
-              {/* Hamburger button */}
-              <button
-                onClick={() => setIsSidebarOpen(true)}
-                className="p-2 -ml-2 mr-2 text-aim-copy-muted hover:text-white lg:hidden rounded-lg focus:outline-none cursor-pointer"
-                aria-label="Open Sidebar"
-              >
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-              <h2 className="text-white text-sm font-semibold capitalize">
-                {navItems.find((n) => isActive(n.path))?.label || 'Partner Portal'}
-              </h2>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-aim-copy-muted font-semibold shrink-0 ml-3">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              <span className="truncate max-w-[150px] sm:max-w-none">{getPartnerTypeLabel(partnerUser)}</span>
-            </div>
-          </div>
-        </header>
+      {/* Main content (No navbar) */}
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
+        {/* Mobile Sidebar Trigger (only visible on mobile screens) */}
+        <div className="lg:hidden p-4 pb-0 flex items-center justify-between">
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-aim-copy-muted hover:text-white border border-white/10 focus:outline-none cursor-pointer"
+            aria-label="Open Sidebar"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
 
         {/* Page content */}
         <main className="flex-1 p-6 overflow-y-auto">

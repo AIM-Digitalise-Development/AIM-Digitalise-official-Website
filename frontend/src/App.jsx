@@ -56,6 +56,7 @@ import PartnerMarketing from './pages/partner/Marketing'
 import PartnerDueRenewal from './pages/partner/DueRenewal'
 import PartnerSupport from './pages/partner/Support'
 import PartnerDemoSlots from './pages/partner/DemoSlots'
+import PartnerNetwork from './pages/partner/Network'
 import ClientLayout from './layouts/ClientLayout'
 import ClientLogin from './pages/client/Login'
 import ClientProducts from './pages/client/Products'
@@ -174,6 +175,7 @@ function App() {
           {/* ── Partner portal (authenticated shell with sidebar) ── */}
           <Route path={ROUTES.PARTNER.DASHBOARD} element={<PartnerLayout />}>
             <Route index element={<PartnerDashboard />} />
+            <Route path="network" element={<PartnerNetwork />} />
             <Route path="orders" element={<PartnerOrders />} />
             <Route path="payouts" element={<PartnerPayouts />} />
             <Route path="leads" element={<PartnerLeads />} />

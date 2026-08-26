@@ -3669,6 +3669,293 @@ export const getMockResponse = (url, method, data = null) => {
     };
   }
 
+  // GET /partner/my-subordinates
+  if (lowercaseUrl.includes('/partner/my-subordinates') && method === 'GET') {
+    return {
+      success: true,
+      data: {
+        partner: {
+          id: 2,
+          partner_id: "PIDIN26052",
+          name: "Your Partner Name",
+          rank: "master"
+        },
+        summary: {
+          total_subordinates: 3,
+          total_masters: 1,
+          total_associates: 2,
+          total_downline: 5,
+          total_downline_revenue: 1850000
+        },
+        hierarchy_tree: {
+          id: 2,
+          partner_id: "PIDIN26052",
+          partner_name: "Your Partner Name",
+          organization_name: "Your Organization Name",
+          email: "your.email@example.com",
+          contact_no: "9876543210",
+          rank: "master",
+          is_active: true,
+          parent_partner_id: null,
+          sales_summary: {
+            total_sales: 18,
+            total_revenue: 720000,
+            active_clients: 15
+          },
+          children: [
+            {
+              id: 3,
+              partner_id: "PIDIN26053",
+              partner_name: "Kajol Mahato",
+              organization_name: "BB Locals",
+              email: "kajol@gmail.com",
+              contact_no: "4875680537",
+              rank: "associate",
+              is_active: true,
+              parent_partner_id: "PIDIN26052",
+              sales_summary: {
+                total_sales: 12,
+                total_revenue: 450000,
+                active_clients: 9
+              },
+              children: [
+                {
+                  id: 6,
+                  partner_id: "PIDIN26056",
+                  partner_name: "Rohan Verma",
+                  organization_name: "Verma Digital Hub",
+                  email: "rohan.verma@example.com",
+                  contact_no: "9811223344",
+                  rank: "associate",
+                  is_active: true,
+                  parent_partner_id: "PIDIN26053",
+                  sales_summary: {
+                    total_sales: 5,
+                    total_revenue: 180000,
+                    active_clients: 4
+                  },
+                  children: []
+                }
+              ]
+            },
+            {
+              id: 4,
+              partner_id: "PIDIN26054",
+              partner_name: "Vikramaditya Roy",
+              organization_name: "Apex Tech Solutions",
+              email: "vikram@apextech.in",
+              contact_no: "9748291038",
+              rank: "master",
+              is_active: true,
+              parent_partner_id: "PIDIN26052",
+              sales_summary: {
+                total_sales: 16,
+                total_revenue: 680000,
+                active_clients: 14
+              },
+              children: [
+                {
+                  id: 7,
+                  partner_id: "PIDIN26057",
+                  partner_name: "Pooja Hegde",
+                  organization_name: "Pooja Innovations",
+                  email: "pooja@innovations.io",
+                  contact_no: "9833445566",
+                  rank: "associate",
+                  is_active: true,
+                  parent_partner_id: "PIDIN26054",
+                  sales_summary: {
+                    total_sales: 8,
+                    total_revenue: 310000,
+                    active_clients: 7
+                  },
+                  children: []
+                }
+              ]
+            },
+            {
+              id: 5,
+              partner_id: "PIDIN26055",
+              partner_name: "Sneha Mukherjee",
+              organization_name: "CloudScale Systems",
+              email: "sneha.m@cloudscale.com",
+              contact_no: "9823456789",
+              rank: "associate",
+              is_active: true,
+              parent_partner_id: "PIDIN26052",
+              sales_summary: {
+                total_sales: 9,
+                total_revenue: 230000,
+                active_clients: 6
+              },
+              children: []
+            }
+          ]
+        },
+        all_subordinates: [
+          {
+            id: 3,
+            partner_id: "PIDIN26053",
+            partner_name: "Kajol Mahato",
+            organization_name: "BB Locals",
+            email: "kajol@gmail.com",
+            contact_no: "4875680537",
+            rank: "associate",
+            is_active: true,
+            sales_summary: {
+              total_sales: 12,
+              total_revenue: 450000,
+              active_clients: 9
+            },
+            total_subordinates: 1
+          },
+          {
+            id: 4,
+            partner_id: "PIDIN26054",
+            partner_name: "Vikramaditya Roy",
+            organization_name: "Apex Tech Solutions",
+            email: "vikram@apextech.in",
+            contact_no: "9748291038",
+            rank: "master",
+            is_active: true,
+            sales_summary: {
+              total_sales: 16,
+              total_revenue: 680000,
+              active_clients: 14
+            },
+            total_subordinates: 1
+          },
+          {
+            id: 5,
+            partner_id: "PIDIN26055",
+            partner_name: "Sneha Mukherjee",
+            organization_name: "CloudScale Systems",
+            email: "sneha.m@cloudscale.com",
+            contact_no: "9823456789",
+            rank: "associate",
+            is_active: true,
+            sales_summary: {
+              total_sales: 9,
+              total_revenue: 230000,
+              active_clients: 6
+            },
+            total_subordinates: 0
+          }
+        ]
+      }
+    };
+  }
+
+  // GET /partner/profile
+  if (lowercaseUrl.includes('/partner/profile') && method === 'GET') {
+    return {
+      success: true,
+      data: {
+        id: 2,
+        partner_id: "PIDIN26052",
+        organization_name: "Your Organization Name",
+        partner_name: "Your Partner Name",
+        partner_type: "associate",
+        rank: "master",
+        email: "your.email@example.com",
+        contact_no: "9876543210",
+        is_active: true,
+        registration_status: "active",
+        total_clients: 18,
+        extra_earnings_percentage: 15,
+        validity_till: "2027-03-31"
+      }
+    };
+  }
+
+  // GET /partner/commission-report
+  if (lowercaseUrl.includes('/partner/commission-report') && method === 'GET') {
+    return {
+      success: true,
+      data: {
+        partner_id: "PIDIN26052",
+        partner_name: "Your Partner Name",
+        rank: "master",
+        total_sales: 13660.93,
+        total_commission: 683.05,
+        total_orders: 2,
+        monthly_breakdown: [
+          {
+            month: "2026-07",
+            order_count: 2,
+            total_sales: 13660.93,
+            commission: 683.05
+          },
+          {
+            month: "2026-06",
+            order_count: 3,
+            total_sales: 18450.00,
+            commission: 922.50
+          },
+          {
+            month: "2026-05",
+            order_count: 1,
+            total_sales: 6500.00,
+            commission: 325.00
+          }
+        ],
+        commission_details: [
+          {
+            id: 8,
+            client_name: "BB Locals Client",
+            client_display_id: "AIM9745938",
+            cycle: "monthly",
+            amount: 2064.21,
+            payment_date: "2026-07-11 08:09:55",
+            seller_id: "PIDIN26053",
+            seller_name: "Kajol Mahato",
+            seller_rank: "associate",
+            my_commission_rate: "5%",
+            my_commission_earned: 103.21,
+            downline_commissions: [
+              {
+                partner_id: "PIDIN26053",
+                partner_name: "Kajol Mahato",
+                rank: "associate",
+                commission_rate: "10%",
+                commission_earned: 206.42
+              }
+            ]
+          },
+          {
+            id: 9,
+            client_name: "Apex Pro Institute",
+            client_display_id: "AIM9745939",
+            cycle: "yearly",
+            amount: 11596.72,
+            payment_date: "2026-07-15 11:24:10",
+            seller_id: "PIDIN26054",
+            seller_name: "Vikramaditya Roy",
+            seller_rank: "master",
+            my_commission_rate: "5%",
+            my_commission_earned: 579.84,
+            downline_commissions: [
+              {
+                partner_id: "PIDIN26054",
+                partner_name: "Vikramaditya Roy",
+                rank: "master",
+                commission_rate: "15%",
+                commission_earned: 1739.51
+              },
+              {
+                partner_id: "PIDIN26057",
+                partner_name: "Pooja Hegde",
+                rank: "associate",
+                commission_rate: "10%",
+                commission_earned: 1159.67
+              }
+            ]
+          }
+        ]
+      }
+    };
+  }
+
   return null
 }
 

@@ -165,6 +165,10 @@ export const checkPartnerAuth = () =>
 export const getPartnerProfile = () =>
   partnerFetch('GET', '/partner/profile')
 
+// ─── Partner Subordinates & Hierarchy Tree ────────────────────────────────────
+export const getPartnerSubordinates = () =>
+  partnerFetch('GET', '/partner/my-subordinates')
+
 // ─── Logout ──────────────────────────────────────────────────────────────────
 export const partnerLogout = () =>
   partnerFetch('POST', '/partner/logout')

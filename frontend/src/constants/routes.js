@@ -40,6 +40,7 @@ export const ROUTES = {
   },
   PARTNER: {
     DASHBOARD: '/partner',
+    NETWORK: '/partner/network',
     ORDERS: '/partner/orders',
     PAYOUTS: '/partner/payouts',
     LOGIN: '/partner/login',

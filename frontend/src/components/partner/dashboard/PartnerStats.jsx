@@ -1,32 +1,49 @@
 import { useEffect, useState } from 'react'
-import { getDashboardStats } from '../../../api/partner'
+import { getDashboardStats, getCommissionReport } from '../../../api/partner'
 import { usePartnerAuthStore } from '../../../store/partnerAuthStore'
 
 const PartnerStats = () => {
-  const { dashboardStats, setDashboardStats } = usePartnerAuthStore()
+  const { dashboardStats, setDashboardStats, commissionReport, setCommissionReport } = usePartnerAuthStore()
   const [stats, setStats] = useState(dashboardStats)
-  const [loading, setLoading] = useState(!dashboardStats)
+  const [report, setReport] = useState(commissionReport)
+  const [loading, setLoading] = useState(!dashboardStats && !commissionReport)
 
   useEffect(() => {
     if (dashboardStats) {
       setStats(dashboardStats)
     }
+    if (commissionReport) {
+      setReport(commissionReport)
+    }
 
-    getDashboardStats()
-      .then((res) => {
-        if (res.data?.success) {
-          const newData = res.data.data
-          if (JSON.stringify(newData) !== JSON.stringify(dashboardStats)) {
-            setStats(newData)
-            setDashboardStats(newData)
-          }
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    Promise.allSettled([
+      getDashboardStats(),
+      getCommissionReport()
+    ]).then(([statsRes, reportRes]) => {
+      if (statsRes.status === 'fulfilled' && statsRes.value?.data?.success) {
+        const newData = statsRes.value.data.data
+        setStats(newData)
+        setDashboardStats(newData)
+      }
+      if (reportRes.status === 'fulfilled' && reportRes.value?.data?.success) {
+        const newReport = reportRes.value.data.data
+        setReport(newReport)
+        setCommissionReport(newReport)
+      }
+    }).finally(() => {
+      setLoading(false)
+    })
   }, [])
 
   const info = stats?.partner_info
+
+  // Calculate actual total commission
+  const actualCommission = 
+    report?.total_commission !== undefined && report?.total_commission !== null
+      ? report.total_commission
+      : (info?.total_commission !== undefined && info?.total_commission !== null
+          ? info.total_commission
+          : (info?.commission !== undefined && info?.commission !== null ? info.commission : 0))
 
   const statCards = [
     {
@@ -38,7 +55,7 @@ const PartnerStats = () => {
     },
     {
       label: 'Total Commission',
-      value: loading ? '...' : `₹${Number(info?.total_revenue || 0).toLocaleString('en-IN')}`,
+      value: loading ? '...' : `₹${Number(actualCommission || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: '💰',
       color: 'text-green-400',
       bg: 'bg-green-500/10 border-green-500/20',

@@ -30,6 +30,7 @@ export const usePartnerAuthStore = create((set) => ({
   renewals: null,
   dashboardStats: null,
   commissionReport: null,
+  subordinatesData: null,
 
   partnerLogin: (user, token) => {
     localStorage.setItem(PARTNER_TOKEN_KEY, token)
@@ -48,6 +49,7 @@ export const usePartnerAuthStore = create((set) => ({
       renewals: null,
       dashboardStats: null,
       commissionReport: null,
+      subordinatesData: null,
     })
   },
 
@@ -68,10 +70,20 @@ export const usePartnerAuthStore = create((set) => ({
       renewals: null,
       dashboardStats: null,
       commissionReport: null,
+      subordinatesData: null,
     })
   },
 
-  setPartnerUser: (user) => set({ partnerUser: user, profileFetched: true }),
+  setPartnerUser: (user) => {
+    try {
+      const existing = localStorage.getItem(PARTNER_USER_KEY) ? JSON.parse(localStorage.getItem(PARTNER_USER_KEY)) : {}
+      const merged = { ...existing, ...user }
+      localStorage.setItem(PARTNER_USER_KEY, JSON.stringify(merged))
+      set({ partnerUser: merged, profileFetched: true })
+    } catch (_) {
+      set({ partnerUser: user, profileFetched: true })
+    }
+  },
   setOrders: (orders) => set({ orders }),
   setOrdersSummary: (ordersSummary) => set({ ordersSummary }),
   setLeads: (leads) => set({ leads }),
@@ -81,4 +93,5 @@ export const usePartnerAuthStore = create((set) => ({
   setRenewals: (renewals) => set({ renewals }),
   setDashboardStats: (dashboardStats) => set({ dashboardStats }),
   setCommissionReport: (commissionReport) => set({ commissionReport }),
+  setSubordinatesData: (subordinatesData) => set({ subordinatesData }),
 }))

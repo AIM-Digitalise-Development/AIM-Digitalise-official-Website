@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
+import { Link } from 'react-router-dom'
+import { ROUTES } from '../../constants/routes'
 import { usePartnerAuthStore } from '../../store/partnerAuthStore'
-import { getPartnerProfile, getPartnerOrders } from '../../api/partner'
+import { getPartnerProfile, getPartnerOrders, getPartnerSubordinates } from '../../api/partner'
+import RankBadge from '../../components/partner/network/RankBadge'
 import EarningsWidget from '../../components/partner/dashboard/EarningsWidget'
 import PartnerStats from '../../components/partner/dashboard/PartnerStats'
 import RecentOrders from '../../components/partner/dashboard/RecentOrders'
@@ -15,7 +18,9 @@ const PartnerDashboard = () => {
     commissionReport, 
     dashboardStats, 
     orders, 
-    setOrders 
+    setOrders,
+    subordinatesData,
+    setSubordinatesData
   } = usePartnerAuthStore()
   const [profile, setProfile] = useState(partnerUser)
   const [loading, setLoading] = useState(!partnerUser)
@@ -43,6 +48,19 @@ const PartnerDashboard = () => {
     }
     fetchProfile()
 
+    if (!subordinatesData) {
+      getPartnerSubordinates()
+        .then(res => {
+          if (res.data?.success) {
+            setSubordinatesData(res.data.data)
+            if (res.data.data?.partner?.rank) {
+              setProfile(prev => ({ ...(prev || {}), rank: res.data.data.partner.rank }))
+            }
+          }
+        })
+        .catch(() => {})
+    }
+
     if (!orders) {
       getPartnerOrders()
         .then(res => {
@@ -55,20 +73,13 @@ const PartnerDashboard = () => {
   }, [])
 
   const displayUser = profile || partnerUser
-
-  const getPartnerTypeLabel = (user) => {
-    if (user?.partner_type) {
-      const pt = user.partner_type.toLowerCase()
-      if (pt.includes('premium')) return 'Premium Partner'
-      if (pt.includes('master')) return 'Master Partner'
-      if (pt.includes('associate')) return 'Associate Partner'
-      return user.partner_type.charAt(0).toUpperCase() + user.partner_type.slice(1) + ' Partner'
-    }
-    if (user?.name?.toLowerCase().includes('hadid') || user?.partner_name?.toLowerCase().includes('hadid')) {
-      return 'Premium Partner'
-    }
-    return 'Associate Partner'
-  }
+  const partnerRank = 
+    displayUser?.rank || 
+    subordinatesData?.partner?.rank || 
+    subordinatesData?.hierarchy_tree?.rank || 
+    displayUser?.partner_rank || 
+    displayUser?.partner_type || 
+    'associate'
 
   const getClientsThisMonth = () => {
     if (displayUser?.total_clients_this_month !== undefined) {
@@ -140,29 +151,27 @@ const PartnerDashboard = () => {
               </span>{' '}
               👋
             </h1>
-            <p className="text-aim-copy-muted text-sm mt-1">
-              {displayUser?.organization_name || displayUser?.organization || 'AIM Partner'}
+            <p className="text-aim-copy-muted text-sm mt-1 flex items-center gap-2">
+              <span>{displayUser?.organization_name || displayUser?.organization || 'AIM Partner'}</span>
+              {displayUser?.partner_id && (
+                <>
+                  <span className="text-gray-600">•</span>
+                  <span className="font-mono text-gray-400 font-bold">{displayUser.partner_id}</span>
+                </>
+              )}
             </p>
           </div>
 
-          {/* Status badge */}
-          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border ${
-            displayUser?.is_active
-              ? 'bg-green-500/10 border-green-500/20 text-green-400'
-              : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
-          }`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${displayUser?.is_active ? 'bg-green-400' : 'bg-yellow-400'} animate-pulse`} />
-            {getPartnerTypeLabel(displayUser)}
+          {/* Dynamic Partner Rank / Type */}
+          <div className="flex items-center gap-2 shrink-0">
+            <RankBadge rank={partnerRank} size="sm" />
           </div>
         </div>
 
         {/* Profile info strip */}
         {!loading && displayUser && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {/* Card 1: This Month Earnings */}
-           
-
-            {/* Card 2: Total Client */}
+            {/* Card 1: Total Client */}
             <div className="relative rounded-xl border border-white/10 bg-white/5 px-4 py-3 hover:border-white/20 transition-all duration-300">
               <div className="flex justify-between items-start">
                 <p className="text-[10px] text-aim-copy-muted uppercase tracking-wider font-semibold">Total Client</p>
@@ -175,7 +184,7 @@ const PartnerDashboard = () => {
               </p>
             </div>
 
-            {/* Card 3: Extra Earnings Percentage */}
+            {/* Card 2: Extra Earnings Percentage */}
             <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 hover:border-white/20 transition-all duration-300">
               <p className="text-[10px] text-aim-copy-muted uppercase tracking-wider font-semibold">Extra Earnings Slab</p>
               <p className="text-white text-sm font-black mt-1 truncate">
@@ -187,7 +196,9 @@ const PartnerDashboard = () => {
                 })()}
               </p>
             </div>
-             <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 hover:border-white/20 transition-all duration-300">
+
+            {/* Card 3: This Month Extra Earnings */}
+            <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 hover:border-white/20 transition-all duration-300">
               <p className="text-[10px] text-aim-copy-muted uppercase tracking-wider font-semibold">
                 {new Date().toLocaleDateString('en-US', { month: 'long' })} Extra Earnings
               </p>
@@ -217,6 +228,44 @@ const PartnerDashboard = () => {
                   return dateObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
                 })()}
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* Network & Hierarchy Snapshot Banner */}
+        {subordinatesData && (
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-aim-navy via-[#151928] to-[#121624] border border-white/10 p-5 shadow-lg">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-aim-gold/10 border border-aim-gold/20 flex items-center justify-center text-aim-gold shrink-0 text-xl">
+                  🌳
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm sm:text-base font-black text-white">
+                      Partner Team & Hierarchy Network
+                    </h3>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-aim-gold/10 text-aim-gold border border-aim-gold/20">
+                      {subordinatesData.summary?.total_downline || 0} Downlines
+                    </span>
+                  </div>
+                  <p className="text-xs text-aim-copy-muted mt-0.5">
+                    {subordinatesData.summary?.total_subordinates || 0} direct subordinate partners • ₹{Number(subordinatesData.summary?.total_downline_revenue || 0).toLocaleString('en-IN')} total team sales volume
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 self-start md:self-center">
+                <Link
+                  to={ROUTES.PARTNER.NETWORK}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-aim-gold hover:bg-aim-gold-light text-aim-navy font-black text-xs transition-all shadow-md shadow-aim-gold/10 hover:scale-105 cursor-pointer"
+                >
+                  <span>Explore Hierarchy Tree</span>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </Link>
+              </div>
             </div>
           </div>
         )}

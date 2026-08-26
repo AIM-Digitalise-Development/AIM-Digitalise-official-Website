@@ -11,6 +11,7 @@ import {
   getCommissionSettings,
   updateCommissionSettings
 } from '../../api/admin/partners'
+import PartnerPayoutTab from '../../components/admin/partners/PartnerPayoutTab'
 
 const AdminPartners = () => {
   const [partners, setPartners] = useState([])
@@ -552,6 +553,16 @@ const AdminPartners = () => {
               Partner Commission
             </button>
             <button
+              onClick={() => setActiveTab('partner_payout')}
+              className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${
+                activeTab === 'partner_payout'
+                  ? 'bg-white border-[#ef4444] text-[#ef4444] -mb-[13px] z-10'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
+              }`}
+            >
+              Partner Payout
+            </button>
+            <button
               onClick={() => setActiveTab('partner_reports')}
               className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 ${
                 activeTab === 'partner_reports'
@@ -736,7 +747,7 @@ const AdminPartners = () => {
           )}
 
           {/* Inactive Tab Placeholders */}
-          {activeTab !== 'show_partner' && activeTab !== 'hierarchy' && activeTab !== 'partner_commission' && (
+          {activeTab !== 'show_partner' && activeTab !== 'hierarchy' && activeTab !== 'partner_commission' && activeTab !== 'partner_payout' && (
             <div className="flex flex-col items-center justify-center py-16 text-center space-y-3.5">
               <span className="text-4xl">🤝</span>
               <h4 className="text-base font-bold text-slate-800 capitalize">{activeTab.replace('partner_', 'Partner ')} Records</h4>
@@ -864,6 +875,11 @@ const AdminPartners = () => {
                 )}
               </div>
             </div>
+          )}
+
+          {/* Tab 4 Content: Partner Payout */}
+          {activeTab === 'partner_payout' && (
+            <PartnerPayoutTab />
           )}
 
           {/* Tab 5 Content: Partner Hierarchy Tree */}
