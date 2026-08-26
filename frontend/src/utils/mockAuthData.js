@@ -403,6 +403,141 @@ export const getMockResponse = (url, method, data = null) => {
         }
       ]
     }
+    if (!window.__mockProposals) {
+      try {
+        const stored = localStorage.getItem('mock_proposals_data')
+        if (stored) {
+          window.__mockProposals = JSON.parse(stored)
+        }
+      } catch (e) {}
+
+      if (!window.__mockProposals || !window.__mockProposals.length) {
+        window.__mockProposals = [
+          {
+            id: 1,
+            school_name: "Greenwood High School",
+            principal_name: "Dr. Sarah Jenkins",
+            email: "official@school.edu.in",
+            contact_no: "+91 98765 43210",
+            address: "123 Campus Lane, City Center, Bangalore",
+            email_sent: false,
+            proposal_letter_path: "uploads/proposals/proposal_1_17145293.pdf",
+            sent_at: null,
+            created_at: "2026-08-25T13:00:00.000000Z",
+            updated_at: "2026-08-25T13:00:00.000000Z"
+          },
+          {
+            id: 2,
+            school_name: "St. Xavier's International Academy",
+            principal_name: "Fr. Thomas D'Souza",
+            email: "admin@stxaviers.edu.in",
+            contact_no: "+91 98450 11223",
+            address: "45 Heritage Boulevard, Civil Lines, Pune",
+            email_sent: true,
+            proposal_letter_path: "uploads/proposals/proposal_2_17145294.pdf",
+            sent_at: "2026-08-25T15:30:00.000000Z",
+            created_at: "2026-08-24T09:15:00.000000Z",
+            updated_at: "2026-08-25T15:30:00.000000Z"
+          },
+          {
+            id: 3,
+            school_name: "Delhi Public Global Campus",
+            principal_name: "Mrs. Meenakshi Sharma",
+            email: "principal@dpglobal.ac.in",
+            contact_no: "+91 98112 34567",
+            address: "Plot 88, Knowledge Park III, Greater Noida",
+            email_sent: false,
+            proposal_letter_path: "uploads/proposals/proposal_3_17145295.pdf",
+            sent_at: null,
+            created_at: "2026-08-26T10:45:00.000000Z",
+            updated_at: "2026-08-26T10:45:00.000000Z"
+          }
+        ]
+      }
+    }
+  }
+
+  // ── Proposal API Mocks ───────────────────────────
+  // POST /api/public/proposals/send-otp
+  if (lowercaseUrl.includes('/proposals/send-otp') && method === 'POST') {
+    const demoOtp = 4829
+    return {
+      success: true,
+      message: "Verification OTP has been sent to your Email ID. Please check your inbox.",
+      otp: demoOtp
+    }
+  }
+
+  // POST /api/public/proposals/verify-otp
+  if (lowercaseUrl.includes('/proposals/verify-otp') && method === 'POST') {
+    return {
+      success: true,
+      message: "Email ID verified successfully!"
+    }
+  }
+
+  // POST /api/public/proposals (Submit Proposal)
+  if (lowercaseUrl.includes('/public/proposals') && method === 'POST') {
+    const newProposal = {
+      id: (window.__mockProposals?.length || 0) + 1,
+      school_name: data.school_name || "Greenwood High School",
+      principal_name: data.principal_name || "Principal",
+      email: data.email || "official@school.edu.in",
+      contact_no: data.contact_no || data.phone || "+91 98765 43210",
+      address: data.address || "123 Campus Lane, City Center",
+      email_sent: false,
+      proposal_letter_path: `uploads/proposals/proposal_${Date.now()}.pdf`,
+      sent_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+    if (window.__mockProposals) {
+      window.__mockProposals = [newProposal, ...window.__mockProposals]
+      try {
+        localStorage.setItem('mock_proposals_data', JSON.stringify(window.__mockProposals))
+      } catch (e) {}
+    }
+    return {
+      success: true,
+      message: "Proposal request details submitted successfully!",
+      data: newProposal
+    }
+  }
+
+  // POST /api/admin/proposals/:id/send-email
+  if (lowercaseUrl.includes('/admin/proposals/') && lowercaseUrl.includes('/send-email') && method === 'POST') {
+    const match = lowercaseUrl.match(/\/admin\/proposals\/(\d+)\/send-email/)
+    const propId = match ? parseInt(match[1], 10) : null
+    let targetEmail = "client@school.edu.in"
+    if (window.__mockProposals) {
+      window.__mockProposals = window.__mockProposals.map(p => {
+        if (p.id === propId || String(p.id) === String(propId)) {
+          targetEmail = p.email
+          return {
+            ...p,
+            email_sent: true,
+            sent_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        }
+        return p
+      })
+      try {
+        localStorage.setItem('mock_proposals_data', JSON.stringify(window.__mockProposals))
+      } catch (e) {}
+    }
+    return {
+      success: true,
+      message: `Proposal email successfully sent to ${targetEmail}!`
+    }
+  }
+
+  // GET /api/admin/proposals
+  if (lowercaseUrl.includes('/admin/proposals') && method === 'GET') {
+    return {
+      success: true,
+      data: window.__mockProposals || []
+    }
   }
 
   if (lowercaseUrl.includes('/public/rm-options')) {

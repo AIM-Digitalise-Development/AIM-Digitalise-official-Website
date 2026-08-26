@@ -6,6 +6,8 @@ import useUIStore from '../../store/uiStore'
 import nexgnLogo from '../../assets/images/nexgnlogo.png'
 import nexgnVideo from '../../assets/videos/craete_a_video_where_kids_tea.mp4'
 
+import { sendProposalOtp, verifyProposalOtp, submitProposal } from '../../api/proposals'
+
 // Official Documents
 import officialBrochureImg from '../../assets/doc/OfficialBrochure.jpg'
 import officialBrochureImg1 from '../../assets/doc/Official Brochure1.jpg'
@@ -321,12 +323,16 @@ const SchoolCollegeSaas = () => {
     address: '',
     principal_name: '',
     email: '',
-    phone: '',
+    contact_no: '',
     otp: '',
   })
   const [otpSent, setOtpSent] = useState(false)
   const [otpVerified, setOtpVerified] = useState(false)
   const [otpNotice, setOtpNotice] = useState('')
+  const [proposalError, setProposalError] = useState('')
+  const [isSendingOtp, setIsSendingOtp] = useState(false)
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
+  const [isSubmittingProposal, setIsSubmittingProposal] = useState(false)
   const [proposalSuccess, setProposalSuccess] = useState(false)
 
   // ── Feature Explorer Modal State ──
@@ -372,43 +378,85 @@ const SchoolCollegeSaas = () => {
   }
 
   const openProposalModal = () => {
-    setProposalFormData({ school_name: '', address: '', principal_name: '', email: '', phone: '', otp: '' })
+    setProposalFormData({ school_name: '', address: '', principal_name: '', email: '', contact_no: '', otp: '' })
     setOtpSent(false)
     setOtpVerified(false)
     setOtpNotice('')
+    setProposalError('')
+    setIsSendingOtp(false)
+    setIsVerifyingOtp(false)
+    setIsSubmittingProposal(false)
     setProposalSuccess(false)
     setIsProposalModalOpen(true)
   }
 
-  const handleSendOtp = () => {
+  const handleSendOtp = async () => {
+    setProposalError('')
     if (!proposalFormData.email || !proposalFormData.email.includes('@')) {
-      alert('Please enter a valid Email ID first.')
+      setProposalError('Please enter a valid Email ID first.')
       return
     }
-    setOtpSent(true)
-    setOtpNotice('✉️ Demo OTP: 4829 has been sent to your Email ID.')
+    setIsSendingOtp(true)
+    setOtpNotice('')
+    try {
+      await sendProposalOtp(proposalFormData.email.trim())
+      setOtpSent(true)
+      setOtpNotice('✉️ Verification OTP has been sent to your Email ID. Please check your inbox.')
+    } catch (err) {
+      setProposalError(err.message || 'Failed to send OTP. Please try again.')
+    } finally {
+      setIsSendingOtp(false)
+    }
   }
 
-  const handleVerifyOtp = () => {
-    if (proposalFormData.otp && proposalFormData.otp.trim().length === 4) {
+  const handleVerifyOtp = async () => {
+    setProposalError('')
+    if (!proposalFormData.otp || proposalFormData.otp.trim().length !== 4) {
+      setProposalError('Please enter the 4-digit OTP.')
+      return
+    }
+    setIsVerifyingOtp(true)
+    try {
+      const res = await verifyProposalOtp(proposalFormData.email.trim(), proposalFormData.otp.trim())
       setOtpVerified(true)
-      setOtpNotice('✅ Email verified successfully!')
-    } else {
-      alert('Please enter the 4-digit OTP.')
+      setOtpNotice(res.message || '✅ Email ID verified successfully!')
+    } catch (err) {
+      setProposalError(err.message || 'Invalid or expired OTP.')
+    } finally {
+      setIsVerifyingOtp(false)
     }
   }
 
-  const handleProposalSubmit = (e) => {
+  const handleProposalSubmit = async (e) => {
     e.preventDefault()
-    if (!proposalFormData.school_name || !proposalFormData.phone) {
-      alert('Please fill all required fields.')
+    setProposalError('')
+    if (!proposalFormData.school_name || !proposalFormData.address || !proposalFormData.principal_name || !proposalFormData.contact_no) {
+      setProposalError('Please fill all required fields.')
       return
     }
-    handleDownloadDoc('proposal')
-    setProposalSuccess(true)
-    setTimeout(() => {
-      setIsProposalModalOpen(false)
-    }, 2800)
+    if (!otpVerified) {
+      setProposalError('Please verify your Email ID with OTP before requesting proposal.')
+      return
+    }
+    setIsSubmittingProposal(true)
+    try {
+      await submitProposal({
+        school_name: proposalFormData.school_name.trim(),
+        address: proposalFormData.address.trim(),
+        principal_name: proposalFormData.principal_name.trim(),
+        email: proposalFormData.email.trim(),
+        contact_no: proposalFormData.contact_no.trim(),
+      })
+      // Note: Proposal is not downloaded automatically. Admin will review and send it via email from the admin portal.
+      setProposalSuccess(true)
+      setTimeout(() => {
+        setIsProposalModalOpen(false)
+      }, 4000)
+    } catch (err) {
+      setProposalError(err.message || 'Failed to submit proposal request. Please try again.')
+    } finally {
+      setIsSubmittingProposal(false)
+    }
   }
 
   const togglePlay = () => {
@@ -1008,17 +1056,29 @@ const SchoolCollegeSaas = () => {
                   📄 Official Commercial Proposal
                 </div>
                 <h3 className="text-xl sm:text-2xl font-black text-white">Get Proposal With Commercial</h3>
-                <p className="text-xs text-slate-300">Provide your institution details to download the official commercial proposal PDF.</p>
+                <p className="text-xs text-slate-300">Provide your institution details to receive the official commercial proposal PDF on your email.</p>
               </div>
 
               {proposalSuccess ? (
                 <div className="py-8 text-center space-y-3">
-                  <div className="text-5xl">🎉</div>
-                  <h4 className="text-lg font-black text-emerald-400">Proposal Downloading!</h4>
-                  <p className="text-xs text-slate-300">The NEXGN Official Proposal (PDF) with commercial pricing is now downloading to your device.</p>
+                  <div className="text-5xl animate-bounce">🎉</div>
+                  <h4 className="text-lg font-black text-emerald-400">Proposal Request Submitted!</h4>
+                  <p className="text-xs text-slate-300 max-w-sm mx-auto">
+                    Thank you! Your institutional proposal request has been logged. Our administration desk will review your details and send the official proposal with commercial pricing directly to your verified email.
+                  </p>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold font-mono">
+                    ✓ Request Received • Proposal Will Be Sent to Your Email
+                  </div>
                 </div>
               ) : (
                 <form onSubmit={handleProposalSubmit} className="space-y-4">
+
+                  {proposalError && (
+                    <div className="p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-300 text-xs flex items-center gap-2">
+                      <span className="shrink-0 font-bold">⚠️</span>
+                      <span>{proposalError}</span>
+                    </div>
+                  )}
 
                   {/* School Name */}
                   <div className="space-y-1.5">
@@ -1061,7 +1121,18 @@ const SchoolCollegeSaas = () => {
 
                   {/* Email + OTP */}
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-slate-200">Email ID (OTP verify) <span className="text-aim-gold">*</span></label>
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-slate-200">
+                        Official Email ID <span className="text-aim-gold">*</span>
+                      </label>
+                      {otpVerified ? (
+                        <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
+                          <span>✓</span> Verified
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-amber-300 font-semibold">(Requires OTP Verification)</span>
+                      )}
+                    </div>
                     <div className="flex gap-2">
                       <input
                         type="email"
@@ -1070,41 +1141,66 @@ const SchoolCollegeSaas = () => {
                         placeholder="official@school.edu.in"
                         value={proposalFormData.email}
                         onChange={(e) => setProposalFormData({ ...proposalFormData, email: e.target.value })}
-                        className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/15 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-aim-gold transition-colors disabled:opacity-60"
+                        className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/15 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-aim-gold transition-colors disabled:opacity-60 disabled:bg-white/[0.02]"
                       />
                       {!otpVerified && (
                         <button
                           type="button"
+                          disabled={isSendingOtp || !proposalFormData.email}
                           onClick={handleSendOtp}
-                          className="px-3.5 py-2.5 rounded-xl bg-amber-500/20 text-aim-gold border border-amber-500/30 text-xs font-bold whitespace-nowrap hover:bg-amber-500/30 transition-colors cursor-pointer"
+                          className="px-3.5 py-2.5 rounded-xl bg-amber-500/20 text-aim-gold border border-amber-500/30 text-xs font-bold whitespace-nowrap hover:bg-amber-500/30 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                         >
-                          {otpSent ? 'Resend OTP' : 'Send OTP'}
+                          {isSendingOtp ? (
+                            <>
+                              <span className="w-3 h-3 border-2 border-aim-gold border-t-transparent rounded-full animate-spin inline-block" />
+                              <span>Sending...</span>
+                            </>
+                          ) : (
+                            otpSent ? 'Resend OTP' : 'Send OTP'
+                          )}
                         </button>
                       )}
                     </div>
 
                     {/* OTP input row */}
                     {otpSent && !otpVerified && (
-                      <div className="flex items-center gap-2 pt-1">
-                        <input
-                          type="text"
-                          maxLength={4}
-                          placeholder="4-Digit OTP"
-                          value={proposalFormData.otp}
-                          onChange={(e) => setProposalFormData({ ...proposalFormData, otp: e.target.value })}
-                          className="w-32 px-4 py-2 rounded-xl bg-white/10 border border-aim-gold text-white text-xs tracking-widest font-mono text-center focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleVerifyOtp}
-                          className="px-4 py-2 rounded-xl bg-aim-gold text-aim-navy text-xs font-black uppercase tracking-wider hover:scale-105 transition-all cursor-pointer"
-                        >
-                          Verify
-                        </button>
+                      <div className="space-y-1.5 pt-1">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            maxLength={4}
+                            placeholder="4-Digit OTP"
+                            value={proposalFormData.otp}
+                            onChange={(e) => setProposalFormData({ ...proposalFormData, otp: e.target.value })}
+                            className="w-32 px-4 py-2 rounded-xl bg-white/10 border border-aim-gold text-white text-xs tracking-widest font-mono text-center focus:outline-none placeholder:text-slate-500 placeholder:tracking-normal"
+                          />
+                          <button
+                            type="button"
+                            disabled={isVerifyingOtp || !proposalFormData.otp || proposalFormData.otp.trim().length !== 4}
+                            onClick={handleVerifyOtp}
+                            className="px-4 py-2 rounded-xl bg-aim-gold text-aim-navy text-xs font-black uppercase tracking-wider hover:scale-105 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center gap-1.5"
+                          >
+                            {isVerifyingOtp ? (
+                              <>
+                                <span className="w-3 h-3 border-2 border-aim-navy border-t-transparent rounded-full animate-spin inline-block" />
+                                <span>Verifying...</span>
+                              </>
+                            ) : (
+                              'VERIFY'
+                            )}
+                          </button>
+                        </div>
                       </div>
                     )}
+
                     {otpNotice && (
-                      <p className={`text-[11px] font-bold font-mono ${otpVerified ? 'text-emerald-400' : 'text-amber-300'}`}>{otpNotice}</p>
+                      <div className={`p-2.5 rounded-xl text-xs font-medium font-mono border ${
+                        otpVerified 
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' 
+                          : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                      }`}>
+                        {otpNotice}
+                      </div>
                     )}
                   </div>
 
@@ -1115,19 +1211,38 @@ const SchoolCollegeSaas = () => {
                       type="tel"
                       required
                       placeholder="+91 98765 43210"
-                      value={proposalFormData.phone}
-                      onChange={(e) => setProposalFormData({ ...proposalFormData, phone: e.target.value })}
+                      value={proposalFormData.contact_no}
+                      onChange={(e) => setProposalFormData({ ...proposalFormData, contact_no: e.target.value })}
                       className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/15 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-aim-gold transition-colors"
                     />
                   </div>
 
-                  {/* Submit */}
-                  <button
-                    type="submit"
-                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-aim-gold via-amber-400 to-aim-gold text-aim-navy font-black text-xs sm:text-sm uppercase tracking-wider shadow-2xl shadow-aim-gold/30 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer mt-2"
-                  >
-                    Get Proposal With Commercial
-                  </button>
+                  {/* Submit Button */}
+                  <div className="pt-2 space-y-1.5">
+                    <button
+                      type="submit"
+                      disabled={!otpVerified || isSubmittingProposal}
+                      className={`w-full py-3.5 rounded-2xl text-aim-navy font-black text-xs sm:text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+                        !otpVerified || isSubmittingProposal
+                          ? 'bg-slate-700/60 text-slate-400 cursor-not-allowed border border-white/10'
+                          : 'bg-gradient-to-r from-aim-gold via-amber-400 to-aim-gold shadow-2xl shadow-aim-gold/30 hover:scale-[1.02] active:scale-95 cursor-pointer'
+                      }`}
+                    >
+                      {isSubmittingProposal ? (
+                        <>
+                          <span className="w-4 h-4 border-2 border-aim-navy border-t-transparent rounded-full animate-spin inline-block" />
+                          <span>Submitting Proposal Request...</span>
+                        </>
+                      ) : (
+                        'Get Proposal With Commercial'
+                      )}
+                    </button>
+                    {!otpVerified && (
+                      <p className="text-[11px] text-center text-slate-400 font-medium">
+                        * Please verify your email with OTP above to enable proposal download.
+                      </p>
+                    )}
+                  </div>
                 </form>
               )}
             </motion.div>

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Helmet } from 'react-helmet-async'
+import { useSearchParams } from 'react-router-dom'
+import AdminProposals from './Proposals'
 import {
   getAdminLeads as getLeads,
   getAdminLeadStats as getLeadStats,
@@ -23,6 +25,28 @@ import {
 } from '../../api/admin/leads'
 
 export default function AdminLeads() {
+  // Navigation Tabs State
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const [activeTab, setActiveTab] = useState(tabParam && ['leads', 'followup', 'proposal'].includes(tabParam) ? tabParam : 'leads')
+
+  // Follow-up tab specific filter state
+  const [followUpFilterType, setFollowUpFilterType] = useState('all') // 'all' | 'today' | 'overdue' | 'upcoming'
+  const [followUpSearch, setFollowUpSearch] = useState('')
+  const [followUpPriority, setFollowUpPriority] = useState('')
+
+  useEffect(() => {
+    const currentTab = searchParams.get('tab')
+    if (currentTab && ['leads', 'followup', 'proposal'].includes(currentTab)) {
+      setActiveTab(currentTab)
+    }
+  }, [searchParams])
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId)
+    setSearchParams({ tab: tabId }, { replace: true })
+  }
+
   // Stats and Listing State
   const [stats, setStats] = useState(null)
   const [leads, setLeads] = useState([])
@@ -765,6 +789,89 @@ export default function AdminLeads() {
     return <span className={`inline-flex text-[9px] font-black uppercase tracking-wider border rounded-md px-2 py-0.5 ${c}`}>{label}</span>
   }
 
+  const getFollowUpStatus = (dateStr) => {
+    if (!dateStr) return { type: 'none', label: 'Not Set', badge: 'bg-slate-100 text-slate-500 border-slate-200' }
+    const cleanDateStr = dateStr.split(' ')[0]
+    const target = new Date(cleanDateStr)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    target.setHours(0, 0, 0, 0)
+
+    const diffTime = target.getTime() - today.getTime()
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24))
+
+    if (diffDays < 0) {
+      return {
+        type: 'overdue',
+        diffDays: Math.abs(diffDays),
+        label: `Overdue by ${Math.abs(diffDays)}d`,
+        formattedDate: cleanDateStr,
+        badge: 'bg-red-500/10 text-red-600 border-red-300 font-bold'
+      }
+    } else if (diffDays === 0) {
+      return {
+        type: 'today',
+        diffDays: 0,
+        label: 'Due Today',
+        formattedDate: cleanDateStr,
+        badge: 'bg-amber-500/15 text-amber-700 border-amber-400 font-black'
+      }
+    } else if (diffDays <= 7) {
+      return {
+        type: 'upcoming',
+        diffDays,
+        label: `In ${diffDays}d`,
+        formattedDate: cleanDateStr,
+        badge: 'bg-emerald-500/10 text-emerald-700 border-emerald-300 font-bold'
+      }
+    } else {
+      return {
+        type: 'future',
+        diffDays,
+        label: `In ${diffDays}d`,
+        formattedDate: cleanDateStr,
+        badge: 'bg-blue-500/10 text-blue-700 border-blue-200 font-medium'
+      }
+    }
+  }
+
+  // Follow-up tab filtered leads
+  const followUpLeads = leads.filter(lead => {
+    const fDate = lead.follow_up_date || lead.expected_close_date
+    if (!fDate) return false
+    const statusInfo = getFollowUpStatus(fDate)
+
+    if (followUpFilterType === 'today' && statusInfo.type !== 'today') return false
+    if (followUpFilterType === 'overdue' && statusInfo.type !== 'overdue') return false
+    if (followUpFilterType === 'upcoming' && statusInfo.type !== 'upcoming' && statusInfo.type !== 'today') return false
+
+    if (followUpPriority && lead.lead_priority !== followUpPriority) return false
+
+    if (followUpSearch) {
+      const q = followUpSearch.toLowerCase().trim()
+      const matches =
+        (lead.client_name && lead.client_name.toLowerCase().includes(q)) ||
+        (lead.company_name && lead.company_name.toLowerCase().includes(q)) ||
+        (lead.client_phone && lead.client_phone.toLowerCase().includes(q)) ||
+        (lead.client_email && lead.client_email.toLowerCase().includes(q)) ||
+        (lead.city && lead.city.toLowerCase().includes(q))
+      if (!matches) return false
+    }
+
+    return true
+  }).sort((a, b) => {
+    const dateA = new Date((a.follow_up_date || a.expected_close_date).split(' ')[0])
+    const dateB = new Date((b.follow_up_date || b.expected_close_date).split(' ')[0])
+    return dateA - dateB
+  })
+
+  const followUpCounts = {
+    today: leads.filter(l => getFollowUpStatus(l.follow_up_date || l.expected_close_date).type === 'today').length,
+    overdue: leads.filter(l => getFollowUpStatus(l.follow_up_date || l.expected_close_date).type === 'overdue').length,
+    upcoming: leads.filter(l => getFollowUpStatus(l.follow_up_date || l.expected_close_date).type === 'upcoming').length,
+    total: leads.filter(l => Boolean(l.follow_up_date || l.expected_close_date)).length
+  }
+
   return (
     <>
       <Helmet>
@@ -787,291 +894,638 @@ export default function AdminLeads() {
           )}
         </AnimatePresence>
 
-        {/* Action Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-3xl border border-slate-200/85 shadow-sm">
-          <div>
-            <h1 className="text-xl font-black tracking-tight text-slate-800 uppercase">Leads Database</h1>
-            <p className="text-xs text-slate-400 mt-0.5">Filter, track and manage system-wide client leads</p>
-          </div>
-          <div className="flex flex-wrap gap-2.5">
-            {selectedLeadIds.length > 0 && (
+        {/* Navigation Tabs Bar */}
+        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm px-6 pt-5 pb-3">
+          <div className="flex flex-wrap items-center gap-2 border-b border-slate-200/80 pb-3">
+            {[
+              { id: 'leads', label: 'Leads' },
+              { id: 'followup', label: 'Follow Up' },
+              { id: 'proposal', label: 'Proposal' },
+            ].map(tab => (
               <button
-                onClick={() => setIsBulkAssignOpen(true)}
-                className="bg-indigo-600 hover:bg-indigo-750 text-white font-bold text-xs px-4.5 py-2.5 rounded-full shadow-sm cursor-pointer transition active:scale-[0.98]"
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                className={`px-6 py-2.5 rounded-t-xl text-sm font-bold transition-all cursor-pointer border-t-2 ${activeTab === tab.id
+                    ? 'bg-white border-[#ef4444] text-[#ef4444] -mb-[13px] z-10'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-500 border-transparent'
+                  }`}
               >
-                Reassign Selected ({selectedLeadIds.length})
+                {tab.label}
               </button>
-            )}
-            <button
-              onClick={openCreateModal}
-              className="bg-[#38b34a] hover:bg-[#2d963b] text-white font-black text-xs px-5 py-2.5 rounded-full shadow-sm cursor-pointer transition active:scale-[0.98] uppercase tracking-wider"
-            >
-              + Create Lead
-            </button>
+            ))}
           </div>
         </div>
 
-        {/* METRICS STATS CARDS */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { label: 'Total Leads', value: statsLoading ? '...' : (stats?.total || 0), icon: '📋', color: 'indigo' },
-            { label: 'Active Leads', value: statsLoading ? '...' : (stats?.active || 0), icon: '⚡', color: 'amber' },
-            { label: 'Today Follow-up', value: statsLoading ? '...' : (stats?.follow_up_today || 0), icon: '📅', color: 'blue' },
-            { label: 'Today Demo', value: statsLoading ? '...' : (stats?.today_demo || 0), icon: '🖥️', color: 'emerald' }
-          ].map((item, idx) => (
-            <div key={idx} className="bg-white p-5 rounded-3xl border border-slate-200/85 shadow-sm flex items-center gap-4">
-              <span className="text-3xl shrink-0">{item.icon}</span>
+        {/* ── TAB 1: LEADS DATABASE ── */}
+        {activeTab === 'leads' && (
+          <div className="space-y-6">
+            {/* Action Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-3xl border border-slate-200/85 shadow-sm">
               <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">{item.label}</span>
-                <span className="text-xl font-black text-slate-800 mt-0.5 block">{item.value}</span>
+                <h1 className="text-xl font-black tracking-tight text-slate-800 uppercase">Leads Database</h1>
+                <p className="text-xs text-slate-400 mt-0.5">Filter, track and manage system-wide client leads</p>
+              </div>
+              <div className="flex flex-wrap gap-2.5">
+                {selectedLeadIds.length > 0 && (
+                  <button
+                    onClick={() => setIsBulkAssignOpen(true)}
+                    className="bg-indigo-600 hover:bg-indigo-750 text-white font-bold text-xs px-4.5 py-2.5 rounded-full shadow-sm cursor-pointer transition active:scale-[0.98]"
+                  >
+                    Reassign Selected ({selectedLeadIds.length})
+                  </button>
+                )}
+                <button
+                  onClick={openCreateModal}
+                  className="bg-[#38b34a] hover:bg-[#2d963b] text-white font-black text-xs px-5 py-2.5 rounded-full shadow-sm cursor-pointer transition active:scale-[0.98] uppercase tracking-wider"
+                >
+                  + Create Lead
+                </button>
               </div>
             </div>
-          ))}
-        </div>
 
-        {/* FILTERS & SEARCH CONTROL BAR */}
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/85 shadow-sm space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
-            {/* Search */}
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search name, phone, company..."
-                value={search}
-                onChange={e => { setSearch(e.target.value); setPage(1) }}
-                className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a]"
-              />
+            {/* METRICS STATS CARDS */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { label: 'Total Leads', value: statsLoading ? '...' : (stats?.total || 0), icon: '📋', color: 'indigo' },
+                { label: 'Active Leads', value: statsLoading ? '...' : (stats?.active || 0), icon: '⚡', color: 'amber' },
+                { label: 'Today Follow-up', value: statsLoading ? '...' : (stats?.follow_up_today || 0), icon: '📅', color: 'blue' },
+                { label: 'Today Demo', value: statsLoading ? '...' : (stats?.today_demo || 0), icon: '🖥️', color: 'emerald' }
+              ].map((item, idx) => (
+                <div key={idx} className="bg-white p-5 rounded-3xl border border-slate-200/85 shadow-sm flex items-center gap-4">
+                  <span className="text-3xl shrink-0">{item.icon}</span>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">{item.label}</span>
+                    <span className="text-xl font-black text-slate-800 mt-0.5 block">{item.value}</span>
+                  </div>
+                </div>
+              ))}
             </div>
-            {/* Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
-              className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs text-slate-600 focus:outline-none cursor-pointer"
-            >
-              <option value="">All Statuses</option>
-              <option value="new">New</option>
-              <option value="contacted">Contacted</option>
-              <option value="qualified">Qualified</option>
-              <option value="proposal">Proposal</option>
-              <option value="negotiation">Negotiation</option>
-              <option value="converted">Converted</option>
-              <option value="lost">Lost</option>
-              <option value="junk">Junk</option>
-            </select>
-            {/* Priority Filter */}
-            <select
-              value={priorityFilter}
-              onChange={e => { setPriorityFilter(e.target.value); setPage(1) }}
-              className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs text-slate-600 focus:outline-none cursor-pointer"
-            >
-              <option value="">All Priorities</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
-            </select>
+
+            {/* FILTERS & SEARCH CONTROL BAR */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-200/85 shadow-sm space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+                {/* Search */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search name, phone, company..."
+                    value={search}
+                    onChange={e => { setSearch(e.target.value); setPage(1) }}
+                    className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a]"
+                  />
+                </div>
+                {/* Status Filter */}
+                <select
+                  value={statusFilter}
+                  onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
+                  className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs text-slate-600 focus:outline-none cursor-pointer"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="new">New</option>
+                  <option value="contacted">Contacted</option>
+                  <option value="qualified">Qualified</option>
+                  <option value="proposal">Proposal</option>
+                  <option value="negotiation">Negotiation</option>
+                  <option value="converted">Converted</option>
+                  <option value="lost">Lost</option>
+                  <option value="junk">Junk</option>
+                </select>
+                {/* Priority Filter */}
+                <select
+                  value={priorityFilter}
+                  onChange={e => { setPriorityFilter(e.target.value); setPage(1) }}
+                  className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs text-slate-600 focus:outline-none cursor-pointer"
+                >
+                  <option value="">All Priorities</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+
+              <div className="flex flex-wrap gap-4 pt-1 border-t border-slate-100 text-xs font-bold text-slate-500">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={followUpToday}
+                    onChange={e => { setFollowUpToday(e.target.checked); setPage(1) }}
+                    className="w-4 h-4 rounded text-[#38b34a] border-slate-350 focus:ring-[#38b34a]"
+                  />
+                  <span>Follow-up Scheduled Today</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={pendingFollowUp}
+                    onChange={e => { setPendingFollowUp(e.target.checked); setPage(1) }}
+                    className="w-4 h-4 rounded text-[#38b34a] border-slate-350 focus:ring-[#38b34a]"
+                  />
+                  <span>Pending Follow-ups (Overdue)</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={todayDemo}
+                    onChange={e => { setTodayDemo(e.target.checked); setPage(1) }}
+                    className="w-4 h-4 rounded text-[#38b34a] border-slate-350 focus:ring-[#38b34a]"
+                  />
+                  <span>Demos Scheduled Today</span>
+                </label>
+              </div>
+            </div>
+
+            {/* MAIN LEADS DATA TABLE */}
+            <div className="bg-white rounded-3xl border border-slate-200/85 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                      <th className="px-6 py-4 w-12 text-center">
+                        <input
+                          type="checkbox"
+                          checked={leads.length > 0 && selectedLeadIds.length === leads.length}
+                          onChange={handleSelectAll}
+                          className="w-4 h-4 rounded text-[#38b34a] border-slate-300 focus:ring-[#38b34a]"
+                        />
+                      </th>
+                      <th className="px-6 py-4">Client Detail</th>
+                      <th className="px-6 py-4">Status & Priority</th>
+                      <th className="px-6 py-4">Product Category</th>
+                      <th className="px-6 py-4">Last Logged Remarks</th>
+                      <th className="px-6 py-4 text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                    {loading ? (
+                      <tr>
+                        <td colSpan="6" className="px-6 py-12 text-center text-slate-400 font-bold">
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <div className="w-8 h-8 rounded-full border-4 border-slate-100 border-t-[#38b34a] animate-spin" />
+                            <span>Loading leads database...</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : leads.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" className="px-6 py-12 text-center text-slate-400 font-bold">
+                          No matching leads found.
+                        </td>
+                      </tr>
+                    ) : (
+                      leads.map(lead => {
+                        const isSelected = selectedLeadIds.includes(lead.id)
+                        return (
+                          <tr
+                            key={lead.id}
+                            className={`hover:bg-slate-50/50 transition-colors ${isSelected ? 'bg-slate-50/70' : ''}`}
+                          >
+                            <td className="px-6 py-4 text-center">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => handleSelectLead(lead.id)}
+                                className="w-4 h-4 rounded text-[#38b34a] border-slate-300 focus:ring-[#38b34a]"
+                              />
+                            </td>
+                            <td className="px-6 py-4">
+                              <div>
+                                <span
+                                  onClick={() => setSelectedDrawerLead(lead)}
+                                  className="font-bold text-slate-800 hover:text-[#38b34a] cursor-pointer block text-sm"
+                                >
+                                  {lead.client_name}
+                                </span>
+                                <span className="text-slate-400 font-medium block mt-0.5">
+                                  {lead.company_name ? `${lead.company_name} · ` : ''}
+                                  {lead.client_phone}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex flex-wrap gap-1.5">
+                                {getStatusBadge(lead.lead_status)}
+                                {getPriorityBadge(lead.lead_priority)}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div>
+                                <span className="font-bold text-slate-700 block">{lead.product_name || 'Generic Inquiry'}</span>
+                                {lead.follow_up_date && (
+                                  <span className="text-[10px] text-amber-500 font-bold mt-0.5 block">
+                                    📅 Next F/Up: {lead.follow_up_date.split(' ')[0]}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 max-w-xs">
+                              <p className="truncate text-slate-400 font-medium" title={getLatestRemark(lead)}>
+                                {getLatestRemark(lead)}
+                              </p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  onClick={() => openFollowUpModal(lead)}
+                                  title="Schedule Follow-up"
+                                  className="p-1.5 text-slate-400 hover:text-amber-500 hover:bg-slate-50 rounded-xl transition cursor-pointer"
+                                >
+                                  📅
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedLeadForAssign(lead)
+                                    setShowAssignModal(true)
+                                    setSelectedDate('')
+                                  }}
+                                  title="Book Demo Slot"
+                                  className="p-1.5 text-slate-400 hover:text-emerald-500 hover:bg-slate-50 rounded-xl transition cursor-pointer"
+                                >
+                                  🖥️
+                                </button>
+                                <button
+                                  onClick={() => openMailModal(lead)}
+                                  title="Send Demo Email"
+                                  className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-slate-50 rounded-xl transition cursor-pointer"
+                                >
+                                  ✉️
+                                </button>
+                                <button
+                                  onClick={() => openEditModal(lead)}
+                                  title="Edit Lead"
+                                  className="p-1.5 text-slate-400 hover:text-[#38b34a] hover:bg-slate-50 rounded-xl transition cursor-pointer"
+                                >
+                                  ✏️
+                                </button>
+                                <button
+                                  onClick={() => openStatusModal(lead)}
+                                  title="Change Status"
+                                  className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-slate-50 rounded-xl transition cursor-pointer"
+                                >
+                                  🛡️
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteLead(lead.id)}
+                                  title="Delete Lead"
+                                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-slate-50 rounded-xl transition cursor-pointer"
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination Footer */}
+              <div className="bg-slate-50 border-t border-slate-100 px-6 py-4 flex items-center justify-between text-xs font-bold text-slate-500">
+                <span>Page {page}</span>
+                <div className="flex gap-2">
+                  <button
+                    disabled={page <= 1}
+                    onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+                    className="px-3.5 py-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    disabled={leads.length < 15}
+                    onClick={() => setPage(prev => prev + 1)}
+                    className="px-3.5 py-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
+        )}
 
-          <div className="flex flex-wrap gap-4 pt-1 border-t border-slate-100 text-xs font-bold text-slate-500">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={followUpToday}
-                onChange={e => { setFollowUpToday(e.target.checked); setPage(1) }}
-                className="w-4 h-4 rounded text-[#38b34a] border-slate-350 focus:ring-[#38b34a]"
-              />
-              <span>Follow-up Scheduled Today</span>
-            </label>
+        {/* ── TAB 2: FOLLOWUP PIPELINE ── */}
+        {activeTab === 'followup' && (
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-3xl border border-slate-200/85 shadow-sm">
+              <div>
+                <h1 className="text-xl font-black tracking-tight text-slate-800 uppercase">Follow-up Pipeline</h1>
+                <p className="text-xs text-slate-400 mt-0.5">Track and action customer follow-up schedules, overdue timelines, and reminders</p>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <button
+                  onClick={() => { loadLeads(); loadStats(); }}
+                  disabled={loading}
+                  className="px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <span className={loading ? 'animate-spin inline-block' : ''}>🔄</span>
+                  <span>Refresh Pipeline</span>
+                </button>
+                <button
+                  onClick={openCreateModal}
+                  className="bg-[#38b34a] hover:bg-[#2d963b] text-white font-black text-xs px-5 py-2.5 rounded-full shadow-sm cursor-pointer transition active:scale-[0.98] uppercase tracking-wider"
+                >
+                  + Create Lead
+                </button>
+              </div>
+            </div>
 
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={pendingFollowUp}
-                onChange={e => { setPendingFollowUp(e.target.checked); setPage(1) }}
-                className="w-4 h-4 rounded text-[#38b34a] border-slate-350 focus:ring-[#38b34a]"
-              />
-              <span>Pending Follow-ups (Overdue)</span>
-            </label>
+            {/* Follow-up Metric Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div
+                onClick={() => setFollowUpFilterType('today')}
+                className={`bg-white p-5 rounded-3xl border shadow-sm flex items-center gap-4 cursor-pointer transition-all ${followUpFilterType === 'today' ? 'border-amber-400 ring-2 ring-amber-400/20' : 'border-slate-200/85 hover:border-amber-300'}`}
+              >
+                <span className="text-3xl shrink-0">📅</span>
+                <div>
+                  <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest block">Due Today</span>
+                  <span className="text-2xl font-black text-slate-800 mt-0.5 block">{followUpCounts.today}</span>
+                </div>
+              </div>
 
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={todayDemo}
-                onChange={e => { setTodayDemo(e.target.checked); setPage(1) }}
-                className="w-4 h-4 rounded text-[#38b34a] border-slate-350 focus:ring-[#38b34a]"
-              />
-              <span>Demos Scheduled Today</span>
-            </label>
-          </div>
-        </div>
+              <div
+                onClick={() => setFollowUpFilterType('overdue')}
+                className={`bg-white p-5 rounded-3xl border shadow-sm flex items-center gap-4 cursor-pointer transition-all ${followUpFilterType === 'overdue' ? 'border-red-400 ring-2 ring-red-400/20' : 'border-slate-200/85 hover:border-red-300'}`}
+              >
+                <span className="text-3xl shrink-0">⚠️</span>
+                <div>
+                  <span className="text-[10px] font-bold text-red-600 uppercase tracking-widest block">Overdue Follow-ups</span>
+                  <span className="text-2xl font-black text-red-600 mt-0.5 block">{followUpCounts.overdue}</span>
+                </div>
+              </div>
 
-        {/* MAIN LEADS DATA TABLE */}
-        <div className="bg-white rounded-3xl border border-slate-200/85 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  <th className="px-6 py-4 w-12 text-center">
-                    <input
-                      type="checkbox"
-                      checked={leads.length > 0 && selectedLeadIds.length === leads.length}
-                      onChange={handleSelectAll}
-                      className="w-4 h-4 rounded text-[#38b34a] border-slate-300 focus:ring-[#38b34a]"
-                    />
-                  </th>
-                  <th className="px-6 py-4">Client Detail</th>
-                  <th className="px-6 py-4">Status & Priority</th>
-                  <th className="px-6 py-4">Product Category</th>
-                  <th className="px-6 py-4">Last Logged Remarks</th>
-                  <th className="px-6 py-4 text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-                {loading ? (
-                  <tr>
-                    <td colSpan="6" className="px-6 py-12 text-center text-slate-400 font-bold">
-                      <div className="flex flex-col items-center justify-center gap-2">
-                        <div className="w-8 h-8 rounded-full border-4 border-slate-100 border-t-[#38b34a] animate-spin" />
-                        <span>Loading leads database...</span>
-                      </div>
-                    </td>
-                  </tr>
-                ) : leads.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="px-6 py-12 text-center text-slate-400 font-bold">
-                      No matching leads found.
-                    </td>
-                  </tr>
-                ) : (
-                  leads.map(lead => {
-                    const isSelected = selectedLeadIds.includes(lead.id)
-                    return (
-                      <tr
-                        key={lead.id}
-                        className={`hover:bg-slate-50/50 transition-colors ${isSelected ? 'bg-slate-50/70' : ''}`}
-                      >
-                        <td className="px-6 py-4 text-center">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => handleSelectLead(lead.id)}
-                            className="w-4 h-4 rounded text-[#38b34a] border-slate-300 focus:ring-[#38b34a]"
-                          />
-                        </td>
-                        <td className="px-6 py-4">
-                          <div>
-                            <span
-                              onClick={() => setSelectedDrawerLead(lead)}
-                              className="font-bold text-slate-800 hover:text-[#38b34a] cursor-pointer block text-sm"
-                            >
-                              {lead.client_name}
-                            </span>
-                            <span className="text-slate-400 font-medium block mt-0.5">
-                              {lead.company_name ? `${lead.company_name} · ` : ''}
-                              {lead.client_phone}
-                            </span>
+              <div
+                onClick={() => setFollowUpFilterType('upcoming')}
+                className={`bg-white p-5 rounded-3xl border shadow-sm flex items-center gap-4 cursor-pointer transition-all ${followUpFilterType === 'upcoming' ? 'border-emerald-400 ring-2 ring-emerald-400/20' : 'border-slate-200/85 hover:border-emerald-300'}`}
+              >
+                <span className="text-3xl shrink-0">⏰</span>
+                <div>
+                  <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest block">Upcoming (7 Days)</span>
+                  <span className="text-2xl font-black text-slate-800 mt-0.5 block">{followUpCounts.upcoming}</span>
+                </div>
+              </div>
+
+              <div
+                onClick={() => setFollowUpFilterType('all')}
+                className={`bg-white p-5 rounded-3xl border shadow-sm flex items-center gap-4 cursor-pointer transition-all ${followUpFilterType === 'all' ? 'border-indigo-400 ring-2 ring-indigo-400/20' : 'border-slate-200/85 hover:border-indigo-300'}`}
+              >
+                <span className="text-3xl shrink-0">📊</span>
+                <div>
+                  <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest block">Total Pipeline</span>
+                  <span className="text-2xl font-black text-slate-800 mt-0.5 block">{followUpCounts.total}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Follow-up Sub-Filters */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-200/85 shadow-sm space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                {/* Date Quick Filter Chips */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {[
+                    { id: 'all', label: 'All Scheduled', count: followUpCounts.total },
+                    { id: 'today', label: 'Due Today', count: followUpCounts.today },
+                    { id: 'overdue', label: 'Overdue', count: followUpCounts.overdue },
+                    { id: 'upcoming', label: 'Next 7 Days', count: followUpCounts.upcoming }
+                  ].map(f => (
+                    <button
+                      key={f.id}
+                      onClick={() => setFollowUpFilterType(f.id)}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${followUpFilterType === f.id
+                        ? 'bg-slate-900 text-white shadow-sm'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                        }`}
+                    >
+                      <span>{f.label}</span>
+                      <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${followUpFilterType === f.id ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}`}>
+                        {f.count}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Priority Filter */}
+                <div className="flex items-center gap-2">
+                  <select
+                    value={followUpPriority}
+                    onChange={e => setFollowUpPriority(e.target.value)}
+                    className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs text-slate-600 focus:outline-none cursor-pointer"
+                  >
+                    <option value="">All Priorities</option>
+                    <option value="urgent">Urgent</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Search input */}
+              <div>
+                <input
+                  type="text"
+                  placeholder="Search follow-up lead by client name, organization, phone, or email..."
+                  value={followUpSearch}
+                  onChange={e => setFollowUpSearch(e.target.value)}
+                  className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a]"
+                />
+              </div>
+            </div>
+
+            {/* Follow-up Leads List Table */}
+            <div className="bg-white rounded-3xl border border-slate-200/85 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                      <th className="px-6 py-4">Client / Institution</th>
+                      <th className="px-6 py-4">Quick Contact</th>
+                      <th className="px-6 py-4">Scheduled Date</th>
+                      <th className="px-6 py-4">Status & Priority</th>
+                      <th className="px-6 py-4">Discussion / Remarks</th>
+                      <th className="px-6 py-4 text-center">Follow-up Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                    {loading ? (
+                      <tr>
+                        <td colSpan="6" className="px-6 py-12 text-center text-slate-400 font-bold">
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <div className="w-8 h-8 rounded-full border-4 border-slate-100 border-t-[#38b34a] animate-spin" />
+                            <span>Loading follow-up pipeline...</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-wrap gap-1.5">
-                            {getStatusBadge(lead.lead_status)}
-                            {getPriorityBadge(lead.lead_priority)}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div>
-                            <span className="font-bold text-slate-700 block">{lead.product_name || 'Generic Inquiry'}</span>
-                            {lead.follow_up_date && (
-                              <span className="text-[10px] text-amber-500 font-bold mt-0.5 block">
-                                📅 Next F/Up: {lead.follow_up_date.split(' ')[0]}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 max-w-xs">
-                          <p className="truncate text-slate-400 font-medium" title={getLatestRemark(lead)}>
-                            {getLatestRemark(lead)}
-                          </p>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center justify-center gap-1">
+                      </tr>
+                    ) : followUpLeads.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" className="px-6 py-12 text-center text-slate-400 font-bold">
+                          <div className="flex flex-col items-center justify-center gap-2 py-4">
+                            <span className="text-3xl">📞</span>
+                            <span className="text-slate-600 font-bold text-sm">No follow-ups matching this filter.</span>
+                            <p className="text-slate-400 text-xs max-w-sm">Schedule a follow-up date for any lead in the Leads tab to track them in this pipeline.</p>
                             <button
-                              onClick={() => openFollowUpModal(lead)}
-                              title="Schedule Follow-up"
-                              className="p-1.5 text-slate-400 hover:text-amber-500 hover:bg-slate-50 rounded-xl transition cursor-pointer"
+                              onClick={() => handleTabChange('leads')}
+                              className="mt-2 px-4 py-2 bg-[#38b34a] text-white rounded-full text-xs font-bold cursor-pointer"
                             >
-                              📅
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedLeadForAssign(lead)
-                                setShowAssignModal(true)
-                                setSelectedDate('')
-                              }}
-                              title="Book Demo Slot"
-                              className="p-1.5 text-slate-400 hover:text-emerald-500 hover:bg-slate-50 rounded-xl transition cursor-pointer"
-                            >
-                              🖥️
-                            </button>
-                            <button
-                              onClick={() => openMailModal(lead)}
-                              title="Send Demo Email"
-                              className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-slate-50 rounded-xl transition cursor-pointer"
-                            >
-                              ✉️
-                            </button>
-                            <button
-                              onClick={() => openEditModal(lead)}
-                              title="Edit Lead"
-                              className="p-1.5 text-slate-400 hover:text-[#38b34a] hover:bg-slate-50 rounded-xl transition cursor-pointer"
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              onClick={() => openStatusModal(lead)}
-                              title="Change Status"
-                              className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-slate-50 rounded-xl transition cursor-pointer"
-                            >
-                              🛡️
-                            </button>
-                            <button
-                              onClick={() => handleDeleteLead(lead.id)}
-                              title="Delete Lead"
-                              className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-slate-50 rounded-xl transition cursor-pointer"
-                            >
-                              🗑️
+                              Go to Leads Database
                             </button>
                           </div>
                         </td>
                       </tr>
-                    )
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                    ) : (
+                      followUpLeads.map(lead => {
+                        const fDate = lead.follow_up_date || lead.expected_close_date
+                        const statusInfo = getFollowUpStatus(fDate)
+                        const rawPhone = lead.client_phone ? cleanAndFixPhone(lead.client_phone) : ''
+                        return (
+                          <tr key={lead.id} className="hover:bg-slate-50/50 transition-colors">
+                            {/* Client & Organization */}
+                            <td className="px-6 py-4">
+                              <div>
+                                <span
+                                  onClick={() => setSelectedDrawerLead(lead)}
+                                  className="font-bold text-slate-800 hover:text-[#38b34a] cursor-pointer block text-sm"
+                                >
+                                  {lead.client_name}
+                                </span>
+                                <span className="text-slate-400 font-medium block mt-0.5">
+                                  {lead.company_name ? `${lead.company_name} · ` : ''}
+                                  {lead.city ? `${lead.city}, ` : ''}{lead.state || 'India'}
+                                </span>
+                              </div>
+                            </td>
 
-          {/* Pagination Footer */}
-          <div className="bg-slate-50 border-t border-slate-100 px-6 py-4 flex items-center justify-between text-xs font-bold text-slate-500">
-            <span>Page {page}</span>
-            <div className="flex gap-2">
-              <button
-                disabled={page <= 1}
-                onClick={() => setPage(prev => Math.max(prev - 1, 1))}
-                className="px-3.5 py-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition"
-              >
-                Previous
-              </button>
-              <button
-                disabled={leads.length < 15}
-                onClick={() => setPage(prev => prev + 1)}
-                className="px-3.5 py-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition"
-              >
-                Next
-              </button>
+                            {/* Quick Contact buttons */}
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-1.5">
+                                {lead.client_phone && (
+                                  <>
+                                    <a
+                                      href={`tel:${lead.client_phone}`}
+                                      title={`Call ${lead.client_phone}`}
+                                      className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold transition flex items-center gap-1"
+                                    >
+                                      <span>📞</span>
+                                      <span>Call</span>
+                                    </a>
+                                    <a
+                                      href={`https://wa.me/${rawPhone}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      title={`WhatsApp ${lead.client_phone}`}
+                                      className="px-2.5 py-1 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded-lg text-xs font-bold transition flex items-center gap-1"
+                                    >
+                                      <span>💬</span>
+                                      <span>Chat</span>
+                                    </a>
+                                  </>
+                                )}
+                                {lead.client_email && (
+                                  <a
+                                    href={`mailto:${lead.client_email}`}
+                                    title={`Email ${lead.client_email}`}
+                                    className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition flex items-center gap-1"
+                                  >
+                                    <span>✉️</span>
+                                  </a>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Scheduled Date */}
+                            <td className="px-6 py-4">
+                              <div>
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs border ${statusInfo.badge}`}>
+                                  <span>📅</span>
+                                  <span>{statusInfo.label}</span>
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-semibold block mt-1">
+                                  Target: {statusInfo.formattedDate}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Status & Priority */}
+                            <td className="px-6 py-4">
+                              <div className="flex flex-wrap gap-1.5">
+                                {getStatusBadge(lead.lead_status)}
+                                {getPriorityBadge(lead.lead_priority)}
+                              </div>
+                            </td>
+
+                            {/* Last Remarks */}
+                            <td className="px-6 py-4 max-w-xs">
+                              <p className="truncate text-slate-600 font-medium" title={getLatestRemark(lead)}>
+                                {getLatestRemark(lead)}
+                              </p>
+                            </td>
+
+                            {/* Actions */}
+                            <td className="px-6 py-4">
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  onClick={() => openFollowUpModal(lead)}
+                                  title="Reschedule / Log Follow-up"
+                                  className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow-sm"
+                                >
+                                  <span>📅</span>
+                                  <span>Log / Reschedule</span>
+                                </button>
+                                <button
+                                  onClick={() => openStatusModal(lead)}
+                                  title="Change Status"
+                                  className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-slate-50 rounded-xl transition cursor-pointer"
+                                >
+                                  🛡️
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedLeadForAssign(lead)
+                                    setShowAssignModal(true)
+                                    setSelectedDate('')
+                                  }}
+                                  title="Book Demo Slot"
+                                  className="p-1.5 text-slate-400 hover:text-emerald-500 hover:bg-slate-50 rounded-xl transition cursor-pointer"
+                                >
+                                  🖥️
+                                </button>
+                                <button
+                                  onClick={() => openMailModal(lead)}
+                                  title="Send Demo Email"
+                                  className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-slate-50 rounded-xl transition cursor-pointer"
+                                >
+                                  ✉️
+                                </button>
+                                <button
+                                  onClick={() => openEditModal(lead)}
+                                  title="Edit Lead"
+                                  className="p-1.5 text-slate-400 hover:text-[#38b34a] hover:bg-slate-50 rounded-xl transition cursor-pointer"
+                                >
+                                  ✏️
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* ── TAB 3: THE PROPOSAL ── */}
+        {activeTab === 'proposal' && (
+          <div className="space-y-6">
+            <AdminProposals />
+          </div>
+        )}
       </div>
 
       {/* CREATE & EDIT LEAD MODAL */}

@@ -65,6 +65,11 @@ const AdminLayout = () => {
   const renderIcon = (type, isActive) => {
     const iconClass = `w-4.5 h-4.5 ${isActive ? 'text-[#38b34a]' : ''}`
     if (type === 'dashboard') return <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /></svg>
+    if (type === 'proposals') return (
+      <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    )
     if (type === 'leads') return (
       <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -287,6 +292,7 @@ const AdminLayout = () => {
             <span className="text-sm font-semibold text-slate-400 font-sans truncate hidden md:inline-block">
               {(() => {
                 if (location.pathname === ROUTES.ADMIN.DASHBOARD) return "Welcome back! Here's your business overview for June 2026."
+                if (location.pathname === ROUTES.ADMIN.PROPOSALS) return "Track institutional proposal requests from website and dispatch commercial PDF letters."
                 if (location.pathname === ROUTES.ADMIN.LEADS) return "Manage all system leads, assignments, and follow-ups."
                 if (location.pathname === ROUTES.ADMIN.DEMO) return "Manage customer and partner video conference demo slots."
                 if (location.pathname === ROUTES.ADMIN.USERS) return "Manage your client accounts."

@@ -30,6 +30,7 @@ export const ROUTES = {
     ADDON_SERVICES: '/admin/addon-services',
     DEMO: '/admin/demo',
     PG_KYC: '/admin/pg-kyc',
+    PROPOSALS: '/admin/proposals',
   },
   EMPLOYEE: {
     DASHBOARD: '/employee',

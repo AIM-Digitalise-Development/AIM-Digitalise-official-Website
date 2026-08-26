@@ -46,6 +46,7 @@ import AdminImplementation from './pages/admin/Implementation'
 import AdminAddonServices from './pages/admin/AddonServices'
 import AdminPgKyc from './pages/admin/PgKyc'
 import AdminDemoSlots from './pages/admin/DemoSlots'
+import AdminProposals from './pages/admin/Proposals'
 import PartnerLogin from './pages/partner/Login'
 import PartnerRegister from './pages/partner/Register'
 import PartnerDashboard from './pages/partner/Dashboard'
@@ -146,6 +147,7 @@ function App() {
             <Route path="addon-services" element={<AdminAddonServices />} />
             <Route path="demo" element={<AdminDemoSlots />} />
             <Route path="pg-kyc" element={<AdminPgKyc />} />
+            <Route path="proposals" element={<Navigate to="/admin/leads?tab=proposal" replace />} />
           </Route>
 
           {/* ── Employee portal (authenticated shell with sidebar) ── */}
