@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -21,6 +21,59 @@ import {
   getPublicProductsForCountry,
   getSubscriptionClients,
 } from '../../api/admin/generalClients'
+
+export const normalizeService = (srv) => {
+  if (!srv || typeof srv !== 'object') return srv
+  return {
+    ...srv,
+    id: srv.id || srv._id || srv.service_id,
+    name: srv.name || srv.service_name || srv.title || srv.serviceName || srv.service_title || 'General Service',
+    hsn: srv.hsn || srv.hsn_code || srv.hsn_sac || srv.sac || srv.hsnCode || '998314',
+    unit: srv.unit || srv.unit_name || srv.unitType || 'Unit',
+    selling_price: Number(srv.selling_price ?? srv.price ?? srv.standard_rate ?? srv.standardRate ?? srv.rate ?? srv.amount ?? srv.cost ?? 0),
+    category: srv.category || srv.category_name || srv.type || 'Web Development',
+    description: srv.description || srv.service_description || srv.details || srv.desc || '',
+    is_active: srv.is_active !== undefined ? srv.is_active : true,
+  }
+}
+
+const numberToIndianWords = (num) => {
+  if (!num || isNaN(num)) return 'Zero Rupees Only'
+  const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen ']
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
+
+  const inWords = (n) => {
+    let str = ''
+    if (n > 99) {
+      str += a[Math.floor(n / 100)] + 'Hundred '
+      n %= 100
+    }
+    if (n > 19) {
+      str += b[Math.floor(n / 10)] + ' ' + a[n % 10]
+    } else if (n > 0) {
+      str += a[n]
+    }
+    return str
+  }
+
+  let n = Math.floor(num)
+  if (n === 0) return 'Zero Rupees Only'
+  let crore = Math.floor(n / 10000000)
+  n %= 10000000
+  let lakh = Math.floor(n / 100000)
+  n %= 100000
+  let thousand = Math.floor(n / 1000)
+  n %= 1000
+  let remainder = n
+
+  let res = ''
+  if (crore > 0) res += inWords(crore) + 'Crore '
+  if (lakh > 0) res += inWords(lakh) + 'Lakh '
+  if (thousand > 0) res += inWords(thousand) + 'Thousand '
+  if (remainder > 0) res += inWords(remainder)
+
+  return 'INR ' + res.trim() + ' Only'
+}
 
 const countryFlags = {
   IN: '🇮🇳',
@@ -97,8 +150,8 @@ const STATUS_ICONS = {
 }
 
 const AdminUsers = () => {
-  // Navigation Tab State
-  const [activeTab, setActiveTab] = useState('show_clients') // 'clients' | 'show_clients' | 'pricing' | 'follow_up' | 'due_payment' | 'payment_report'
+  // Navigation Tab State (Default: show_clients)
+  const [activeTab, setActiveTab] = useState('show_clients') // 'show_clients' | 'services' | 'pricing' | 'follow_up' | 'due_payment' | 'payment_report'
 
   // Loading & Alert Messages
   const [loading, setLoading] = useState(false)
@@ -112,6 +165,10 @@ const AdminUsers = () => {
   const [loadingGenClients, setLoadingGenClients] = useState(false)
   const [genClientSearch, setGenClientSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
+
+  // Pagination State for Thousands of Clients
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
 
   // Add / Edit Client Form State
   const [showAddClientModal, setShowAddClientModal] = useState(false)
@@ -158,6 +215,8 @@ const AdminUsers = () => {
   const [showAddServiceModal, setShowAddServiceModal] = useState(false)
   const [showServicesCatalogModal, setShowServicesCatalogModal] = useState(false)
   const [editingServiceId, setEditingServiceId] = useState(null)
+  const [serviceCatalogSearch, setServiceCatalogSearch] = useState('')
+  const [serviceCategoryFilter, setServiceCategoryFilter] = useState('All')
   const [serviceForm, setServiceForm] = useState({
     name: '',
     hsn: '998314',
@@ -168,16 +227,21 @@ const AdminUsers = () => {
     is_active: true,
   })
 
-  // Quotations List Modal State
+  // Quotations List Modal & Document Viewer State
   const [showQuotationsListModal, setShowQuotationsListModal] = useState(false)
   const [selectedClientQuotations, setSelectedClientQuotations] = useState([])
+  const [showQuotationDocModal, setShowQuotationDocModal] = useState(false)
+  const [viewingQuotationDoc, setViewingQuotationDoc] = useState(null)
+  const [copiedPayLink, setCopiedPayLink] = useState(false)
 
   // ============================================================
   // 3. QUOTATION BUILDER STATE
   // ============================================================
   const [selectedGenClient, setSelectedGenClient] = useState(null)
   const [showQuotationBuilder, setShowQuotationBuilder] = useState(false)
-  const [sidebarTab, setSidebarTab] = useState('services') // 'services' | 'products'
+  const [sidebarTab, setSidebarTab] = useState('services') // 'services'
+  const [sidebarServiceSearch, setSidebarServiceSearch] = useState('')
+  const [sidebarCategoryFilter, setSidebarCategoryFilter] = useState('All')
   const [quotationForm, setQuotationForm] = useState({
     quotation_date: new Date().toISOString().substring(0, 10),
     quotation_number: '',
@@ -211,14 +275,22 @@ const AdminUsers = () => {
   const [clients, setClients] = useState([])
   const [loadingClients, setLoadingClients] = useState(false)
 
-  // Load Initial Data
+  // Load Primary Initial Data
   useEffect(() => {
     fetchGeneralClientsList()
     fetchGeneralServicesList()
-    fetchCountryTaxesList()
-    fetchProductsList()
-    fetchSubscriptionClientsList()
   }, [])
+
+  // Lazy Load Secondary Catalogs only when relevant tabs are accessed
+  useEffect(() => {
+    if (activeTab === 'pricing') {
+      if (taxes.length === 0) fetchCountryTaxesList()
+      if (products.length === 0) fetchProductsList()
+    }
+    if ((activeTab === 'due_payment' || activeTab === 'payment_report') && clients.length === 0) {
+      fetchSubscriptionClientsList()
+    }
+  }, [activeTab])
 
   useEffect(() => {
     if (selectedProduct) {
@@ -231,10 +303,8 @@ const AdminUsers = () => {
     setLoadingGenClients(true)
     try {
       const res = await getGeneralClients()
-      const result = res.data
-      if (result.success) {
-        setGeneralClients(result.data || [])
-      }
+      const rawData = res.data?.data || res.data?.clients || (Array.isArray(res.data) ? res.data : [])
+      setGeneralClients(Array.isArray(rawData) ? rawData : [])
     } catch (err) {
       console.error('Error fetching general clients:', err)
     } finally {
@@ -242,15 +312,14 @@ const AdminUsers = () => {
     }
   }
 
-  // Fetch General Services
+  // Fetch General Services with complete normalization
   const fetchGeneralServicesList = async () => {
     setLoadingServices(true)
     try {
       const res = await getGeneralServices()
-      const result = res.data
-      if (result.success) {
-        setGeneralServices(result.data || [])
-      }
+      const rawData = res.data?.data || res.data?.services || (Array.isArray(res.data) ? res.data : [])
+      const normalized = (Array.isArray(rawData) ? rawData : []).map(normalizeService)
+      setGeneralServices(normalized)
     } catch (err) {
       console.error('Error fetching general services:', err)
     } finally {
@@ -767,7 +836,7 @@ const AdminUsers = () => {
     return { subtotal, cgst, sgst, igst, taxTotal, grandTotal }
   }
 
-  // Save Quotation / Generate & Copy Payment Link
+  // Save Quotation / Direct Document View
   const handleSaveQuotation = async (e, sendImmediately = false) => {
     if (e) e.preventDefault()
     if (!selectedGenClient) return
@@ -785,29 +854,34 @@ const AdminUsers = () => {
       const res = await createQuotation(selectedGenClient.id, payload)
       const result = res.data
       if (result.success) {
-        const quotationId = result.data.id
-        setMessage(`✅ Quotation "${result.data.quotation_number}" created successfully!`)
+        const quotationData = result.data
+        setMessage(`✅ Quotation "${quotationData.quotation_number}" created successfully!`)
 
+        let payUrl = `${window.location.origin}/general-quotation-pay.html?uuid=${quotationData.uuid || ('quotation-' + quotationData.id)}`
         if (sendImmediately) {
           try {
-            const sendRes = await sendQuotation(quotationId)
-            const sendResult = sendRes.data
-            if (sendResult.success) {
-              const payUrl =
-                sendResult.payment_url || `${window.location.origin}/general-quotation-pay.html?uuid=${result.data.uuid}`
-
-              if (navigator.clipboard && navigator.clipboard.writeText) {
-                await navigator.clipboard.writeText(payUrl)
-                alert(`📋 Quotation saved & Payment Link copied to clipboard!\n\nPayment Link: ${payUrl}`)
-              } else {
-                alert(`📋 Quotation saved! Payment Link:\n\n${payUrl}`)
-              }
-              setMessage(`📋 Quotation "${result.data.quotation_number}" saved & Payment Link copied to clipboard!`)
+            const sendRes = await sendQuotation(quotationData.id)
+            if (sendRes?.data?.payment_url) {
+              payUrl = sendRes.data.payment_url
             }
           } catch (sendErr) {
             console.error('Error sending quotation:', sendErr)
           }
         }
+
+        // Open Quotation Document Viewer directly without copy-paste requirement!
+        handleOpenQuotationDoc({
+          ...quotationData,
+          items: quotationItems,
+          client: selectedGenClient,
+          payment_url: payUrl,
+          subtotal: totals.subtotal,
+          tax_total: totals.taxTotal,
+          cgst: totals.cgst,
+          sgst: totals.sgst,
+          igst: totals.igst,
+          grand_total: totals.grandTotal,
+        }, selectedGenClient)
 
         setShowQuotationBuilder(false)
         fetchGeneralClientsList()
@@ -819,6 +893,56 @@ const AdminUsers = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Open Full Official Quotation Document Viewer
+  const handleOpenQuotationDoc = (quotation, clientObj = null) => {
+    const client = clientObj || selectedGenClient || viewingClient || quotation.client || {}
+    const items = (quotation.items || []).map((item) => ({
+      product_name: item.product_name || item.name || item.service_name || 'Service Item',
+      hsn: item.hsn || item.hsn_code || '998314',
+      qty: Number(item.qty || item.quantity || 1),
+      unit: item.unit || 'Unit',
+      selling_price: Number(item.selling_price || item.price || item.unit_price || 0),
+      discount_percentage: Number(item.discount_percentage || item.discount || 0),
+      description: item.description || '',
+    }))
+
+    const calcSubtotal = items.reduce((sum, it) => sum + (it.qty * it.selling_price * (1 - it.discount_percentage / 100)), 0)
+    const isIntra = (quotation.gst_type || client.gst_type || 'Intra-State') === 'Intra-State'
+    const isIndia = (client.country_code || 'IN') === 'IN'
+
+    let cgst = 0, sgst = 0, igst = 0, taxTotal = 0
+    if (isIndia) {
+      if (isIntra) {
+        cgst = Math.round(calcSubtotal * 0.09 * 100) / 100
+        sgst = Math.round(calcSubtotal * 0.09 * 100) / 100
+        taxTotal = cgst + sgst
+      } else {
+        igst = Math.round(calcSubtotal * 0.18 * 100) / 100
+        taxTotal = igst
+      }
+    } else {
+      taxTotal = Math.round(calcSubtotal * 0.18 * 100) / 100
+    }
+    const grandTotal = Number(quotation.grand_total || quotation.total_amount) || Math.round((calcSubtotal + taxTotal) * 100) / 100
+
+    const targetUuid = quotation.uuid || `quotation-${quotation.id}`
+    const payUrl = quotation.payment_url || `${window.location.origin}/general-quotation-pay.html?uuid=${targetUuid}`
+
+    setViewingQuotationDoc({
+      ...quotation,
+      client,
+      items,
+      subtotal: Number(quotation.subtotal) || calcSubtotal,
+      cgst: quotation.cgst !== undefined ? Number(quotation.cgst) : cgst,
+      sgst: quotation.sgst !== undefined ? Number(quotation.sgst) : sgst,
+      igst: quotation.igst !== undefined ? Number(quotation.igst) : igst,
+      tax_total: Number(quotation.tax_total) || taxTotal,
+      grand_total: grandTotal,
+      payment_url: payUrl,
+    })
+    setShowQuotationDocModal(true)
   }
 
   // View Client's Previous Quotations
@@ -901,26 +1025,42 @@ const AdminUsers = () => {
 
   const totals = computeQuotationTotals()
 
-  // General Clients filtered list
-  const filteredGeneralClients = generalClients.filter((c) => {
-    const q = genClientSearch.toLowerCase()
-    const matchesSearch =
-      !q ||
-      (c.client_name && c.client_name.toLowerCase().includes(q)) ||
-      (c.client_id && c.client_id.toLowerCase().includes(q)) ||
-      (c.company_name && c.company_name.toLowerCase().includes(q)) ||
-      (c.contact_person && c.contact_person.toLowerCase().includes(q)) ||
-      (c.email && c.email.toLowerCase().includes(q)) ||
-      (c.state && c.state.toLowerCase().includes(q)) ||
-      (c.sold_by_name && c.sold_by_name.toLowerCase().includes(q)) ||
-      (c.branch_name && c.branch_name.toLowerCase().includes(q)) ||
-      (c.software_requirements && c.software_requirements.toLowerCase().includes(q)) ||
-      (c.contact_number && c.contact_number.toLowerCase().includes(q))
+  // Reset pagination when search or status filter changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [genClientSearch, statusFilter])
 
-    const matchesStatus = statusFilter === 'All' || c.status === statusFilter
+  // General Clients filtered list with useMemo for high-performance with thousands of records
+  const filteredGeneralClients = useMemo(() => {
+    const q = genClientSearch.trim().toLowerCase()
+    return generalClients.filter((c) => {
+      const matchesSearch =
+        !q ||
+        (c.client_name && c.client_name.toLowerCase().includes(q)) ||
+        (c.client_id && c.client_id.toLowerCase().includes(q)) ||
+        (c.company_name && c.company_name.toLowerCase().includes(q)) ||
+        (c.contact_person && c.contact_person.toLowerCase().includes(q)) ||
+        (c.email && c.email.toLowerCase().includes(q)) ||
+        (c.state && c.state.toLowerCase().includes(q)) ||
+        (c.district && c.district.toLowerCase().includes(q)) ||
+        (c.sold_by_name && c.sold_by_name.toLowerCase().includes(q)) ||
+        (c.branch_name && c.branch_name.toLowerCase().includes(q)) ||
+        (c.software_requirements && c.software_requirements.toLowerCase().includes(q)) ||
+        (c.contact_number && c.contact_number.toLowerCase().includes(q))
 
-    return matchesSearch && matchesStatus
-  })
+      const matchesStatus = statusFilter === 'All' || c.status === statusFilter
+
+      return matchesSearch && matchesStatus
+    })
+  }, [generalClients, genClientSearch, statusFilter])
+
+  // Paginated general clients slice
+  const totalClientsCount = filteredGeneralClients.length
+  const totalPages = Math.max(1, Math.ceil(totalClientsCount / pageSize))
+  const paginatedGeneralClients = useMemo(() => {
+    const startIdx = (currentPage - 1) * pageSize
+    return filteredGeneralClients.slice(startIdx, startIdx + pageSize)
+  }, [filteredGeneralClients, currentPage, pageSize])
 
   // Format Date Helper
   const formatDateDisplay = (dateStr) => {
@@ -1000,24 +1140,9 @@ const AdminUsers = () => {
 
         {/* Main Card Container */}
         <div className="bg-white rounded-3xl border border-slate-200/80 shadow-md p-6">
-          {/* Top Tabs Switcher */}
+          {/* Top Tabs Switcher (Quick Actions removed as requested) */}
           <div className="flex flex-wrap items-center gap-1 border-b border-slate-200/60 pb-3 mb-6">
-            {/* 1. Clients Quick Actions Tab */}
-            <button
-              onClick={() => {
-                setActiveTab('clients')
-                setShowQuotationBuilder(false)
-              }}
-              className={`px-5 py-2.5 rounded-t-xl text-xs font-black transition-all cursor-pointer border-t-2 ${
-                activeTab === 'clients'
-                  ? 'bg-white border-[#38b34a] text-[#38b34a] -mb-[13px] z-10 shadow-sm'
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-500 border-transparent'
-              }`}
-            >
-              ⚡ Quick Actions
-            </button>
-
-            {/* 2. Show Clients Tab */}
+            {/* 1. Show Clients Tab */}
             <button
               onClick={() => {
                 setActiveTab('show_clients')
@@ -1032,7 +1157,7 @@ const AdminUsers = () => {
               👥 Show Clients ({generalClients.length})
             </button>
 
-            {/* 3. Service Catalog Tab */}
+            {/* 2. Service Catalog Tab */}
             <button
               onClick={() => {
                 setActiveTab('services')
@@ -1224,13 +1349,34 @@ const AdminUsers = () => {
 
                   {/* General Clients Table (Exact Excel Schema Pattern) */}
                   <div className="bg-white rounded-2xl border border-slate-200/90 shadow-md overflow-hidden">
-                    <div className="bg-slate-100/80 px-6 py-3 border-b border-slate-200 flex items-center justify-between">
-                      <span className="text-xs font-black text-slate-700 uppercase tracking-wider">
-                        📋 For General Client
+                    <div className="bg-slate-100/80 px-6 py-3 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <span className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                        <span>📋 For General Client</span>
+                        <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-bold">
+                          {totalClientsCount} Total Found
+                        </span>
                       </span>
-                      <span className="text-[11px] font-bold text-slate-500">
-                        Showing {filteredGeneralClients.length} of {generalClients.length} clients
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[11px] font-bold text-slate-500">
+                          Showing {totalClientsCount === 0 ? 0 : (currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, totalClientsCount)} of {totalClientsCount}
+                        </span>
+                        <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-600">
+                          <span>Rows:</span>
+                          <select
+                            value={pageSize}
+                            onChange={(e) => {
+                              setPageSize(Number(e.target.value))
+                              setCurrentPage(1)
+                            }}
+                            className="bg-white border border-slate-300 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 focus:outline-none"
+                          >
+                            <option value={10}>10</option>
+                            <option value={25}>25</option>
+                            <option value={50}>50</option>
+                            <option value={100}>100</option>
+                          </select>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="overflow-x-auto">
@@ -1288,8 +1434,8 @@ const AdminUsers = () => {
                                 <span className="inline-block animate-spin mr-2">🔄</span> Loading General Clients...
                               </td>
                             </tr>
-                          ) : filteredGeneralClients.length > 0 ? (
-                            filteredGeneralClients.map((c) => {
+                          ) : paginatedGeneralClients.length > 0 ? (
+                            paginatedGeneralClients.map((c) => {
                               const servicesList = c.software_requirements
                                 ? c.software_requirements.split(',').map((s) => s.trim()).filter(Boolean)
                                 : []
@@ -1464,6 +1610,70 @@ const AdminUsers = () => {
                         </tbody>
                       </table>
                     </div>
+
+                    {/* Pagination Toolbar */}
+                    {totalPages > 1 && (
+                      <div className="bg-slate-50 px-6 py-3.5 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                        <span className="text-slate-500 font-medium">
+                          Page <strong className="text-slate-800 font-bold">{currentPage}</strong> of <strong className="text-slate-800 font-bold">{totalPages}</strong>
+                        </span>
+
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => setCurrentPage(1)}
+                            disabled={currentPage === 1}
+                            className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 transition-all shadow-sm"
+                            title="First Page"
+                          >
+                            ⏮️ First
+                          </button>
+                          <button
+                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 transition-all shadow-sm"
+                          >
+                            ◀ Prev
+                          </button>
+
+                          {/* Dynamic page numbers */}
+                          {Array.from({ length: totalPages }, (_, i) => i + 1)
+                            .filter((p) => p === 1 || p === totalPages || (p >= currentPage - 2 && p <= currentPage + 2))
+                            .map((p, idx, arr) => (
+                              <React.Fragment key={p}>
+                                {idx > 0 && arr[idx - 1] !== p - 1 && (
+                                  <span className="px-1 text-slate-400">...</span>
+                                )}
+                                <button
+                                  onClick={() => setCurrentPage(p)}
+                                  className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                                    currentPage === p
+                                      ? 'bg-[#38b34a] text-white shadow-sm'
+                                      : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100'
+                                  }`}
+                                >
+                                  {p}
+                                </button>
+                              </React.Fragment>
+                            ))}
+
+                          <button
+                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                            className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 transition-all shadow-sm"
+                          >
+                            Next ▶
+                          </button>
+                          <button
+                            onClick={() => setCurrentPage(totalPages)}
+                            disabled={currentPage === totalPages}
+                            className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 transition-all shadow-sm"
+                            title="Last Page"
+                          >
+                            Last ⏭️
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -1791,109 +2001,99 @@ const AdminUsers = () => {
                       </div>
                     </div>
 
-                    {/* Right Column (1 Col): Dynamic Catalog Quick-Add Sidebar + Totals */}
+                    {/* Right Column (1 Col): Dynamic Services Catalog Quick-Add Sidebar + Totals */}
                     <div className="space-y-6">
-                      {/* Sidebar Catalog Card */}
+                      {/* Sidebar Services Catalog Card */}
                       <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm">
                         <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                          <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">
-                            Database Catalog
-                          </h3>
+                          <div>
+                            <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                              <span>📦</span>
+                              <span>Services Database ({generalServices.length})</span>
+                            </h3>
+                            <p className="text-[10px] text-slate-400 font-medium">Click to add services to line items</p>
+                          </div>
                           <button
+                            type="button"
                             onClick={handleOpenAddServiceModal}
-                            className="text-[10px] font-bold text-purple-700 hover:underline flex items-center gap-1"
+                            className="text-[11px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 px-2 py-1 rounded-lg border border-purple-200 flex items-center gap-1 transition-all"
                           >
-                            <span>+ New Service</span>
+                            <span>+ New</span>
                           </button>
                         </div>
 
-                        {/* Sidebar Tab Switcher */}
-                        <div className="flex rounded-xl bg-slate-200/70 p-1 text-xs font-bold">
-                          <button
-                            type="button"
-                            onClick={() => setSidebarTab('services')}
-                            className={`flex-1 py-1.5 rounded-lg transition-all ${
-                              sidebarTab === 'services'
-                                ? 'bg-white text-purple-700 shadow-sm'
-                                : 'text-slate-600 hover:text-slate-900'
-                            }`}
-                          >
-                            📦 Services ({generalServices.length})
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setSidebarTab('products')}
-                            className={`flex-1 py-1.5 rounded-lg transition-all ${
-                              sidebarTab === 'products'
-                                ? 'bg-white text-blue-700 shadow-sm'
-                                : 'text-slate-600 hover:text-slate-900'
-                            }`}
-                          >
-                            🚀 Products ({products.length})
-                          </button>
+                        {/* Quick Search in Quotation Sidebar */}
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
+                          <input
+                            type="text"
+                            placeholder="Search catalog services..."
+                            value={sidebarServiceSearch}
+                            onChange={(e) => setSidebarServiceSearch(e.target.value)}
+                            className="w-full bg-white border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-purple-500"
+                          />
                         </div>
 
-                        {/* Catalog Items List */}
-                        <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
-                          {sidebarTab === 'services' ? (
-                            generalServices.length > 0 ? (
-                              generalServices.map((srv) => (
-                                <div
-                                  key={srv.id}
-                                  className="bg-white border border-slate-200 rounded-xl p-2.5 transition-all shadow-sm hover:border-purple-300"
-                                >
-                                  <div className="flex justify-between items-start">
-                                    <p className="font-bold text-xs text-slate-800 leading-tight">{srv.name}</p>
-                                    <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-1 rounded ml-1 shrink-0">
-                                      {srv.hsn || '9983'}
-                                    </span>
-                                  </div>
-                                  <p className="text-[10px] text-slate-400 line-clamp-1 mt-0.5">{srv.description}</p>
-                                  <div className="flex justify-between items-center text-[10px] mt-2 pt-1 border-t border-slate-100">
-                                    <span className="font-black text-purple-700">
-                                      ₹{(srv.selling_price || srv.price || 0).toLocaleString('en-IN')} / {srv.unit || 'Unit'}
-                                    </span>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleAddGeneralServiceToQuotation(srv)}
-                                      className="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg font-black text-[10px] border border-purple-200 transition-all cursor-pointer"
-                                    >
-                                      + Add to Quote
-                                    </button>
-                                  </div>
+                        {/* Services List */}
+                        <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+                          {(() => {
+                            const filteredSidebarServices = generalServices.filter((srv) => {
+                              const q = sidebarServiceSearch.trim().toLowerCase()
+                              return !q || (srv.name && srv.name.toLowerCase().includes(q)) || (srv.category && srv.category.toLowerCase().includes(q)) || (srv.description && srv.description.toLowerCase().includes(q))
+                            })
+
+                            if (filteredSidebarServices.length === 0) {
+                              return (
+                                <div className="text-center py-8 text-slate-400 text-xs space-y-1">
+                                  <span className="text-2xl block">🔍</span>
+                                  <p className="font-bold">No services matching search</p>
+                                  <button
+                                    type="button"
+                                    onClick={handleOpenAddServiceModal}
+                                    className="text-purple-600 font-bold hover:underline text-[11px]"
+                                  >
+                                    + Add New Service to Catalog
+                                  </button>
                                 </div>
-                              ))
-                            ) : (
-                              <div className="text-center py-6 text-slate-400 text-xs">
-                                No services found in catalog.
-                              </div>
-                            )
-                          ) : products.length > 0 ? (
-                            products.map((p) => (
+                              )
+                            }
+
+                            return filteredSidebarServices.map((srv) => (
                               <div
-                                key={p.id}
-                                className="bg-white border border-slate-200 rounded-xl p-2.5 transition-all shadow-sm hover:border-blue-300"
+                                key={srv.id}
+                                className="bg-white border border-slate-200 rounded-xl p-3 transition-all shadow-sm hover:border-purple-400 hover:shadow-md space-y-1.5"
                               >
-                                <p className="font-bold text-xs text-slate-800 leading-tight">{p.name}</p>
-                                <div className="flex justify-between items-center text-[10px] text-slate-500 mt-2 pt-1 border-t border-slate-100">
-                                  <span className="font-black text-blue-700">
-                                    Fee: ₹{(p.processing_fee || p.price || 0).toLocaleString('en-IN')}
+                                <div className="flex justify-between items-start gap-2">
+                                  <p className="font-extrabold text-xs text-slate-800 leading-snug">
+                                    {srv.name || srv.service_name || 'Service Item'}
+                                  </p>
+                                  <span className="text-[10px] font-mono text-purple-700 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded shrink-0">
+                                    {srv.hsn || '998314'}
+                                  </span>
+                                </div>
+
+                                {srv.description && (
+                                  <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
+                                    {srv.description}
+                                  </p>
+                                )}
+
+                                <div className="flex justify-between items-center text-xs pt-1.5 border-t border-slate-100">
+                                  <span className="font-black text-purple-700">
+                                    ₹{Number(srv.selling_price || srv.price || 0).toLocaleString('en-IN')}{' '}
+                                    <span className="text-[10px] font-normal text-slate-400">/ {srv.unit || 'Unit'}</span>
                                   </span>
                                   <button
                                     type="button"
-                                    onClick={() => handleAddCatalogProductToQuotation(p)}
-                                    className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg font-black text-[10px] border border-blue-200 transition-all cursor-pointer"
+                                    onClick={() => handleAddGeneralServiceToQuotation(srv)}
+                                    className="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold text-[11px] shadow-sm transition-all flex items-center gap-1 cursor-pointer active:scale-95"
                                   >
-                                    + Add Item
+                                    <span>+ Add to Quote</span>
                                   </button>
                                 </div>
                               </div>
                             ))
-                          ) : (
-                            <div className="text-center py-6 text-slate-400 text-xs">
-                              No products found in catalog.
-                            </div>
-                          )}
+                          })()}
                         </div>
                       </div>
 
@@ -1951,18 +2151,20 @@ const AdminUsers = () => {
                             type="button"
                             disabled={loading || quotationItems.length === 0}
                             onClick={(e) => handleSaveQuotation(e, false)}
-                            className="w-full py-3 bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer"
+                            className="w-full py-3 bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
                           >
-                            {loading ? 'Saving...' : '💾 Save Draft Quotation'}
+                            <span>💾</span>
+                            <span>{loading ? 'Saving...' : 'Save & View Quotation Document'}</span>
                           </button>
 
                           <button
                             type="button"
                             disabled={loading || quotationItems.length === 0}
                             onClick={(e) => handleSaveQuotation(e, true)}
-                            className="w-full py-3.5 bg-gradient-to-r from-[#38b34a] to-emerald-600 hover:from-[#329f42] hover:to-emerald-700 disabled:opacity-50 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-lg transition-all active:scale-[0.98] cursor-pointer"
+                            className="w-full py-3.5 bg-gradient-to-r from-[#38b34a] to-emerald-600 hover:from-[#329f42] hover:to-emerald-700 disabled:opacity-50 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-lg transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1.5"
                           >
-                            {loading ? 'Processing...' : '⚡ Save & Send Payment Link'}
+                            <span>⚡</span>
+                            <span>{loading ? 'Processing...' : 'Save & Generate Payment Link'}</span>
                           </button>
                         </div>
                       </div>
@@ -1973,72 +2175,16 @@ const AdminUsers = () => {
             </div>
           )}
 
-          {/* TAB 2: CLIENTS QUICK ACTIONS (3 Gradient Cards) */}
-          {activeTab === 'clients' && (
-            <div className="space-y-6 animate-fade-in">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                  <span>Quick Actions for General Clients</span>
-                </h3>
-                <button
-                  onClick={() => setActiveTab('show_clients')}
-                  className="text-xs font-bold text-[#38b34a] hover:bg-emerald-50 rounded-xl px-3 py-1.5 border border-emerald-200 transition-all flex items-center gap-1 cursor-pointer"
-                >
-                  <span>View Full Directory ({generalClients.length})</span>
-                  <span>→</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-3">
-                {/* 1. Add Client Gradient Card */}
-                <div
-                  onClick={handleOpenAddClientModal}
-                  className="bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] rounded-2xl p-6 text-white shadow-lg flex flex-col items-center justify-center min-h-[190px] hover:scale-[1.02] transition-transform cursor-pointer relative overflow-hidden group"
-                >
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full translate-x-8 -translate-y-8 group-hover:scale-110 transition-transform"></div>
-                  <div className="w-14 h-14 rounded-2xl bg-teal-100/90 flex items-center justify-center shadow-md mb-4 shrink-0">
-                    <span className="text-2xl">➕</span>
-                  </div>
-                  <span className="text-lg font-extrabold tracking-tight">Add Client</span>
-                  <span className="text-xs text-purple-200 mt-1 font-medium">Single Client Registration</span>
-                </div>
-
-                {/* 2. Service Catalog Gradient Card */}
-                <div
-                  onClick={() => setActiveTab('services')}
-                  className="bg-gradient-to-br from-[#10b981] to-[#059669] rounded-2xl p-6 text-white shadow-lg flex flex-col items-center justify-center min-h-[190px] hover:scale-[1.02] transition-transform cursor-pointer relative overflow-hidden group"
-                >
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full translate-x-8 -translate-y-8 group-hover:scale-110 transition-transform"></div>
-                  <div className="w-14 h-14 rounded-2xl bg-blue-100/90 flex items-center justify-center shadow-md mb-4 shrink-0">
-                    <span className="text-2xl">📦</span>
-                  </div>
-                  <span className="text-lg font-extrabold tracking-tight">Service Catalog</span>
-                  <span className="text-xs text-emerald-100 mt-1 font-medium">Manage {generalServices.length} Billable Services</span>
-                </div>
-
-                {/* 3. Follow Up Gradient Card */}
-                <div
-                  onClick={() => setActiveTab('follow_up')}
-                  className="bg-gradient-to-br from-[#f59e0b] to-[#ea580c] rounded-2xl p-6 text-white shadow-lg flex flex-col items-center justify-center min-h-[190px] hover:scale-[1.02] transition-transform cursor-pointer relative overflow-hidden group"
-                >
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full translate-x-8 -translate-y-8 group-hover:scale-110 transition-transform"></div>
-                  <div className="w-14 h-14 rounded-2xl bg-pink-100/90 flex items-center justify-center shadow-md mb-4 shrink-0">
-                    <span className="text-2xl">📞</span>
-                  </div>
-                  <span className="text-lg font-extrabold tracking-tight">Follow-Up Schedule</span>
-                  <span className="text-xs text-amber-100 mt-1 font-medium">Active Follow-up Pipeline</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 3: SERVICE CATALOG (Module 1: General Services Management) */}
+          {/* TAB 2: SERVICE CATALOG (General Services Management) */}
           {activeTab === 'services' && (
             <div className="space-y-6 animate-fade-in">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-slate-100">
                 <div>
                   <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
                     <span>📦 General Services Catalog</span>
+                    <span className="text-xs bg-purple-100 text-purple-800 px-2.5 py-0.5 rounded-full font-bold">
+                      {generalServices.length} Total Services
+                    </span>
                   </h3>
                   <p className="text-xs text-slate-500 font-medium">
                     Configure services available for client selection and automated line-item pre-filling in Quotations.
@@ -2053,55 +2199,124 @@ const AdminUsers = () => {
                 </button>
               </div>
 
-              {/* Services Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {generalServices.map((srv) => (
-                  <div
-                    key={srv.id}
-                    className="bg-slate-50/70 border border-slate-200/90 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+              {/* Service Search and Filter */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                  <input
+                    type="text"
+                    placeholder="Search services by title, category, HSN code, or keywords..."
+                    value={serviceCatalogSearch}
+                    onChange={(e) => setServiceCatalogSearch(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/10"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-[11px] font-bold text-slate-400 whitespace-nowrap">Category:</label>
+                  <select
+                    value={serviceCategoryFilter}
+                    onChange={(e) => setServiceCategoryFilter(e.target.value)}
+                    className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:border-purple-500"
                   >
-                    <div className="space-y-2">
-                      <div className="flex items-start justify-between">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-purple-100 text-purple-800 border border-purple-200">
-                          {srv.category || 'Service'}
-                        </span>
-                        <span className="text-[10px] font-mono font-bold text-slate-400 bg-white px-2 py-0.5 rounded border border-slate-200">
-                          HSN: {srv.hsn || '998314'}
-                        </span>
-                      </div>
-                      <h4 className="font-extrabold text-slate-800 text-sm">{srv.name}</h4>
-                      <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed">{srv.description}</p>
-                    </div>
-
-                    <div className="pt-4 mt-3 border-t border-slate-200/60 flex items-center justify-between">
-                      <div>
-                        <span className="text-[10px] text-slate-400 block font-semibold">Standard Rate:</span>
-                        <span className="text-base font-black text-purple-700">
-                          ₹{(srv.selling_price || srv.price || 0).toLocaleString('en-IN')}
-                          <span className="text-[11px] font-normal text-slate-400"> / {srv.unit || 'Unit'}</span>
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => handleEditServiceClick(srv)}
-                          className="p-1.5 bg-white hover:bg-slate-100 text-slate-600 rounded-lg border border-slate-200 text-xs font-bold transition-all"
-                          title="Edit Service"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          onClick={() => handleDeleteService(srv)}
-                          className="p-1.5 bg-white hover:bg-rose-50 text-rose-600 rounded-lg border border-slate-200 text-xs font-bold transition-all"
-                          title="Delete Service"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                    <option value="All">All Categories</option>
+                    <option value="Web Development">Web Development</option>
+                    <option value="Software">Software & ERP</option>
+                    <option value="API Integration">API Integration</option>
+                    <option value="E-Commerce">E-Commerce</option>
+                    <option value="Mobile App">Mobile App</option>
+                    <option value="Maintenance">Maintenance & AMC</option>
+                    <option value="General">General</option>
+                  </select>
+                </div>
               </div>
+
+              {/* Services Grid (Using normalized fields so service names and prices are never blank) */}
+              {(() => {
+                const filteredCatalogServices = generalServices.filter((srv) => {
+                  const q = serviceCatalogSearch.trim().toLowerCase()
+                  const matchesSearch =
+                    !q ||
+                    (srv.name && srv.name.toLowerCase().includes(q)) ||
+                    (srv.category && srv.category.toLowerCase().includes(q)) ||
+                    (srv.description && srv.description.toLowerCase().includes(q)) ||
+                    (srv.hsn && String(srv.hsn).includes(q))
+                  const matchesCategory =
+                    serviceCategoryFilter === 'All' || srv.category === serviceCategoryFilter
+                  return matchesSearch && matchesCategory
+                })
+
+                if (filteredCatalogServices.length === 0) {
+                  return (
+                    <div className="text-center py-16 bg-slate-50/60 rounded-3xl border border-slate-200 text-slate-400 space-y-2">
+                      <span className="text-4xl block">📦</span>
+                      <p className="font-bold text-sm">No services found</p>
+                      <p className="text-xs text-slate-400">Try adjusting your search filter or add a new service.</p>
+                      <button
+                        onClick={handleOpenAddServiceModal}
+                        className="mt-3 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold shadow-sm"
+                      >
+                        + Add New Service
+                      </button>
+                    </div>
+                  )
+                }
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredCatalogServices.map((srv) => (
+                      <div
+                        key={srv.id}
+                        className="bg-slate-50/70 border border-slate-200/90 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-purple-100 text-purple-800 border border-purple-200">
+                              {srv.category || 'Service'}
+                            </span>
+                            <span className="text-[10px] font-mono font-bold text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200 shrink-0">
+                              HSN: {srv.hsn || '998314'}
+                            </span>
+                          </div>
+                          <h4 className="font-extrabold text-slate-800 text-sm leading-snug">
+                            {srv.name || srv.service_name || 'General Service'}
+                          </h4>
+                          <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed">
+                            {srv.description || 'Standard service scope and deliverables.'}
+                          </p>
+                        </div>
+
+                        <div className="pt-4 mt-3 border-t border-slate-200/60 flex items-center justify-between">
+                          <div>
+                            <span className="text-[10px] text-slate-400 block font-semibold">Standard Rate:</span>
+                            <span className="text-base font-black text-purple-700">
+                              ₹{Number(srv.selling_price || srv.price || 0).toLocaleString('en-IN')}
+                              <span className="text-[11px] font-normal text-slate-400"> / {srv.unit || 'Unit'}</span>
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => handleEditServiceClick(srv)}
+                              className="p-1.5 bg-white hover:bg-slate-100 text-slate-600 rounded-lg border border-slate-200 text-xs font-bold transition-all cursor-pointer shadow-sm"
+                              title="Edit Service"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={() => handleDeleteService(srv)}
+                              className="p-1.5 bg-white hover:bg-rose-50 text-rose-600 rounded-lg border border-slate-200 text-xs font-bold transition-all cursor-pointer shadow-sm"
+                              title="Delete Service"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
             </div>
           )}
 
@@ -3635,8 +3850,33 @@ const AdminUsers = () => {
                           </td>
                           <td className="px-4 py-3 text-center">
                             <div className="flex items-center justify-center gap-2">
+                              {/* Direct View Quotation Document */}
                               <button
                                 type="button"
+                                onClick={() => {
+                                  setShowQuotationsListModal(false)
+                                  handleOpenQuotationDoc(q, selectedGenClient)
+                                }}
+                                className="px-3 py-1.5 bg-[#1e3e6b] hover:bg-[#152e50] text-white rounded-lg text-[11px] font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
+                              >
+                                <span>👁️</span>
+                                <span>View Document</span>
+                              </button>
+
+                              {isPaid && (
+                                <a
+                                  href={getAdminInvoiceDownloadUrl(q.id)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-bold inline-flex items-center gap-1 shadow-sm transition-all"
+                                >
+                                  📥 Tax Invoice PDF
+                                </a>
+                              )}
+
+                              <button
+                                type="button"
+                                title="Copy Payment Link"
                                 onClick={async () => {
                                   let payUrl = q.payment_url || q.pay_url
                                   if (!payUrl && q.id) {
@@ -3655,25 +3895,12 @@ const AdminUsers = () => {
                                   if (navigator.clipboard && navigator.clipboard.writeText) {
                                     await navigator.clipboard.writeText(payUrl)
                                     alert(`📋 Payment Link copied to clipboard:\n\n${payUrl}`)
-                                  } else {
-                                    alert(`📋 Payment Link:\n\n${payUrl}`)
                                   }
                                 }}
-                                className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-[11px] font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer"
+                                className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-bold transition-all cursor-pointer"
                               >
-                                🔗 Copy Pay Link
+                                🔗
                               </button>
-
-                              {isPaid && (
-                                <a
-                                  href={getAdminInvoiceDownloadUrl(q.id)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[11px] font-bold inline-flex items-center gap-1 shadow-md transition-all"
-                                >
-                                  📥 Tax Invoice PDF
-                                </a>
-                              )}
                             </div>
                           </td>
                         </tr>
@@ -3690,6 +3917,347 @@ const AdminUsers = () => {
                 className="px-5 py-2 border border-slate-300 text-slate-600 font-bold rounded-xl text-xs hover:bg-slate-100"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* MODAL 6: OFFICIAL QUOTATION DOCUMENT VIEWER (Print Ready) */}
+      {/* ============================================================ */}
+      {showQuotationDocModal && viewingQuotationDoc && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/75 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto animate-fade-in print:p-0 print:bg-white">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col text-slate-800 overflow-hidden print:max-h-none print:shadow-none print:border-none print:rounded-none">
+            {/* Modal Controls Top Bar (Hidden on Print) */}
+            <div className="px-6 py-3.5 bg-slate-900 text-white flex items-center justify-between gap-3 shrink-0 print:hidden">
+              <div className="flex items-center gap-2.5">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  Official Quotation Document
+                </span>
+                <span className="font-mono text-xs font-bold text-slate-300">
+                  #{viewingQuotationDoc.quotation_number || `QUO-${viewingQuotationDoc.id}`}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
+                >
+                  <span>🖨️</span>
+                  <span>Print / Save PDF</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const payUrl = viewingQuotationDoc.payment_url || `${window.location.origin}/general-quotation-pay.html?uuid=${viewingQuotationDoc.uuid || ('quotation-' + viewingQuotationDoc.id)}`
+                    navigator.clipboard.writeText(payUrl)
+                    setCopiedPayLink(true)
+                    setTimeout(() => setCopiedPayLink(false), 2500)
+                  }}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>{copiedPayLink ? '✅' : '🔗'}</span>
+                  <span>{copiedPayLink ? 'Link Copied!' : 'Copy Pay Link'}</span>
+                </button>
+
+                <a
+                  href={viewingQuotationDoc.payment_url || `${window.location.origin}/general-quotation-pay.html?uuid=${viewingQuotationDoc.uuid || ('quotation-' + viewingQuotationDoc.id)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+                >
+                  <span>🌐</span>
+                  <span>Public View</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => setShowQuotationDocModal(false)}
+                  className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center transition-colors ml-2 cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Document Body (A4 Style Paper) */}
+            <div className="flex-1 overflow-y-auto p-6 sm:p-10 bg-slate-100/60 print:p-0 print:bg-white print:overflow-visible font-sans">
+              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-8 sm:p-10 space-y-8 print:border-none print:shadow-none print:p-0 max-w-3xl mx-auto">
+                {/* 1. Letterhead & Brand Header */}
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-6 pb-6 border-b-2 border-slate-800">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#1e3e6b] to-blue-700 text-white font-black flex items-center justify-center text-xl shadow-md">
+                        A
+                      </div>
+                      <div>
+                        <h1 className="text-xl font-black text-[#1e3e6b] tracking-tight uppercase">AIM Digitalise Pvt. Ltd.</h1>
+                        <p className="text-[11px] font-bold text-slate-500">Corporate Web, Software & Digital Transformation Solutions</p>
+                      </div>
+                    </div>
+                    <div className="text-[10px] text-slate-500 leading-relaxed pt-1">
+                      <p>Corporate Office: Head Office (Gurugram) / New Delhi, India</p>
+                      <p>GSTIN: <strong>07AAACA1234A1Z5</strong> | CIN: <strong>U72900DL2026PTC123456</strong></p>
+                      <p>Email: <span className="text-blue-600">contact@aimdigitalise.com</span> | Web: <strong>www.aimdigitalise.com</strong></p>
+                    </div>
+                  </div>
+
+                  <div className="text-left sm:text-right space-y-1.5 bg-slate-50 sm:bg-transparent p-4 sm:p-0 rounded-2xl border sm:border-none border-slate-200 w-full sm:w-auto">
+                    <span className="inline-block px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-widest bg-[#1e3e6b] text-white">
+                      OFFICIAL QUOTATION
+                    </span>
+                    <div className="text-xs pt-1 space-y-0.5">
+                      <p className="font-mono font-black text-slate-800 text-sm">
+                        #{viewingQuotationDoc.quotation_number || `QUO-${viewingQuotationDoc.id}`}
+                      </p>
+                      <p className="text-slate-500 font-medium">
+                        Date: <strong>{formatDateDisplay(viewingQuotationDoc.quotation_date)}</strong>
+                      </p>
+                      <p className="text-slate-500 font-medium">
+                        Payment Terms: <strong>{viewingQuotationDoc.payment_terms || 'Due on Receipt'}</strong>
+                      </p>
+                      <p className="text-slate-500 font-medium">
+                        Status:{' '}
+                        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                          viewingQuotationDoc.status === 'paid'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          {viewingQuotationDoc.status || 'Draft'}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Client / Billing Information */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50/80 rounded-2xl p-5 border border-slate-200/80 text-xs">
+                  <div className="space-y-1">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block font-sans">
+                      QUOTATION FOR (BILL TO):
+                    </span>
+                    <h3 className="font-extrabold text-slate-900 text-sm">
+                      {viewingQuotationDoc.client?.company_name || viewingQuotationDoc.client?.client_name || 'Valued Client'}
+                    </h3>
+                    {viewingQuotationDoc.client?.contact_person && (
+                      <p className="text-slate-600 font-medium">
+                        Attn: <strong>{viewingQuotationDoc.client.contact_person}</strong>
+                      </p>
+                    )}
+                    <p className="text-slate-600">{viewingQuotationDoc.client?.email || '—'}</p>
+                    <p className="text-slate-600">{viewingQuotationDoc.client?.contact_number || '—'}</p>
+                    {viewingQuotationDoc.client?.address && (
+                      <p className="text-slate-500 pt-0.5 leading-snug">
+                        {viewingQuotationDoc.client.address}
+                        {viewingQuotationDoc.client.district ? `, ${viewingQuotationDoc.client.district}` : ''}
+                        {viewingQuotationDoc.client.state ? `, ${viewingQuotationDoc.client.state}` : ''}
+                        {viewingQuotationDoc.client.pin_code ? ` - ${viewingQuotationDoc.client.pin_code}` : ''}
+                      </p>
+                    )}
+                    {viewingQuotationDoc.client?.gstin && (
+                      <p className="font-mono text-slate-700 font-bold pt-1">
+                        GSTIN: {viewingQuotationDoc.client.gstin}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1 sm:border-l sm:border-slate-200 sm:pl-6">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block font-sans">
+                      EXECUTIVE & ORDER METADATA:
+                    </span>
+                    <p className="text-slate-700">
+                      Sold / Prepared By: <strong>{viewingQuotationDoc.client?.sold_by_name || 'Admin Sales Team'}</strong>
+                    </p>
+                    <p className="text-slate-700">
+                      Branch: <strong>{viewingQuotationDoc.client?.branch_name || 'Head Office (Gurugram)'}</strong>
+                    </p>
+                    <p className="text-slate-700">
+                      Tax Regime: <strong>{viewingQuotationDoc.gst_type || viewingQuotationDoc.client?.gst_type || 'Intra-State'}</strong>
+                    </p>
+                    <p className="text-slate-700">
+                      Country: <strong>{countryFlags[viewingQuotationDoc.client?.country_code] || '🇮🇳'} {viewingQuotationDoc.client?.country_code || 'IN'}</strong>
+                    </p>
+                    {viewingQuotationDoc.po_number && (
+                      <p className="text-slate-700">
+                        PO Number: <strong>{viewingQuotationDoc.po_number}</strong> ({viewingQuotationDoc.po_date || 'N/A'})
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Scope & Itemized Breakdown Table */}
+                <div className="space-y-2">
+                  <span className="text-[10px] font-black text-slate-700 uppercase tracking-wider block">
+                    Scope of Services & Line Items:
+                  </span>
+
+                  <div className="border border-slate-300 rounded-xl overflow-hidden shadow-xs">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-900 text-white font-bold text-[10px] uppercase tracking-wider">
+                          <th className="px-3.5 py-2.5 text-center w-10">#</th>
+                          <th className="px-4 py-2.5">Service Description & Technical Scope</th>
+                          <th className="px-3 py-2.5 text-center w-20">HSN/SAC</th>
+                          <th className="px-3 py-2.5 text-center w-16">Qty</th>
+                          <th className="px-3 py-2.5 text-right w-24">Rate (₹)</th>
+                          <th className="px-3 py-2.5 text-center w-16">Disc</th>
+                          <th className="px-4 py-2.5 text-right w-28">Amount (₹)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 text-slate-800">
+                        {(viewingQuotationDoc.items || []).map((item, idx) => {
+                          const qty = Number(item.qty || item.quantity || 1)
+                          const price = Number(item.selling_price || item.price || 0)
+                          const disc = Number(item.discount_percentage || item.discount || 0)
+                          const lineTotal = Math.round(qty * price * (1 - disc / 100) * 100) / 100
+
+                          return (
+                            <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                              <td className="px-3.5 py-3 text-center text-slate-400 font-bold">{idx + 1}</td>
+                              <td className="px-4 py-3">
+                                <p className="font-extrabold text-slate-900 leading-snug">
+                                  {item.product_name || item.name || item.service_name || 'Service Item'}
+                                </p>
+                                {item.description && (
+                                  <p className="text-[11px] text-slate-500 mt-1 leading-relaxed whitespace-pre-line">
+                                    {item.description}
+                                  </p>
+                                )}
+                              </td>
+                              <td className="px-3 py-3 text-center font-mono text-[11px] text-slate-600">
+                                {item.hsn || '998314'}
+                              </td>
+                              <td className="px-3 py-3 text-center font-bold">
+                                {qty} <span className="text-[10px] font-normal text-slate-400">{item.unit || 'Unit'}</span>
+                              </td>
+                              <td className="px-3 py-3 text-right font-medium">
+                                ₹{price.toLocaleString('en-IN')}
+                              </td>
+                              <td className="px-3 py-3 text-center font-medium text-slate-500">
+                                {disc > 0 ? `${disc}%` : '—'}
+                              </td>
+                              <td className="px-4 py-3 text-right font-black text-slate-900">
+                                ₹{lineTotal.toLocaleString('en-IN')}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* 4. Financial Calculations & Amount in Words */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+                  <div className="space-y-4">
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">
+                        Amount in Words:
+                      </span>
+                      <p className="font-bold text-slate-800 italic leading-relaxed">
+                        {numberToIndianWords(viewingQuotationDoc.grand_total)}
+                      </p>
+                    </div>
+
+                    <div className="p-4 bg-blue-50/70 rounded-2xl border border-blue-100 text-xs space-y-1.5">
+                      <span className="text-[9px] font-black text-blue-700 uppercase tracking-widest block">
+                        Bank Transfer & UPI Details:
+                      </span>
+                      <div className="text-[11px] text-slate-700 space-y-0.5">
+                        <p>Bank: <strong>HDFC Bank Ltd</strong> | Account: <strong>Current Account</strong></p>
+                        <p>A/C Name: <strong>AIM DIGITALISE PVT LTD</strong></p>
+                        <p>A/C No: <strong>50200087654321</strong> | IFSC: <strong>HDFC0001234</strong></p>
+                        <p>UPI ID: <strong className="text-blue-700">aimdigitalise@hdfcbank</strong></p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-2 text-xs">
+                    <div className="flex justify-between text-slate-600 font-medium">
+                      <span>Subtotal:</span>
+                      <span className="font-bold text-slate-800">
+                        ₹{Number(viewingQuotationDoc.subtotal || 0).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+
+                    {(viewingQuotationDoc.client?.country_code || 'IN') === 'IN' ? (
+                      (viewingQuotationDoc.gst_type || 'Intra-State') === 'Intra-State' ? (
+                        <>
+                          <div className="flex justify-between text-slate-500 text-[11px]">
+                            <span>CGST (9%):</span>
+                            <span>₹{Number(viewingQuotationDoc.cgst || (viewingQuotationDoc.tax_total / 2) || 0).toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="flex justify-between text-slate-500 text-[11px]">
+                            <span>SGST (9%):</span>
+                            <span>₹{Number(viewingQuotationDoc.sgst || (viewingQuotationDoc.tax_total / 2) || 0).toLocaleString('en-IN')}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex justify-between text-slate-500 text-[11px]">
+                          <span>IGST (18%):</span>
+                          <span>₹{Number(viewingQuotationDoc.igst || viewingQuotationDoc.tax_total || 0).toLocaleString('en-IN')}</span>
+                        </div>
+                      )
+                    ) : (
+                      <div className="flex justify-between text-slate-500 text-[11px]">
+                        <span>Export Tax (18%):</span>
+                        <span>₹{Number(viewingQuotationDoc.tax_total || 0).toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between text-slate-700 font-bold border-t border-slate-200 pt-2">
+                      <span>Total Tax:</span>
+                      <span>₹{Number(viewingQuotationDoc.tax_total || 0).toLocaleString('en-IN')}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center border-t-2 border-slate-800 pt-3 text-base font-black text-slate-900">
+                      <span>Grand Total:</span>
+                      <span className="text-xl text-[#38b34a]">
+                        ₹{Number(viewingQuotationDoc.grand_total || 0).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5. Terms & Signature */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 border-t border-slate-200 text-xs">
+                  <div className="sm:col-span-2 space-y-1 text-slate-500 text-[10px]">
+                    <span className="font-black text-slate-700 uppercase tracking-wider block">Terms & Conditions:</span>
+                    <ol className="list-decimal pl-4 space-y-0.5">
+                      <li>This quotation is valid for 30 days from the date of issuance.</li>
+                      <li>Work commences immediately upon receipt of initial confirmation or advance.</li>
+                      <li>GST/Taxes are calculated based on registered business jurisdiction.</li>
+                      <li>For any inquiries regarding this quotation, contact <strong>support@aimdigitalise.com</strong>.</li>
+                    </ol>
+                  </div>
+
+                  <div className="text-center sm:text-right space-y-8 pt-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
+                      For AIM Digitalise Pvt. Ltd.
+                    </span>
+                    <div className="border-t border-slate-400 pt-1 inline-block min-w-[140px] text-center">
+                      <span className="font-black text-slate-800 text-xs block">Authorized Signatory</span>
+                      <span className="text-[9px] text-slate-400 block font-medium">Digital Signature & Stamp</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3 shrink-0 print:hidden">
+              <span className="text-xs text-slate-500 font-medium">
+                Official document format for AIM Digitalise clients & accounting audits.
+              </span>
+              <button
+                onClick={() => setShowQuotationDocModal(false)}
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs transition-all shadow-sm cursor-pointer"
+              >
+                Close Document
               </button>
             </div>
           </div>
