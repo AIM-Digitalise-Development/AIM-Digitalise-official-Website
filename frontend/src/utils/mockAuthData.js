@@ -360,6 +360,12 @@ export const getMockResponse = (url, method, data = null) => {
     normalizedUrl = normalizedUrl.replace('/admin/demo-slots-available', '/employee/demo-slots-available')
   } else if (normalizedUrl.includes('/admin/bookings')) {
     normalizedUrl = normalizedUrl.replace('/admin/bookings', '/employee/bookings')
+  } else if (normalizedUrl.includes('/employee/general-services')) {
+    normalizedUrl = normalizedUrl.replace('/employee/general-services', '/admin/general-services')
+  } else if (normalizedUrl.includes('/public/general-services')) {
+    normalizedUrl = normalizedUrl.replace('/public/general-services', '/admin/general-services')
+  } else if (normalizedUrl.includes('/employee/general-clients')) {
+    normalizedUrl = normalizedUrl.replace('/employee/general-clients', '/admin/general-clients')
   }
   const lowercaseUrl = normalizedUrl
   if (!data) data = {}
@@ -843,7 +849,13 @@ export const getMockResponse = (url, method, data = null) => {
 
     return {
       success: true,
-      data: window.__mockGeneralServices || []
+      data: (window.__mockGeneralServices || []).map(s => ({
+        ...s,
+        service_name: s.service_name || s.name,
+        service_price: s.service_price !== undefined ? s.service_price : (s.selling_price || s.price || 0),
+        service_description: s.service_description !== undefined ? s.service_description : (s.description || ''),
+        hsn_code: s.hsn_code || s.hsn || '9983'
+      }))
     }
   }
 
@@ -901,9 +913,9 @@ export const getMockResponse = (url, method, data = null) => {
     return { success: true, data: newQuotation, message: 'Quotation created successfully' }
   }
 
-  // POST /admin/quotations/:id/send
-  if (lowercaseUrl.includes('/admin/quotations/') && lowercaseUrl.includes('/send')) {
-    const uuidMatch = lowercaseUrl.match(/\/admin\/quotations\/(\d+)\/send/)
+  // POST /admin/quotations/:id/send or /employee/general-clients/quotations/:id/send-email
+  if ((lowercaseUrl.includes('/quotations/') && (lowercaseUrl.includes('/send') || lowercaseUrl.includes('/send-email')))) {
+    const uuidMatch = lowercaseUrl.match(/\/quotations\/(\d+)\/(send|send-email)/)
     const qId = uuidMatch ? uuidMatch[1] : '101'
     if (window.__mockGeneralClients) {
       for (const clientItem of window.__mockGeneralClients) {
@@ -919,8 +931,37 @@ export const getMockResponse = (url, method, data = null) => {
     }
     return {
       success: true,
-      message: 'Quotation sent successfully',
+      message: 'Quotation & Invoice sent successfully to client email!',
       payment_url: `${window.location.origin}/general-quotation-pay.html?uuid=quotation-uuid-${qId}`
+    }
+  }
+
+  // POST /employee/general-clients/quotations/:id/record-payment
+  if (lowercaseUrl.includes('/record-payment') && method === 'POST') {
+    const qMatch = lowercaseUrl.match(/\/quotations\/(\d+)\/record-payment/)
+    const qId = qMatch ? qMatch[1] : null
+    let recordedQuotation = null
+    if (window.__mockGeneralClients) {
+      for (const c of window.__mockGeneralClients) {
+        if (c.quotations) {
+          const q = c.quotations.find(it => String(it.id) === String(qId))
+          if (q) {
+            q.status = 'paid'
+            q.paid_amount = data?.payment_amount || q.grand_total
+            q.payment_mode = data?.payment_mode || 'Bank Transfer'
+            q.transaction_reference = data?.transaction_reference || ('UTR' + Date.now())
+            q.payment_date = data?.payment_date || new Date().toISOString().substring(0, 10)
+            c.status = 'Order Closed'
+            recordedQuotation = q
+            break
+          }
+        }
+      }
+    }
+    return {
+      success: true,
+      message: 'Payment recorded successfully!',
+      data: recordedQuotation || data
     }
   }
 
@@ -1099,6 +1140,52 @@ export const getMockResponse = (url, method, data = null) => {
       if (window.__mockGeneralClients) {
         window.__mockGeneralClients.unshift(newGenClient)
       }
+
+      // Mirror to mock Leads if available
+      if (window.__mockLeads) {
+        const alreadyInLeads = window.__mockLeads.some(
+          l => l.client_name?.toLowerCase() === (newGenClient.client_name || '').toLowerCase() &&
+               l.client_phone === newGenClient.contact_number
+        )
+        if (!alreadyInLeads) {
+          const newLeadId = window.__mockLeads.length > 0 ? Math.max(...window.__mockLeads.map(l => l.id)) + 1 : 1
+          window.__mockLeads.unshift({
+            id: newLeadId,
+            lead_id: `LEAD26${String(newLeadId).padStart(5, '0')}`,
+            employee_id: getLoggedInMockEmployee().id,
+            client_name: newGenClient.client_name,
+            client_email: newGenClient.email || '',
+            client_phone: newGenClient.contact_number,
+            client_alternate_phone: newGenClient.alt_contact_number || null,
+            company_name: newGenClient.company_name || null,
+            address: newGenClient.address || null,
+            city: newGenClient.district || null,
+            state: newGenClient.state || null,
+            pin_code: newGenClient.pin_code || null,
+            country: newGenClient.country_code === 'IN' ? 'India' : (newGenClient.country_code || 'India'),
+            country_code: newGenClient.country_code || 'IN',
+            lead_source: newGenClient.lead_source || 'Website',
+            lead_status: 'new',
+            lead_priority: 'medium',
+            category_id: 'general_client',
+            category_name: 'General Client',
+            product_name: newGenClient.software_requirements || 'General Client Services',
+            product_interest: newGenClient.software_requirements || 'General Client Services',
+            software_requirements: newGenClient.software_requirements,
+            selected_services: newGenClient.software_requirements ? newGenClient.software_requirements.split(',').map(s => s.trim()) : [],
+            gst_type: newGenClient.gst_type || null,
+            gstin: newGenClient.gstin || null,
+            follow_up_date: newGenClient.next_followup_date || null,
+            next_follow_up: newGenClient.next_followup_date || null,
+            notes: `[Created from General Client Panel] Services: ${newGenClient.software_requirements}`,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            employee: getLoggedInMockEmployee(),
+            activities: []
+          })
+        }
+      }
+
       return { success: true, data: newGenClient, message: 'General client created successfully' }
     }
 
@@ -1624,11 +1711,83 @@ export const getMockResponse = (url, method, data = null) => {
       }
     }
 
+    // POST /employee/leads/{id}/convert
+    const convertMatch = lowercaseUrl.match(/\/employee\/leads\/(\d+)\/convert$/)
+    if (convertMatch && method === 'POST') {
+      const leadId = parseInt(convertMatch[1])
+      const lead = leadsList.find(l => l.id === leadId)
+      if (lead) {
+        lead.is_converted = true
+        lead.lead_status = 'converted'
+        lead.conversion_date = new Date().toISOString()
+        const newClientId = `GC-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`
+        const newGenClient = {
+          id: Math.floor(Date.now() + Math.random() * 1000),
+          client_id: newClientId,
+          client_name: lead.client_name,
+          company_name: lead.company_name || lead.client_name,
+          contact_person: lead.client_name,
+          email: lead.client_email || '',
+          contact_number: lead.client_phone || '',
+          alt_contact_number: lead.client_alternate_phone || '',
+          address: lead.address || '',
+          district: lead.city || '',
+          state: lead.state || '',
+          pin_code: lead.pin_code || '',
+          country_code: lead.country_code || 'IN',
+          gst_type: lead.gst_type || 'Intra-State',
+          gstin: '',
+          lead_source: lead.lead_source || 'Website',
+          referred_by: lead.referred_by || 'Direct',
+          sold_by_name: getLoggedInMockEmployee().full_name || 'Employee',
+          branch_name: 'Head Office (Gurugram)',
+          status: 'Attended',
+          next_followup_date: lead.follow_up_date || '',
+          reg_date: new Date().toISOString().substring(0, 10),
+          software_requirements: Array.isArray(lead.software_requirements) ? lead.software_requirements.join(', ') : (lead.software_requirements || lead.product_interest || ''),
+          quotations_count: 0,
+          quotations: []
+        }
+        if (window.__mockGeneralClients) {
+          window.__mockGeneralClients.unshift(newGenClient)
+        }
+        return {
+          success: true,
+          message: 'Lead successfully converted to Client!',
+          data: { client_id: newClientId, client: newGenClient }
+        }
+      } else {
+        return { success: false, message: 'Lead not found for conversion' }
+      }
+    }
+
+    // POST /employee/leads/{id}/assign-demo-slot
+    const assignSlotMatch = lowercaseUrl.match(/\/employee\/leads\/(\d+)\/assign-demo-slot$/)
+    if (assignSlotMatch && method === 'POST') {
+      const leadId = parseInt(assignSlotMatch[1])
+      const slotId = data?.demo_slot_id
+      const lead = leadsList.find(l => l.id === leadId)
+      if (lead) {
+        lead.demo_status = 'scheduled'
+        lead.demo_slot = new Date().toISOString()
+        return {
+          success: true,
+          message: 'Demo slot assigned to lead successfully!',
+          data: lead
+        }
+      } else {
+        return { success: false, message: 'Lead not found' }
+      }
+    }
+
     // POST /employee/leads (Create)
     if (method === 'POST') {
       const newId = leadsList.length > 0 ? Math.max(...leadsList.map(l => l.id)) + 1 : 1
       const leadId = `LEAD26${String(newId).padStart(5, '0')}`
       const followUp = data.follow_up_date || data.expected_close_date || null
+      const isGeneralClient = data.category_id === 'general_client' || data.category_name === 'General Client'
+      const servicesStr = data.software_requirements || (Array.isArray(data.selected_services) ? data.selected_services.join(', ') : '') || data.product_name || data.product_interest || null
+
       const newLead = {
         id: newId,
         lead_id: leadId,
@@ -1643,16 +1802,28 @@ export const getMockResponse = (url, method, data = null) => {
         state: data.state || null,
         pin_code: data.pin_code || null,
         country: data.country || 'India',
+        country_code: data.country_code || 'IN',
         lead_source: data.lead_source || 'Website',
         lead_status: data.lead_status || 'new',
         lead_priority: data.lead_priority || 'medium',
+        category_id: data.category_id || (isGeneralClient ? 'general_client' : null),
+        category_name: isGeneralClient ? 'General Client' : (data.category_name || null),
+        sub_category_id: data.sub_category_id || null,
+        product_id: data.product_id || null,
+        product_name: isGeneralClient ? (servicesStr || 'General Client Services') : (data.product_name || data.product_interest || null),
+        product_interest: isGeneralClient ? (servicesStr || 'General Client Services') : (data.product_interest || data.product_name || null),
+        software_requirements: servicesStr,
+        selected_services: Array.isArray(data.selected_services) ? data.selected_services : (servicesStr ? servicesStr.split(',').map(s => s.trim()) : []),
+        gst_type: data.gst_type || null,
+        gstin: data.gstin || null,
+        product_processing_fee: data.product_processing_fee || null,
+        product_monthly_subscription: data.product_monthly_subscription || null,
         assigned_to: data.assigned_to || null,
         assigned_by: data.assigned_to ? getLoggedInMockEmployee().id : null,
         follow_up_date: followUp,
         next_follow_up: followUp,
         notes: data.notes || null,
         remarks: null,
-        product_interest: data.product_interest || null,
         budget: data.budget ? String(data.budget) : '0.00',
         expected_close_date: data.expected_close_date || null,
         conversion_date: null,
@@ -1667,6 +1838,43 @@ export const getMockResponse = (url, method, data = null) => {
       }
       leadsList.unshift(newLead)
       window.__mockLeads = leadsList
+
+      // Mirror to mock General Clients if it is a general client and not already present
+      if (isGeneralClient && window.__mockGeneralClients) {
+        const alreadyExists = window.__mockGeneralClients.some(
+          c => c.client_name?.toLowerCase() === (data.client_name || '').toLowerCase() &&
+               c.contact_number === data.client_phone
+        )
+        if (!alreadyExists) {
+          window.__mockGeneralClients.unshift({
+            id: Math.floor(Date.now() + Math.random() * 1000),
+            client_id: `GC-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
+            client_name: data.client_name || 'New Client',
+            company_name: data.company_name || '',
+            contact_person: data.client_name || '',
+            email: data.client_email || '',
+            contact_number: data.client_phone || '',
+            alt_contact_number: data.client_alternate_phone || '',
+            address: data.address || '',
+            district: data.city || '',
+            state: data.state || '',
+            pin_code: data.pin_code || '',
+            country_code: data.country_code || 'IN',
+            gst_type: data.gst_type || 'Intra-State',
+            gstin: data.gstin || '',
+            lead_source: data.lead_source || 'Direct Enquiry',
+            referred_by: 'Direct / None',
+            sold_by_name: getLoggedInMockEmployee()?.full_name || 'Employee',
+            branch_name: 'Head Office (Gurugram)',
+            status: 'Attended',
+            next_followup_date: followUp || '',
+            reg_date: new Date().toISOString().substring(0, 10),
+            software_requirements: servicesStr || '',
+            quotations_count: 0,
+            quotations: []
+          })
+        }
+      }
 
       return {
         success: true,

@@ -1256,13 +1256,6 @@ const AdminUsers = () => {
                       >
                         <span>📦 + Add Service</span>
                       </button>
-
-                      <button
-                        onClick={handleOpenAddClientModal}
-                        className="px-4 py-2 bg-[#38b34a] hover:bg-[#329f42] text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5 active:scale-95 cursor-pointer"
-                      >
-                        <span>➕ Add Client</span>
-                      </button>
                     </div>
                   </div>
 
@@ -1597,13 +1590,7 @@ const AdminUsers = () => {
                               <td colSpan="7" className="text-center py-16 text-slate-400">
                                 <span className="text-4xl block mb-2">📁</span>
                                 <p className="font-bold text-sm">No General Clients found matching your criteria</p>
-                                <p className="text-xs text-slate-400 mt-1">Try changing your search query or status filter.</p>
-                                <button
-                                  onClick={handleOpenAddClientModal}
-                                  className="mt-4 px-5 py-2.5 bg-[#38b34a] text-white rounded-xl text-xs font-bold shadow-md hover:bg-[#329f42]"
-                                >
-                                  + Create New General Client
-                                </button>
+                                <p className="text-xs text-slate-400 mt-1">General clients are added via the unified Add New Lead flow.</p>
                               </td>
                             </tr>
                           )}

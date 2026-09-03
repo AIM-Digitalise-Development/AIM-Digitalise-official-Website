@@ -14,6 +14,7 @@ import EmployeeProfile from './pages/employee/Profile'
 import EmployeePunchIn from './pages/employee/PunchIn'
 import EmployeeLeads from './pages/employee/Leads'
 import EmployeeDemoSlots from './pages/employee/DemoSlots'
+import EmployeeGeneralClients from './pages/employee/GeneralClients'
 import Home from './pages/website/Home'
 import About from './pages/website/About'
 import Contact from './pages/website/Contact'
@@ -155,7 +156,8 @@ function App() {
             <Route index element={<EmployeeDashboard />} />
             <Route path="saas-clients" element={<DemoSaasClients />} />
             <Route path="subscription" element={<DemoComingSoon title="Subscribed Clients" icon="💳" />} />
-            <Route path="users" element={<DemoComingSoon title="General Clients" icon="👥" />} />
+            <Route path="users" element={<EmployeeGeneralClients />} />
+            <Route path="general-clients" element={<EmployeeGeneralClients />} />
             <Route path="accounts" element={<DemoComingSoon title="Accounts" icon="💰" />} />
             <Route path="employee" element={<EmployeeProfile />} />
             <Route path="projects" element={<DemoComingSoon title="Projects" icon="📁" />} />

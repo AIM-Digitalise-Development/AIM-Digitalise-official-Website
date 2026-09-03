@@ -70,3 +70,19 @@ export const cancelBooking = (bookingId) =>
 export const scheduleFollowUp = (leadId, data) =>
   client.post(`/employee/leads/${leadId}/follow-up`, data)
 
+// Get General Services Catalog (for Non-Subscription / General Clients) - GET /employee/general-services
+export const getGeneralServices = () =>
+  client.get('/employee/general-services')
+
+// Create General Client (Non-Subscription) - POST /employee/general-clients
+export const createGeneralClient = (data) =>
+  client.post('/employee/general-clients', data)
+
+// Convert Lead to Full Client - POST /employee/leads/:leadId/convert
+export const convertLeadToClient = (leadId) =>
+  client.post(`/employee/leads/${leadId}/convert`)
+
+// Assign Demo Slot to Lead - POST /employee/leads/:leadId/assign-demo-slot
+export const assignDemoSlotToLead = (leadId, demoSlotId) =>
+  client.post(`/employee/leads/${leadId}/assign-demo-slot`, { demo_slot_id: demoSlotId })
+
