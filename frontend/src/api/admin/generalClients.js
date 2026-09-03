@@ -1,8 +1,16 @@
 import client from '../client'
 
 // General Clients API endpoints
-export const getGeneralClients = () =>
-  client.get('/admin/general-clients')
+export const getGeneralClients = (params = {}) => {
+  const query = new URLSearchParams()
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== '' && v !== false && v !== undefined && v !== null && v !== 'all') {
+      query.set(k, v)
+    }
+  })
+  const queryString = query.toString()
+  return client.get(`/admin/general-clients${queryString ? `?${queryString}` : ''}`)
+}
 
 export const getGeneralClientById = (id) =>
   client.get(`/admin/general-clients/${id}`)

@@ -2,28 +2,28 @@ import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  getEmployeeGeneralClients,
-  getEmployeeGeneralClientById,
-  createEmployeeGeneralClient,
-  updateEmployeeGeneralClient,
-  updateEmployeeGeneralClientStatus,
-  deleteEmployeeGeneralClient,
-  getEmployeeGeneralServices,
-  createEmployeeGeneralService,
-  updateEmployeeGeneralService,
-  deleteEmployeeGeneralService,
-  createEmployeeQuotation,
-  sendEmployeeQuotation,
-  getEmployeeInvoiceDownloadUrl,
-  recordEmployeeQuotationPayment,
+  getPartnerGeneralClients,
+  getPartnerGeneralClientById,
+  createPartnerGeneralClient,
+  updatePartnerGeneralClient,
+  updatePartnerGeneralClientStatus,
+  deletePartnerGeneralClient,
+  getPartnerGeneralServices,
+  createPartnerGeneralService,
+  updatePartnerGeneralService,
+  deletePartnerGeneralService,
+  createPartnerQuotation,
+  sendPartnerQuotationEmail,
+  getPartnerInvoiceDownloadUrl,
+  recordPartnerQuotationPayment,
   getCountryTaxes,
   updateCountryTax,
   setCountryPrice,
   getPublicProductsForCountry,
   getSubscriptionClients,
-} from '../../api/employee'
-import { createLead } from '../../api/leads'
-import { useAuth } from '../../hooks/useAuth'
+  createPartnerLead,
+} from '../../api/partner'
+import { usePartnerAuthStore } from '../../store/partnerAuthStore'
 
 export const normalizeService = (srv) => {
   if (!srv || typeof srv !== 'object') return srv
@@ -125,9 +125,9 @@ const STATUS_ICONS = {
   'Not Interested': '⏸️',
 }
 
-export default function EmployeeGeneralClients() {
-  const { user } = useAuth()
-  const employeeName = user?.full_name || user?.name || user?.username || 'Employee'
+export default function PartnerGeneralClients() {
+  const { partnerUser: user } = usePartnerAuthStore()
+  const partnerName = user?.name || user?.full_name || user?.partner_id || 'Partner'
 
   // Navigation Tab State (Default: show_clients)
   const [activeTab, setActiveTab] = useState('show_clients') // 'show_clients' | 'services' | 'pricing' | 'follow_up' | 'due_payment' | 'payment_report'
@@ -173,7 +173,7 @@ export default function EmployeeGeneralClients() {
     gstin: '',
     lead_source: 'Direct Enquiry',
     referred_by: 'Direct / None',
-    sold_by_name: employeeName,
+    sold_by_name: partnerName,
     branch_name: 'Head Office (Gurugram)',
     status: 'Attended',
     next_followup_date: '',
@@ -267,7 +267,7 @@ export default function EmployeeGeneralClients() {
   const fetchGeneralClientsList = async () => {
     setLoadingGenClients(true)
     try {
-      const res = await getEmployeeGeneralClients()
+      const res = await getPartnerGeneralClients()
       const rawData = res.data?.data || res.data?.clients || (Array.isArray(res.data) ? res.data : [])
       setGeneralClients(Array.isArray(rawData) ? rawData : [])
     } catch (err) {
@@ -282,7 +282,7 @@ export default function EmployeeGeneralClients() {
   const fetchGeneralServicesList = async () => {
     setLoadingServices(true)
     try {
-      const res = await getEmployeeGeneralServices()
+      const res = await getPartnerGeneralServices()
       const rawData = res.data?.data || res.data?.services || (Array.isArray(res.data) ? res.data : [])
       const normalized = (Array.isArray(rawData) ? rawData : []).map(normalizeService)
       setGeneralServices(normalized)
@@ -339,7 +339,7 @@ export default function EmployeeGeneralClients() {
   const handleOpenAddClientModal = () => {
     setClientForm({
       ...initialClientForm,
-      sold_by_name: employeeName,
+      sold_by_name: partnerName,
     })
     setShowAddClientModal(true)
   }
@@ -358,16 +358,16 @@ export default function EmployeeGeneralClients() {
 
     const payload = {
       ...clientForm,
-      sold_by_name: clientForm.sold_by_name || employeeName,
+      sold_by_name: clientForm.sold_by_name || partnerName,
       software_requirements: (clientForm.selected_services || []).join(', ') || clientForm.software_requirements,
     }
 
     try {
-      const res = await createEmployeeGeneralClient(payload)
+      const res = await createPartnerGeneralClient(payload)
       if (res.data?.success || res.status === 200 || res.status === 201) {
         // Mirror to Leads table so it reflects in both panels
         try {
-          await createLead({
+          await createPartnerLead({
             client_name: payload.client_name,
             company_name: payload.company_name || payload.client_name,
             client_phone: payload.contact_number,
@@ -434,7 +434,7 @@ export default function EmployeeGeneralClients() {
       gstin: client.gstin || '',
       lead_source: client.lead_source || 'Direct Enquiry',
       referred_by: client.referred_by || 'Direct / None',
-      sold_by_name: client.sold_by_name || client.sold_by || employeeName,
+      sold_by_name: client.sold_by_name || client.sold_by || partnerName,
       branch_name: client.branch_name || 'Head Office (Gurugram)',
       status: client.status || 'Attended',
       next_followup_date: client.next_followup_date ? client.next_followup_date.substring(0, 10) : '',
@@ -457,7 +457,7 @@ export default function EmployeeGeneralClients() {
     }
 
     try {
-      const res = await updateEmployeeGeneralClient(editingClientId, payload)
+      const res = await updatePartnerGeneralClient(editingClientId, payload)
       if (res.data?.success || res.status === 200) {
         setMessage(`✅ Client "${payload.client_name}" updated successfully!`)
         setShowEditClientModal(false)
@@ -474,7 +474,7 @@ export default function EmployeeGeneralClients() {
 
   const handleInlineStatusChange = async (client, newStatus) => {
     try {
-      const res = await updateEmployeeGeneralClientStatus(client.id, newStatus)
+      const res = await updatePartnerGeneralClient(client.id, newStatus)
       if (res.data?.success || res.status === 200) {
         setMessage(`Status updated to "${newStatus}" for client ${client.client_name}`)
         setGeneralClients((prev) =>
@@ -499,7 +499,7 @@ export default function EmployeeGeneralClients() {
 
     setLoading(true)
     try {
-      const res = await deleteEmployeeGeneralClient(client.id)
+      const res = await deletePartnerGeneralClient(client.id)
       if (res.data?.success || res.status === 200) {
         setMessage(`✅ Client "${client.client_name}" removed.`)
         fetchGeneralClientsList()
@@ -550,7 +550,7 @@ export default function EmployeeGeneralClients() {
 
     try {
       if (editingServiceId) {
-        const res = await updateEmployeeGeneralService(editingServiceId, serviceForm)
+        const res = await updatePartnerGeneralService(editingServiceId, serviceForm)
         if (res.data?.success || res.status === 200) {
           setMessage(`✅ Service "${serviceForm.name}" updated successfully!`)
           setShowAddServiceModal(false)
@@ -559,7 +559,7 @@ export default function EmployeeGeneralClients() {
           setErrorMsg(res.data?.message || 'Failed to update service')
         }
       } else {
-        const res = await createEmployeeGeneralService(serviceForm)
+        const res = await createPartnerGeneralService(serviceForm)
         if (res.data?.success || res.status === 200 || res.status === 201) {
           setMessage(`✅ New service "${serviceForm.name}" added to catalog!`)
           setShowAddServiceModal(false)
@@ -579,7 +579,7 @@ export default function EmployeeGeneralClients() {
     if (!window.confirm(`Are you sure you want to remove service "${service.name}" from catalog?`)) return
     setLoading(true)
     try {
-      const res = await deleteEmployeeGeneralService(service.id)
+      const res = await deletePartnerGeneralService(service.id)
       if (res.data?.success || res.status === 200) {
         setMessage(`✅ Service "${service.name}" removed from catalog.`)
         fetchGeneralServicesList()
@@ -813,7 +813,7 @@ export default function EmployeeGeneralClients() {
     }
 
     try {
-      const res = await createEmployeeQuotation(selectedGenClient.id, payload)
+      const res = await createPartnerQuotation(selectedGenClient.id, payload)
       if (res.data?.success || res.status === 200 || res.status === 201) {
         const quotationData = res.data?.data || res.data?.quotation || {
           ...payload,
@@ -824,7 +824,7 @@ export default function EmployeeGeneralClients() {
 
         if (shouldSendEmail && quotationData.id) {
           try {
-            const emailRes = await sendEmployeeQuotation(quotationData.id)
+            const emailRes = await sendPartnerQuotationEmail(quotationData.id)
             if (emailRes.data?.payment_url) {
               paymentUrl = emailRes.data.payment_url
             }
@@ -845,6 +845,7 @@ export default function EmployeeGeneralClients() {
           selectedGenClient
         )
 
+        setShowQuotationBuilder(false)
         fetchGeneralClientsList()
       } else {
         setErrorMsg(res.data?.message || 'Failed to save quotation')
@@ -887,7 +888,7 @@ export default function EmployeeGeneralClients() {
   const handleViewClientQuotations = async (client) => {
     setSelectedGenClient(client)
     try {
-      const res = await getEmployeeGeneralClientById(client.id)
+      const res = await getPartnerGeneralClientById(client.id)
       const data = res.data?.data || res.data?.client || client
       const quotes = data.quotations || client.quotations || []
       setSelectedClientQuotations(quotes)
@@ -902,7 +903,7 @@ export default function EmployeeGeneralClients() {
   const handleSendSingleQuotationEmail = async (quotation) => {
     setLoading(true)
     try {
-      const res = await sendEmployeeQuotation(quotation.id)
+      const res = await sendPartnerQuotationEmail(quotation.id)
       if (res.data?.success || res.status === 200) {
         setMessage(`✅ Email and Razorpay payment link sent to client for Quotation #${quotation.quotation_number}`)
       } else {
@@ -933,7 +934,7 @@ export default function EmployeeGeneralClients() {
     if (!paymentQuotation) return
     setLoading(true)
     try {
-      const res = await recordEmployeeQuotationPayment(paymentQuotation.id, paymentForm)
+      const res = await recordPartnerQuotationPayment(paymentQuotation.id, paymentForm)
       if (res.data?.success || res.status === 200) {
         setMessage(`✅ Payment of ₹${paymentForm.payment_amount} recorded successfully for Quotation #${paymentQuotation.quotation_number}`)
         setShowPaymentModal(false)
@@ -996,7 +997,7 @@ export default function EmployeeGeneralClients() {
   return (
     <>
       <Helmet>
-        <title>General Clients | Employee Portal</title>
+        <title>General Clients | Partner Portal</title>
       </Helmet>
 
       <div className="space-y-6 select-none text-gray-300 animate-fade-in font-sans pb-16">
@@ -1057,7 +1058,7 @@ export default function EmployeeGeneralClients() {
           </div>
         )}
 
-        {/* Main Card Container with Employee Portal Dark Theme */}
+        {/* Main Card Container with Partner Portal Dark Theme */}
         <div className="bg-[#151722] rounded-3xl border border-white/5 shadow-2xl p-6">
           {/* Top Tabs Switcher */}
           <div className="flex flex-wrap items-center gap-1 border-b border-white/10 pb-3 mb-6">
@@ -1401,7 +1402,7 @@ export default function EmployeeGeneralClients() {
                                   <td className="px-5 py-4 align-top">
                                     <p className="font-bold text-gray-200 text-[12px] flex items-center gap-1">
                                       <span>👤</span>
-                                      <span>{c.sold_by_name || c.sold_by || employeeName}</span>
+                                      <span>{c.sold_by_name || c.sold_by || partnerName}</span>
                                     </p>
                                     <p className="text-[10px] text-gray-400 font-medium mt-1 flex items-center gap-1">
                                       <span>🏛️</span>
@@ -1594,7 +1595,7 @@ export default function EmployeeGeneralClients() {
                         <code className="text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded font-mono font-bold border border-blue-500/20">
                           {selectedGenClient?.client_id || `AIMGC${selectedGenClient?.id}`}
                         </code>{' '}
-                        | Executive: <strong className="text-gray-300">{selectedGenClient?.sold_by_name || selectedGenClient?.sold_by || employeeName}</strong> | Branch:{' '}
+                        | Executive: <strong className="text-gray-300">{selectedGenClient?.sold_by_name || selectedGenClient?.sold_by || partnerName}</strong> | Branch:{' '}
                         {selectedGenClient?.branch_name || 'Head Office'}
                       </p>
                     </div>
@@ -1659,7 +1660,7 @@ export default function EmployeeGeneralClients() {
                             <input
                               type="text"
                               readOnly
-                              value={selectedGenClient?.sold_by_name || selectedGenClient?.sold_by || employeeName}
+                              value={selectedGenClient?.sold_by_name || selectedGenClient?.sold_by || partnerName}
                               className="w-full bg-[#151722] border border-white/10 rounded-lg px-3 py-1.5 font-bold text-gray-200"
                             />
                           </div>
@@ -2256,7 +2257,7 @@ export default function EmployeeGeneralClients() {
 
         {/* 1. Add General Client Modal */}
         {showAddClientModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
             <div className="bg-[#151722] rounded-3xl border border-white/10 shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden text-gray-200">
               <div className="p-5 border-b border-white/10 flex items-center justify-between bg-[#1a1e2d]">
                 <h3 className="text-base font-black text-white flex items-center gap-2">
@@ -2458,7 +2459,7 @@ export default function EmployeeGeneralClients() {
 
         {/* 2. Edit General Client Modal */}
         {showEditClientModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
             <div className="bg-[#151722] rounded-3xl border border-white/10 shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden text-gray-200">
               <div className="p-5 border-b border-white/10 flex items-center justify-between bg-[#1a1e2d]">
                 <h3 className="text-base font-black text-white flex items-center gap-2">
@@ -2598,7 +2599,7 @@ export default function EmployeeGeneralClients() {
 
         {/* 3. View Client Dossier Modal */}
         {showViewClientModal && viewingClient && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
             <div className="bg-[#151722] rounded-3xl border border-white/10 shadow-2xl max-w-2xl w-full overflow-hidden text-gray-200">
               <div className="p-5 border-b border-white/10 flex items-center justify-between bg-[#1a1e2d]">
                 <div>
@@ -2637,7 +2638,7 @@ export default function EmployeeGeneralClients() {
                   </div>
                   <div>
                     <span className="text-gray-400 font-bold block mb-1">Sold By Executive:</span>
-                    <span className="font-bold text-white">{viewingClient.sold_by_name || viewingClient.sold_by || employeeName}</span>
+                    <span className="font-bold text-white">{viewingClient.sold_by_name || viewingClient.sold_by || partnerName}</span>
                   </div>
                   <div>
                     <span className="text-gray-400 font-bold block mb-1">Branch:</span>
@@ -2667,7 +2668,7 @@ export default function EmployeeGeneralClients() {
 
         {/* 4. Add / Edit General Service Modal */}
         {showAddServiceModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
             <div className="bg-[#151722] rounded-3xl border border-white/10 shadow-2xl max-w-lg w-full overflow-hidden text-gray-200">
               <div className="p-5 border-b border-white/10 flex items-center justify-between bg-[#1a1e2d]">
                 <h3 className="text-base font-black text-white">
@@ -2763,7 +2764,7 @@ export default function EmployeeGeneralClients() {
 
         {/* 5. Quotations History List Modal */}
         {showQuotationsListModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
             <div className="bg-[#151722] rounded-3xl border border-white/10 shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden text-gray-200">
               <div className="p-5 border-b border-white/10 flex items-center justify-between bg-[#1a1e2d]">
                 <div>
@@ -2833,7 +2834,7 @@ export default function EmployeeGeneralClients() {
 
         {/* 6. Commercial Quotation Document Viewer Modal */}
         {showQuotationDocModal && viewingQuotationDoc && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
             <div className="bg-[#151722] rounded-3xl border border-white/10 shadow-2xl max-w-4xl w-full max-h-[95vh] flex flex-col overflow-hidden text-gray-200">
               <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#1a1e2d]">
                 <div className="flex items-center gap-3">
@@ -3019,7 +3020,7 @@ export default function EmployeeGeneralClients() {
 
         {/* 7. Record Manual Payment Modal */}
         {showPaymentModal && paymentQuotation && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
             <div className="bg-[#151722] rounded-3xl border border-white/10 shadow-2xl max-w-md w-full overflow-hidden text-gray-200">
               <div className="p-5 border-b border-white/10 flex items-center justify-between bg-[#1a1e2d]">
                 <h3 className="text-base font-black text-white flex items-center gap-2">

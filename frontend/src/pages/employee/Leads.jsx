@@ -1428,7 +1428,7 @@ export default function EmployeeLeads() {
                             onClick={() => setSelectedDrawerLead(lead)}
                             className="font-bold text-white text-xs hover:text-[#38b34a] transition-colors leading-none cursor-pointer block"
                           >
-                            {lead.company_name || 'Individual'}
+                            {lead.company_name || lead.client_name}
                           </button>
                           <span className="text-[9px] font-bold text-cyan-400 font-mono tracking-wider block mt-1">{lead.lead_id}</span>
                           {lead.created_at && (
@@ -1656,8 +1656,12 @@ export default function EmployeeLeads() {
                       <p className="text-xs font-bold text-white mt-1 select-text">{selectedDrawerLead.client_phone || 'N/A'}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Company Name</p>
-                      <p className="text-xs font-bold text-white mt-1">{selectedDrawerLead.company_name || 'Individual'}</p>
+                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Client Name</p>
+                      <p className="text-xs font-bold text-white mt-1">{selectedDrawerLead.company_name || selectedDrawerLead.client_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Contact Person</p>
+                      <p className="text-xs font-bold text-white mt-1">{selectedDrawerLead.client_name || selectedDrawerLead.contact_person || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
@@ -2861,8 +2865,8 @@ export default function EmployeeLeads() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                     <div className="space-y-3.5 text-left">
                       <div>
-                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Company / Client Name</span>
-                        <span className="text-white font-semibold text-[13px] block mt-0.5">{followUpLead.company_name || 'Individual'}</span>
+                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Client Name</span>
+                        <span className="text-white font-semibold text-[13px] block mt-0.5">{followUpLead.company_name || followUpLead.client_name}</span>
                       </div>
                       <div>
                         <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Contact Person</span>

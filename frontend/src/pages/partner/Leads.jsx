@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Helmet } from 'react-helmet-async'
 import {
@@ -17,10 +17,19 @@ import {
   bookPartnerDemoSlot as bookDemoSlot,
   cancelPartnerBooking as cancelBooking,
   getPartnerDemoSlotsAvailable as getAvailableDemoSlots,
-  getPartnerAvailableDates as getAvailableDates
+  getPartnerAvailableDates as getAvailableDates,
+  createPartnerGeneralClient,
+  updatePartnerGeneralClient,
+  deletePartnerGeneralClient,
+  getPartnerGeneralClients,
+  getPartnerGeneralServices
 } from '../../api/partner'
+import { normalizeService } from '../employee/GeneralClients'
+import { usePartnerAuthStore } from '../../store/partnerAuthStore'
 
 export default function PartnerLeads() {
+  const { partnerUser } = usePartnerAuthStore()
+  const partnerName = partnerUser?.name || partnerUser?.full_name || partnerUser?.partner_id || 'Partner'
   // Stats and Listing State
   const [stats, setStats] = useState(null)
   const [leads, setLeads] = useState([])
@@ -48,6 +57,11 @@ export default function PartnerLeads() {
   const [availableDemoSlots, setAvailableDemoSlots] = useState([])
   const [selectedCategoryId, setSelectedCategoryId] = useState('')
   const [selectedSubCategoryId, setSelectedSubCategoryId] = useState('')
+
+  // General Services state for "General Client" category
+  const [generalServices, setGeneralServices] = useState([])
+  const [loadingGeneralServices, setLoadingGeneralServices] = useState(false)
+  const [serviceSearchTerm, setServiceSearchTerm] = useState('')
 
   // Assign Demo Slot states
   const [showAssignModal, setShowAssignModal] = useState(false)
@@ -99,6 +113,9 @@ export default function PartnerLeads() {
     state: '',
     pin_code: '',
     country: 'India',
+    country_code: 'IN',
+    gst_type: 'Intra-State',
+    gstin: '',
     lead_source: 'Website',
     lead_status: 'new',
     lead_priority: 'medium',
@@ -110,7 +127,8 @@ export default function PartnerLeads() {
     product_id: '',
     product_name: '',
     product_processing_fee: '',
-    product_monthly_subscription: ''
+    product_monthly_subscription: '',
+    selected_services: []
   })
 
   const [statusForm, setStatusForm] = useState({
@@ -162,8 +180,84 @@ export default function PartnerLeads() {
         today_demo: todayDemo || undefined
       }
       const res = await getLeads(params)
+      let standardLeads = []
       if (res.data?.success) {
-        setLeads(res.data.data?.data || [])
+        standardLeads = res.data.data?.data || (Array.isArray(res.data.data) ? res.data.data : [])
+      }
+
+      // Also fetch Partner General Clients so they appear in Leads panel!
+      try {
+        const gcRes = await getPartnerGeneralClients()
+        const gcList = gcRes.data?.success && Array.isArray(gcRes.data.data)
+          ? gcRes.data.data
+          : Array.isArray(gcRes.data) ? gcRes.data : []
+
+        const statusMap = {
+          'Attended': 'new',
+          'Quotation Sent': 'proposal',
+          'Pursuing to Purchase': 'negotiation',
+          'Order Closed': 'converted',
+          'Not Interested': 'lost'
+        }
+
+        const formattedGenClients = gcList.map(gc => ({
+          id: `gc-${gc.id}`,
+          rawId: gc.id,
+          is_general_client: true,
+          lead_id: gc.client_id || `GC-${gc.id}`,
+          client_name: gc.client_name,
+          company_name: gc.company_name || gc.client_name,
+          client_phone: gc.contact_number,
+          client_alternate_phone: gc.alt_contact_number || null,
+          client_email: gc.email || '',
+          address: gc.address || '',
+          city: gc.district || '',
+          state: gc.state || '',
+          pin_code: gc.pin_code || '',
+          country: gc.country_code === 'IN' ? 'India' : (gc.country_code || 'India'),
+          country_code: gc.country_code || 'IN',
+          lead_source: gc.lead_source || 'Direct Enquiry',
+          lead_status: statusMap[gc.status] || 'new',
+          raw_status: gc.status,
+          lead_priority: 'medium',
+          category_id: 'general_client',
+          category_name: 'General Client',
+          product_name: gc.software_requirements || 'General Client Services',
+          product_interest: gc.software_requirements || 'General Client Services',
+          software_requirements: gc.software_requirements,
+          selected_services: gc.software_requirements ? gc.software_requirements.split(',').map(s => s.trim()).filter(Boolean) : [],
+          gst_type: gc.gst_type,
+          gstin: gc.gstin,
+          follow_up_date: gc.next_followup_date || null,
+          expected_close_date: gc.next_followup_date || null,
+          created_at: gc.created_at || gc.reg_date || new Date().toISOString(),
+          notes: `General Client: ${gc.software_requirements || 'Deliverables'}`,
+          employee: { full_name: gc.sold_by || partnerName || 'Partner' },
+          activities: []
+        }))
+
+        let filteredGc = formattedGenClients
+        if (search) {
+          const q = search.toLowerCase()
+          filteredGc = filteredGc.filter(g =>
+            g.client_name?.toLowerCase().includes(q) ||
+            g.company_name?.toLowerCase().includes(q) ||
+            g.client_phone?.includes(q) ||
+            g.lead_id?.toLowerCase().includes(q)
+          )
+        }
+        if (statusFilter) {
+          filteredGc = filteredGc.filter(g => g.lead_status === statusFilter || g.raw_status === statusFilter)
+        }
+
+        const combined = [
+          ...filteredGc,
+          ...standardLeads.filter(l => !filteredGc.some(g => g.client_phone && g.client_phone === l.client_phone))
+        ]
+        setLeads(combined)
+      } catch (gcErr) {
+        console.warn('Could not load general clients for partner leads view:', gcErr)
+        setLeads(standardLeads)
       }
     } catch (err) {
       console.error('Error fetching leads:', err)
@@ -172,6 +266,62 @@ export default function PartnerLeads() {
       setLoading(false)
     }
   }
+
+  const fetchGeneralServicesList = async () => {
+    try {
+      setLoadingGeneralServices(true)
+      const res = await getPartnerGeneralServices()
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        setGeneralServices(res.data.data.map(normalizeService))
+      } else if (Array.isArray(res.data)) {
+        setGeneralServices(res.data.map(normalizeService))
+      }
+    } catch (err) {
+      console.error('Failed to load general services:', err)
+    } finally {
+      setLoadingGeneralServices(false)
+    }
+  }
+
+  const toggleServiceSelection = (serviceName) => {
+    setLeadForm(prev => {
+      const current = prev.selected_services || []
+      const updated = current.includes(serviceName)
+        ? current.filter(s => s !== serviceName)
+        : [...current, serviceName]
+      const servStr = updated.join(', ')
+      return {
+        ...prev,
+        selected_services: updated,
+        product_name: servStr || 'General Client Services',
+        product_interest: servStr || 'General Client Services'
+      }
+    })
+  }
+
+  const removeSelectedService = (serviceName) => {
+    setLeadForm(prev => {
+      const current = prev.selected_services || []
+      const updated = current.filter(s => s !== serviceName)
+      const servStr = updated.join(', ')
+      return {
+        ...prev,
+        selected_services: updated,
+        product_name: servStr || 'General Client Services',
+        product_interest: servStr || 'General Client Services'
+      }
+    })
+  }
+
+  const filteredGeneralServices = useMemo(() => {
+    if (!serviceSearchTerm.trim()) return generalServices
+    const q = serviceSearchTerm.toLowerCase()
+    return generalServices.filter(s =>
+      s.name?.toLowerCase().includes(q) ||
+      s.category?.toLowerCase().includes(q) ||
+      s.description?.toLowerCase().includes(q)
+    )
+  }, [generalServices, serviceSearchTerm])
 
   const fetchCategories = async () => {
     try {
@@ -220,21 +370,37 @@ export default function PartnerLeads() {
   const handleCategoryChange = (e) => {
     const categoryId = e.target.value
     setSelectedCategoryId(categoryId)
-    setLeadForm(prev => ({
-      ...prev,
-      category_id: categoryId,
-      sub_category_id: '',
-      product_id: '',
-      product_name: '',
-      product_processing_fee: '',
-      product_monthly_subscription: ''
-    }))
     setSelectedSubCategoryId('')
-    if (categoryId) {
-      fetchSubcategories(categoryId)
-    } else {
+
+    if (categoryId === 'general_client') {
+      setLeadForm(prev => ({
+        ...prev,
+        category_id: 'general_client',
+        sub_category_id: '',
+        product_id: '',
+        product_name: prev.selected_services?.join(', ') || 'General Client Services',
+        product_processing_fee: '',
+        product_monthly_subscription: ''
+      }))
       setSubcategories([])
       setProducts([])
+      fetchGeneralServicesList()
+    } else {
+      setLeadForm(prev => ({
+        ...prev,
+        category_id: categoryId,
+        sub_category_id: '',
+        product_id: '',
+        product_name: '',
+        product_processing_fee: '',
+        product_monthly_subscription: ''
+      }))
+      if (categoryId) {
+        fetchSubcategories(categoryId)
+      } else {
+        setSubcategories([])
+        setProducts([])
+      }
     }
   }
 
@@ -435,6 +601,9 @@ export default function PartnerLeads() {
       state: '',
       pin_code: '',
       country: 'India',
+      country_code: 'IN',
+      gst_type: 'Intra-State',
+      gstin: '',
       lead_source: 'Website',
       lead_status: 'new',
       lead_priority: 'medium',
@@ -446,8 +615,10 @@ export default function PartnerLeads() {
       product_id: '',
       product_name: '',
       product_processing_fee: '',
-      product_monthly_subscription: ''
+      product_monthly_subscription: '',
+      selected_services: []
     })
+    setServiceSearchTerm('')
     setSelectedCategoryId('')
     setSelectedSubCategoryId('')
     setSubcategories([])
@@ -457,6 +628,15 @@ export default function PartnerLeads() {
 
   const openEditModal = (lead) => {
     setEditingLead(lead)
+    const isGC = lead.category_id === 'general_client' || lead.is_general_client || String(lead.id).startsWith('gc-')
+
+    let existingServices = []
+    if (lead.selected_services && Array.isArray(lead.selected_services)) {
+      existingServices = lead.selected_services
+    } else if (lead.software_requirements) {
+      existingServices = lead.software_requirements.split(',').map(s => s.trim()).filter(Boolean)
+    }
+
     setLeadForm({
       client_name: lead.client_name || '',
       client_email: lead.client_email || '',
@@ -468,20 +648,33 @@ export default function PartnerLeads() {
       state: lead.state || '',
       pin_code: lead.pin_code || '',
       country: lead.country || 'India',
+      country_code: lead.country_code || 'IN',
+      gst_type: lead.gst_type || 'Intra-State',
+      gstin: lead.gstin || '',
       lead_source: lead.lead_source || 'Website',
       lead_status: lead.lead_status || 'new',
       lead_priority: lead.lead_priority || 'medium',
       notes: lead.notes || '',
       budget: lead.budget || '',
       expected_close_date: lead.follow_up_date ? lead.follow_up_date.split(' ')[0] : (lead.expected_close_date || ''),
-      category_id: lead.category_id || '',
+      category_id: isGC ? 'general_client' : (lead.category_id || ''),
       sub_category_id: lead.sub_category_id || '',
       product_id: lead.product_id || '',
       product_name: lead.product_name || '',
       product_processing_fee: lead.product_processing_fee || '',
-      product_monthly_subscription: lead.product_monthly_subscription || ''
+      product_monthly_subscription: lead.product_monthly_subscription || '',
+      selected_services: existingServices
     })
-    if (lead.category_id) {
+
+    setServiceSearchTerm('')
+
+    if (isGC) {
+      setSelectedCategoryId('general_client')
+      setSelectedSubCategoryId('')
+      setSubcategories([])
+      setProducts([])
+      fetchGeneralServicesList()
+    } else if (lead.category_id) {
       setSelectedCategoryId(lead.category_id)
       fetchSubcategories(lead.category_id)
       if (lead.sub_category_id) {
@@ -496,7 +689,6 @@ export default function PartnerLeads() {
     }
     setIsCreateEditOpen(true)
   }
-
 
   const cleanAndFixPhone = (val) => {
     if (!val) return ''
@@ -513,25 +705,107 @@ export default function PartnerLeads() {
       setSaving(true)
       const cleanedPhone = cleanAndFixPhone(leadForm.client_phone)
       const cleanedAltPhone = cleanAndFixPhone(leadForm.client_alternate_phone)
-      const payload = {
-        ...leadForm,
-        client_phone: cleanedPhone,
-        client_alternate_phone: cleanedAltPhone || null,
-        follow_up_date: leadForm.expected_close_date || null
+      const isGeneralClient = leadForm.category_id === 'general_client'
+
+      if (isGeneralClient && (!leadForm.selected_services || leadForm.selected_services.length === 0)) {
+        setError('Please select at least one service from the General Services catalog.')
+        setSaving(false)
+        return
       }
-      if (editingLead) {
-        await updateLead(editingLead.id, payload)
-        triggerSuccess('Lead updated successfully.')
+
+      const servicesString = isGeneralClient ? leadForm.selected_services.join(', ') : ''
+
+      if (isGeneralClient) {
+        const genClientPayload = {
+          client_name: leadForm.client_name,
+          company_name: leadForm.company_name || leadForm.client_name,
+          contact_person: leadForm.client_name,
+          email: leadForm.client_email || '',
+          contact_number: cleanedPhone,
+          alt_contact_number: cleanedAltPhone || '',
+          address: leadForm.address || '',
+          district: leadForm.city || '',
+          state: leadForm.state || '',
+          pin_code: leadForm.pin_code || '',
+          country_code: leadForm.country === 'India' || !leadForm.country_code ? 'IN' : leadForm.country_code,
+          gst_type: leadForm.gst_type || 'Intra-State',
+          gstin: leadForm.gstin || '',
+          lead_source: leadForm.lead_source || 'Direct Enquiry',
+          referred_by: 'Direct / None',
+          sold_by: partnerName,
+          status: 'Attended',
+          next_followup_date: leadForm.expected_close_date || '',
+          software_requirements: servicesString,
+          selected_services: leadForm.selected_services || [],
+        }
+
+        if (editingLead) {
+          if (editingLead.is_general_client || String(editingLead.id).startsWith('gc-')) {
+            const rawId = editingLead.rawId || String(editingLead.id).replace('gc-', '')
+            await updatePartnerGeneralClient(rawId, genClientPayload)
+          } else {
+            await updateLead(editingLead.id, {
+              ...leadForm,
+              client_phone: cleanedPhone,
+              client_alternate_phone: cleanedAltPhone || null,
+              follow_up_date: leadForm.expected_close_date || null,
+              product_name: servicesString,
+              product_interest: servicesString,
+              software_requirements: servicesString
+            })
+          }
+          triggerSuccess('General Client Lead updated successfully.')
+        } else {
+          // 1. Primary: Save to Partner General Clients API
+          await createPartnerGeneralClient(genClientPayload)
+
+          // 2. Secondary: Attempt to also register in standard partner leads API (safely catch 422 if backend requires subscription product fields)
+          try {
+            const defaultCat = categories.find(c => c.name?.toLowerCase().includes('web') || c.name?.toLowerCase().includes('digital')) || categories[0]
+            const leadPayload = {
+              ...leadForm,
+              category_id: defaultCat?.id || undefined,
+              client_phone: cleanedPhone,
+              client_alternate_phone: cleanedAltPhone || null,
+              follow_up_date: leadForm.expected_close_date || null,
+              product_name: servicesString,
+              product_interest: servicesString,
+              software_requirements: servicesString,
+              notes: leadForm.notes ? `${leadForm.notes}\n[General Client: ${servicesString}]` : `[General Client: ${servicesString}]`
+            }
+            await createLead(leadPayload)
+          } catch (leadSyncErr) {
+            console.warn('Note: Backend leads table requires subscription fields. Client successfully saved to Partner General Clients registry:', leadSyncErr?.response?.data || leadSyncErr.message)
+          }
+
+          triggerSuccess('✅ General Client created successfully! Reflected in both Leads and General Clients.')
+        }
       } else {
-        await createLead(payload)
-        triggerSuccess('Lead created successfully.')
+        // Standard Subscription Lead
+        const payload = {
+          ...leadForm,
+          client_phone: cleanedPhone,
+          client_alternate_phone: cleanedAltPhone || null,
+          follow_up_date: leadForm.expected_close_date || null
+        }
+        if (editingLead) {
+          await updateLead(editingLead.id, payload)
+          triggerSuccess('Lead updated successfully.')
+        } else {
+          await createLead(payload)
+          triggerSuccess('Lead created successfully.')
+        }
       }
+
       setIsCreateEditOpen(false)
       loadLeads()
       loadStats()
     } catch (err) {
       console.error(err)
-      setError(err?.response?.data?.message || 'Failed to submit lead form.')
+      const errDetail = err?.response?.data?.errors
+        ? Object.values(err.response.data.errors).flat().join(', ')
+        : (err?.response?.data?.message || err?.message || 'Failed to submit lead form.')
+      setError(errDetail)
     } finally {
       setSaving(false)
     }
@@ -622,7 +896,12 @@ export default function PartnerLeads() {
   const handleDeleteLead = async (id) => {
     if (!window.confirm('Are you sure you want to delete this lead? This action cannot be undone.')) return
     try {
-      await deleteLead(id)
+      if (String(id).startsWith('gc-')) {
+        const rawId = String(id).replace('gc-', '')
+        await deletePartnerGeneralClient(rawId)
+      } else {
+        await deleteLead(id)
+      }
       triggerSuccess('Lead deleted successfully.')
       if (selectedDrawerLead?.id === id) {
         setSelectedDrawerLead(null)
@@ -1105,7 +1384,7 @@ export default function PartnerLeads() {
                             onClick={() => setSelectedDrawerLead(lead)}
                             className="font-bold text-white text-xs hover:text-[#38b34a] transition-colors leading-none cursor-pointer block"
                           >
-                            {lead.company_name || 'Individual'}
+                            {lead.company_name || lead.client_name}
                           </button>
                           <span className="text-[9px] font-bold text-cyan-400 font-mono tracking-wider block mt-1">{lead.lead_id}</span>
                           {lead.created_at && (
@@ -1122,6 +1401,11 @@ export default function PartnerLeads() {
                       {/* Pipeline Status — Product + Status badge */}
                       <td className="p-4">
                         <div className="text-left space-y-1">
+                          {(lead.is_general_client || lead.category_id === 'general_client') && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-1">
+                              💼 General Client
+                            </span>
+                          )}
                           <span className="text-[10px] text-gray-400 font-bold block">{lead.product_name || lead.product_interest || 'N/A'}</span>
                           {getStatusBadge(lead.lead_status)}
                         </div>
@@ -1331,8 +1615,12 @@ export default function PartnerLeads() {
                       <p className="text-xs font-bold text-white mt-1 select-text">{selectedDrawerLead.client_phone || 'N/A'}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Company Name</p>
-                      <p className="text-xs font-bold text-white mt-1">{selectedDrawerLead.company_name || 'Individual'}</p>
+                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Client Name</p>
+                      <p className="text-xs font-bold text-white mt-1">{selectedDrawerLead.company_name || selectedDrawerLead.client_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Contact Person</p>
+                      <p className="text-xs font-bold text-white mt-1">{selectedDrawerLead.client_name || selectedDrawerLead.contact_person || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Product Name</p>
@@ -1556,8 +1844,15 @@ export default function PartnerLeads() {
 
                   {/* Product Interest */}
                   {/* Category Selection */}
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Category *</label>
+                  <div className="space-y-1 sm:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Category *</label>
+                      {leadForm.category_id === 'general_client' && (
+                        <span className="text-[9px] font-black text-[#38b34a] uppercase tracking-wider bg-[#38b34a]/10 px-2 py-0.5 rounded-full border border-[#38b34a]/20">
+                          Non-Subscription Services Model
+                        </span>
+                      )}
+                    </div>
                     <select
                       value={leadForm.category_id}
                       onChange={handleCategoryChange}
@@ -1565,67 +1860,211 @@ export default function PartnerLeads() {
                       className="w-full bg-white/3 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
                     >
                       <option value="" className="bg-[#13151f]">Select Category</option>
+                      <option value="general_client" className="bg-[#13151f] text-[#38b34a] font-bold">⭐ General Client (Services Catalog)</option>
                       {categories.map(cat => (
                         <option key={cat.id} value={cat.id} className="bg-[#13151f]">{cat.name}</option>
                       ))}
                     </select>
                   </div>
 
-                  {/* Sub-Category Selection */}
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Sub-Category *</label>
-                    <select
-                      value={leadForm.sub_category_id}
-                      onChange={handleSubCategoryChange}
-                      required
-                      className="w-full bg-white/3 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
-                    >
-                      <option value="" className="bg-[#13151f]">Select Sub-Category</option>
-                      {subcategories.map(sub => (
-                        <option key={sub.id} value={sub.id} className="bg-[#13151f]">{sub.name}</option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* If General Client is selected: Render Services Catalog Picker */}
+                  {leadForm.category_id === 'general_client' ? (
+                    <div className="sm:col-span-2 bg-[#13151f] p-4 rounded-2xl border border-[#38b34a]/30 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-xs font-black text-white flex items-center gap-1.5">
+                            <span>🛠️</span> General Client Services Catalog
+                          </h4>
+                          <p className="text-[10px] text-gray-400 mt-0.5">
+                            Choose deliverables for this client. Reflects in both Leads and General Clients.
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-bold text-[#38b34a] bg-[#38b34a]/10 border border-[#38b34a]/30 px-2.5 py-1 rounded-lg">
+                          {leadForm.selected_services?.length || 0} Selected
+                        </span>
+                      </div>
 
-                  {/* Product Selection */}
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Product *</label>
-                    <select
-                      value={leadForm.product_id}
-                      onChange={handleProductSelect}
-                      required
-                      className="w-full bg-[#1a1d2b] border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
-                    >
-                      <option value="" className="bg-[#13151f]">Select Product</option>
-                      {products.map(prod => (
-                        <option key={prod.id} value={prod.id} className="bg-[#13151f]">{prod.name}</option>
-                      ))}
-                    </select>
-                  </div>
+                      {/* Search Services */}
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={serviceSearchTerm}
+                          onChange={(e) => setServiceSearchTerm(e.target.value)}
+                          placeholder="Search deliverables by name or category..."
+                          className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#38b34a]"
+                        />
+                        {serviceSearchTerm && (
+                          <button
+                            type="button"
+                            onClick={() => setServiceSearchTerm('')}
+                            className="absolute right-3 top-2.5 text-gray-400 hover:text-white text-xs cursor-pointer"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
 
-                  {/* Processing Fee */}
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Processing Fee (INR)</label>
-                    <input
-                      type="number"
-                      value={leadForm.product_processing_fee}
-                      onChange={(e) => setLeadForm(prev => ({ ...prev, product_processing_fee: e.target.value }))}
-                      placeholder="Processing Fee"
-                      className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] font-mono font-bold"
-                    />
-                  </div>
+                      {/* Selected Service Chips */}
+                      {leadForm.selected_services && leadForm.selected_services.length > 0 && (
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Selected Deliverables</label>
+                          <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-2 bg-black/30 rounded-xl border border-white/5">
+                            {leadForm.selected_services.map((svcName) => (
+                              <span
+                                key={svcName}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-[#38b34a]/15 text-[#38b34a] border border-[#38b34a]/30"
+                              >
+                                {svcName}
+                                <button
+                                  type="button"
+                                  onClick={() => removeSelectedService(svcName)}
+                                  className="hover:text-red-400 transition-colors cursor-pointer text-xs leading-none ml-0.5"
+                                >
+                                  ✕
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
-                  {/* Monthly Subscription */}
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Monthly Subscription (INR)</label>
-                    <input
-                      type="number"
-                      value={leadForm.product_monthly_subscription}
-                      onChange={(e) => setLeadForm(prev => ({ ...prev, product_monthly_subscription: e.target.value }))}
-                      placeholder="Monthly Subscription"
-                      className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] font-mono font-bold"
-                    />
-                  </div>
+                      {/* Services List with Checkboxes */}
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Available Services</label>
+                        <div className="max-h-52 overflow-y-auto space-y-1.5 pr-1 divide-y divide-white/5">
+                          {loadingGeneralServices ? (
+                            <div className="text-center py-6 text-xs text-gray-500 animate-pulse">
+                              Loading services catalog...
+                            </div>
+                          ) : filteredGeneralServices.length === 0 ? (
+                            <div className="text-center py-6 text-xs text-gray-500">
+                              No services match your search term.
+                            </div>
+                          ) : (
+                            filteredGeneralServices.map((service) => {
+                              const isChecked = leadForm.selected_services?.includes(service.name)
+                              return (
+                                <label
+                                  key={service.id || service.name}
+                                  className={`flex items-start gap-2.5 p-2.5 rounded-xl cursor-pointer transition-colors border ${
+                                    isChecked
+                                      ? 'bg-[#38b34a]/10 border-[#38b34a]/40 text-white'
+                                      : 'bg-black/20 hover:bg-black/40 border-transparent text-gray-300'
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => toggleServiceSelection(service.name)}
+                                    className="mt-0.5 rounded text-[#38b34a] focus:ring-0 bg-white/5 border border-white/20 cursor-pointer"
+                                  />
+                                  <div className="flex-1 min-w-0 text-left">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <p className="text-xs font-bold truncate">{service.name}</p>
+                                      {service.price ? (
+                                        <span className="text-[10px] font-mono font-bold text-cyan-400 whitespace-nowrap">
+                                          ₹{Number(service.price).toLocaleString()}
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      <span className="text-[9px] text-gray-500 font-semibold">{service.category || 'General'}</span>
+                                      {service.description && (
+                                        <span className="text-[9px] text-gray-400 truncate max-w-xs">{service.description}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </label>
+                              )
+                            })
+                          )}
+                        </div>
+                      </div>
+
+                      {/* GST Supply Type & GSTIN */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-white/5">
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">GST Supply Type</label>
+                          <select
+                            value={leadForm.gst_type || 'Intra-State'}
+                            onChange={(e) => setLeadForm(prev => ({ ...prev, gst_type: e.target.value }))}
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#38b34a]"
+                          >
+                            <option value="Intra-State" className="bg-[#13151f]">Intra-State (CGST 9% + SGST 9%)</option>
+                            <option value="Inter-State" className="bg-[#13151f]">Inter-State (IGST 18%)</option>
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Client GSTIN (Optional)</label>
+                          <input
+                            type="text"
+                            value={leadForm.gstin || ''}
+                            onChange={(e) => setLeadForm(prev => ({ ...prev, gstin: e.target.value.toUpperCase() }))}
+                            placeholder="e.g. 19AAPCS3828N1ZH"
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#38b34a] uppercase font-mono"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Sub-Category Selection */}
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Sub-Category *</label>
+                        <select
+                          value={leadForm.sub_category_id}
+                          onChange={handleSubCategoryChange}
+                          required
+                          className="w-full bg-white/3 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
+                        >
+                          <option value="" className="bg-[#13151f]">Select Sub-Category</option>
+                          {subcategories.map(sub => (
+                            <option key={sub.id} value={sub.id} className="bg-[#13151f]">{sub.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Product Selection */}
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Product *</label>
+                        <select
+                          value={leadForm.product_id}
+                          onChange={handleProductSelect}
+                          required
+                          className="w-full bg-[#1a1d2b] border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
+                        >
+                          <option value="" className="bg-[#13151f]">Select Product</option>
+                          {products.map(prod => (
+                            <option key={prod.id} value={prod.id} className="bg-[#13151f]">{prod.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Processing Fee */}
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Processing Fee (INR)</label>
+                        <input
+                          type="number"
+                          value={leadForm.product_processing_fee}
+                          onChange={(e) => setLeadForm(prev => ({ ...prev, product_processing_fee: e.target.value }))}
+                          placeholder="Processing Fee"
+                          className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] font-mono font-bold"
+                        />
+                      </div>
+
+                      {/* Monthly Subscription */}
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Monthly Subscription (INR)</label>
+                        <input
+                          type="number"
+                          value={leadForm.product_monthly_subscription}
+                          onChange={(e) => setLeadForm(prev => ({ ...prev, product_monthly_subscription: e.target.value }))}
+                          placeholder="Monthly Subscription"
+                          className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] font-mono font-bold"
+                        />
+                      </div>
+                    </>
+                  )}
 
 
                   {/* Budget */}
@@ -2392,8 +2831,8 @@ export default function PartnerLeads() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                     <div className="space-y-3.5 text-left">
                       <div>
-                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Company / Client Name</span>
-                        <span className="text-white font-semibold text-[13px] block mt-0.5">{followUpLead.company_name || 'Individual'}</span>
+                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Client Name</span>
+                        <span className="text-white font-semibold text-[13px] block mt-0.5">{followUpLead.company_name || followUpLead.client_name}</span>
                       </div>
                       <div>
                         <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Contact Person</span>

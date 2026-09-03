@@ -47,6 +47,7 @@ export const ROUTES = {
     LOGIN: '/partner/login',
     REGISTER: '/partner/register',
     LEADS: '/partner/leads',
+    GENERAL_CLIENTS: '/partner/general-clients',
     MARKETING: '/partner/marketing',
     DUE_RENEWAL: '/partner/due-renewal',
     SUPPORT: '/partner/support',

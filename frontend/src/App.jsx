@@ -54,6 +54,7 @@ import PartnerDashboard from './pages/partner/Dashboard'
 import PartnerOrders from './pages/partner/Orders'
 import PartnerPayouts from './pages/partner/Payouts'
 import PartnerLeads from './pages/partner/Leads'
+import PartnerGeneralClients from './pages/partner/GeneralClients'
 import PartnerMarketing from './pages/partner/Marketing'
 import PartnerDueRenewal from './pages/partner/DueRenewal'
 import PartnerSupport from './pages/partner/Support'
@@ -183,6 +184,7 @@ function App() {
             <Route path="orders" element={<PartnerOrders />} />
             <Route path="payouts" element={<PartnerPayouts />} />
             <Route path="leads" element={<PartnerLeads />} />
+            <Route path="general-clients" element={<PartnerGeneralClients />} />
             <Route path="marketing" element={<PartnerMarketing />} />
             <Route path="due-renewal" element={<PartnerDueRenewal />} />
             <Route path="support" element={<PartnerSupport />} />

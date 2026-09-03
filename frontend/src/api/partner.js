@@ -296,4 +296,57 @@ export const getPartnerAvailableDates = (slotId, params = {}) => {
 
 export const bulkAssignLeads = (data) => {
   return Promise.resolve({ data: { success: true, message: 'Leads reassigned successfully (Mocked).' } })
-}
+}
+
+// ─── Partner General Clients & Services (Non-Subscription Customized Clients) ───
+export const getPartnerGeneralClients = () =>
+  partnerFetch('GET', '/partner/general-clients')
+
+export const getPartnerGeneralClientById = (id) =>
+  partnerFetch('GET', `/partner/general-clients/${id}`)
+
+export const createPartnerGeneralClient = (data) =>
+  partnerFetch('POST', '/partner/general-clients', data)
+
+export const updatePartnerGeneralClient = (id, data) =>
+  partnerFetch('PUT', `/partner/general-clients/${id}`, data)
+
+export const updatePartnerGeneralClientStatus = (id, status) =>
+  partnerFetch('PUT', `/partner/general-clients/${id}/status`, { status })
+
+export const deletePartnerGeneralClient = (id) =>
+  partnerFetch('DELETE', `/partner/general-clients/${id}`)
+
+export const getPartnerGeneralServices = () =>
+  partnerFetch('GET', '/partner/general-services')
+
+export const createPartnerGeneralService = (data) =>
+  partnerFetch('POST', '/partner/general-services', data)
+
+export const updatePartnerGeneralService = (id, data) =>
+  partnerFetch('PUT', `/partner/general-services/${id}`, data)
+
+export const deletePartnerGeneralService = (id) =>
+  partnerFetch('DELETE', `/partner/general-services/${id}`)
+
+export const createPartnerQuotation = (clientId, data) =>
+  partnerFetch('POST', `/partner/general-clients/${clientId}/quotation`, data)
+
+export const sendPartnerQuotationEmail = (quotationId) =>
+  partnerFetch('POST', `/partner/general-clients/quotations/${quotationId}/send-email`)
+
+export const getPartnerInvoiceDownloadUrl = (quotationId) => {
+  const token = localStorage.getItem('partner_token') || ''
+  return `${PARTNER_API}/partner/general-clients/quotations/${quotationId}/download-invoice?token=${token}`
+}
+
+export const recordPartnerQuotationPayment = (quotationId, data) =>
+  partnerFetch('POST', `/partner/general-clients/quotations/${quotationId}/record-payment`, data)
+
+export const getCountryTaxes = () => partnerFetch('GET', '/country-taxes')
+export const updateCountryTax = (id, data) => partnerFetch('PUT', `/country-taxes/${id}`, data)
+export const setCountryPrice = (productId, data) => partnerFetch('POST', `/admin/products/${productId}/country-price`, data)
+export const getPublicProductsForCountry = (countryCode = 'IN') =>
+  partnerFetch('GET', `/public/products?country=${countryCode}`)
+export const getSubscriptionClients = () => partnerFetch('GET', '/partner/my-orders')
+

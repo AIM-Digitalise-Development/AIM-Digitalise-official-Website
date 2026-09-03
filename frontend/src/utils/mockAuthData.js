@@ -34,239 +34,7 @@ const getLoggedInMockEmployee = () => {
 }
 
 if (typeof window !== 'undefined' && !window.__mockLeads) {
-  const getRelativeDateStr = (offsetDays) => {
-    const d = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000)
-    return d.toISOString().split('T')[0]
-  }
-
-  const todayStr = getRelativeDateStr(0)
-  const tomorrowStr = getRelativeDateStr(1)
-  const yesterdayStr = getRelativeDateStr(-1)
-
-  window.__mockLeads = [
-    {
-      id: 1,
-      lead_id: "LEAD2600001",
-      employee_id: 1,
-      client_name: "Rajesh Kumar",
-      client_email: "rajesh.kumar@example.com",
-      client_phone: "9876543210",
-      client_alternate_phone: null,
-      company_name: "Tech Solutions Pvt Ltd",
-      address: "123, MG Road, Bangalore",
-      city: "Bangalore",
-      state: "Karnataka",
-      pin_code: "560001",
-      country: "India",
-      lead_source: "Website",
-      lead_status: "new",
-      lead_priority: "high",
-      assigned_to: null,
-      assigned_by: null,
-      follow_up_date: `${todayStr} 10:00:00`,
-      next_follow_up: `${todayStr} 10:00:00`,
-      notes: "Interested in our enterprise solution",
-      remarks: null,
-      product_interest: "Institute Pro",
-      budget: "1000000.00",
-      expected_close_date: `${todayStr}`,
-      conversion_date: null,
-      converted_to_client_id: null,
-      is_converted: false,
-      is_active: true,
-      lost_reason: null,
-      demo_status: "scheduled",
-      demo_slot: `${todayStr} 14:00:00`,
-      demo_link: "https://meet.google.com/abc-defg-hij",
-      created_at: "2026-06-20T10:30:00.000000Z",
-      updated_at: "2026-06-20T10:30:00.000000Z",
-      employee: {
-        id: 1,
-        employee_id: "AIM260001",
-        full_name: "John Doe"
-      },
-      activities: [
-        {
-          id: 101,
-          lead_id: 1,
-          employee_id: 1,
-          activity_type: "call",
-          description: "Initial discovery call with client",
-          notes: "Discussed requirements, budget seems good, scheduled demo",
-          scheduled_date: "2026-06-21T15:00:00.000000Z",
-          completed_at: "2026-06-20T10:35:00.000000Z",
-          created_at: "2026-06-20T10:35:00.000000Z",
-          employee: {
-            id: 1,
-            employee_id: "AIM260001",
-            full_name: "John Doe"
-          }
-        }
-      ]
-    },
-    {
-      id: 2,
-      lead_id: "LEAD2600002",
-      employee_id: 1,
-      client_name: "Priya Sharma",
-      client_email: "priya.sharma@example.com",
-      client_phone: "9876543211",
-      client_alternate_phone: "9876543212",
-      company_name: "Education First Academy",
-      address: "456, Park Street, Delhi",
-      city: "Delhi",
-      state: "Delhi",
-      pin_code: "110001",
-      country: "India",
-      lead_source: "Referral",
-      lead_status: "contacted",
-      lead_priority: "urgent",
-      assigned_to: null,
-      assigned_by: null,
-      follow_up_date: `${tomorrowStr} 10:00:00`,
-      next_follow_up: `${tomorrowStr} 10:00:00`,
-      notes: "Looking for custom LMS solution for their school",
-      remarks: null,
-      product_interest: "Custom Solution",
-      budget: "2500000.00",
-      expected_close_date: `${tomorrowStr}`,
-      conversion_date: null,
-      converted_to_client_id: null,
-      is_converted: false,
-      is_active: true,
-      lost_reason: null,
-      demo_status: "completed",
-      demo_slot: `${yesterdayStr} 11:00:00`,
-      demo_link: "https://meet.google.com/xyz-pdqr-abc",
-      created_at: "2026-06-18T14:20:00.000000Z",
-      updated_at: "2026-06-20T11:00:00.000000Z",
-      employee: {
-        id: 1,
-        employee_id: "AIM260001",
-        full_name: "John Doe"
-      },
-      activities: [
-        {
-          id: 102,
-          lead_id: 2,
-          employee_id: 1,
-          activity_type: "email",
-          description: "Sent product brochure and pricing",
-          notes: "Sent email with attachments, waiting for response",
-          scheduled_date: "2026-06-20T11:00:00.000000Z",
-          completed_at: "2026-06-20T11:00:00.000000Z",
-          created_at: "2026-06-20T11:00:00.000000Z",
-          employee: {
-            id: 1,
-            employee_id: "AIM260001",
-            full_name: "John Doe"
-          }
-        }
-      ]
-    },
-    {
-      id: 3,
-      lead_id: "LEAD2600003",
-      employee_id: 1,
-      client_name: "Amit Singh",
-      client_email: "amit.singh@example.com",
-      client_phone: "9876543213",
-      client_alternate_phone: null,
-      company_name: "Global Edutech",
-      address: "789, BKC, Mumbai",
-      city: "Mumbai",
-      state: "Maharashtra",
-      pin_code: "400051",
-      country: "India",
-      lead_source: "Cold Call",
-      lead_status: "new",
-      lead_priority: "medium",
-      assigned_to: null,
-      assigned_by: null,
-      follow_up_date: `${yesterdayStr} 16:30:00`,
-      next_follow_up: `${yesterdayStr} 16:30:00`,
-      notes: "Follow up after initial call",
-      remarks: null,
-      product_interest: "ERP System",
-      budget: "1500000.00",
-      expected_close_date: `${yesterdayStr}`,
-      conversion_date: null,
-      converted_to_client_id: null,
-      is_converted: false,
-      is_active: true,
-      lost_reason: null,
-      demo_status: null,
-      demo_slot: null,
-      created_at: "2026-06-19T09:15:00.000000Z",
-      updated_at: "2026-06-19T09:15:00.000000Z",
-      employee: {
-        id: 1,
-        employee_id: "AIM260001",
-        full_name: "John Doe"
-      },
-      activities: []
-    },
-    {
-      id: 4,
-      lead_id: "LEAD2600004",
-      employee_id: 1,
-      client_name: "Delhi Public School",
-      client_email: "contact@dps.edu.in",
-      client_phone: "9876543214",
-      client_alternate_phone: null,
-      company_name: "Delhi Public School",
-      address: "Sector 12, Dwarka, Delhi",
-      city: "Delhi",
-      state: "Delhi",
-      pin_code: "110075",
-      country: "India",
-      lead_source: "Referral",
-      lead_status: "converted",
-      lead_priority: "medium",
-      assigned_to: null,
-      assigned_by: null,
-      follow_up_date: null,
-      next_follow_up: null,
-      notes: "Completed conversion and billing set up.",
-      remarks: null,
-      product_interest: "Institute Pro",
-      budget: "150000.00",
-      expected_close_date: `${yesterdayStr}`,
-      conversion_date: `${todayStr}T09:00:00.000000Z`,
-      converted_to_client_id: 4,
-      is_converted: true,
-      is_active: true,
-      lost_reason: null,
-      demo_status: "completed",
-      demo_slot: `${yesterdayStr} 15:00:00`,
-      demo_link: "https://meet.google.com/dps-demo",
-      created_at: "2026-06-10T11:00:00.000000Z",
-      updated_at: `${todayStr}T09:00:00.000000Z`,
-      employee: {
-        id: 1,
-        employee_id: "AIM260001",
-        full_name: "John Doe"
-      },
-      activities: [
-        {
-          id: 103,
-          lead_id: 4,
-          employee_id: 1,
-          activity_type: "meeting",
-          description: "Final agreement signature and payment review",
-          notes: "Agreement signed, setup complete.",
-          scheduled_date: null,
-          completed_at: `${todayStr}T09:00:00.000000Z`,
-          created_at: `${todayStr}T09:00:00.000000Z`,
-          employee: {
-            id: 1,
-            employee_id: "AIM260001",
-            full_name: "John Doe"
-          }
-        }
-      ]
-    }
-  ]
+  window.__mockLeads = []
 }
 
 if (typeof window !== 'undefined' && !window.__mockDemoSlots) {
@@ -366,6 +134,10 @@ export const getMockResponse = (url, method, data = null) => {
     normalizedUrl = normalizedUrl.replace('/public/general-services', '/admin/general-services')
   } else if (normalizedUrl.includes('/employee/general-clients')) {
     normalizedUrl = normalizedUrl.replace('/employee/general-clients', '/admin/general-clients')
+  } else if (normalizedUrl.includes('/partner/general-services')) {
+    normalizedUrl = normalizedUrl.replace('/partner/general-services', '/admin/general-services')
+  } else if (normalizedUrl.includes('/partner/general-clients')) {
+    normalizedUrl = normalizedUrl.replace('/partner/general-clients', '/admin/general-clients')
   }
   const lowercaseUrl = normalizedUrl
   if (!data) data = {}
@@ -656,128 +428,7 @@ export const getMockResponse = (url, method, data = null) => {
     }
 
     if (!window.__mockGeneralClients) {
-      window.__mockGeneralClients = [
-        {
-          id: 1,
-          client_id: 'GC-2026-001',
-          client_name: 'Sharma Tech Solutions',
-          company_name: 'Sharma Tech Pvt Ltd',
-          contact_person: 'Mr. Rohit Sharma',
-          email: 'contact@sharmatech.com',
-          contact_number: '+91 9876543210',
-          alt_contact_number: '+91 9876543211',
-          address: '45, MG Road, Sector 14',
-          district: 'Gurugram',
-          state: 'Haryana',
-          pin_code: '122001',
-          country_code: 'IN',
-          gst_type: 'Intra-State',
-          gstin: '07AAAAA0000A1Z5',
-          lead_source: 'Website',
-          referred_by: 'Direct',
-          sold_by_name: 'Rahul Verma',
-          branch_name: 'Head Office (Gurugram)',
-          status: 'Quotation Sent',
-          next_followup_date: '2026-08-25',
-          reg_date: '2026-08-10',
-          software_requirements: 'Custom ERP & Billing Portal, WhatsApp Business API Integration',
-          quotations_count: 1,
-          quotations: [
-            {
-              id: 101,
-              quotation_number: 'AIM-20260813-001',
-              quotation_date: '2026-08-10',
-              payment_terms: 'Due on Receipt',
-              gst_type: 'Intra-State',
-              subtotal: 57000,
-              cgst: 5130,
-              sgst: 5130,
-              tax_total: 10260,
-              grand_total: 67260,
-              uuid: 'quotation-uuid-101',
-              status: 'sent',
-              items: [
-                {
-                  id: 1,
-                  product_id: 2,
-                  product_name: 'Custom ERP & Billing Portal',
-                  hsn: '998313',
-                  qty: 1,
-                  unit: 'Unit',
-                  selling_price: 45000,
-                  discount_percentage: 0,
-                  description: 'Enterprise ERP software with GST billing, multi-user role management, inventory control, and payment gateway integration.'
-                },
-                {
-                  id: 2,
-                  product_id: 3,
-                  product_name: 'WhatsApp Business API Integration',
-                  hsn: '998315',
-                  qty: 1,
-                  unit: 'Setup',
-                  selling_price: 12000,
-                  discount_percentage: 0,
-                  description: 'Automated WhatsApp messaging bot, order confirmation alerts, OTP verification, and broadcast marketing panel.'
-                }
-              ]
-            }
-          ]
-        },
-        {
-          id: 2,
-          client_id: 'GC-2026-002',
-          client_name: 'Himalayan Traders',
-          company_name: 'Himalayan Traders LLC',
-          contact_person: 'Mr. Pasang Sherpa',
-          email: 'info@himalayantraders.np',
-          contact_number: '+977 9801234567',
-          alt_contact_number: '',
-          address: 'Durbar Marg',
-          district: 'Kathmandu',
-          state: 'Bagmati',
-          pin_code: '44600',
-          country_code: 'NP',
-          gst_type: 'Inter-State',
-          gstin: '301234567',
-          lead_source: 'Partner',
-          referred_by: 'Kathmandu Branch',
-          sold_by_name: 'Anil Shrestha',
-          branch_name: 'Kathmandu Branch',
-          status: 'Pursuing to Purchase',
-          next_followup_date: '2026-08-28',
-          reg_date: '2026-08-14',
-          software_requirements: 'Corporate Informative Website, Annual Cloud Hosting & Maintenance (AMC)',
-          quotations_count: 0,
-          quotations: []
-        },
-        {
-          id: 3,
-          client_id: 'GC-2026-003',
-          client_name: 'Apex Global Logistics',
-          company_name: 'Apex Logistics Inc.',
-          contact_person: 'Ms. Sunita Roy',
-          email: 'admin@apexglobal.in',
-          contact_number: '+91 9988776655',
-          alt_contact_number: '+91 9988776650',
-          address: 'Connaught Place',
-          district: 'Central Delhi',
-          state: 'Delhi',
-          pin_code: '110001',
-          country_code: 'IN',
-          gst_type: 'Intra-State',
-          gstin: '07BBBBB1111B2Z8',
-          lead_source: 'Referral',
-          referred_by: 'Delhi HQ',
-          sold_by_name: 'Pooja Mehta',
-          branch_name: 'Head Office (Gurugram)',
-          status: 'Attended',
-          next_followup_date: '2026-08-30',
-          reg_date: '2026-08-18',
-          software_requirements: 'Corporate Informative Website, E-Commerce Online Store with PG',
-          quotations_count: 0,
-          quotations: []
-        }
-      ]
+      window.__mockGeneralClients = []
     }
 
     if (!window.__mockCountryTaxes) {
@@ -882,8 +533,8 @@ export const getMockResponse = (url, method, data = null) => {
     return { success: false, message: 'Client not found' }
   }
 
-  // POST /admin/general-clients/:id/quotations
-  const createQuotationMatch = lowercaseUrl.match(/\/admin\/general-clients\/(\d+)\/quotations$/)
+  // POST /admin/general-clients/:id/quotation or /quotations
+  const createQuotationMatch = lowercaseUrl.match(/\/admin\/general-clients\/(\d+)\/quotations?$/)
   if (createQuotationMatch && method === 'POST') {
     const clientId = parseInt(createQuotationMatch[1], 10)
     const clientItem = (window.__mockGeneralClients || []).find(c => c.id === clientId)
@@ -1189,9 +840,42 @@ export const getMockResponse = (url, method, data = null) => {
       return { success: true, data: newGenClient, message: 'General client created successfully' }
     }
 
+    let resultClients = [...(window.__mockGeneralClients || [])]
+    try {
+      const urlObj = new URL(url, 'https://dummy.com')
+      const soldBy = urlObj.searchParams.get('sold_by')?.toLowerCase()
+      const sortDir = urlObj.searchParams.get('sort_dir')
+      const search = urlObj.searchParams.get('search')?.toLowerCase()
+
+      if (search) {
+        resultClients = resultClients.filter(c =>
+          c.client_name?.toLowerCase().includes(search) ||
+          c.company_name?.toLowerCase().includes(search) ||
+          c.contact_number?.includes(search) ||
+          c.client_id?.toLowerCase().includes(search)
+        )
+      }
+      if (soldBy && soldBy !== 'all') {
+        resultClients = resultClients.filter(c => {
+          const sold = (c.sold_by || c.sold_by_name || '').toLowerCase()
+          if (soldBy === 'partner') return sold.startsWith('pidin') || sold.includes('partner')
+          if (soldBy === 'employee') return sold.startsWith('aim') || sold.includes('employee')
+          if (soldBy === 'admin') return !sold.startsWith('pidin') && !sold.startsWith('aim') && !sold.includes('partner') && !sold.includes('employee')
+          return true
+        })
+      }
+      if (sortDir === 'asc') {
+        resultClients.sort((a, b) => new Date(a.created_at || a.reg_date || 0) - new Date(b.created_at || b.reg_date || 0))
+      } else {
+        resultClients.sort((a, b) => new Date(b.created_at || b.reg_date || 0) - new Date(a.created_at || a.reg_date || 0))
+      }
+    } catch {
+      // fallback
+    }
+
     return {
       success: true,
-      data: window.__mockGeneralClients || []
+      data: resultClients
     }
   }
 
@@ -1893,6 +1577,8 @@ export const getMockResponse = (url, method, data = null) => {
       const filterStatus = searchParams.get('status')
       const filterPriority = searchParams.get('priority')
       const filterSearch = searchParams.get('search')?.toLowerCase()
+      const filterBroughtBy = searchParams.get('brought_by')?.toLowerCase()
+      const sortDir = searchParams.get('sort_dir')
       const followUpTodayFlag = searchParams.get('follow_up_today') === 'true'
       const pendingFollowUpFlag = searchParams.get('pending_follow_up') === 'true'
       const todayDemoFlag = searchParams.get('today_demo') === 'true'
@@ -1913,6 +1599,20 @@ export const getMockResponse = (url, method, data = null) => {
           l.product_interest?.toLowerCase().includes(filterSearch) ||
           l.lead_id?.toLowerCase().includes(filterSearch)
         )
+      }
+      if (filterBroughtBy && filterBroughtBy !== 'all') {
+        filtered = filtered.filter(l => {
+          const sold = (l.sold_by || l.employee?.full_name || l.employee?.employee_id || '').toLowerCase()
+          if (filterBroughtBy === 'partner') return sold.startsWith('pidin') || sold.includes('partner')
+          if (filterBroughtBy === 'employee') return sold.startsWith('aim') || sold.includes('employee')
+          if (filterBroughtBy === 'admin') return !sold.startsWith('pidin') && !sold.startsWith('aim') && !sold.includes('partner') && !sold.includes('employee')
+          return true
+        })
+      }
+      if (sortDir === 'asc') {
+        filtered.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0))
+      } else {
+        filtered.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
       }
       const todayStr = new Date().toISOString().split('T')[0]
       if (followUpTodayFlag) {

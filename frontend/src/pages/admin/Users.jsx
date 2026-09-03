@@ -21,6 +21,30 @@ import {
   getPublicProductsForCountry,
   getSubscriptionClients,
 } from '../../api/admin/generalClients'
+import { createAdminLead } from '../../api/admin/leads'
+
+export const renderCreatorBadge = (creatorCode) => {
+  const code = String(creatorCode || 'Admin')
+  if (code.startsWith('PIDIN') || code.toLowerCase().includes('partner')) {
+    return (
+      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-300 inline-block">
+        🤝 Partner ({code})
+      </span>
+    )
+  }
+  if (code.startsWith('AIM') || code.toLowerCase().includes('employee')) {
+    return (
+      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-700 border border-sky-300 inline-block">
+        👔 Employee ({code})
+      </span>
+    )
+  }
+  return (
+    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-300 inline-block">
+      🏢 Admin ({code})
+    </span>
+  )
+}
 
 export const normalizeService = (srv) => {
   if (!srv || typeof srv !== 'object') return srv
@@ -165,6 +189,8 @@ const AdminUsers = () => {
   const [loadingGenClients, setLoadingGenClients] = useState(false)
   const [genClientSearch, setGenClientSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
+  const [soldByFilter, setSoldByFilter] = useState('all') // 'all' | 'admin' | 'employee' | 'partner'
+  const [sortDir, setSortDir] = useState('desc') // 'desc' | 'asc'
 
   // Pagination State for Thousands of Clients
   const [currentPage, setCurrentPage] = useState(1)
@@ -302,7 +328,11 @@ const AdminUsers = () => {
   const fetchGeneralClientsList = async () => {
     setLoadingGenClients(true)
     try {
-      const res = await getGeneralClients()
+      const res = await getGeneralClients({
+        sold_by: soldByFilter !== 'all' ? soldByFilter : undefined,
+        sort_dir: sortDir || undefined,
+        search: genClientSearch || undefined
+      })
       const rawData = res.data?.data || res.data?.clients || (Array.isArray(res.data) ? res.data : [])
       setGeneralClients(Array.isArray(rawData) ? rawData : [])
     } catch (err) {
@@ -311,6 +341,10 @@ const AdminUsers = () => {
       setLoadingGenClients(false)
     }
   }
+
+  useEffect(() => {
+    fetchGeneralClientsList()
+  }, [soldByFilter, sortDir])
 
   // Fetch General Services with complete normalization
   const fetchGeneralServicesList = async () => {
@@ -458,6 +492,32 @@ const AdminUsers = () => {
       const res = await createGeneralClient(payload)
       const result = res.data
       if (result.success) {
+        // Mirror safely to Admin Leads panel
+        try {
+          await createAdminLead({
+            client_name: payload.client_name,
+            client_email: payload.email,
+            client_phone: payload.contact_number,
+            client_alternate_phone: payload.alt_contact_number || null,
+            company_name: payload.company_name || payload.client_name,
+            address: payload.address,
+            city: payload.district,
+            state: payload.state,
+            pin_code: payload.pin_code,
+            country: payload.country_code === 'IN' ? 'India' : (payload.country_code || 'India'),
+            lead_source: payload.lead_source || 'Direct Enquiry',
+            category_id: null,
+            category_name: 'General Client',
+            product_name: payload.software_requirements || 'General Client Services',
+            product_interest: payload.software_requirements || 'General Client Services',
+            software_requirements: payload.software_requirements,
+            notes: `General Client: ${payload.software_requirements || 'Services'}`,
+            sold_by: 'Admin'
+          })
+        } catch (leadErr) {
+          console.warn('Mirror to admin leads notice:', leadErr)
+        }
+
         setMessage(`✅ General Client "${result.data.client_name}" created with ID: ${result.data.client_id}`)
         setShowAddClientModal(false)
         setClientForm(initialClientForm)
@@ -1100,7 +1160,7 @@ const AdminUsers = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={handleOpenAddServiceModal}
-              className="px-3.5 py-2 border border-purple-200 bg-purple-50 hover:bg-purple-100 rounded-xl text-xs font-bold text-purple-800 shadow-sm flex items-center gap-1.5 transition-all"
+              className="px-3.5 py-2 border border-purple-200 bg-purple-50 hover:bg-purple-100 rounded-xl text-xs font-bold text-purple-800 shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <span>📦</span>
               <span>+ Add Service Entry</span>
@@ -1111,7 +1171,7 @@ const AdminUsers = () => {
                 fetchGeneralClientsList()
                 fetchGeneralServicesList()
               }}
-              className="px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-700 shadow-sm flex items-center gap-1.5 transition-all"
+              className="px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-700 shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <span>🔄</span>
               <span>Refresh</span>
@@ -1148,11 +1208,10 @@ const AdminUsers = () => {
                 setActiveTab('show_clients')
                 setShowQuotationBuilder(false)
               }}
-              className={`px-5 py-2.5 rounded-t-xl text-xs font-black transition-all cursor-pointer border-t-2 ${
-                activeTab === 'show_clients'
-                  ? 'bg-white border-[#38b34a] text-[#38b34a] -mb-[13px] z-10 shadow-sm'
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-500 border-transparent'
-              }`}
+              className={`px-5 py-2.5 rounded-t-xl text-xs font-black transition-all cursor-pointer border-t-2 ${activeTab === 'show_clients'
+                ? 'bg-white border-[#38b34a] text-[#38b34a] -mb-[13px] z-10 shadow-sm'
+                : 'bg-slate-50 hover:bg-slate-100 text-slate-500 border-transparent'
+                }`}
             >
               👥 Show Clients ({generalClients.length})
             </button>
@@ -1163,11 +1222,10 @@ const AdminUsers = () => {
                 setActiveTab('services')
                 setShowQuotationBuilder(false)
               }}
-              className={`px-5 py-2.5 rounded-t-xl text-xs font-black transition-all cursor-pointer border-t-2 ${
-                activeTab === 'services'
-                  ? 'bg-white border-[#38b34a] text-[#38b34a] -mb-[13px] z-10 shadow-sm'
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-500 border-transparent'
-              }`}
+              className={`px-5 py-2.5 rounded-t-xl text-xs font-black transition-all cursor-pointer border-t-2 ${activeTab === 'services'
+                ? 'bg-white border-[#38b34a] text-[#38b34a] -mb-[13px] z-10 shadow-sm'
+                : 'bg-slate-50 hover:bg-slate-100 text-slate-500 border-transparent'
+                }`}
             >
               📦 Service Catalog ({generalServices.length})
             </button>
@@ -1178,11 +1236,10 @@ const AdminUsers = () => {
                 setActiveTab('pricing')
                 setShowQuotationBuilder(false)
               }}
-              className={`px-5 py-2.5 rounded-t-xl text-xs font-black transition-all cursor-pointer border-t-2 ${
-                activeTab === 'pricing'
-                  ? 'bg-white border-[#38b34a] text-[#38b34a] -mb-[13px] z-10 shadow-sm'
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-500 border-transparent'
-              }`}
+              className={`px-5 py-2.5 rounded-t-xl text-xs font-black transition-all cursor-pointer border-t-2 ${activeTab === 'pricing'
+                ? 'bg-white border-[#38b34a] text-[#38b34a] -mb-[13px] z-10 shadow-sm'
+                : 'bg-slate-50 hover:bg-slate-100 text-slate-500 border-transparent'
+                }`}
             >
               🌐 Country Taxes & Pricing
             </button>
@@ -1193,11 +1250,10 @@ const AdminUsers = () => {
                 setActiveTab('follow_up')
                 setShowQuotationBuilder(false)
               }}
-              className={`px-5 py-2.5 rounded-t-xl text-xs font-black transition-all cursor-pointer border-t-2 ${
-                activeTab === 'follow_up'
-                  ? 'bg-white border-[#38b34a] text-[#38b34a] -mb-[13px] z-10 shadow-sm'
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-500 border-transparent'
-              }`}
+              className={`px-5 py-2.5 rounded-t-xl text-xs font-black transition-all cursor-pointer border-t-2 ${activeTab === 'follow_up'
+                ? 'bg-white border-[#38b34a] text-[#38b34a] -mb-[13px] z-10 shadow-sm'
+                : 'bg-slate-50 hover:bg-slate-100 text-slate-500 border-transparent'
+                }`}
             >
               📞 Follow Up Schedule
             </button>
@@ -1208,11 +1264,10 @@ const AdminUsers = () => {
                 setActiveTab('due_payment')
                 setShowQuotationBuilder(false)
               }}
-              className={`px-5 py-2.5 rounded-t-xl text-xs font-black transition-all cursor-pointer border-t-2 ${
-                activeTab === 'due_payment'
-                  ? 'bg-white border-[#38b34a] text-[#38b34a] -mb-[13px] z-10 shadow-sm'
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-500 border-transparent'
-              }`}
+              className={`px-5 py-2.5 rounded-t-xl text-xs font-black transition-all cursor-pointer border-t-2 ${activeTab === 'due_payment'
+                ? 'bg-white border-[#38b34a] text-[#38b34a] -mb-[13px] z-10 shadow-sm'
+                : 'bg-slate-50 hover:bg-slate-100 text-slate-500 border-transparent'
+                }`}
             >
               ⚠️ Due Payment
             </button>
@@ -1223,11 +1278,10 @@ const AdminUsers = () => {
                 setActiveTab('payment_report')
                 setShowQuotationBuilder(false)
               }}
-              className={`px-5 py-2.5 rounded-t-xl text-xs font-black transition-all cursor-pointer border-t-2 ${
-                activeTab === 'payment_report'
-                  ? 'bg-white border-[#38b34a] text-[#38b34a] -mb-[13px] z-10 shadow-sm'
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-500 border-transparent'
-              }`}
+              className={`px-5 py-2.5 rounded-t-xl text-xs font-black transition-all cursor-pointer border-t-2 ${activeTab === 'payment_report'
+                ? 'bg-white border-[#38b34a] text-[#38b34a] -mb-[13px] z-10 shadow-sm'
+                : 'bg-slate-50 hover:bg-slate-100 text-slate-500 border-transparent'
+                }`}
             >
               📑 Payment Report
             </button>
@@ -1251,8 +1305,14 @@ const AdminUsers = () => {
 
                     <div className="flex flex-wrap items-center gap-2">
                       <button
+                        onClick={handleOpenAddClientModal}
+                        className="px-4 py-2 bg-[#38b34a] hover:bg-[#2d963b] text-white text-xs font-black rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer uppercase tracking-wider"
+                      >
+                        <span>➕ Add General Client</span>
+                      </button>
+                      <button
                         onClick={handleOpenAddServiceModal}
-                        className="px-3.5 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold rounded-xl border border-purple-200 transition-all shadow-sm flex items-center gap-1.5"
+                        className="px-3.5 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold rounded-xl border border-purple-200 transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
                       >
                         <span>📦 + Add Service</span>
                       </button>
@@ -1311,24 +1371,53 @@ const AdminUsers = () => {
                   </div>
 
                   {/* Search & Filter Bar */}
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="relative flex-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="relative">
                       <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
                       <input
                         type="text"
-                        placeholder="Search by Client Name, ID, Company, Service, Executive, Branch..."
+                        placeholder="Search name, ID, company, creator..."
                         value={genClientSearch}
                         onChange={(e) => setGenClientSearch(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 transition-all"
                       />
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <label className="text-[11px] font-bold text-slate-400 whitespace-nowrap">Filter Status:</label>
+                    {/* Creator / Sold By Filter */}
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-[11px] font-bold text-slate-400 whitespace-nowrap">Brought By:</label>
+                      <select
+                        value={soldByFilter}
+                        onChange={(e) => setSoldByFilter(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5 text-xs font-bold text-sky-700 focus:outline-none focus:border-[#38b34a] cursor-pointer"
+                      >
+                        <option value="all">👤 All Creator Types (Everyone)</option>
+                        <option value="admin">🏢 Brought by Admin</option>
+                        <option value="employee">👔 Brought by Employees</option>
+                        <option value="partner">🤝 Brought by Partners</option>
+                      </select>
+                    </div>
+
+                    {/* Date Order Filter */}
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-[11px] font-bold text-slate-400 whitespace-nowrap">Order:</label>
+                      <select
+                        value={sortDir}
+                        onChange={(e) => setSortDir(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5 text-xs font-bold text-blue-700 focus:outline-none focus:border-[#38b34a] cursor-pointer"
+                      >
+                        <option value="desc">📅 Newest First</option>
+                        <option value="asc">📅 Oldest First</option>
+                      </select>
+                    </div>
+
+                    {/* Status Filter */}
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-[11px] font-bold text-slate-400 whitespace-nowrap">Status:</label>
                       <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-[#38b34a]"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-[#38b34a] cursor-pointer"
                       >
                         <option value="All">All Statuses ({generalClients.length})</option>
                         {STATUS_OPTIONS.map((st) => (
@@ -1447,7 +1536,23 @@ const AdminUsers = () => {
 
                                   {/* Column 2: Client Details */}
                                   <td className="px-5 py-4 align-top max-w-[200px]">
-                                    <p className="font-extrabold text-slate-800 text-sm leading-snug">{c.client_name}</p>
+                                    <p className="font-extrabold text-slate-800 text-sm leading-snug">
+                                      {c.company_name || c.client_name}
+                                    </p>
+                                    {(c.contact_person || c.client_name) && (
+                                      <p className="text-[11px] text-slate-600 font-semibold mt-0.5">
+                                        👤 {c.contact_person || c.client_name}
+                                      </p>
+                                    )}
+                                    <p className="text-[10px] text-slate-400 font-medium mt-0.5 flex items-center gap-1">
+                                      <span>📞</span>
+                                      <span>{c.contact_number || 'No contact'}</span>
+                                    </p>
+                                    {c.email && (
+                                      <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                                        ✉️ {c.email}
+                                      </p>
+                                    )}
                                   </td>
 
                                   {/* Column 3: Service Details */}
@@ -1476,9 +1581,12 @@ const AdminUsers = () => {
 
                                   {/* Column 4: Sold By (Executive & Branch Name) */}
                                   <td className="px-5 py-4 align-top">
+                                    <div className="mb-1.5">
+                                      {renderCreatorBadge(c.sold_by || c.sold_by_name || 'Admin')}
+                                    </div>
                                     <p className="font-bold text-slate-800 text-[12px] flex items-center gap-1">
                                       <span>👤</span>
-                                      <span>{c.sold_by_name || 'Admin Sales Team'}</span>
+                                      <span>{c.sold_by_name || c.sold_by || 'Admin Sales Team'}</span>
                                     </p>
                                     <p className="text-[10px] text-slate-500 font-medium mt-1 flex items-center gap-1">
                                       <span>🏛️</span>
@@ -1495,9 +1603,8 @@ const AdminUsers = () => {
                                       <select
                                         value={c.status || 'Attended'}
                                         onChange={(e) => handleInlineStatusChange(c, e.target.value)}
-                                        className={`px-3 py-1.5 rounded-full text-[11px] font-black uppercase border tracking-wider cursor-pointer shadow-sm focus:outline-none focus:ring-2 appearance-none pr-7 pl-3 ${
-                                          STATUS_STYLES[c.status] || STATUS_STYLES['Attended']
-                                        }`}
+                                        className={`px-3 py-1.5 rounded-full text-[11px] font-black uppercase border tracking-wider cursor-pointer shadow-sm focus:outline-none focus:ring-2 appearance-none pr-7 pl-3 ${STATUS_STYLES[c.status] || STATUS_STYLES['Attended']
+                                          }`}
                                       >
                                         {STATUS_OPTIONS.map((st) => (
                                           <option key={st} value={st} className="bg-white text-slate-800 normal-case font-bold">
@@ -1632,11 +1739,10 @@ const AdminUsers = () => {
                                 )}
                                 <button
                                   onClick={() => setCurrentPage(p)}
-                                  className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
-                                    currentPage === p
-                                      ? 'bg-[#38b34a] text-white shadow-sm'
-                                      : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100'
-                                  }`}
+                                  className={`px-3 py-1.5 rounded-lg font-bold transition-all ${currentPage === p
+                                    ? 'bg-[#38b34a] text-white shadow-sm'
+                                    : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100'
+                                    }`}
                                 >
                                   {p}
                                 </button>
@@ -2535,9 +2641,8 @@ const AdminUsers = () => {
                               {c.client_id || `GC-${c.id}`}
                             </span>
                             <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${
-                                STATUS_STYLES[c.status] || STATUS_STYLES['Attended']
-                              }`}
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${STATUS_STYLES[c.status] || STATUS_STYLES['Attended']
+                                }`}
                             >
                               {c.status || 'Attended'}
                             </span>
@@ -2932,9 +3037,8 @@ const AdminUsers = () => {
                               return (
                                 <label
                                   key={service.id}
-                                  className={`flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold cursor-pointer transition-colors ${
-                                    isChecked ? 'bg-purple-50 text-purple-900' : 'hover:bg-slate-50 text-slate-700'
-                                  }`}
+                                  className={`flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold cursor-pointer transition-colors ${isChecked ? 'bg-purple-50 text-purple-900' : 'hover:bg-slate-50 text-slate-700'
+                                    }`}
                                 >
                                   <input
                                     type="checkbox"
@@ -3284,9 +3388,8 @@ const AdminUsers = () => {
                               return (
                                 <label
                                   key={service.id}
-                                  className={`flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold cursor-pointer transition-colors ${
-                                    isChecked ? 'bg-purple-50 text-purple-900' : 'hover:bg-slate-50 text-slate-700'
-                                  }`}
+                                  className={`flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold cursor-pointer transition-colors ${isChecked ? 'bg-purple-50 text-purple-900' : 'hover:bg-slate-50 text-slate-700'
+                                    }`}
                                 >
                                   <input
                                     type="checkbox"
@@ -3379,9 +3482,8 @@ const AdminUsers = () => {
                       Contact: <strong className="text-slate-700">{viewingClient.contact_person || viewingClient.client_name}</strong>
                     </span>
                     <span className="text-slate-300">•</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border uppercase whitespace-nowrap ${
-                      STATUS_STYLES[viewingClient.status] || STATUS_STYLES['Attended']
-                    }`}>
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border uppercase whitespace-nowrap ${STATUS_STYLES[viewingClient.status] || STATUS_STYLES['Attended']
+                      }`}>
                       {STATUS_ICONS[viewingClient.status]} {viewingClient.status || 'Attended'}
                     </span>
                   </div>
@@ -3404,11 +3506,10 @@ const AdminUsers = () => {
                   <button
                     key={t.id}
                     onClick={() => setDossierTab(t.id)}
-                    className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer border ${
-                      dossierTab === t.id
-                        ? 'bg-[#1e3e6b] text-white border-[#1e3e6b] shadow-sm'
-                        : 'bg-white hover:bg-slate-50 text-slate-500 border-slate-200'
-                    }`}
+                    className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer border ${dossierTab === t.id
+                      ? 'bg-[#1e3e6b] text-white border-[#1e3e6b] shadow-sm'
+                      : 'bg-white hover:bg-slate-50 text-slate-500 border-slate-200'
+                      }`}
                   >
                     <span>{t.icon}</span>
                     <span>{t.label}</span>
@@ -3433,15 +3534,11 @@ const AdminUsers = () => {
                         <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-[11px]">
                           <div>
                             <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Client Name</span>
-                            <p className="text-slate-800 font-bold mt-1">{viewingClient.client_name}</p>
+                            <p className="text-slate-800 font-bold mt-1">{viewingClient.company_name || viewingClient.client_name}</p>
                           </div>
                           <div>
-                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Company / Organization</span>
-                            <p className="text-slate-800 font-medium mt-1">{viewingClient.company_name || '—'}</p>
-                          </div>
-                          <div>
-                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Connected Person</span>
-                            <p className="text-slate-800 font-medium mt-1">{viewingClient.contact_person || viewingClient.client_name}</p>
+                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Contact Person</span>
+                            <p className="text-slate-800 font-medium mt-1">{viewingClient.contact_person || viewingClient.client_name || '—'}</p>
                           </div>
                           <div>
                             <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Email Address</span>
@@ -3561,9 +3658,8 @@ const AdminUsers = () => {
                           </div>
                           <div>
                             <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Lifecycle Status</span>
-                            <span className={`inline-block mt-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${
-                              STATUS_STYLES[viewingClient.status] || STATUS_STYLES['Attended']
-                            }`}>
+                            <span className={`inline-block mt-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${STATUS_STYLES[viewingClient.status] || STATUS_STYLES['Attended']
+                              }`}>
                               {STATUS_ICONS[viewingClient.status]} {viewingClient.status || 'Attended'}
                             </span>
                           </div>
@@ -3873,7 +3969,7 @@ const AdminUsers = () => {
                                         payUrl = sendRes.data.payment_url
                                         q.payment_url = payUrl
                                       }
-                                    } catch (_) {}
+                                    } catch (_) { }
                                   }
                                   if (!payUrl) {
                                     const targetUuid = q.uuid || `quotation-uuid-${q.id}`
@@ -4009,11 +4105,10 @@ const AdminUsers = () => {
                       </p>
                       <p className="text-slate-500 font-medium">
                         Status:{' '}
-                        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-black uppercase ${
-                          viewingQuotationDoc.status === 'paid'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-amber-100 text-amber-800'
-                        }`}>
+                        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-black uppercase ${viewingQuotationDoc.status === 'paid'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-amber-100 text-amber-800'
+                          }`}>
                           {viewingQuotationDoc.status || 'Draft'}
                         </span>
                       </p>

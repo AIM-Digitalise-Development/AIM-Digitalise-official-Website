@@ -23,6 +23,52 @@ import {
   addAdminLeadActivity as addLeadActivity,
   bulkAssignAdminLeads as bulkAssignLeads
 } from '../../api/admin/leads'
+import {
+  getGeneralClients,
+  createGeneralClient,
+  updateGeneralClient,
+  deleteGeneralClient,
+  getGeneralServices
+} from '../../api/admin/generalClients'
+
+export const renderCreatorBadge = (creatorCode) => {
+  const code = String(creatorCode || 'Admin')
+  if (code.startsWith('PIDIN') || code.toLowerCase().includes('partner')) {
+    return (
+      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-300">
+        🤝 Partner ({code})
+      </span>
+    )
+  }
+  if (code.startsWith('AIM') || code.toLowerCase().includes('employee')) {
+    return (
+      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-700 border border-sky-300">
+        👔 Employee ({code})
+      </span>
+    )
+  }
+  return (
+    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-300">
+      🏢 Admin ({code})
+    </span>
+  )
+}
+
+const normalizeService = (srv) => {
+  if (!srv || typeof srv !== 'object') return srv
+  return {
+    ...srv,
+    id: srv.id || srv._id || srv.service_id,
+    name: srv.service_name || srv.name || srv.title || 'General Service',
+    service_name: srv.service_name || srv.name || srv.title || 'General Service',
+    service_price: Number(srv.service_price ?? srv.selling_price ?? srv.price ?? 0),
+    selling_price: Number(srv.service_price ?? srv.selling_price ?? srv.price ?? 0),
+    hsn: srv.hsn || srv.hsn_code || '998314',
+    unit: srv.unit || 'Unit',
+    description: srv.service_description || srv.description || '',
+    is_active: srv.is_active !== undefined ? srv.is_active : true,
+  }
+}
 
 export default function AdminLeads() {
   // Navigation Tabs State
@@ -59,6 +105,8 @@ export default function AdminLeads() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [priorityFilter, setPriorityFilter] = useState('')
+  const [broughtByFilter, setBroughtByFilter] = useState('all') // 'all' | 'admin' | 'employee' | 'partner'
+  const [sortDir, setSortDir] = useState('desc') // 'desc' | 'asc'
   const [followUpToday, setFollowUpToday] = useState(false)
   const [pendingFollowUp, setPendingFollowUp] = useState(false)
   const [todayDemo, setTodayDemo] = useState(false)
@@ -71,6 +119,8 @@ export default function AdminLeads() {
   const [categories, setCategories] = useState([])
   const [subcategories, setSubcategories] = useState([])
   const [products, setProducts] = useState([])
+  const [generalServices, setGeneralServices] = useState([])
+  const [loadingGeneralServices, setLoadingGeneralServices] = useState(false)
   const [availableDemoSlots, setAvailableDemoSlots] = useState([])
   const [selectedCategoryId, setSelectedCategoryId] = useState('')
   const [selectedSubCategoryId, setSelectedSubCategoryId] = useState('')
@@ -125,6 +175,10 @@ export default function AdminLeads() {
     state: '',
     pin_code: '',
     country: 'India',
+    country_code: 'IN',
+    gst_type: 'Intra-State',
+    gstin: '',
+    referred_by: 'Direct / None',
     lead_source: 'Website',
     lead_status: 'new',
     lead_priority: 'medium',
@@ -136,7 +190,10 @@ export default function AdminLeads() {
     product_id: '',
     product_name: '',
     product_processing_fee: '',
-    product_monthly_subscription: ''
+    product_monthly_subscription: '',
+    software_requirements: '',
+    selected_services: [],
+    sold_by: 'Admin'
   })
 
   const [statusForm, setStatusForm] = useState({
@@ -183,19 +240,135 @@ export default function AdminLeads() {
         search: search || undefined,
         status: statusFilter || undefined,
         priority: priorityFilter || undefined,
+        brought_by: broughtByFilter !== 'all' ? broughtByFilter : undefined,
+        sort_dir: sortDir || undefined,
         follow_up_today: followUpToday || undefined,
         pending_follow_up: pendingFollowUp || undefined,
         today_demo: todayDemo || undefined
       }
       const res = await getLeads(params)
+      let standardLeads = []
       if (res.data?.success) {
-        setLeads(res.data.data?.data || [])
+        standardLeads = res.data.data?.data || (Array.isArray(res.data.data) ? res.data.data : [])
+      }
+
+      // Also fetch Admin General Clients so they appear seamlessly in the Leads panel!
+      try {
+        const gcParams = {
+          sold_by: broughtByFilter !== 'all' ? broughtByFilter : undefined,
+          sort_dir: sortDir || undefined,
+          search: search || undefined,
+        }
+        const gcRes = await getGeneralClients(gcParams)
+        const gcList = gcRes.data?.success && Array.isArray(gcRes.data.data)
+          ? gcRes.data.data
+          : Array.isArray(gcRes.data) ? gcRes.data : []
+
+        const statusMap = {
+          'Attended': 'new',
+          'Quotation Sent': 'proposal',
+          'Pursuing to Purchase': 'negotiation',
+          'Order Closed': 'converted',
+          'Not Interested': 'lost'
+        }
+
+        const formattedGenClients = gcList.map(gc => ({
+          id: `gc-${gc.id}`,
+          rawId: gc.id,
+          is_general_client: true,
+          lead_id: gc.client_id || `GC-${gc.id}`,
+          client_name: gc.client_name,
+          company_name: gc.company_name || gc.client_name,
+          client_phone: gc.contact_number,
+          client_alternate_phone: gc.alt_contact_number || null,
+          client_email: gc.email || '',
+          address: gc.address || '',
+          city: gc.district || gc.city || '',
+          state: gc.state || '',
+          pin_code: gc.pin_code || '',
+          country: gc.country_code === 'IN' ? 'India' : (gc.country_code || 'India'),
+          country_code: gc.country_code || 'IN',
+          lead_source: gc.lead_source || 'Direct Enquiry',
+          lead_status: statusMap[gc.status] || 'new',
+          raw_status: gc.status,
+          lead_priority: 'medium',
+          category_id: 'general_client',
+          category_name: 'General Client',
+          product_name: gc.software_requirements || 'General Client Services',
+          product_interest: gc.software_requirements || 'General Client Services',
+          software_requirements: gc.software_requirements,
+          selected_services: gc.software_requirements ? gc.software_requirements.split(',').map(s => s.trim()).filter(Boolean) : [],
+          gst_type: gc.gst_type,
+          gstin: gc.gstin,
+          follow_up_date: gc.next_followup_date || null,
+          expected_close_date: gc.next_followup_date || null,
+          created_at: gc.created_at || gc.reg_date || new Date().toISOString(),
+          notes: `General Client: ${gc.software_requirements || 'Deliverables'}`,
+          sold_by: gc.sold_by || gc.sold_by_name || 'Admin',
+          employee: { full_name: gc.sold_by || gc.sold_by_name || 'Admin' },
+          activities: []
+        }))
+
+        let filteredGc = formattedGenClients
+        if (search) {
+          const q = search.toLowerCase()
+          filteredGc = filteredGc.filter(g =>
+            g.client_name?.toLowerCase().includes(q) ||
+            g.company_name?.toLowerCase().includes(q) ||
+            g.client_phone?.includes(q) ||
+            g.lead_id?.toLowerCase().includes(q)
+          )
+        }
+        if (statusFilter) {
+          filteredGc = filteredGc.filter(g => g.lead_status === statusFilter || g.raw_status === statusFilter)
+        }
+        if (broughtByFilter !== 'all') {
+          filteredGc = filteredGc.filter(g => {
+            const sold = (g.sold_by || '').toLowerCase()
+            if (broughtByFilter === 'partner') return sold.startsWith('pidin') || sold.includes('partner')
+            if (broughtByFilter === 'employee') return sold.startsWith('aim') || sold.includes('employee')
+            if (broughtByFilter === 'admin') return !sold.startsWith('pidin') && !sold.startsWith('aim') && !sold.includes('partner') && !sold.includes('employee')
+            return true
+          })
+        }
+
+        const combined = [
+          ...filteredGc,
+          ...standardLeads.filter(l => !filteredGc.some(g => g.client_phone && g.client_phone === l.client_phone))
+        ]
+
+        if (sortDir === 'asc') {
+          combined.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+        } else {
+          combined.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        }
+
+        setLeads(combined)
+      } catch (gcErr) {
+        console.warn('Could not load general clients for admin leads view:', gcErr)
+        setLeads(standardLeads)
       }
     } catch (err) {
       console.error('Error fetching leads:', err)
       setError(err?.response?.data?.message || 'Could not load leads from server.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchGeneralServicesList = async () => {
+    try {
+      setLoadingGeneralServices(true)
+      const res = await getGeneralServices()
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        setGeneralServices(res.data.data.map(normalizeService))
+      } else if (Array.isArray(res.data)) {
+        setGeneralServices(res.data.map(normalizeService))
+      }
+    } catch (err) {
+      console.error('Failed to load general services:', err)
+    } finally {
+      setLoadingGeneralServices(false)
     }
   }
 
@@ -251,12 +424,16 @@ export default function AdminLeads() {
       category_id: categoryId,
       sub_category_id: '',
       product_id: '',
-      product_name: '',
+      product_name: categoryId === 'general_client' ? 'General Client Services' : '',
       product_processing_fee: '',
       product_monthly_subscription: ''
     }))
     setSelectedSubCategoryId('')
-    if (categoryId) {
+    if (categoryId === 'general_client') {
+      setSubcategories([])
+      setProducts([])
+      fetchGeneralServicesList()
+    } else if (categoryId) {
       fetchSubcategories(categoryId)
     } else {
       setSubcategories([])
@@ -417,11 +594,12 @@ export default function AdminLeads() {
 
   useEffect(() => {
     loadLeads()
-  }, [search, statusFilter, priorityFilter, followUpToday, pendingFollowUp, todayDemo, page])
+  }, [search, statusFilter, priorityFilter, broughtByFilter, sortDir, followUpToday, pendingFollowUp, todayDemo, page])
 
   useEffect(() => {
     loadStats()
     fetchCategories()
+    fetchGeneralServicesList()
     fetchAvailableDemoSlots()
   }, [])
 
@@ -467,6 +645,10 @@ export default function AdminLeads() {
       state: '',
       pin_code: '',
       country: 'India',
+      country_code: 'IN',
+      gst_type: 'Intra-State',
+      gstin: '',
+      referred_by: 'Direct / None',
       lead_source: 'Website',
       lead_status: 'new',
       lead_priority: 'medium',
@@ -478,17 +660,23 @@ export default function AdminLeads() {
       product_id: '',
       product_name: '',
       product_processing_fee: '',
-      product_monthly_subscription: ''
+      product_monthly_subscription: '',
+      software_requirements: '',
+      selected_services: [],
+      sold_by: 'Admin'
     })
     setSelectedCategoryId('')
     setSelectedSubCategoryId('')
     setSubcategories([])
     setProducts([])
+    fetchGeneralServicesList()
     setIsCreateEditOpen(true)
   }
 
   const openEditModal = (lead) => {
     setEditingLead(lead)
+    const isGc = lead.is_general_client || lead.category_id === 'general_client'
+    const servicesList = lead.selected_services || (lead.software_requirements ? lead.software_requirements.split(',').map(s => s.trim()).filter(Boolean) : [])
     setLeadForm({
       client_name: lead.client_name || '',
       client_email: lead.client_email || '',
@@ -500,20 +688,30 @@ export default function AdminLeads() {
       state: lead.state || '',
       pin_code: lead.pin_code || '',
       country: lead.country || 'India',
+      country_code: lead.country_code || 'IN',
+      gst_type: lead.gst_type || 'Intra-State',
+      gstin: lead.gstin || '',
+      referred_by: lead.referred_by || 'Direct / None',
       lead_source: lead.lead_source || 'Website',
       lead_status: lead.lead_status || 'new',
       lead_priority: lead.lead_priority || 'medium',
       notes: lead.notes || '',
       budget: lead.budget || '',
       expected_close_date: lead.follow_up_date ? lead.follow_up_date.split(' ')[0] : (lead.expected_close_date || ''),
-      category_id: lead.category_id || '',
+      category_id: isGc ? 'general_client' : (lead.category_id || ''),
       sub_category_id: lead.sub_category_id || '',
       product_id: lead.product_id || '',
-      product_name: lead.product_name || '',
+      product_name: isGc ? (lead.software_requirements || 'General Client Services') : (lead.product_name || ''),
       product_processing_fee: lead.product_processing_fee || '',
-      product_monthly_subscription: lead.product_monthly_subscription || ''
+      product_monthly_subscription: lead.product_monthly_subscription || '',
+      software_requirements: lead.software_requirements || '',
+      selected_services: servicesList,
+      sold_by: lead.sold_by || 'Admin'
     })
-    if (lead.category_id) {
+    if (isGc) {
+      setSelectedCategoryId('general_client')
+      fetchGeneralServicesList()
+    } else if (lead.category_id) {
       setSelectedCategoryId(lead.category_id)
       fetchSubcategories(lead.category_id)
       if (lead.sub_category_id) {
@@ -544,11 +742,71 @@ export default function AdminLeads() {
       setSaving(true)
       const cleanedPhone = cleanAndFixPhone(leadForm.client_phone)
       const cleanedAltPhone = cleanAndFixPhone(leadForm.client_alternate_phone)
+
+      // ── GENERAL CLIENT ROUTING ──
+      if (leadForm.category_id === 'general_client') {
+        const reqString = Array.isArray(leadForm.selected_services) && leadForm.selected_services.length > 0
+          ? leadForm.selected_services.join(', ')
+          : (leadForm.software_requirements || 'General Client Services')
+
+        const genClientPayload = {
+          client_name: leadForm.client_name,
+          email: leadForm.client_email,
+          contact_number: cleanedPhone,
+          alt_contact_number: cleanedAltPhone || null,
+          company_name: leadForm.company_name || leadForm.client_name,
+          country_code: leadForm.country_code || 'IN',
+          gst_type: leadForm.gst_type || 'Intra-State',
+          gstin: leadForm.gstin || '',
+          lead_source: leadForm.lead_source || 'Website',
+          referred_by: leadForm.referred_by || 'Direct / None',
+          software_requirements: reqString,
+          sold_by: 'Admin',
+          address: leadForm.address || '',
+          city: leadForm.city || '',
+          state: leadForm.state || '',
+          pin_code: leadForm.pin_code || '',
+          next_followup_date: leadForm.expected_close_date || null,
+          status: 'Attended'
+        }
+
+        if (editingLead && editingLead.is_general_client) {
+          await updateGeneralClient(editingLead.rawId, genClientPayload)
+          triggerSuccess('General Client updated successfully.')
+        } else {
+          await createGeneralClient(genClientPayload)
+          // Safely mirror to leads without 422 blocker
+          try {
+            await createLead({
+              ...leadForm,
+              client_phone: cleanedPhone,
+              client_alternate_phone: cleanedAltPhone || null,
+              category_id: null,
+              category_name: 'General Client',
+              product_name: reqString,
+              product_interest: reqString,
+              software_requirements: reqString,
+              notes: `General Client: ${reqString}. ${leadForm.notes || ''}`,
+              sold_by: 'Admin'
+            })
+          } catch (leadSyncErr) {
+            console.warn('Standard lead mirror notice:', leadSyncErr)
+          }
+          triggerSuccess('General Client created successfully & reflected in directory.')
+        }
+        setIsCreateEditOpen(false)
+        loadLeads()
+        loadStats()
+        return
+      }
+
+      // ── STANDARD SUBSCRIPTION PRODUCT ROUTING ──
       const payload = {
         ...leadForm,
         client_phone: cleanedPhone,
         client_alternate_phone: cleanedAltPhone || null,
-        follow_up_date: leadForm.expected_close_date || null
+        follow_up_date: leadForm.expected_close_date || null,
+        sold_by: 'Admin'
       }
       if (editingLead) {
         await updateLead(editingLead.id, payload)
@@ -653,8 +911,14 @@ export default function AdminLeads() {
   const handleDeleteLead = async (id) => {
     if (!window.confirm('Are you sure you want to delete this lead? This action cannot be undone.')) return
     try {
-      await deleteLead(id)
-      triggerSuccess('Lead deleted successfully.')
+      if (String(id).startsWith('gc-')) {
+        const rawId = String(id).replace('gc-', '')
+        await deleteGeneralClient(rawId)
+        triggerSuccess('General Client deleted successfully.')
+      } else {
+        await deleteLead(id)
+        triggerSuccess('Lead deleted successfully.')
+      }
       if (selectedDrawerLead?.id === id) {
         setSelectedDrawerLead(null)
       }
@@ -963,7 +1227,7 @@ export default function AdminLeads() {
 
             {/* FILTERS & SEARCH CONTROL BAR */}
             <div className="bg-white p-5 rounded-3xl border border-slate-200/85 shadow-sm space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3.5">
                 {/* Search */}
                 <div className="relative">
                   <input
@@ -974,6 +1238,29 @@ export default function AdminLeads() {
                     className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a]"
                   />
                 </div>
+
+                {/* Creator / Brought By Filter */}
+                <select
+                  value={broughtByFilter}
+                  onChange={e => { setBroughtByFilter(e.target.value); setPage(1) }}
+                  className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs font-bold text-sky-700 focus:outline-none cursor-pointer"
+                >
+                  <option value="all">👤 All Creator Types (Everyone)</option>
+                  <option value="admin">🏢 Brought by Admin</option>
+                  <option value="employee">👔 Brought by Employees</option>
+                  <option value="partner">🤝 Brought by Partners</option>
+                </select>
+
+                {/* Date Order Filter */}
+                <select
+                  value={sortDir}
+                  onChange={e => { setSortDir(e.target.value); setPage(1) }}
+                  className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs font-bold text-blue-700 focus:outline-none cursor-pointer"
+                >
+                  <option value="desc">📅 Date Descending (Newest First)</option>
+                  <option value="asc">📅 Date Ascending (Oldest First)</option>
+                </select>
+
                 {/* Status Filter */}
                 <select
                   value={statusFilter}
@@ -990,6 +1277,7 @@ export default function AdminLeads() {
                   <option value="lost">Lost</option>
                   <option value="junk">Junk</option>
                 </select>
+
                 {/* Priority Filter */}
                 <select
                   value={priorityFilter}
@@ -1040,10 +1328,10 @@ export default function AdminLeads() {
             {/* MAIN LEADS DATA TABLE */}
             <div className="bg-white rounded-3xl border border-slate-200/85 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse min-w-[1100px]">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                      <th className="px-6 py-4 w-12 text-center">
+                      <th className="px-4 py-4 w-12 text-center">
                         <input
                           type="checkbox"
                           checked={leads.length > 0 && selectedLeadIds.length === leads.length}
@@ -1051,11 +1339,11 @@ export default function AdminLeads() {
                           className="w-4 h-4 rounded text-[#38b34a] border-slate-300 focus:ring-[#38b34a]"
                         />
                       </th>
-                      <th className="px-6 py-4">Client Detail</th>
-                      <th className="px-6 py-4">Status & Priority</th>
-                      <th className="px-6 py-4">Product Category</th>
-                      <th className="px-6 py-4">Last Logged Remarks</th>
-                      <th className="px-6 py-4 text-center">Actions</th>
+                      <th className="px-5 py-4 min-w-[220px]">Client Detail</th>
+                      <th className="px-4 py-4 min-w-[140px] whitespace-nowrap">Status & Priority</th>
+                      <th className="px-5 py-4 min-w-[200px]">Product Category</th>
+                      <th className="px-4 py-4 min-w-[160px] max-w-xs">Last Logged Remarks</th>
+                      <th className="px-4 py-4 text-center whitespace-nowrap min-w-[220px] w-56 sticky right-0 bg-slate-50 z-10 shadow-[-6px_0_12px_rgba(0,0,0,0.06)]">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
@@ -1080,9 +1368,9 @@ export default function AdminLeads() {
                         return (
                           <tr
                             key={lead.id}
-                            className={`hover:bg-slate-50/50 transition-colors ${isSelected ? 'bg-slate-50/70' : ''}`}
+                            className={`group hover:bg-slate-50/70 transition-colors ${isSelected ? 'bg-slate-50/90' : 'bg-white'}`}
                           >
-                            <td className="px-6 py-4 text-center">
+                            <td className="px-4 py-4 text-center w-12">
                               <input
                                 type="checkbox"
                                 checked={isSelected}
@@ -1090,29 +1378,39 @@ export default function AdminLeads() {
                                 className="w-4 h-4 rounded text-[#38b34a] border-slate-300 focus:ring-[#38b34a]"
                               />
                             </td>
-                            <td className="px-6 py-4">
+                            <td className="px-5 py-4 min-w-[220px]">
                               <div>
-                                <span
-                                  onClick={() => setSelectedDrawerLead(lead)}
-                                  className="font-bold text-slate-800 hover:text-[#38b34a] cursor-pointer block text-sm"
-                                >
-                                  {lead.client_name}
-                                </span>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span
+                                    onClick={() => setSelectedDrawerLead(lead)}
+                                    className="font-bold text-slate-800 hover:text-[#38b34a] cursor-pointer block text-sm"
+                                  >
+                                    {lead.company_name || lead.client_name}
+                                  </span>
+                                  {lead.is_general_client && (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-blue-800 border border-blue-200">
+                                      💼 General Client
+                                    </span>
+                                  )}
+                                  {renderCreatorBadge(lead.sold_by || lead.employee?.employee_id || lead.employee?.full_name || 'Admin')}
+                                </div>
                                 <span className="text-slate-400 font-medium block mt-0.5">
-                                  {lead.company_name ? `${lead.company_name} · ` : ''}
+                                  {lead.client_name && lead.company_name && lead.client_name !== lead.company_name ? `👤 ${lead.client_name} · ` : ''}
                                   {lead.client_phone}
                                 </span>
                               </div>
                             </td>
-                            <td className="px-6 py-4">
+                            <td className="px-4 py-4 min-w-[140px] whitespace-nowrap">
                               <div className="flex flex-wrap gap-1.5">
                                 {getStatusBadge(lead.lead_status)}
                                 {getPriorityBadge(lead.lead_priority)}
                               </div>
                             </td>
-                            <td className="px-6 py-4">
+                            <td className="px-5 py-4 min-w-[200px]">
                               <div>
-                                <span className="font-bold text-slate-700 block">{lead.product_name || 'Generic Inquiry'}</span>
+                                <span className="font-bold text-slate-700 block">
+                                  {lead.is_general_client ? `General Client (${lead.software_requirements || 'Services'})` : (lead.product_name || 'Generic Inquiry')}
+                                </span>
                                 {lead.follow_up_date && (
                                   <span className="text-[10px] text-amber-500 font-bold mt-0.5 block">
                                     📅 Next F/Up: {lead.follow_up_date.split(' ')[0]}
@@ -1120,17 +1418,17 @@ export default function AdminLeads() {
                                 )}
                               </div>
                             </td>
-                            <td className="px-6 py-4 max-w-xs">
+                            <td className="px-4 py-4 min-w-[160px] max-w-xs">
                               <p className="truncate text-slate-400 font-medium" title={getLatestRemark(lead)}>
                                 {getLatestRemark(lead)}
                               </p>
                             </td>
-                            <td className="px-6 py-4">
+                            <td className={`px-4 py-4 text-center whitespace-nowrap min-w-[220px] w-56 sticky right-0 transition-colors shadow-[-6px_0_12px_rgba(0,0,0,0.06)] ${isSelected ? 'bg-slate-50' : 'bg-white group-hover:bg-slate-50'}`}>
                               <div className="flex items-center justify-center gap-1">
                                 <button
                                   onClick={() => openFollowUpModal(lead)}
                                   title="Schedule Follow-up"
-                                  className="p-1.5 text-slate-400 hover:text-amber-500 hover:bg-slate-50 rounded-xl transition cursor-pointer"
+                                  className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition cursor-pointer"
                                 >
                                   📅
                                 </button>
@@ -1141,35 +1439,35 @@ export default function AdminLeads() {
                                     setSelectedDate('')
                                   }}
                                   title="Book Demo Slot"
-                                  className="p-1.5 text-slate-400 hover:text-emerald-500 hover:bg-slate-50 rounded-xl transition cursor-pointer"
+                                  className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition cursor-pointer"
                                 >
                                   🖥️
                                 </button>
                                 <button
                                   onClick={() => openMailModal(lead)}
                                   title="Send Demo Email"
-                                  className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-slate-50 rounded-xl transition cursor-pointer"
+                                  className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition cursor-pointer"
                                 >
                                   ✉️
                                 </button>
                                 <button
                                   onClick={() => openEditModal(lead)}
                                   title="Edit Lead"
-                                  className="p-1.5 text-slate-400 hover:text-[#38b34a] hover:bg-slate-50 rounded-xl transition cursor-pointer"
+                                  className="p-1.5 text-slate-500 hover:text-[#38b34a] hover:bg-green-50 rounded-xl transition cursor-pointer"
                                 >
                                   ✏️
                                 </button>
                                 <button
                                   onClick={() => openStatusModal(lead)}
                                   title="Change Status"
-                                  className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-slate-50 rounded-xl transition cursor-pointer"
+                                  className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition cursor-pointer"
                                 >
                                   🛡️
                                 </button>
                                 <button
                                   onClick={() => handleDeleteLead(lead.id)}
                                   title="Delete Lead"
-                                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-slate-50 rounded-xl transition cursor-pointer"
+                                  className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition cursor-pointer"
                                 >
                                   🗑️
                                 </button>
@@ -1339,15 +1637,15 @@ export default function AdminLeads() {
             {/* Follow-up Leads List Table */}
             <div className="bg-white rounded-3xl border border-slate-200/85 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse min-w-[1050px]">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                      <th className="px-6 py-4">Client / Institution</th>
-                      <th className="px-6 py-4">Quick Contact</th>
-                      <th className="px-6 py-4">Scheduled Date</th>
-                      <th className="px-6 py-4">Status & Priority</th>
-                      <th className="px-6 py-4">Discussion / Remarks</th>
-                      <th className="px-6 py-4 text-center">Follow-up Actions</th>
+                      <th className="px-5 py-4 min-w-[200px]">Client / Institution</th>
+                      <th className="px-4 py-4 min-w-[140px] whitespace-nowrap">Quick Contact</th>
+                      <th className="px-4 py-4 min-w-[140px] whitespace-nowrap">Scheduled Date</th>
+                      <th className="px-4 py-4 min-w-[130px] whitespace-nowrap">Status & Priority</th>
+                      <th className="px-4 py-4 min-w-[160px] max-w-xs">Discussion / Remarks</th>
+                      <th className="px-4 py-4 text-center whitespace-nowrap min-w-[220px] w-56 sticky right-0 bg-slate-50 z-10 shadow-[-6px_0_12px_rgba(0,0,0,0.06)]">Follow-up Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
@@ -1382,25 +1680,25 @@ export default function AdminLeads() {
                         const statusInfo = getFollowUpStatus(fDate)
                         const rawPhone = lead.client_phone ? cleanAndFixPhone(lead.client_phone) : ''
                         return (
-                          <tr key={lead.id} className="hover:bg-slate-50/50 transition-colors">
+                          <tr key={lead.id} className="group hover:bg-slate-50/70 transition-colors">
                             {/* Client & Organization */}
-                            <td className="px-6 py-4">
+                            <td className="px-5 py-4 min-w-[200px]">
                               <div>
                                 <span
                                   onClick={() => setSelectedDrawerLead(lead)}
                                   className="font-bold text-slate-800 hover:text-[#38b34a] cursor-pointer block text-sm"
                                 >
-                                  {lead.client_name}
+                                  {lead.company_name || lead.client_name}
                                 </span>
                                 <span className="text-slate-400 font-medium block mt-0.5">
-                                  {lead.company_name ? `${lead.company_name} · ` : ''}
+                                  {lead.client_name && lead.company_name && lead.client_name !== lead.company_name ? `👤 ${lead.client_name} · ` : ''}
                                   {lead.city ? `${lead.city}, ` : ''}{lead.state || 'India'}
                                 </span>
                               </div>
                             </td>
 
                             {/* Quick Contact buttons */}
-                            <td className="px-6 py-4">
+                            <td className="px-4 py-4 min-w-[140px] whitespace-nowrap">
                               <div className="flex items-center gap-1.5">
                                 {lead.client_phone && (
                                   <>
@@ -1437,7 +1735,7 @@ export default function AdminLeads() {
                             </td>
 
                             {/* Scheduled Date */}
-                            <td className="px-6 py-4">
+                            <td className="px-4 py-4 min-w-[140px] whitespace-nowrap">
                               <div>
                                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs border ${statusInfo.badge}`}>
                                   <span>📅</span>
@@ -1450,7 +1748,7 @@ export default function AdminLeads() {
                             </td>
 
                             {/* Status & Priority */}
-                            <td className="px-6 py-4">
+                            <td className="px-4 py-4 min-w-[130px] whitespace-nowrap">
                               <div className="flex flex-wrap gap-1.5">
                                 {getStatusBadge(lead.lead_status)}
                                 {getPriorityBadge(lead.lead_priority)}
@@ -1458,14 +1756,14 @@ export default function AdminLeads() {
                             </td>
 
                             {/* Last Remarks */}
-                            <td className="px-6 py-4 max-w-xs">
+                            <td className="px-4 py-4 min-w-[160px] max-w-xs">
                               <p className="truncate text-slate-600 font-medium" title={getLatestRemark(lead)}>
                                 {getLatestRemark(lead)}
                               </p>
                             </td>
 
                             {/* Actions */}
-                            <td className="px-6 py-4">
+                            <td className="px-4 py-4 text-center whitespace-nowrap min-w-[220px] w-56 sticky right-0 bg-white group-hover:bg-slate-50 transition-colors shadow-[-6px_0_12px_rgba(0,0,0,0.06)]">
                               <div className="flex items-center justify-center gap-1">
                                 <button
                                   onClick={() => openFollowUpModal(lead)}
@@ -1582,6 +1880,20 @@ export default function AdminLeads() {
                     />
                   </div>
 
+                  {/* Client Alternate Phone */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">
+                      Alternative Phone
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="e.g. 9876543211"
+                      value={leadForm.client_alternate_phone}
+                      onChange={e => setLeadForm(prev => ({ ...prev, client_alternate_phone: e.target.value }))}
+                      className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4.5 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a]"
+                    />
+                  </div>
+
                   {/* Client Email */}
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">
@@ -1610,63 +1922,184 @@ export default function AdminLeads() {
                   </div>
 
                   {/* Category dropdown */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">Product Category</label>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">
+                      Product Category <span className="text-red-500">*</span>
+                    </label>
                     <select
                       value={selectedCategoryId}
                       onChange={handleCategoryChange}
-                      className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs text-slate-650 focus:outline-none cursor-pointer"
+                      className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs text-slate-700 focus:outline-none cursor-pointer"
                     >
                       <option value="">Select Category</option>
+                      <option value="general_client" className="font-bold text-sky-600 bg-sky-50">
+                        📄 General Client (Non-Subscription)
+                      </option>
                       {categories.map(c => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
                     </select>
                   </div>
 
-                  {/* Subcategory dropdown */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">Subcategory</label>
-                    <select
-                      value={selectedSubCategoryId}
-                      onChange={handleSubCategoryChange}
-                      disabled={!selectedCategoryId}
-                      className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs text-slate-650 focus:outline-none disabled:opacity-50 cursor-pointer"
-                    >
-                      <option value="">Select Subcategory</option>
-                      {subcategories.map(s => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* Dynamic Fields based on Category */}
+                  {selectedCategoryId === 'general_client' ? (
+                    <div className="sm:col-span-2 bg-sky-50/70 border border-sky-200 rounded-2xl p-4 space-y-3.5">
+                      <div className="flex items-center justify-between pb-2 border-b border-sky-100 flex-wrap gap-2">
+                        <h5 className="text-xs font-black text-sky-900 flex items-center gap-1.5">
+                          <span>📄 General Client Information (Non-Subscription)</span>
+                        </h5>
+                        <span className="text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 px-2.5 py-0.5 rounded-full">
+                          💡 Stored in General Clients & Leads
+                        </span>
+                      </div>
 
-                  {/* Product selection */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">Product Package</label>
-                    <select
-                      value={leadForm.product_id}
-                      onChange={handleProductSelect}
-                      disabled={!selectedSubCategoryId}
-                      className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs text-slate-650 focus:outline-none disabled:opacity-50 cursor-pointer"
-                    >
-                      <option value="">Select Product Package</option>
-                      {products.map(p => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
-                    </select>
-                  </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1">Country</label>
+                          <select
+                            value={leadForm.country_code}
+                            onChange={e => setLeadForm(prev => ({ ...prev, country_code: e.target.value, country: e.target.value === 'IN' ? 'India' : (e.target.value === 'NP' ? 'Nepal' : 'Bhutan') }))}
+                            className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700"
+                          >
+                            <option value="IN">🇮🇳 India (IN)</option>
+                            <option value="NP">🇳🇵 Nepal (NP)</option>
+                            <option value="BT">🇧🇹 Bhutan (BT)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1">GST Supply Type</label>
+                          <select
+                            value={leadForm.gst_type}
+                            onChange={e => setLeadForm(prev => ({ ...prev, gst_type: e.target.value }))}
+                            className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700"
+                          >
+                            <option value="Intra-State">Intra-State (CGST 9% + SGST 9%)</option>
+                            <option value="Inter-State">Inter-State (IGST 18%)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1">Referred By</label>
+                          <select
+                            value={leadForm.referred_by}
+                            onChange={e => setLeadForm(prev => ({ ...prev, referred_by: e.target.value }))}
+                            className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700"
+                          >
+                            <option value="Direct / None">Direct / None</option>
+                            <option value="Existing Client">Existing Client</option>
+                            <option value="Partner / Agent">Partner / Agent</option>
+                            <option value="Employee">Employee</option>
+                            <option value="Social Media Ad">Social Media Ad</option>
+                          </select>
+                        </div>
+                      </div>
 
-                  {/* Budget */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">Estimated Budget</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. ₹25,000"
-                      value={leadForm.budget}
-                      onChange={e => setLeadForm(prev => ({ ...prev, budget: e.target.value }))}
-                      className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4.5 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a]"
-                    />
-                  </div>
+                      {/* Software / Service Requirements Checkboxes */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="text-[10px] font-bold text-slate-600">
+                            Software / Service Requirements (Select items for custom quotation):
+                          </label>
+                          <span className="text-[10px] text-sky-700 font-bold">
+                            {leadForm.selected_services?.length || 0} selected
+                          </span>
+                        </div>
+
+                        {loadingGeneralServices ? (
+                          <div className="p-3 text-center text-xs text-slate-400">Loading catalog services...</div>
+                        ) : generalServices.length === 0 ? (
+                          <div className="p-3 text-center text-xs text-slate-400 bg-white rounded-xl border border-slate-200">
+                            No general services found. Add services in General Client panel.
+                          </div>
+                        ) : (
+                          <div className="bg-white border border-slate-200 rounded-xl p-2.5 grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto">
+                            {generalServices.map(srv => {
+                              const sName = srv.name || srv.service_name
+                              const isSelected = (leadForm.selected_services || []).includes(sName)
+                              return (
+                                <label
+                                  key={srv.id}
+                                  className={`flex items-center justify-between p-2 rounded-lg border text-xs cursor-pointer transition ${
+                                    isSelected ? 'bg-sky-50 border-sky-300 font-bold text-slate-800' : 'bg-slate-50/50 border-slate-100 text-slate-600 hover:bg-slate-50'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={e => {
+                                        let list = [...(leadForm.selected_services || [])]
+                                        if (e.target.checked) {
+                                          if (!list.includes(sName)) list.push(sName)
+                                        } else {
+                                          list = list.filter(item => item !== sName)
+                                        }
+                                        setLeadForm(prev => ({
+                                          ...prev,
+                                          selected_services: list,
+                                          software_requirements: list.join(', ')
+                                        }))
+                                      }}
+                                      className="w-3.5 h-3.5 rounded text-sky-600 accent-sky-600"
+                                    />
+                                    <span className="truncate">{sName}</span>
+                                  </div>
+                                  <span className="text-emerald-600 font-mono font-bold text-[11px] shrink-0 ml-2">
+                                    ₹{Number(srv.selling_price || srv.service_price || 0).toLocaleString('en-IN')}
+                                  </span>
+                                </label>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Subcategory dropdown */}
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">Subcategory</label>
+                        <select
+                          value={selectedSubCategoryId}
+                          onChange={handleSubCategoryChange}
+                          disabled={!selectedCategoryId}
+                          className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs text-slate-650 focus:outline-none disabled:opacity-50 cursor-pointer"
+                        >
+                          <option value="">Select Subcategory</option>
+                          {subcategories.map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Product selection */}
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">Product Package</label>
+                        <select
+                          value={leadForm.product_id}
+                          onChange={handleProductSelect}
+                          disabled={!selectedSubCategoryId}
+                          className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs text-slate-650 focus:outline-none disabled:opacity-50 cursor-pointer"
+                        >
+                          <option value="">Select Product Package</option>
+                          {products.map(p => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Budget */}
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">Estimated Budget</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. ₹25,000"
+                          value={leadForm.budget}
+                          onChange={e => setLeadForm(prev => ({ ...prev, budget: e.target.value }))}
+                          className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4.5 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a]"
+                        />
+                      </div>
+                    </>
+                  )}
 
                   {/* Follow-up target date */}
                   <div className="space-y-1.5">
@@ -2114,8 +2547,10 @@ export default function AdminLeads() {
                     <div className="p-6 border-b border-slate-100">
                       <div className="flex items-start justify-between">
                         <div>
-                          <h2 className="text-base font-black text-slate-850 uppercase">{selectedDrawerLead.client_name}</h2>
-                          <span className="text-slate-450 block mt-0.5 font-medium">{selectedDrawerLead.company_name || 'No Company'}</span>
+                          <h2 className="text-base font-black text-slate-850 uppercase">{selectedDrawerLead.company_name || selectedDrawerLead.client_name}</h2>
+                          {selectedDrawerLead.client_name && selectedDrawerLead.company_name && selectedDrawerLead.client_name !== selectedDrawerLead.company_name && (
+                            <span className="text-slate-450 block mt-0.5 font-medium">👤 Contact: {selectedDrawerLead.client_name}</span>
+                          )}
                         </div>
                         <button
                           onClick={() => setSelectedDrawerLead(null)}
