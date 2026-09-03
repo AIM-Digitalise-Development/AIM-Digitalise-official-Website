@@ -70,6 +70,13 @@ const normalizeService = (srv) => {
   }
 }
 
+// Module-level in-memory caches to keep data instantly available across tab/page switches
+let cachedAdminLeads = null
+let cachedAdminStats = null
+let cachedAdminCategories = null
+let cachedAdminServices = null
+let cachedAdminDemoSlots = null
+
 export default function AdminLeads() {
   // Navigation Tabs State
   const [searchParams, setSearchParams] = useSearchParams()
@@ -93,15 +100,17 @@ export default function AdminLeads() {
     setSearchParams({ tab: tabId }, { replace: true })
   }
 
-  // Stats and Listing State
-  const [stats, setStats] = useState(null)
-  const [leads, setLeads] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [statsLoading, setStatsLoading] = useState(true)
+  // Stats and Listing State (Pre-populated from cache for 0ms reloads)
+  const [stats, setStats] = useState(cachedAdminStats)
+  const [leads, setLeads] = useState(cachedAdminLeads || [])
+  const [loading, setLoading] = useState(!cachedAdminLeads)
+  const [statsLoading, setStatsLoading] = useState(!cachedAdminStats)
+  const [isRevalidating, setIsRevalidating] = useState(false)
   const [error, setError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
 
   // Query / Filter State
+  const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [priorityFilter, setPriorityFilter] = useState('')
@@ -112,16 +121,25 @@ export default function AdminLeads() {
   const [todayDemo, setTodayDemo] = useState(false)
   const [page, setPage] = useState(1)
 
+  // 300ms Debounced search so typing is super snappy and doesn't spam APIs
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput.trim())
+      setPage(1)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchInput])
+
   // Selection state for Bulk Actions
   const [selectedLeadIds, setSelectedLeadIds] = useState([])
 
-  // Category/Subcategory/Product states
-  const [categories, setCategories] = useState([])
+  // Category/Subcategory/Product states (Pre-populated from cache)
+  const [categories, setCategories] = useState(cachedAdminCategories || [])
   const [subcategories, setSubcategories] = useState([])
   const [products, setProducts] = useState([])
-  const [generalServices, setGeneralServices] = useState([])
+  const [generalServices, setGeneralServices] = useState(cachedAdminServices || [])
   const [loadingGeneralServices, setLoadingGeneralServices] = useState(false)
-  const [availableDemoSlots, setAvailableDemoSlots] = useState([])
+  const [availableDemoSlots, setAvailableDemoSlots] = useState(cachedAdminDemoSlots || [])
   const [selectedCategoryId, setSelectedCategoryId] = useState('')
   const [selectedSubCategoryId, setSelectedSubCategoryId] = useState('')
 
@@ -217,12 +235,18 @@ export default function AdminLeads() {
   const [saving, setSaving] = useState(false)
 
   // 1. Fetch Stats & Leads
-  const loadStats = async () => {
+  const loadStats = async (force = false) => {
+    if (!force && cachedAdminStats) {
+      setStats(cachedAdminStats)
+      setStatsLoading(false)
+      return
+    }
     try {
-      setStatsLoading(true)
+      if (!cachedAdminStats) setStatsLoading(true)
       const res = await getLeadStats()
       if (res.data?.success) {
         setStats(res.data.data)
+        cachedAdminStats = res.data.data
       }
     } catch (err) {
       console.error('Error fetching lead stats:', err)
@@ -231,9 +255,16 @@ export default function AdminLeads() {
     }
   }
 
-  const loadLeads = async () => {
+  const loadLeads = async (forceSpinner = false) => {
     try {
-      setLoading(true)
+      if (forceSpinner) {
+        cachedAdminLeads = null
+      }
+      if (forceSpinner || !cachedAdminLeads || cachedAdminLeads.length === 0) {
+        setLoading(true)
+      } else {
+        setIsRevalidating(true)
+      }
       setError('')
       const params = {
         page,
@@ -246,125 +277,146 @@ export default function AdminLeads() {
         pending_follow_up: pendingFollowUp || undefined,
         today_demo: todayDemo || undefined
       }
-      const res = await getLeads(params)
-      let standardLeads = []
-      if (res.data?.success) {
-        standardLeads = res.data.data?.data || (Array.isArray(res.data.data) ? res.data.data : [])
+      const gcParams = {
+        sold_by: broughtByFilter !== 'all' ? broughtByFilter : undefined,
+        sort_dir: sortDir || undefined,
+        search: search || undefined,
       }
 
-      // Also fetch Admin General Clients so they appear seamlessly in the Leads panel!
-      try {
-        const gcParams = {
-          sold_by: broughtByFilter !== 'all' ? broughtByFilter : undefined,
-          sort_dir: sortDir || undefined,
-          search: search || undefined,
-        }
-        const gcRes = await getGeneralClients(gcParams)
-        const gcList = gcRes.data?.success && Array.isArray(gcRes.data.data)
-          ? gcRes.data.data
-          : Array.isArray(gcRes.data) ? gcRes.data : []
+      // Parallel execution for 2x faster load time
+      const [leadsRes, gcRes] = await Promise.all([
+        getLeads(params).catch(err => {
+          console.error('Error fetching leads:', err)
+          return { data: null }
+        }),
+        getGeneralClients(gcParams).catch(gcErr => {
+          console.warn('Could not load general clients for admin leads view:', gcErr)
+          return { data: null }
+        })
+      ])
 
-        const statusMap = {
-          'Attended': 'new',
-          'Quotation Sent': 'proposal',
-          'Pursuing to Purchase': 'negotiation',
-          'Order Closed': 'converted',
-          'Not Interested': 'lost'
-        }
+      let standardLeads = []
+      if (leadsRes?.data?.success) {
+        standardLeads = leadsRes.data.data?.data || (Array.isArray(leadsRes.data.data) ? leadsRes.data.data : [])
+      } else if (Array.isArray(leadsRes?.data)) {
+        standardLeads = leadsRes.data
+      }
 
-        const formattedGenClients = gcList.map(gc => ({
-          id: `gc-${gc.id}`,
-          rawId: gc.id,
-          is_general_client: true,
-          lead_id: gc.client_id || `GC-${gc.id}`,
-          client_name: gc.client_name,
-          company_name: gc.company_name || gc.client_name,
-          client_phone: gc.contact_number,
-          client_alternate_phone: gc.alt_contact_number || null,
-          client_email: gc.email || '',
-          address: gc.address || '',
-          city: gc.district || gc.city || '',
-          state: gc.state || '',
-          pin_code: gc.pin_code || '',
-          country: gc.country_code === 'IN' ? 'India' : (gc.country_code || 'India'),
-          country_code: gc.country_code || 'IN',
-          lead_source: gc.lead_source || 'Direct Enquiry',
-          lead_status: statusMap[gc.status] || 'new',
-          raw_status: gc.status,
-          lead_priority: 'medium',
-          category_id: 'general_client',
-          category_name: 'General Client',
-          product_name: gc.software_requirements || 'General Client Services',
-          product_interest: gc.software_requirements || 'General Client Services',
-          software_requirements: gc.software_requirements,
-          selected_services: gc.software_requirements ? gc.software_requirements.split(',').map(s => s.trim()).filter(Boolean) : [],
-          gst_type: gc.gst_type,
-          gstin: gc.gstin,
-          follow_up_date: gc.next_followup_date || null,
-          expected_close_date: gc.next_followup_date || null,
-          created_at: gc.created_at || gc.reg_date || new Date().toISOString(),
-          notes: `General Client: ${gc.software_requirements || 'Deliverables'}`,
-          sold_by: gc.sold_by || gc.sold_by_name || 'Admin',
-          employee: { full_name: gc.sold_by || gc.sold_by_name || 'Admin' },
-          activities: []
-        }))
+      let gcList = []
+      if (gcRes?.data?.success && Array.isArray(gcRes.data.data)) {
+        gcList = gcRes.data.data
+      } else if (Array.isArray(gcRes?.data)) {
+        gcList = gcRes.data
+      }
 
-        let filteredGc = formattedGenClients
-        if (search) {
-          const q = search.toLowerCase()
-          filteredGc = filteredGc.filter(g =>
-            g.client_name?.toLowerCase().includes(q) ||
-            g.company_name?.toLowerCase().includes(q) ||
-            g.client_phone?.includes(q) ||
-            g.lead_id?.toLowerCase().includes(q)
-          )
-        }
-        if (statusFilter) {
-          filteredGc = filteredGc.filter(g => g.lead_status === statusFilter || g.raw_status === statusFilter)
-        }
-        if (broughtByFilter !== 'all') {
-          filteredGc = filteredGc.filter(g => {
-            const sold = (g.sold_by || '').toLowerCase()
-            if (broughtByFilter === 'partner') return sold.startsWith('pidin') || sold.includes('partner')
-            if (broughtByFilter === 'employee') return sold.startsWith('aim') || sold.includes('employee')
-            if (broughtByFilter === 'admin') return !sold.startsWith('pidin') && !sold.startsWith('aim') && !sold.includes('partner') && !sold.includes('employee')
-            return true
-          })
-        }
+      const statusMap = {
+        'Attended': 'new',
+        'Quotation Sent': 'proposal',
+        'Pursuing to Purchase': 'negotiation',
+        'Order Closed': 'converted',
+        'Not Interested': 'lost'
+      }
 
-        const combined = [
-          ...filteredGc,
-          ...standardLeads.filter(l => !filteredGc.some(g => g.client_phone && g.client_phone === l.client_phone))
-        ]
+      const formattedGenClients = gcList.map(gc => ({
+        id: `gc-${gc.id}`,
+        rawId: gc.id,
+        is_general_client: true,
+        lead_id: gc.client_id || `GC-${gc.id}`,
+        client_name: gc.client_name,
+        company_name: gc.company_name || gc.client_name,
+        client_phone: gc.contact_number,
+        client_alternate_phone: gc.alt_contact_number || null,
+        client_email: gc.email || '',
+        address: gc.address || '',
+        city: gc.district || gc.city || '',
+        state: gc.state || '',
+        pin_code: gc.pin_code || '',
+        country: gc.country_code === 'IN' ? 'India' : (gc.country_code || 'India'),
+        country_code: gc.country_code || 'IN',
+        lead_source: gc.lead_source || 'Direct Enquiry',
+        lead_status: statusMap[gc.status] || 'new',
+        raw_status: gc.status,
+        lead_priority: 'medium',
+        category_id: 'general_client',
+        category_name: 'General Client',
+        product_name: gc.software_requirements || 'General Client Services',
+        product_interest: gc.software_requirements || 'General Client Services',
+        software_requirements: gc.software_requirements,
+        selected_services: gc.software_requirements ? gc.software_requirements.split(',').map(s => s.trim()).filter(Boolean) : [],
+        gst_type: gc.gst_type,
+        gstin: gc.gstin,
+        follow_up_date: gc.next_followup_date || null,
+        expected_close_date: gc.next_followup_date || null,
+        created_at: gc.created_at || gc.reg_date || new Date().toISOString(),
+        notes: `General Client: ${gc.software_requirements || 'Deliverables'}`,
+        sold_by: gc.sold_by || gc.sold_by_name || 'Admin',
+        employee: { full_name: gc.sold_by || gc.sold_by_name || 'Admin' },
+        activities: []
+      }))
 
-        if (sortDir === 'asc') {
-          combined.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-        } else {
-          combined.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        }
+      let filteredGc = formattedGenClients
+      if (search) {
+        const q = search.toLowerCase()
+        filteredGc = filteredGc.filter(g =>
+          g.client_name?.toLowerCase().includes(q) ||
+          g.company_name?.toLowerCase().includes(q) ||
+          g.client_phone?.includes(q) ||
+          g.lead_id?.toLowerCase().includes(q)
+        )
+      }
+      if (statusFilter) {
+        filteredGc = filteredGc.filter(g => g.lead_status === statusFilter || g.raw_status === statusFilter)
+      }
+      if (broughtByFilter !== 'all') {
+        filteredGc = filteredGc.filter(g => {
+          const sold = (g.sold_by || '').toLowerCase()
+          if (broughtByFilter === 'partner') return sold.startsWith('pidin') || sold.includes('partner')
+          if (broughtByFilter === 'employee') return sold.startsWith('aim') || sold.includes('employee')
+          if (broughtByFilter === 'admin') return !sold.startsWith('pidin') && !sold.startsWith('aim') && !sold.includes('partner') && !sold.includes('employee')
+          return true
+        })
+      }
 
-        setLeads(combined)
-      } catch (gcErr) {
-        console.warn('Could not load general clients for admin leads view:', gcErr)
-        setLeads(standardLeads)
+      const combined = [
+        ...filteredGc,
+        ...standardLeads.filter(l => !filteredGc.some(g => g.client_phone && g.client_phone === l.client_phone))
+      ]
+
+      if (sortDir === 'asc') {
+        combined.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+      } else {
+        combined.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      }
+
+      setLeads(combined)
+      if (!search && !statusFilter && broughtByFilter === 'all' && page === 1 && !followUpToday && !pendingFollowUp && !todayDemo) {
+        cachedAdminLeads = combined
       }
     } catch (err) {
       console.error('Error fetching leads:', err)
       setError(err?.response?.data?.message || 'Could not load leads from server.')
     } finally {
       setLoading(false)
+      setIsRevalidating(false)
     }
   }
 
-  const fetchGeneralServicesList = async () => {
+  const fetchGeneralServicesList = async (force = false) => {
+    if (!force && cachedAdminServices) {
+      setGeneralServices(cachedAdminServices)
+      return
+    }
     try {
       setLoadingGeneralServices(true)
       const res = await getGeneralServices()
+      let list = []
       if (res.data?.success && Array.isArray(res.data.data)) {
-        setGeneralServices(res.data.data.map(normalizeService))
+        list = res.data.data.map(normalizeService)
       } else if (Array.isArray(res.data)) {
-        setGeneralServices(res.data.map(normalizeService))
+        list = res.data.map(normalizeService)
       }
+      setGeneralServices(list)
+      cachedAdminServices = list
     } catch (err) {
       console.error('Failed to load general services:', err)
     } finally {
@@ -372,11 +424,16 @@ export default function AdminLeads() {
     }
   }
 
-  const fetchCategories = async () => {
+  const fetchCategories = async (force = false) => {
+    if (!force && cachedAdminCategories) {
+      setCategories(cachedAdminCategories)
+      return
+    }
     try {
       const res = await getCategories()
       if (res.data?.success) {
         setCategories(res.data.data)
+        cachedAdminCategories = res.data.data
       }
     } catch (err) {
       console.error('Failed to fetch categories:', err)
@@ -405,11 +462,16 @@ export default function AdminLeads() {
     }
   }
 
-  const fetchAvailableDemoSlots = async () => {
+  const fetchAvailableDemoSlots = async (force = false) => {
+    if (!force && cachedAdminDemoSlots) {
+      setAvailableDemoSlots(cachedAdminDemoSlots)
+      return
+    }
     try {
       const res = await getAvailableDemoSlots()
       if (res.data?.success) {
         setAvailableDemoSlots(res.data.data)
+        cachedAdminDemoSlots = res.data.data
       }
     } catch (err) {
       console.error('Failed to fetch demo slots:', err)
@@ -597,10 +659,15 @@ export default function AdminLeads() {
   }, [search, statusFilter, priorityFilter, broughtByFilter, sortDir, followUpToday, pendingFollowUp, todayDemo, page])
 
   useEffect(() => {
-    loadStats()
-    fetchCategories()
-    fetchGeneralServicesList()
-    fetchAvailableDemoSlots()
+    // Parallel fetch metadata if not already cached
+    const tasks = []
+    if (!cachedAdminStats) tasks.push(loadStats())
+    if (!cachedAdminCategories) tasks.push(fetchCategories())
+    if (!cachedAdminServices) tasks.push(fetchGeneralServicesList())
+    if (!cachedAdminDemoSlots) tasks.push(fetchAvailableDemoSlots())
+    if (tasks.length > 0) {
+      Promise.all(tasks)
+    }
   }, [])
 
   useEffect(() => {
@@ -1186,10 +1253,30 @@ export default function AdminLeads() {
             {/* Action Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-3xl border border-slate-200/85 shadow-sm">
               <div>
-                <h1 className="text-xl font-black tracking-tight text-slate-800 uppercase">Leads Database</h1>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-xl font-black tracking-tight text-slate-800 uppercase">Leads Database</h1>
+                  {isRevalidating && (
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full animate-pulse">
+                      <span className="animate-spin text-xs">🔄</span> Syncing...
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-slate-400 mt-0.5">Filter, track and manage system-wide client leads</p>
               </div>
-              <div className="flex flex-wrap gap-2.5">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  onClick={() => {
+                    cachedAdminLeads = null
+                    loadLeads(true)
+                    loadStats(true)
+                  }}
+                  disabled={loading || isRevalidating}
+                  title="Force refresh leads from server"
+                  className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs px-4 py-2.5 rounded-full shadow-sm cursor-pointer transition active:scale-[0.98] flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <span className={loading || isRevalidating ? 'animate-spin inline-block' : ''}>🔄</span>
+                  <span>Refresh</span>
+                </button>
                 {selectedLeadIds.length > 0 && (
                   <button
                     onClick={() => setIsBulkAssignOpen(true)}
@@ -1233,10 +1320,18 @@ export default function AdminLeads() {
                   <input
                     type="text"
                     placeholder="Search name, phone, company..."
-                    value={search}
-                    onChange={e => { setSearch(e.target.value); setPage(1) }}
-                    className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a]"
+                    value={searchInput}
+                    onChange={e => setSearchInput(e.target.value)}
+                    className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a] pr-8"
                   />
+                  {searchInput && (
+                    <button
+                      onClick={() => setSearchInput('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer font-bold"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
 
                 {/* Creator / Brought By Filter */}
@@ -1383,7 +1478,7 @@ export default function AdminLeads() {
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                   <span
                                     onClick={() => setSelectedDrawerLead(lead)}
-                                    className="font-bold text-slate-800 hover:text-[#38b34a] cursor-pointer block text-sm"
+                                    className="font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer block text-sm transition-colors"
                                   >
                                     {lead.company_name || lead.client_name}
                                   </span>
@@ -1686,7 +1781,7 @@ export default function AdminLeads() {
                               <div>
                                 <span
                                   onClick={() => setSelectedDrawerLead(lead)}
-                                  className="font-bold text-slate-800 hover:text-[#38b34a] cursor-pointer block text-sm"
+                                  className="font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer block text-sm transition-colors"
                                 >
                                   {lead.company_name || lead.client_name}
                                 </span>

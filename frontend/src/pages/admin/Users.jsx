@@ -1536,7 +1536,10 @@ const AdminUsers = () => {
 
                                   {/* Column 2: Client Details */}
                                   <td className="px-5 py-4 align-top max-w-[200px]">
-                                    <p className="font-extrabold text-slate-800 text-sm leading-snug">
+                                    <p
+                                      onClick={() => handleOpenViewClientModal(c)}
+                                      className="font-extrabold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-sm leading-snug transition-colors"
+                                    >
                                       {c.company_name || c.client_name}
                                     </p>
                                     {(c.contact_person || c.client_name) && (
