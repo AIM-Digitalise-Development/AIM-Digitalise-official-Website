@@ -22,6 +22,8 @@ import {
   getSubscriptionClients,
 } from '../../api/admin/generalClients'
 import { createAdminLead } from '../../api/admin/leads'
+import companyLogo from '../../assets/images/logo.png'
+import payQrCode from '../../assets/images/payqr.png'
 
 export const renderCreatorBadge = (creatorCode) => {
   const code = String(creatorCode || 'Admin')
@@ -140,7 +142,7 @@ const SOLD_BY_OPTIONS = [
 ]
 
 const BRANCH_OPTIONS = [
-  'Head Office (Gurugram)',
+  'Head Office ( Kolkata)',
   'Kathmandu Branch',
   'Bhutan Branch',
   'Delhi Branch',
@@ -222,7 +224,7 @@ const AdminUsers = () => {
     lead_source: 'Website',
     referred_by: 'Direct',
     sold_by_name: 'Admin Sales Team',
-    branch_name: 'Head Office (Gurugram)',
+    branch_name: 'Head Office ( Kolkata)',
     status: 'Attended',
     next_followup_date: '',
     software_requirements: '',
@@ -556,7 +558,7 @@ const AdminUsers = () => {
       lead_source: client.lead_source || 'Website',
       referred_by: client.referred_by || 'Direct',
       sold_by_name: client.sold_by_name || 'Admin Sales Team',
-      branch_name: client.branch_name || 'Head Office (Gurugram)',
+      branch_name: client.branch_name || 'Head Office ( Kolkata)',
       status: client.status || 'Attended',
       next_followup_date: client.next_followup_date || '',
       software_requirements: client.software_requirements || '',
@@ -1003,6 +1005,149 @@ const AdminUsers = () => {
       payment_url: payUrl,
     })
     setShowQuotationDocModal(true)
+  }
+
+  // Handle Quotation High-Fidelity Print / Save as PDF
+  const handlePrintQuotation = () => {
+    const printElement = document.getElementById('quotation-document-paper')
+    if (!printElement) {
+      window.print()
+      return
+    }
+
+    const iframe = document.createElement('iframe')
+    iframe.style.position = 'fixed'
+    iframe.style.right = '0'
+    iframe.style.bottom = '0'
+    iframe.style.width = '0px'
+    iframe.style.height = '0px'
+    iframe.style.border = '0px'
+    iframe.setAttribute('title', 'Quotation Print Preview')
+    document.body.appendChild(iframe)
+
+    const doc = iframe.contentWindow.document
+    
+    // Copy all style sheets and stylesheets from the main document to ensure exact Tailwind rendering
+    const headElements = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+      .map(node => node.outerHTML)
+      .join('\n')
+
+    doc.open()
+    doc.write(`
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8" />
+          <title></title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          ${headElements}
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 0 !important;
+            }
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
+              box-sizing: border-box;
+            }
+            html, body {
+              margin: 0 !important;
+              padding: 0 !important;
+              background-color: #ffffff !important;
+              background: #ffffff !important;
+              font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+              color: #0f172a !important;
+              width: 100% !important;
+            }
+            #quotation-document-paper {
+              box-shadow: none !important;
+              border: none !important;
+              padding: 6mm 10mm !important;
+              margin: 0 auto !important;
+              width: 100% !important;
+              max-width: 100% !important;
+            }
+            /* Responsive spacing override for print so single-page quotation fits on 1 page */
+            #quotation-document-paper.space-y-5 > * + *,
+            #quotation-document-paper.space-y-6 > * + *,
+            #quotation-document-paper.space-y-7 > * + *,
+            #quotation-document-paper > div + div {
+              margin-top: 12px !important;
+            }
+            .quotation-terms-signature,
+            .quotation-signature-block,
+            .quotation-financials-block {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            table {
+              border-collapse: collapse !important;
+            }
+            tr {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            th, td {
+              border-color: #cbd5e1 !important;
+            }
+          </style>
+        </head>
+        <body class="bg-white">
+          ${printElement.outerHTML}
+        </body>
+      </html>
+    `)
+    doc.close()
+
+    const triggerPrint = () => {
+      try {
+        iframe.contentWindow.focus()
+        iframe.contentWindow.print()
+      } catch (err) {
+        console.error('Print error:', err)
+      } finally {
+        setTimeout(() => {
+          try {
+            document.body.removeChild(iframe)
+          } catch (e) {
+            // ignore
+          }
+        }, 1500)
+      }
+    }
+
+    const images = iframe.contentWindow.document.images
+    let loaded = 0
+    const total = images ? images.length : 0
+
+    if (total === 0) {
+      setTimeout(triggerPrint, 200)
+    } else {
+      let triggered = false
+      const onImgDone = () => {
+        loaded++
+        if (loaded >= total && !triggered) {
+          triggered = true
+          setTimeout(triggerPrint, 200)
+        }
+      }
+      for (let i = 0; i < total; i++) {
+        if (images[i].complete) {
+          onImgDone()
+        } else {
+          images[i].onload = onImgDone
+          images[i].onerror = onImgDone
+        }
+      }
+      setTimeout(() => {
+        if (!triggered) {
+          triggered = true
+          triggerPrint()
+        }
+      }, 1000)
+    }
   }
 
   // View Client's Previous Quotations
@@ -1593,7 +1738,7 @@ const AdminUsers = () => {
                                     </p>
                                     <p className="text-[10px] text-slate-500 font-medium mt-1 flex items-center gap-1">
                                       <span>🏛️</span>
-                                      <span>{c.branch_name || 'Head Office (Gurugram)'}</span>
+                                      <span>{c.branch_name || 'Head Office ( Kolkata)'}</span>
                                     </p>
                                     <span className="text-[9px] text-slate-400 block mt-0.5">
                                       Source: {c.lead_source || 'Website'}
@@ -1860,7 +2005,7 @@ const AdminUsers = () => {
                             <input
                               type="text"
                               readOnly
-                              value={selectedGenClient?.branch_name || 'Head Office (Gurugram)'}
+                              value={selectedGenClient?.branch_name || 'Head Office ( Kolkata)'}
                               className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 font-bold text-slate-700"
                             />
                           </div>
@@ -2829,7 +2974,7 @@ const AdminUsers = () => {
                   <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">District / City</label>
                   <input
                     type="text"
-                    placeholder="e.g. Gurugram"
+                    placeholder="e.g.  Kolkata"
                     value={clientForm.district}
                     onChange={(e) => setClientForm({ ...clientForm, district: e.target.value })}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:border-[#38b34a]"
@@ -3648,7 +3793,7 @@ const AdminUsers = () => {
                             <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Assigned Branch</span>
                             <p className="text-slate-800 font-medium mt-1 flex items-center gap-1">
                               <span>🏛️</span>
-                              <span>{viewingClient.branch_name || 'Head Office (Gurugram)'}</span>
+                              <span>{viewingClient.branch_name || 'Head Office ( Kolkata)'}</span>
                             </p>
                           </div>
                           <div>
@@ -4022,14 +4167,14 @@ const AdminUsers = () => {
                   Official Quotation Document
                 </span>
                 <span className="font-mono text-xs font-bold text-slate-300">
-                  #{viewingQuotationDoc.quotation_number || `QUO-${viewingQuotationDoc.id}`}
+                  {viewingQuotationDoc.quotation_number || `QUO-${viewingQuotationDoc.id}`}
                 </span>
               </div>
 
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => window.print()}
+                  onClick={handlePrintQuotation}
                   className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
                 >
                   <span>🖨️</span>
@@ -4072,55 +4217,65 @@ const AdminUsers = () => {
 
             {/* Document Body (A4 Style Paper) */}
             <div className="flex-1 overflow-y-auto p-6 sm:p-10 bg-slate-100/60 print:p-0 print:bg-white print:overflow-visible font-sans">
-              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-8 sm:p-10 space-y-8 print:border-none print:shadow-none print:p-0 max-w-3xl mx-auto">
-                {/* 1. Letterhead & Brand Header */}
-                <div className="flex flex-col sm:flex-row justify-between items-start gap-6 pb-6 border-b-2 border-slate-800">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#1e3e6b] to-blue-700 text-white font-black flex items-center justify-center text-xl shadow-md">
-                        A
-                      </div>
+              <div
+                id="quotation-document-paper"
+                className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 sm:p-8 md:p-10 space-y-5 sm:space-y-6 print:border-none print:shadow-none print:p-0 max-w-3xl mx-auto"
+              >
+                {/* 1. Official Quotation Blue Title at Center */}
+                <div className="text-center pb-1">
+                  <h1 className="text-2xl sm:text-3xl font-black text-[#1e3e6b] tracking-wider uppercase font-sans">
+                    OFFICIAL QUOTATION
+                  </h1>
+                  <div className="w-24 h-1 bg-[#1e3e6b] mx-auto mt-2 rounded-full"></div>
+                </div>
+
+                {/* 2. Letterhead & Brand Header with Company Logo */}
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-6 pb-5 border-b-2 border-slate-800">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3.5">
+                      <img
+                        src={companyLogo}
+                        alt="AIM Digitalise Logo"
+                        className="h-13 sm:h-15 w-auto object-contain shrink-0"
+                      />
                       <div>
-                        <h1 className="text-xl font-black text-[#1e3e6b] tracking-tight uppercase">AIM Digitalise Pvt. Ltd.</h1>
-                        <p className="text-[11px] font-bold text-slate-500">Corporate Web, Software & Digital Transformation Solutions</p>
+                        <h2 className="text-lg sm:text-xl font-black text-[#1e3e6b] tracking-tight uppercase leading-tight">
+                          AIM Digitalise Pvt. Ltd.
+                        </h2>
+                        <p className="text-[11px] font-bold text-slate-500">
+                          Digital Nation तो Developed Nation
+                        </p>
                       </div>
                     </div>
                     <div className="text-[10px] text-slate-500 leading-relaxed pt-1">
-                      <p>Corporate Office: Head Office (Gurugram) / New Delhi, India</p>
-                      <p>GSTIN: <strong>07AAACA1234A1Z5</strong> | CIN: <strong>U72900DL2026PTC123456</strong></p>
-                      <p>Email: <span className="text-blue-600">contact@aimdigitalise.com</span> | Web: <strong>www.aimdigitalise.com</strong></p>
+                      <p>Corporate Office: #139, 3rd Floor, Rajdanga Main Road, Kolkata - 700107, India</p>
+                      <p>GSTIN: <strong>19ABCCA9672L1Z0</strong> | CIN: <strong>U62013WB2025PTC279684</strong></p>
+                      <p>Email: <span className="text-blue-600">support@aimdigitalise.com</span> | Web: <strong>www.aimdigitalise.com</strong></p>
                     </div>
                   </div>
 
-                  <div className="text-left sm:text-right space-y-1.5 bg-slate-50 sm:bg-transparent p-4 sm:p-0 rounded-2xl border sm:border-none border-slate-200 w-full sm:w-auto">
-                    <span className="inline-block px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-widest bg-[#1e3e6b] text-white">
-                      OFFICIAL QUOTATION
-                    </span>
-                    <div className="text-xs pt-1 space-y-0.5">
-                      <p className="font-mono font-black text-slate-800 text-sm">
-                        #{viewingQuotationDoc.quotation_number || `QUO-${viewingQuotationDoc.id}`}
-                      </p>
-                      <p className="text-slate-500 font-medium">
-                        Date: <strong>{formatDateDisplay(viewingQuotationDoc.quotation_date)}</strong>
-                      </p>
-                      <p className="text-slate-500 font-medium">
-                        Payment Terms: <strong>{viewingQuotationDoc.payment_terms || 'Due on Receipt'}</strong>
-                      </p>
-                      <p className="text-slate-500 font-medium">
-                        Status:{' '}
-                        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-black uppercase ${viewingQuotationDoc.status === 'paid'
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : 'bg-amber-100 text-amber-800'
-                          }`}>
-                          {viewingQuotationDoc.status || 'Draft'}
+                  <div className="text-left sm:text-right space-y-1.5 bg-slate-50 sm:bg-transparent p-4 sm:p-0 rounded-2xl border sm:border-none border-slate-200 w-full sm:w-auto shrink-0">
+                    <div className="text-xs pt-1 space-y-1">
+                      <div>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block font-sans">
+                          QUOTATION NO.
                         </span>
+                        <p className="font-mono font-black text-[#1e3e6b] text-base">
+                          {viewingQuotationDoc.quotation_number || `QUO-${viewingQuotationDoc.id}`}
+                        </p>
+                      </div>
+                      <p className="text-slate-500 font-medium">
+                        Date: <strong className="text-slate-800">{formatDateDisplay(viewingQuotationDoc.quotation_date)}</strong>
+                      </p>
+                      <p className="text-slate-500 font-medium">
+                        Payment Terms: <strong className="text-slate-800">{viewingQuotationDoc.payment_terms || 'Due on Receipt'}</strong>
                       </p>
                     </div>
                   </div>
                 </div>
 
                 {/* 2. Client / Billing Information */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50/80 rounded-2xl p-5 border border-slate-200/80 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50/80 rounded-2xl p-4 sm:p-5 border border-slate-200/80 text-xs">
                   <div className="space-y-1">
                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block font-sans">
                       QUOTATION FOR (BILL TO):
@@ -4158,7 +4313,7 @@ const AdminUsers = () => {
                       Sold / Prepared By: <strong>{viewingQuotationDoc.client?.sold_by_name || 'Admin Sales Team'}</strong>
                     </p>
                     <p className="text-slate-700">
-                      Branch: <strong>{viewingQuotationDoc.client?.branch_name || 'Head Office (Gurugram)'}</strong>
+                      Branch: <strong>{viewingQuotationDoc.client?.branch_name || 'Head Office ( Kolkata)'}</strong>
                     </p>
                     <p className="text-slate-700">
                       Tax Regime: <strong>{viewingQuotationDoc.gst_type || viewingQuotationDoc.client?.gst_type || 'Intra-State'}</strong>
@@ -4236,32 +4391,36 @@ const AdminUsers = () => {
                   </div>
                 </div>
 
-                {/* 4. Financial Calculations & Amount in Words */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+                {/* 4. Financial Calculations & Bank Details */}
+                <div className="quotation-financials-block grid grid-cols-1 sm:grid-cols-2 gap-5 pt-1" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                   <div className="space-y-4">
-                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1">
-                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">
-                        Amount in Words:
-                      </span>
-                      <p className="font-bold text-slate-800 italic leading-relaxed">
-                        {numberToIndianWords(viewingQuotationDoc.grand_total)}
-                      </p>
-                    </div>
-
-                    <div className="p-4 bg-blue-50/70 rounded-2xl border border-blue-100 text-xs space-y-1.5">
-                      <span className="text-[9px] font-black text-blue-700 uppercase tracking-widest block">
+                    <div className="p-3.5 sm:p-4 bg-blue-50/70 rounded-2xl border border-blue-100 text-xs space-y-2">
+                      <span className="text-[10px] font-black text-blue-700 uppercase tracking-widest block">
                         Bank Transfer & UPI Details:
                       </span>
-                      <div className="text-[11px] text-slate-700 space-y-0.5">
-                        <p>Bank: <strong>HDFC Bank Ltd</strong> | Account: <strong>Current Account</strong></p>
-                        <p>A/C Name: <strong>AIM DIGITALISE PVT LTD</strong></p>
-                        <p>A/C No: <strong>50200087654321</strong> | IFSC: <strong>HDFC0001234</strong></p>
-                        <p>UPI ID: <strong className="text-blue-700">aimdigitalise@hdfcbank</strong></p>
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <div className="text-[11px] text-slate-700 space-y-1 flex-1">
+                          <p>Bank: <strong>State Bank of India</strong></p>
+                          <p>Branch: <strong>SPECIALISED TEA BRANCH</strong></p>
+                          <p>A/C Name: <strong>AIM DIGITALISE PVT LTD</strong></p>
+                          <p>A/C No: <strong>41541042687</strong> | IFSC: <strong>SBIN0015197</strong></p>
+                          <p className="pt-0.5">UPI ID: <strong className="text-blue-700 font-bold">91106425507@ybl</strong></p>
+                        </div>
+                        <div className="flex flex-col items-center p-1.5 bg-white rounded-xl border border-blue-200/80 shadow-xs shrink-0">
+                          <img
+                            src={payQrCode}
+                            alt="UPI Barcode"
+                            className="w-20 h-20 sm:w-24 sm:h-24 object-contain rounded-lg"
+                          />
+                          <span className="text-[8px] font-black text-slate-600 mt-0.5 uppercase tracking-wider text-center">
+                            Scan to Pay (UPI)
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-2 text-xs">
+                  <div className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200 space-y-2 text-xs">
                     <div className="flex justify-between text-slate-600 font-medium">
                       <span>Subtotal:</span>
                       <span className="font-bold text-slate-800">
@@ -4299,7 +4458,7 @@ const AdminUsers = () => {
                       <span>₹{Number(viewingQuotationDoc.tax_total || 0).toLocaleString('en-IN')}</span>
                     </div>
 
-                    <div className="flex justify-between items-center border-t-2 border-slate-800 pt-3 text-base font-black text-slate-900">
+                    <div className="flex justify-between items-center border-t-2 border-slate-800 pt-2.5 text-base font-black text-slate-900">
                       <span>Grand Total:</span>
                       <span className="text-xl text-[#38b34a]">
                         ₹{Number(viewingQuotationDoc.grand_total || 0).toLocaleString('en-IN')}
@@ -4308,8 +4467,17 @@ const AdminUsers = () => {
                   </div>
                 </div>
 
+                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">
+                    Amount in Words:
+                  </span>
+                  <p className="font-bold text-slate-800 italic leading-relaxed">
+                    {numberToIndianWords(viewingQuotationDoc.grand_total)}
+                  </p>
+                </div>
+
                 {/* 5. Terms & Signature */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 border-t border-slate-200 text-xs">
+                <div className="quotation-terms-signature grid grid-cols-1 sm:grid-cols-3 gap-5 pt-3 border-t border-slate-200 text-xs" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                   <div className="sm:col-span-2 space-y-1 text-slate-500 text-[10px]">
                     <span className="font-black text-slate-700 uppercase tracking-wider block">Terms & Conditions:</span>
                     <ol className="list-decimal pl-4 space-y-0.5">
@@ -4320,7 +4488,7 @@ const AdminUsers = () => {
                     </ol>
                   </div>
 
-                  <div className="text-center sm:text-right space-y-8 pt-2">
+                  <div className="quotation-signature-block text-center sm:text-right space-y-5 pt-1" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
                       For AIM Digitalise Pvt. Ltd.
                     </span>
@@ -4338,12 +4506,57 @@ const AdminUsers = () => {
               <span className="text-xs text-slate-500 font-medium">
                 Official document format for AIM Digitalise clients & accounting audits.
               </span>
-              <button
-                onClick={() => setShowQuotationDocModal(false)}
-                className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs transition-all shadow-sm cursor-pointer"
-              >
-                Close Document
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowQuotationDocModal(false)}
+                  className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs transition-all shadow-sm cursor-pointer"
+                >
+                  Close Document
+                </button>
+
+                {/* WhatsApp Action Icon */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const clientPhone = (viewingQuotationDoc.client?.contact_number || '').replace(/\D/g, '')
+                    const payUrl = viewingQuotationDoc.payment_url || `${window.location.origin}/general-quotation-pay.html?uuid=${viewingQuotationDoc.uuid || ('quotation-' + viewingQuotationDoc.id)}`
+                    const text = encodeURIComponent(
+                      `Hello ${viewingQuotationDoc.client?.client_name || 'Valued Client'},\n\nPlease find your Official Quotation (${viewingQuotationDoc.quotation_number || 'AIM Quotation'}) from AIM Digitalise Pvt. Ltd.\n\nTotal Amount: ₹${Number(viewingQuotationDoc.grand_total || 0).toLocaleString('en-IN')}\nView & Pay Online: ${payUrl}\n\nThank you!`
+                    )
+                    const waLink = clientPhone ? `https://wa.me/${clientPhone.length === 10 ? '91' + clientPhone : clientPhone}?text=${text}` : `https://wa.me/?text=${text}`
+                    window.open(waLink, '_blank')
+                  }}
+                  title="Share Quotation via WhatsApp"
+                  aria-label="Share Quotation via WhatsApp"
+                  className="w-8 h-8 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white transition-all shadow-sm flex items-center justify-center cursor-pointer active:scale-95"
+                >
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                  </svg>
+                </button>
+
+                {/* Email Action Icon */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const clientEmail = viewingQuotationDoc.client?.email || ''
+                    const payUrl = viewingQuotationDoc.payment_url || `${window.location.origin}/general-quotation-pay.html?uuid=${viewingQuotationDoc.uuid || ('quotation-' + viewingQuotationDoc.id)}`
+                    const subject = encodeURIComponent(`Official Quotation: ${viewingQuotationDoc.quotation_number || 'AIM Digitalise'}`)
+                    const body = encodeURIComponent(
+                      `Dear ${viewingQuotationDoc.client?.client_name || 'Client'},\n\nPlease find the details for your quotation ${viewingQuotationDoc.quotation_number || ''}.\n\nTotal Amount: ₹${Number(viewingQuotationDoc.grand_total || 0).toLocaleString('en-IN')}\nPayment Terms: ${viewingQuotationDoc.payment_terms || 'Due on Receipt'}\n\nYou can review and pay securely online at:\n${payUrl}\n\nWarm regards,\nAIM Digitalise Pvt. Ltd.\nsupport@aimdigitalise.com`
+                    )
+                    window.location.href = `mailto:${clientEmail}?subject=${subject}&body=${body}`
+                  }}
+                  title="Send Quotation via Email"
+                  aria-label="Send Quotation via Email"
+                  className="w-8 h-8 rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-sm flex items-center justify-center cursor-pointer active:scale-95"
+                >
+                  <svg className="w-4 h-4 fill-none stroke-current" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="20" height="16" x="2" y="4" rx="2"/>
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>

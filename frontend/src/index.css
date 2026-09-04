@@ -674,3 +674,34 @@
 }
 
 /* Custom Header and Footer rules removed to enable responsive themes */
+
+/* Print optimization for high-fidelity PDF and Paper outputs */
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 0 !important;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .quotation-terms-signature,
+  .quotation-signature-block,
+  .quotation-financials-block,
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
