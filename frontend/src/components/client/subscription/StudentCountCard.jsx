@@ -30,7 +30,7 @@ const StudentCountCard = ({ studentCount }) => {
               Connected Database
             </span>
             <h3 className="text-[15px] font-bold text-gray-800 leading-tight">
-              {studentCount.school_name || 'Organization Database'}
+              {studentCount.school_name || '—'}
             </h3>
             <p className="text-[11px] text-gray-400 font-medium">
               Active student count synced from ERP backend

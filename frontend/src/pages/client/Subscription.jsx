@@ -23,6 +23,51 @@ const cycleDisplayNames = {
   'monthly': 'Monthly'
 }
 
+// Standard backend cycle discounts for NEXGN Institute Pro (annual: 40%, half-yearly: 5%, etc.)
+const BACKEND_STANDARD_DISCOUNTS = {
+  annual: 40,
+  yearly: 40,
+  half_yearly: 5,
+  'half-yearly': 5,
+  quarterly: 0,
+  monthly: 0
+}
+
+const enrichCyclesWithBackendDiscounts = (cyclesData, studentCount) => {
+  if (!cyclesData || !cyclesData.cycles) return cyclesData
+  const enrichedCycles = { ...cyclesData.cycles }
+  Object.keys(enrichedCycles).forEach(key => {
+    const normKey = key.toLowerCase()
+    const stdDiscount = BACKEND_STANDARD_DISCOUNTS[normKey] || 0
+    const cycleItem = enrichedCycles[key]
+    if ((!cycleItem.discount || cycleItem.discount === 0) && stdDiscount > 0) {
+      const cycleMult = cycleItem.multiplier || 1
+      const count = studentCount?.student_count || 12
+      const unitRate = 10
+      const baseMonthly = cycleItem.base_monthly || (count * unitRate)
+      const discountedMonthly = Math.round(baseMonthly * (1 - stdDiscount / 100) * 100) / 100
+      const subtotal = Math.round(discountedMonthly * cycleMult * 100) / 100
+      const gst = Math.round(subtotal * 0.18 * 100) / 100
+      const total = Math.round((subtotal + gst) * 100) / 100
+      const savings = Math.round(((baseMonthly * cycleMult) - subtotal) * 100) / 100
+
+      enrichedCycles[key] = {
+        ...cycleItem,
+        discount: stdDiscount,
+        discounted_monthly: discountedMonthly,
+        subtotal: subtotal,
+        gst_amount: gst,
+        total: total,
+        savings: savings
+      }
+    }
+  })
+  return {
+    ...cyclesData,
+    cycles: enrichedCycles
+  }
+}
+
 const ClientSubscription = () => {
   const { clientToken, isClientAuthenticated, profileData, productData, clientLogout } = useClientAuthStore()
 
@@ -155,42 +200,36 @@ const ClientSubscription = () => {
         setPaymentHistory(historyRes.data)
       }
 
-      // 3. Fetch Billing Cycles (only if we have students or if flat rate)
-      const activeProduct = Array.isArray(productData) ? productData[0] : productData
-      const currentPerPerson = activeProduct?.per_person !== undefined
-        ? activeProduct.per_person
-        : (profileData?.per_person !== undefined ? profileData.per_person : 1)
-
-      if (!zeroStudents || currentPerPerson !== 1) {
-        const cyclesRes = await getClientPaymentCycles(clientToken)
-        if (cyclesRes?.success) {
-          setPaymentCycles(cyclesRes.data)
-          if (cyclesRes.data.per_person !== undefined) {
-            setPerPerson(cyclesRes.data.per_person)
-          }
-          if (cyclesRes.data.monthly_subscription !== undefined) {
-            setMonthlySubscription(cyclesRes.data.monthly_subscription)
-          }
-          const cycleToCalc = statusRes?.data?.delivery_info?.last_payment_cycle
-            ? (statusRes.data.delivery_info.last_payment_cycle.toLowerCase() === 'annual' ? 'annual' : (statusRes.data.delivery_info.last_payment_cycle.toLowerCase() === 'half_yearly' ? 'half_yearly' : (statusRes.data.delivery_info.last_payment_cycle.toLowerCase() === 'quarterly' ? 'quarterly' : 'monthly')))
-            : 'annual'
-          setSelectedCycle(cycleToCalc)
+      // 3. Fetch Billing Cycles with Discounts (always fetched so discounts are available regardless of student count)
+      const cyclesRes = await getClientPaymentCycles(clientToken).catch(err => {
+        console.error('Failed to load payment cycles:', err)
+        return null
+      })
+      if (cyclesRes?.success) {
+        const enrichedData = enrichCyclesWithBackendDiscounts(cyclesRes.data, studentRes?.data)
+        setPaymentCycles(enrichedData)
+        if (cyclesRes.data.per_person !== undefined) {
+          setPerPerson(cyclesRes.data.per_person)
+        }
+        if (cyclesRes.data.monthly_subscription !== undefined) {
+          setMonthlySubscription(cyclesRes.data.monthly_subscription)
+        }
+        const cycleToCalc = statusRes?.data?.delivery_info?.last_payment_cycle
+          ? (statusRes.data.delivery_info.last_payment_cycle.toLowerCase() === 'annual' ? 'annual' : (statusRes.data.delivery_info.last_payment_cycle.toLowerCase() === 'half_yearly' ? 'half_yearly' : (statusRes.data.delivery_info.last_payment_cycle.toLowerCase() === 'quarterly' ? 'quarterly' : 'monthly')))
+          : 'annual'
+        setSelectedCycle(cycleToCalc)
+        if (!zeroStudents) {
           await calculateSubscriptionForCycle(cycleToCalc, clientToken)
           setStudentCountWarning(null)
-        } else {
-          if (cyclesRes?.error_code === 'NO_STUDENTS_FOUND') {
-            setHasZeroStudents(true)
-            setStudentCountWarning({
-              show: true,
-              message: cyclesRes.message,
-              action_message: cyclesRes.data?.action_message || 'Please add student records to your school management system first.',
-              student_count: 0
-            })
-            setError('') // Warnings are handled in custom block, not as generic page error
-          } else {
-            setError(cyclesRes?.message || 'Failed to load billing cycle options.')
-          }
         }
+      } else if (cyclesRes?.error_code === 'NO_STUDENTS_FOUND') {
+        setHasZeroStudents(true)
+        setStudentCountWarning({
+          show: true,
+          message: cyclesRes.message,
+          action_message: cyclesRes.data?.action_message || 'Please add student records to your school management system first.',
+          student_count: 0
+        })
       }
     } catch (err) {
       console.error('Error fetching subscription init details:', err)
@@ -214,7 +253,52 @@ const ClientSubscription = () => {
     try {
       const res = await calculateSubscription(cycle, token)
       if (res.success) {
-        setCalculatedAmount(res.data)
+        let calcData = { ...res.data }
+        const calc = { ...(calcData.calculation || {}) }
+
+        // Check if this is extra students payment or has previous session cycle
+        const lastCycle = deliveryInfo?.last_payment_cycle || paymentStatus?.delivery_info?.last_payment_cycle || selectedCycle || 'annual'
+        const cycleToCheck = (cycle || lastCycle || 'annual').toLowerCase().replace('-', '_')
+        const sessionDiscount = BACKEND_STANDARD_DISCOUNTS[cycleToCheck] || (cycleToCheck === 'annual' || cycleToCheck === 'yearly' ? 40 : (cycleToCheck === 'half_yearly' ? 5 : 0))
+
+        const isExtra = Boolean(calcData.is_extra_students_payment || calc.is_extra_students_payment)
+        if (isExtra && (!calc.discount_percentage || calc.discount_percentage === 0) && sessionDiscount > 0) {
+          const baseMonthly = calc.base_monthly_amount || 0
+          const cycleMonths = calc.cycle_months || 1
+          const discountedMonthly = Math.round(baseMonthly * (1 - sessionDiscount / 100) * 100) / 100
+          const regularDiscounted = Math.round(discountedMonthly * cycleMonths * 100) / 100
+          const gst = Math.round(regularDiscounted * (calc.gst_percentage || 18)) / 100
+          const totalWithGst = Math.round((regularDiscounted + gst) * 100) / 100
+          const savings = Math.round(((baseMonthly * cycleMonths) - regularDiscounted) * 100) / 100
+
+          calc.discount_percentage = sessionDiscount
+          calc.discounted_monthly_amount = discountedMonthly
+          calc.subtotal = regularDiscounted
+          calc.regular_months_amount = regularDiscounted
+          calc.total_amount = totalWithGst
+          calc.gst_amount = gst
+          calc.savings = savings
+
+          calcData = {
+            ...calcData,
+            calculation: calc
+          }
+
+          if (calcData.breakdown) {
+            const studentCount = calc.student_count || 12
+            const perStudentRate = baseMonthly / (studentCount || 1)
+            calcData.breakdown = {
+              ...calcData.breakdown,
+              formula: `₹${perStudentRate.toFixed(2)} × ${studentCount} new students × ${cycleMonths} mo`,
+              with_discount: `₹${discountedMonthly.toFixed(2)} (${sessionDiscount}% session discount applied)`,
+              subtotal: `₹${regularDiscounted.toFixed(2)}`,
+              gst: `₹${gst.toFixed(2)} (18%)`,
+              total_for_cycle: `Total = ₹${totalWithGst.toFixed(2)}`
+            }
+          }
+        }
+
+        setCalculatedAmount(calcData)
         setSelectedCycle(cycle)
         if (res.data.product?.per_person !== undefined) {
           setPerPerson(res.data.product.per_person)
@@ -223,7 +307,7 @@ const ClientSubscription = () => {
           setMonthlySubscription(res.data.product.monthly_subscription)
         }
         // Generate bill data when calculation is done
-        generateBillData(res.data, cycle)
+        generateBillData(calcData, cycle)
       } else {
         if (res.error_code === 'NO_STUDENTS_FOUND') {
           setHasZeroStudents(true)
@@ -265,7 +349,11 @@ const ClientSubscription = () => {
 
     // Get values from calculation
     const baseMonthlyAmount = calc.base_monthly_amount || 0
-    const discountPercentage = calc.discount_percentage || 0
+    let discountPercentage = calc.discount_percentage || 0
+    if ((data.is_extra_students_payment || calc.is_extra_students_payment) && (!discountPercentage || discountPercentage === 0)) {
+      const cycleKey = (cycle || 'annual').toLowerCase().replace('-', '_')
+      discountPercentage = BACKEND_STANDARD_DISCOUNTS[cycleKey] || (cycleKey === 'annual' || cycleKey === 'yearly' ? 40 : 0)
+    }
     const cycleMonths = calc.cycle_months || 1
     const carryoverFraction = calc.carryover_fraction || 0
     const carryoverDays = calc.carryover_days || 0
@@ -274,29 +362,29 @@ const ClientSubscription = () => {
 
     // IMPORTANT: Calculate discounted monthly amount from base + discount
     // This ensures we use the CORRECT discounted rate
-    const discountedMonthlyAmount = baseMonthlyAmount * (1 - discountPercentage / 100)
+    const discountedMonthlyAmount = Math.round(baseMonthlyAmount * (1 - discountPercentage / 100) * 100) / 100
 
     // Step 1: Calculate carryover amount using DISCOUNTED monthly rate
-    const carryoverAmount = discountedMonthlyAmount * carryoverFraction
+    const carryoverAmount = Math.round(discountedMonthlyAmount * carryoverFraction * 100) / 100
 
     // Step 2: Calculate regular months amount using DISCOUNTED monthly rate
-    const regularMonthsAmount = discountedMonthlyAmount * cycleMonths
+    const regularMonthsAmount = Math.round(discountedMonthlyAmount * cycleMonths * 100) / 100
 
     // Step 3: Total amount (already discounted)
-    const totalAmount = carryoverAmount + regularMonthsAmount
+    const totalAmount = Math.round((carryoverAmount + regularMonthsAmount) * 100) / 100
 
     // Step 4: Calculate GST on the discounted total
-    const gstAmount = (totalAmount * gstPercentage) / 100
-    const totalWithGST = totalAmount + gstAmount
+    const gstAmount = Math.round((totalAmount * gstPercentage) / 100 * 100) / 100
+    const totalWithGST = Math.round((totalAmount + gstAmount) * 100) / 100
 
     // Step 5: Calculate original amount (without discount) for savings display
-    const baseCarryover = baseMonthlyAmount * carryoverFraction
-    const baseRegular = baseMonthlyAmount * cycleMonths
-    const baseTotal = baseCarryover + baseRegular
-    const originalTotalWithGST = baseTotal + (baseTotal * gstPercentage / 100)
+    const baseCarryover = Math.round(baseMonthlyAmount * carryoverFraction * 100) / 100
+    const baseRegular = Math.round(baseMonthlyAmount * cycleMonths * 100) / 100
+    const baseTotal = Math.round((baseCarryover + baseRegular) * 100) / 100
+    const originalTotalWithGST = Math.round((baseTotal + (baseTotal * gstPercentage / 100)) * 100) / 100
 
     // Step 6: Calculate savings
-    const savings = baseTotal - totalAmount
+    const savings = Math.round((baseTotal - totalAmount) * 100) / 100
 
     // Step 7: Calculate per-day amount for carryover
     const perDayAmount = carryoverDays > 0 ? discountedMonthlyAmount / daysInMonth : 0
@@ -471,8 +559,8 @@ const ClientSubscription = () => {
   }
 
   const handleCycleChange = (cycle) => {
-    if (deliveryInfo?.last_payment_cycle) {
-      setError('Cannot change billing cycle: Your active subscription cycle is locked.')
+    if (deliveryInfo?.last_payment_cycle || paymentStatus?.delivery_info?.last_payment_cycle) {
+      setError('Cannot change billing cycle: Your active subscription cycle is locked for this session.')
       return
     }
     if (hasZeroStudents && perPerson === 1) {
@@ -554,9 +642,10 @@ const ClientSubscription = () => {
         ? activeProduct.per_person
         : (profileData?.per_person !== undefined ? profileData.per_person : 1)
 
-      if (cyclesRes?.success && (studentRes?.data?.student_count > 0 || currentPerPerson !== 1)) {
-        setPaymentCycles(cyclesRes.data)
-        if (selectedCycle) {
+      if (cyclesRes?.success) {
+        const enrichedData = enrichCyclesWithBackendDiscounts(cyclesRes.data, studentRes?.data)
+        setPaymentCycles(enrichedData)
+        if (selectedCycle && (studentRes?.data?.student_count > 0 || currentPerPerson !== 1)) {
           await calculateSubscriptionForCycle(selectedCycle, clientToken)
         }
       }
@@ -1169,7 +1258,7 @@ const ClientSubscription = () => {
               paymentCycles={paymentCycles}
               selectedCycle={selectedCycle}
               onCycleChange={handleCycleChange}
-              isLocked={!!deliveryInfo?.last_payment_cycle}
+              isLocked={!!deliveryInfo?.last_payment_cycle || !!paymentStatus?.delivery_info?.last_payment_cycle}
             />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

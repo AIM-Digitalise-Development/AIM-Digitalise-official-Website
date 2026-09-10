@@ -9,7 +9,7 @@ const ProductActiveCard = ({ activeProduct }) => {
               {activeProduct?.product_name || activeProduct?.name || '—'}
             </h3>
             <span className="text-white/40 text-[11px] font-medium block mt-1 uppercase tracking-wider">
-              {activeProduct?.category || activeProduct?.product_category || 'NEXGN'}
+              {activeProduct?.category || activeProduct?.product_category || '—'}
             </span>
           </div>
           <span className="inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-semibold rounded-md uppercase tracking-wide"

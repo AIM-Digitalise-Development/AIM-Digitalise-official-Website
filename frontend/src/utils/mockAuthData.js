@@ -1722,6 +1722,13 @@ export const getMockResponse = (url, method, data = null) => {
           status: 'Active',
           payment_status: 'Paid',
           total_students: 250,
+          academic_session: '2026-27',
+          discounts: {
+            monthly: 0,
+            quarterly: 5,
+            half_yearly: 10,
+            annual: 15
+          },
           created_at: '2026-01-01',
           activated_at: '2026-01-02',
           client_order: {
@@ -1757,30 +1764,48 @@ export const getMockResponse = (url, method, data = null) => {
           },
           quarterly: {
             multiplier: 3,
-            discount: 5,
-            discounted_monthly: 2375,
-            subtotal: 7125,
-            gst_amount: 1282.5,
-            total: 8407.5,
-            savings: 375
+            discount: 0,
+            discounted_monthly: 2500,
+            subtotal: 7500,
+            gst_amount: 1350,
+            total: 8850,
+            savings: 0
           },
           'half-yearly': {
             multiplier: 6,
-            discount: 10,
-            discounted_monthly: 2250,
-            subtotal: 13500,
-            gst_amount: 2430,
-            total: 15930,
-            savings: 1500
+            discount: 5,
+            discounted_monthly: 2375,
+            subtotal: 14250,
+            gst_amount: 2565,
+            total: 16815,
+            savings: 750
+          },
+          half_yearly: {
+            multiplier: 6,
+            discount: 5,
+            discounted_monthly: 2375,
+            subtotal: 14250,
+            gst_amount: 2565,
+            total: 16815,
+            savings: 750
           },
           yearly: {
             multiplier: 12,
-            discount: 15,
-            discounted_monthly: 2125,
-            subtotal: 25500,
-            gst_amount: 4590,
-            total: 30090,
-            savings: 4500
+            discount: 40,
+            discounted_monthly: 1500,
+            subtotal: 18000,
+            gst_amount: 3240,
+            total: 21240,
+            savings: 12000
+          },
+          annual: {
+            multiplier: 12,
+            discount: 40,
+            discounted_monthly: 1500,
+            subtotal: 18000,
+            gst_amount: 3240,
+            total: 21240,
+            savings: 12000
           }
         }
       }
@@ -1790,10 +1815,10 @@ export const getMockResponse = (url, method, data = null) => {
   if (lowercaseUrl.includes('/client/calculate-subscription')) {
     const cycle = data?.cycle || 'annual'
     const multipliers = { monthly: 1, quarterly: 3, 'half-yearly': 6, half_yearly: 6, yearly: 12, annual: 12 }
-    const discounts = { monthly: 0, quarterly: 5, 'half-yearly': 10, half_yearly: 10, yearly: 15, annual: 15 }
+    const discounts = { monthly: 0, quarterly: 0, 'half-yearly': 5, half_yearly: 5, yearly: 40, annual: 40 }
 
     const mult = multipliers[cycle] || 12
-    const disc = discounts[cycle] || 15
+    const disc = discounts[cycle] !== undefined ? discounts[cycle] : 40
 
     // Simulate: 250 total students, 215 were paid initially → 35 new unpaid students
     const studentCount = 250
