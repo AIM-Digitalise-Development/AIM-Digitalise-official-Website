@@ -1904,31 +1904,40 @@ export const getMockResponse = (url, method, data = null) => {
       success: true,
       data: {
         show_pay_now: !isPaid,
-        next_payment_date: isPaid ? '2027-07-15' : '2026-07-15',
-        message: isPaid ? 'Your subscription is active.' : 'Your subscription period has ended. Please renew your subscription.',
-        has_previous_payments: true,
-        total_payments_made: isPaid ? 3 : 2,
+        next_payment_date: isPaid ? '2027-07-15' : null,
+        message: isPaid ? 'Your subscription is active.' : 'Subscription plan not activated yet.',
+        has_previous_payments: Boolean(isPaid),
+        total_payments_made: isPaid ? 1 : 0,
         delivery_info: {
-          first_payment_date: '2026-01-01',
-          last_payment_date: isPaid ? new Date().toISOString().split('T')[0] : '2026-04-01',
-          last_payment_cycle: 'quarterly',
-          next_due_date: isPaid ? '2027-07-15' : '2026-07-15',
-          days_until_due: isPaid ? 365 : 30,
+          first_payment_date: isPaid ? '2026-01-01' : null,
+          last_payment_date: isPaid ? new Date().toISOString().split('T')[0] : null,
+          last_payment_cycle: isPaid ? 'quarterly' : null,
+          next_due_date: isPaid ? '2027-07-15' : null,
+          days_until_due: isPaid ? 365 : 0,
           is_period_over: false,
           activated_at: '2026-01-02',
-          unpaid_months: isPaid ? [] : ['May 2026', 'June 2026'],
-          total_due_amount: isPaid ? 0 : 5000
+          unpaid_months: [],
+          total_due_amount: 0
+        },
+        client: {
+          client_id: 'NEX-2026-001',
+          name: 'Delhi Public Academy',
+          company_name: 'Delhi Public Academy',
+          processing_fee: 1000,
+          created_at: '2026-01-01T09:00:00Z',
+          razorpay_payment_id: 'pay_REG_PF998877'
         }
       }
     }
   }
 
   if (lowercaseUrl.includes('/client/payment-history')) {
+    const isPaid = typeof window !== 'undefined' && window.__mockSubscriptionPaid
     return {
       success: true,
       data: {
-        has_payments: true,
-        payments: [
+        has_payments: Boolean(isPaid),
+        payments: isPaid ? [
           {
             id: 1,
             razorpay_payment_id: 'pay_P1A2B3C4D5',
@@ -1938,23 +1947,21 @@ export const getMockResponse = (url, method, data = null) => {
             period_start: '2026-04-01',
             period_end: '2026-07-01',
             status: 'success'
-          },
-          {
-            id: 2,
-            razorpay_payment_id: 'pay_P2A2B3C4D5',
-            cycle: 'quarterly',
-            amount: 8408,
-            created_at: '2026-01-01T10:00:00Z',
-            period_start: '2026-01-01',
-            period_end: '2026-04-01',
-            status: 'success'
           }
-        ],
+        ] : [],
+        client: {
+          client_id: 'NEX-2026-001',
+          name: 'Delhi Public Academy',
+          company_name: 'Delhi Public Academy',
+          processing_fee: 1000,
+          created_at: '2026-01-01T09:00:00Z',
+          razorpay_payment_id: 'pay_REG_PF998877'
+        },
         summary: {
-          total_payments: 2,
-          total_amount_formatted: '₹ 16,816.00',
-          latest_payment_cycle: 'quarterly',
-          next_payment_due_formatted: '15/07/2026',
+          total_payments: isPaid ? 1 : 0,
+          total_amount_formatted: isPaid ? '₹ 8,408.00' : '₹ 0.00',
+          latest_payment_cycle: isPaid ? 'quarterly' : null,
+          next_payment_due_formatted: isPaid ? '15/07/2026' : null,
           is_overdue: false
         }
       }

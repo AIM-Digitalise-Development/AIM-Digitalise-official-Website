@@ -15,6 +15,7 @@ import {
   verifyCartPayment
 } from '../../api/clientPortal'
 import ClientPageHeader from '../../components/client/ClientPageHeader'
+import { COMPANY_LOGO_SRC } from '../../utils/invoiceLogo'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const fmtCurrency = (v) => {
@@ -713,7 +714,7 @@ const ClientAddonServices = () => {
           <div ref={billRef} className="bill-container">
             {/* Header */}
             <div className="bill-header">
-              <div className="logo-circle">A</div>
+              <img src={COMPANY_LOGO_SRC} alt="AIM Digitalise" className="h-16 w-auto max-w-[150px] object-contain" />
               <div className="company-info">
                 <h2>AIM Digitalise</h2>
                 #139, 3rd Floor, Rajdanga Main Road,<br />

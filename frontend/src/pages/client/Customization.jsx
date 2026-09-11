@@ -10,6 +10,7 @@ import {
   verifyCustomizationPayment
 } from '../../api/clientPortal'
 import ClientPageHeader from '../../components/client/ClientPageHeader'
+import { COMPANY_LOGO_SRC, getInvoiceLogoHtml } from '../../utils/invoiceLogo'
 
 const ClientCustomization = () => {
   const { profileData, clientToken, isClientAuthenticated } = useClientAuthStore()
@@ -562,11 +563,11 @@ const ClientCustomization = () => {
           <div ref={billRef} className="bill-container">
             {/* Header */}
             <div className="bill-header">
-              <div className="logo-circle">A</div>
+              <img src={COMPANY_LOGO_SRC} alt="AIM Digitalise" className="h-16 w-auto max-w-[150px] object-contain" />
               <div className="company-info">
                 <h2>AIM Digitalise</h2>
                 #139, 3rd Floor, Rajdanga Main Road,<br />
-                Kolkata, West Bangal - 700107<br />
+                Kolkata, West Bengal - 700107<br />
                 GSTIN: 19ABCCA9672L1Z0<br />
                 Email: support@aimdigitalise.com
               </div>

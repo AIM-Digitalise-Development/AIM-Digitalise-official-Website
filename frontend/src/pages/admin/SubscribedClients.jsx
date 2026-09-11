@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getAdminClients, getAdminClientById, updateClientDelivery } from '../../api/admin/partners'
 import { isSaasClient } from '../../utils/subscription'
+import { getInvoiceLogoHtml } from '../../utils/invoiceLogo'
 
 const AdminSubscribedClients = () => {
   const [productFilter, setProductFilter] = useState('All')
@@ -116,9 +117,12 @@ const AdminSubscribedClients = () => {
         </head>
         <body>
           <div class="bill-container">
-            <div class="bill-header">
-              <div class="bill-title">🎓 AIM Digitalise</div>
-              <div class="bill-subtitle">Payment Receipt / Tax Invoice</div>
+            <div class="bill-header" style="display: flex; justify-content: space-between; align-items: center; text-align: left;">
+              ${getInvoiceLogoHtml()}
+              <div style="text-align: right;">
+                <div class="bill-title">AIM Digitalise</div>
+                <div class="bill-subtitle">Payment Receipt / Tax Invoice</div>
+              </div>
             </div>
             <div class="bill-info">
               <div>

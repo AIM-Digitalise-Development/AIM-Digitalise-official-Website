@@ -24,6 +24,7 @@ import {
   verifyUnifiedPayment
 } from '../../api/clientPortal'
 import { isSaasClient } from '../../utils/subscription'
+import { getInvoiceLogoHtml } from '../../utils/invoiceLogo'
 
 const ClientProducts = () => {
   const navigate = useNavigate()
@@ -437,6 +438,65 @@ const ClientProducts = () => {
         })
       })
 
+      // Check for Processing Fee / Initial Setup Fee (Paid at registration)
+      const clientObj = subRes?.data?.client || statusRes?.data?.client || statusRes?.data?.delivery_info || profileData || clientUser || {}
+      const rawProcessingFee =
+        subRes?.data?.client?.processing_fee ??
+        subRes?.data?.client?.security_deposite ??
+        subRes?.data?.client?.security_deposit ??
+        subRes?.data?.client?.pay_amount ??
+        statusRes?.data?.processing_fee ??
+        statusRes?.data?.security_deposite ??
+        statusRes?.data?.security_deposit ??
+        statusRes?.data?.pay_amount ??
+        statusRes?.data?.delivery_info?.processing_fee ??
+        statusRes?.data?.delivery_info?.security_deposite ??
+        statusRes?.data?.delivery_info?.security_deposit ??
+        statusRes?.data?.delivery_info?.pay_amount ??
+        profileData?.processing_fee ??
+        profileData?.security_deposite ??
+        profileData?.security_deposit ??
+        profileData?.pay_amount ??
+        clientUser?.processing_fee ??
+        clientUser?.security_deposite ??
+        clientUser?.security_deposit ??
+        clientUser?.pay_amount ??
+        (Array.isArray(productData) ? (productData[0]?.processing_fee ?? productData[0]?.security_deposite ?? productData[0]?.security_deposit) : (productData?.processing_fee ?? productData?.security_deposite)) ??
+        // Fallback for registered client on portal with SaaS software
+        (clientObj?.client_id || profileData?.client_id || clientUser?.client_id || isClientAuthenticated ? 1000 : 0)
+
+      const parsedPf = Number(rawProcessingFee) || 0
+      const pfAmount = parsedPf > 0 ? parsedPf : (Number(profileData?.processing_fee || clientUser?.processing_fee || (Array.isArray(productData) ? productData[0]?.processing_fee : productData?.processing_fee)) || 1000)
+
+      if (pfAmount > 0 || isClientAuthenticated || clientObj?.client_id) {
+        const finalPf = pfAmount > 0 ? pfAmount : 1000
+        const pfDateRaw = clientObj.created_at || clientObj.registration_date || clientObj.payment_date || profileData?.created_at || clientUser?.created_at || paymentStatus?.delivery_info?.created_at
+        const pfDate = pfDateRaw ? new Date(pfDateRaw).toISOString().split('T')[0] : (new Date().toISOString().split('T')[0])
+        const pfInvoiceNo = clientObj.razorpay_payment_id || clientObj.order_id || `INV-PF-${clientObj.client_id || profileData?.client_id || clientUser?.client_id || '001'}`
+
+        const hasPfInSubs = subPayments.some(p =>
+          (p.payment_type && p.payment_type.toLowerCase().includes('processing')) ||
+          p.razorpay_payment_id === pfInvoiceNo
+        )
+
+        if (!hasPfInSubs) {
+          unifiedList.push({
+            id: `pf_${clientObj.id || clientObj.client_id || 'main'}`,
+            invoiceNo: pfInvoiceNo,
+            paymentDate: pfDate,
+            paymentType: 'Processing Fee',
+            validTill: 'One-time',
+            amount: finalPf,
+            rawType: 'processing_fee',
+            raw: {
+              ...clientObj,
+              product_name: (Array.isArray(productData) ? productData[0]?.name : productData?.name) || clientObj.product_name || 'NEXGN Institute Pro',
+              processing_fee: finalPf,
+            }
+          })
+        }
+      }
+
       unifiedList.sort((a, b) => {
         const dA = new Date(a.paymentDate)
         const dB = new Date(b.paymentDate)
@@ -550,20 +610,25 @@ const ClientProducts = () => {
       </style>
     `
 
-    if (rawType === 'subscription') {
+    const isSubscription = rawType === 'subscription' || item.paymentType === 'Subscription' || (item.paymentType && item.paymentType.toLowerCase().includes('subscription'))
+    const isCustomization = rawType === 'customization' || item.paymentType === 'Customization' || (item.paymentType && item.paymentType.toLowerCase().includes('customization'))
+    const isAddon = rawType === 'addon' || (item.paymentType && (item.paymentType.toLowerCase().startsWith('add-on') || item.paymentType.toLowerCase().includes('addon')))
+    const isProcessingFee = rawType === 'processing_fee' || item.paymentType === 'Processing Fee' || (item.paymentType && (item.paymentType.toLowerCase().includes('processing') || item.paymentType.toLowerCase().includes('security') || item.paymentType.toLowerCase().includes('setup')))
+
+    if (isSubscription) {
       invoiceTitle = `Subscription Invoice ${invoiceNumber}`
       const baseAmount = item.amount / 1.18
       const gstAmount = item.amount - baseAmount
-      const cycleName = raw.cycle || 'Monthly'
+      const cycleName = raw?.cycle || 'Monthly'
 
       billContent = `
         <div class="bill-container">
           <div class="bill-header">
-            <div class="logo-circle">A</div>
+            ${getInvoiceLogoHtml()}
             <div class="company-info">
               <h2>AIM Digitalise</h2>
               #139, 3rd Floor, Rajdanga Main Road,<br/>
-              Kolkata, West Bangal - 700107<br/>
+              Kolkata, West Bengal - 700107<br/>
               GSTIN: 19ABCCA9672L1Z0<br/>
               Email: support@aimdigitalise.com
             </div>
@@ -583,14 +648,14 @@ const ClientProducts = () => {
                 <p>
                   <strong>ID:</strong> ${clientId}<br/>
                   <strong>School:</strong> ${schoolName}<br/>
-                  Registered Address: Noida, Uttar Pradesh, India
+                  Registered Address: ${displayUser?.address || 'Noida, Uttar Pradesh, India'}
                 </p>
               </div>
               <div class="address-block">
                 <h4>Ship To</h4>
                 <div class="client-highlight-name">${schoolName}</div>
                 <p>
-                  Noida, Uttar Pradesh, India
+                  ${displayUser?.address || 'Noida, Uttar Pradesh, India'}
                 </p>
               </div>
             </div>
@@ -634,7 +699,7 @@ const ClientProducts = () => {
                   <div class="item-title">📆 Subscription Fee</div>
                   <div class="item-desc">
                     Academic portal system subscription.<br/>
-                    Billing Period: ${raw.period_start || '—'} to ${raw.period_end || '—'} (Cycle: ${cycleName})
+                    Billing Period: ${raw?.period_start || '—'} to ${raw?.period_end || '—'} (Cycle: ${cycleName})
                   </div>
                 </td>
                 <td class="cell-right">1.00</td>
@@ -676,31 +741,31 @@ const ClientProducts = () => {
           </div>
         </div>
       `
-    } else if (rawType === 'customization') {
+    } else if (isCustomization) {
       invoiceTitle = `Customization Invoice ${invoiceNumber}`
       const baseAmount = item.amount / 1.18
       const gstAmount = item.amount - baseAmount
-      const customizationText = raw.customization_text || 'Custom Upgrade Service'
+      const customizationText = raw?.customization_text || 'Custom Upgrade Service'
 
       billContent = `
         <div class="bill-container">
           <div class="bill-header">
-            <div class="logo-circle">A</div>
+            ${getInvoiceLogoHtml()}
             <div class="company-info">
               <h2>AIM Digitalise</h2>
               #139, 3rd Floor, Rajdanga Main Road,<br/>
-              Kolkata, West Bangal - 700107<br/>
+              Kolkata, West Bengal - 700107<br/>
               GSTIN: 19ABCCA9672L1Z0<br/>
               Email: support@aimdigitalise.com
             </div>
           </div>
-
+          
           <div class="invoice-divider-container">
             <div class="invoice-divider-line"></div>
             <div class="invoice-divider-text">PROFORMA INVOICE</div>
             <div class="invoice-divider-line"></div>
           </div>
-
+          
           <div class="invoice-grid-section">
             <div class="invoice-left-side">
               <div class="address-block">
@@ -709,14 +774,14 @@ const ClientProducts = () => {
                 <p>
                   <strong>ID:</strong> ${clientId}<br/>
                   <strong>School:</strong> ${schoolName}<br/>
-                  Registered Address: Noida, Uttar Pradesh, India
+                  Registered Address: ${displayUser?.address || 'Noida, Uttar Pradesh, India'}
                 </p>
               </div>
               <div class="address-block">
                 <h4>Ship To</h4>
                 <div class="client-highlight-name">${schoolName}</div>
                 <p>
-                  Noida, Uttar Pradesh, India
+                  ${displayUser?.address || 'Noida, Uttar Pradesh, India'}
                 </p>
               </div>
             </div>
@@ -804,22 +869,21 @@ const ClientProducts = () => {
           </div>
         </div>
       `
-    } else if (rawType === 'addon') {
+    } else if (isAddon) {
       invoiceTitle = `Add-on Invoice ${invoiceNumber}`
-      const baseAmount = raw.subtotal || (item.amount / 1.18)
-      const gstAmount = raw.gst_amount || (item.amount - baseAmount)
-      const addonType = raw.addon_type || 'Add-on Service'
-      const count = raw.student_count || raw.teacher_count || '1'
-      const countLabel = raw.recipient_type === 'teacher' ? 'Staff' : 'Students'
+      const baseAmount = raw?.subtotal || (item.amount / 1.18)
+      const gstAmount = raw?.gst_amount || (item.amount - baseAmount)
+      const addonType = raw?.addon_type || 'Add-on Service'
+      const count = raw?.student_count || raw?.teacher_count || '1'
 
       billContent = `
         <div class="bill-container">
           <div class="bill-header">
-            <div class="logo-circle">A</div>
+            ${getInvoiceLogoHtml()}
             <div class="company-info">
               <h2>AIM Digitalise</h2>
               #139, 3rd Floor, Rajdanga Main Road,<br/>
-              Kolkata, West Bangal - 700107<br/>
+              Kolkata, West Bengal - 700107<br/>
               GSTIN: 19ABCCA9672L1Z0<br/>
               Email: support@aimdigitalise.com
             </div>
@@ -839,14 +903,14 @@ const ClientProducts = () => {
                 <p>
                   <strong>ID:</strong> ${clientId}<br/>
                   <strong>School:</strong> ${schoolName}<br/>
-                  Registered Address: Noida, Uttar Pradesh, India
+                  Registered Address: ${displayUser?.address || 'Noida, Uttar Pradesh, India'}
                 </p>
               </div>
               <div class="address-block">
                 <h4>Ship To</h4>
                 <div class="client-highlight-name">${schoolName}</div>
                 <p>
-                  Noida, Uttar Pradesh, India
+                  ${displayUser?.address || 'Noida, Uttar Pradesh, India'}
                 </p>
               </div>
             </div>
@@ -890,7 +954,7 @@ const ClientProducts = () => {
                   <div class="item-title">🔌 Add-on: ${addonType}</div>
                   <div class="item-desc">
                     Additional module activation.<br/>
-                    Billing Period: ${raw.start_date_formatted || '—'} to ${raw.end_date_formatted || '—'}
+                    Billing Period: ${raw?.start_date_formatted || '—'} to ${raw?.end_date_formatted || '—'}
                   </div>
                 </td>
                 <td class="cell-right">${parseFloat(count).toFixed(2)}</td>
@@ -920,6 +984,134 @@ const ClientProducts = () => {
                 </tr>
                 <tr class="total-row">
                   <td>Total</td>
+                  <td>₹${item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                </tr>
+              </table>
+              
+              <div class="balance-due-bar">
+                <span>Balance Due</span>
+                <span>₹0.00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `
+    } else {
+      // Default: Processing Fee / Initial Setup Tax Invoice
+      invoiceTitle = `Processing Fee Invoice ${invoiceNumber}`
+      const totalAmount = Number(item.amount) || 1000
+      const baseAmount = Math.round((totalAmount / 1.18) * 100) / 100
+      const gstAmount = Math.round((totalAmount - baseAmount) * 100) / 100
+      const pName = raw?.product_name || productName || 'NEXGN Institute Pro ERP Suite'
+
+      billContent = `
+        <div class="bill-container">
+          <div class="bill-header">
+            ${getInvoiceLogoHtml()}
+            <div class="company-info">
+              <h2>AIM Digitalise</h2>
+              #139, 3rd Floor, Rajdanga Main Road,<br/>
+              Kolkata, West Bengal - 700107<br/>
+              GSTIN: 19ABCCA9672L1Z0<br/>
+              Email: support@aimdigitalise.com
+            </div>
+          </div>
+          
+          <div class="invoice-divider-container">
+            <div class="invoice-divider-line"></div>
+            <div class="invoice-divider-text">TAX INVOICE / RECEIPT</div>
+            <div class="invoice-divider-line"></div>
+          </div>
+          
+          <div class="invoice-grid-section">
+            <div class="invoice-left-side">
+              <div class="address-block">
+                <h4>Bill To</h4>
+                <div class="client-highlight-name">${clientName}</div>
+                <p>
+                  <strong>ID:</strong> ${clientId}<br/>
+                  <strong>School/Company:</strong> ${schoolName}<br/>
+                  Registered Address: ${displayUser?.address || 'Noida, Uttar Pradesh, India'}
+                </p>
+              </div>
+              <div class="address-block">
+                <h4>Ship To / Activation Target</h4>
+                <div class="client-highlight-name">${schoolName}</div>
+                <p>
+                  ${displayUser?.address || 'Noida, Uttar Pradesh, India'}
+                </p>
+              </div>
+            </div>
+            
+            <div class="invoice-right-side">
+              <table class="meta-table">
+                <tr>
+                  <td class="meta-label">Invoice#</td>
+                  <td class="meta-value" style="font-family: monospace; font-weight: bold; color: #c25e17;">${invoiceNumber}</td>
+                </tr>
+                <tr>
+                  <td class="meta-label">Invoice Date</td>
+                  <td class="meta-value">${invoiceDate}</td>
+                </tr>
+                <tr>
+                  <td class="meta-label">Payment Mode</td>
+                  <td class="meta-value">Online (Payment Gateway)</td>
+                </tr>
+                <tr>
+                  <td class="meta-label">Payment Status</td>
+                  <td class="meta-value" style="color: #16a34a; font-weight: bold;">PAID IN FULL</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+
+          <table class="bill-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Item & Description</th>
+                <th style="text-align: right;">Qty</th>
+                <th style="text-align: right;">Rate</th>
+                <th style="text-align: right;">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="cell-center">1</td>
+                <td>
+                  <div class="item-title">🛠️ One-Time Setup & Processing Fee — ${pName}</div>
+                  <div class="item-desc">
+                    Initial software setup, database provisioning, cloud instance deployment, security configuration, and client onboarding.
+                  </div>
+                </td>
+                <td class="cell-right">1.00</td>
+                <td class="cell-right">₹${baseAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td class="cell-right" style="font-weight: bold;">₹${baseAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="invoice-bottom-section">
+            <div class="terms-section">
+              <div class="thanks-msg">Thank you for partnering with AIM Digitalise!</div>
+              <h5>Terms & Conditions</h5>
+              <p>1. The Processing Fee covers initial product setup, server provisioning, and database configuration.</p>
+              <p>2. Subscription fees are billed separately based on your chosen billing cycle.</p>
+              <p style="font-size: 10px; color: #cbd5e1; margin-top: 8px;">This is a computer-generated tax invoice and requires no physical signature.</p>
+            </div>
+            
+            <div class="summary-section">
+              <table class="summary-table">
+                <tr>
+                  <td>Sub Total</td>
+                  <td>₹${baseAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                </tr>
+                <tr>
+                  <td>GST Tax (18%)</td>
+                  <td>₹${gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                </tr>
+                <tr class="total-row">
+                  <td>Total Paid</td>
                   <td>₹${item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 </tr>
               </table>
@@ -965,6 +1157,12 @@ const ClientProducts = () => {
     fetchEstimatesData()
     syncAllHistories()
   }, [clientToken, isClientAuthenticated])
+
+  useEffect(() => {
+    if (isClientAuthenticated && clientToken) {
+      syncAllHistories()
+    }
+  }, [profileData, productData, paymentStatus])
 
   useEffect(() => {
     const latestSub = rechargeHistory.find(p => p.rawType === 'subscription')
@@ -1376,6 +1574,106 @@ const ClientProducts = () => {
     return priceForSelectedCycle
   })()
 
+  // ─── Total Students Count for subscription calculation ───
+  const effectiveTotalStudents = studentCountData?.student_count ?? tentativeStudentCount ?? activeProduct?.total_students ?? displayUser?.total_students ?? 0
+
+  // ─── Determine if client has paid for any subscription plan ───
+  const latestSubPayment = rechargeHistory.find(p => p.rawType === 'subscription' && Number(p.amount) > 0)
+  
+  const hasValidSubDate = Boolean(
+    paymentStatus?.delivery_info?.last_payment_date &&
+    paymentStatus.delivery_info.last_payment_date !== 'null' &&
+    paymentStatus.delivery_info.last_payment_date !== '—' &&
+    paymentStatus.delivery_info.last_payment_date !== '0000-00-00'
+  )
+
+  const hasPaidSubscription = Boolean(
+    latestSubPayment ||
+    (hasValidSubDate && paymentStatus?.delivery_info?.last_payment_cycle)
+  )
+
+  const activePaidCycle = hasPaidSubscription
+    ? (latestSubPayment?.raw?.cycle || paymentStatus?.delivery_info?.last_payment_cycle || null)
+    : null
+
+  // ─── Subscribed cycle label to display ───
+  const activeCycleLabel = (() => {
+    if (!hasPaidSubscription || !activePaidCycle) return null
+    const cycleKey = activePaidCycle.toLowerCase()
+    if (cycleKey === 'annual' || cycleKey === 'yearly') return 'Annual'
+    if (cycleKey === 'half_yearly' || cycleKey === 'half-yearly') return 'Half Year'
+    if (cycleKey === 'quarterly') return 'Quarterly'
+    if (cycleKey === 'monthly') return 'Monthly'
+    return activePaidCycle
+  })()
+
+  // ─── Last Total Subscription Amount Paid ───
+  const lastPaymentAmount = (() => {
+    // If client hasn't paid for any subscription plan yet, show 0.00
+    if (!hasPaidSubscription) {
+      return 0
+    }
+    // 1. Direct last subscription payment amount from recharge history
+    if (latestSubPayment && Number(latestSubPayment.amount) > 0) {
+      return Number(latestSubPayment.amount)
+    }
+    // 2. Direct from paymentStatus delivery info
+    if (paymentStatus?.delivery_info?.last_payment_amount && Number(paymentStatus.delivery_info.last_payment_amount) > 0) {
+      return Number(paymentStatus.delivery_info.last_payment_amount)
+    }
+    // 3. Fallback calculation for total student count based on active subscription base & cycle
+    if (isInstitutePro || isNexgnSaas) {
+      const sc = Number(effectiveTotalStudents) || 0
+      if (sc > 0) {
+        const cycle = activePaidCycle || selectedCycle || 'yearly'
+        const rate = cycleRates[cycle]?.baseRate || currentStudentRate || 10
+        const multiplier = cycleRates[cycle]?.multiplier || (cycle === 'yearly' ? 12 : cycle === 'half-yearly' ? 6 : cycle === 'quarterly' ? 3 : 1)
+        const discount = currentDiscount ?? cycleRates[cycle]?.discount ?? (cycle === 'yearly' ? 40 : cycle === 'half-yearly' ? 5 : 0)
+        const subtotal = sc * rate * multiplier * (1 - (discount || 0) / 100)
+        return Math.round(subtotal * 1.18 * 100) / 100
+      }
+      return 0
+    }
+    return Number(subscriptionPrice || 0)
+  })()
+
+  // ─── Next Subscription Amount to Pay According to Total Student Count ───
+  const nextPaymentAmount = (() => {
+    const sc = Number(effectiveTotalStudents) || 0
+
+    // If client has not paid for any plan and has 0 students
+    if (!hasPaidSubscription && sc === 0) {
+      return 0
+    }
+
+    const cycle = activePaidCycle || selectedCycle || 'yearly'
+    const rate = cycleRates[cycle]?.baseRate || currentStudentRate || 10
+    const multiplier = cycleRates[cycle]?.multiplier || (cycle === 'yearly' ? 12 : cycle === 'half-yearly' ? 6 : cycle === 'quarterly' ? 3 : 1)
+    const discount = currentDiscount ?? cycleRates[cycle]?.discount ?? (cycle === 'yearly' ? 40 : cycle === 'half-yearly' ? 5 : 0)
+
+    if (isInstitutePro || isNexgnSaas) {
+      if (sc > 0) {
+        // If the backend calculateSubscription returned an explicit gross total for the cycle, use it
+        if (cycleRates[cycle]?.totalAmountWithGst && Number(cycleRates[cycle].totalAmountWithGst) > 0) {
+          return Number(cycleRates[cycle].totalAmountWithGst)
+        }
+        // If overdue subscription exists
+        if (isSubscriptionOverdue && subDueAmount > 0) {
+          return Math.round(subDueAmount * 1.18 * 100) / 100
+        }
+        const grossSubtotal = sc * rate * multiplier * (1 - (discount || 0) / 100)
+        return Math.round(grossSubtotal * 1.18 * 100) / 100
+      }
+      return 0
+    }
+
+    if (!hasPaidSubscription) return 0
+
+    // For fixed non-student products
+    const grossBase = Number(subscriptionPrice || 0) * multiplier * (1 - (discount || 0) / 100)
+    return Math.round(grossBase * 1.18 * 100) / 100
+  })()
+
   // The student count shown in the formula subtitle:
   // - If subscription is overdue for new students → show unpaid student count
   // - Otherwise → show total student count
@@ -1438,7 +1736,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
 .pb{background:#10b981;color:white;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:700}
 </style></head>
 <body><div class="w">
-  <div class="hd"><div class="lc">A</div>
+  <div class="hd">${getInvoiceLogoHtml()}
     <div class="ci"><h2>AIM Digitalise</h2>#139, 3rd Floor, Rajdanga Main Road,<br/>Kolkata, West Bengal - 700107<br/>GSTIN: 19ABCCA9672L1Z0<br/>Email: support@aimdigitalise.com</div>
   </div>
   <div class="dv"><div class="dl"></div><div class="dt">TAX INVOICE</div><div class="dl"></div></div>
@@ -2272,24 +2570,45 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
             </button>
           </div>
 
-          {/* Teacher count, Last Payment, Next Payment in the blank portion of this card */}
+          {/* Teacher count, Student count, Last Payment, Next Payment in the blank portion of this card */}
           <div className="pt-4 border-t border-slate-100 space-y-3.5">
             {isInstitutePro && (
-              <div className="flex justify-between items-center text-xs">
-                <span className="font-bold text-slate-400 uppercase tracking-wider">Total Teacher Count</span>
-                <span className="font-black text-slate-800 text-sm font-mono">0</span>
-              </div>
+              <>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-bold text-slate-400 uppercase tracking-wider">Total Teacher Count</span>
+                  <span className="font-black text-slate-800 text-sm font-mono">
+                    {studentCountData?.teacher_count || 0}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-bold text-slate-400 uppercase tracking-wider">Total Student Count</span>
+                  <span className="font-black text-slate-800 text-sm font-mono">
+                    {effectiveTotalStudents || 0}
+                  </span>
+                </div>
+              </>
             )}
             <div className="flex justify-between items-center text-xs">
               <span className="font-bold text-slate-400 uppercase tracking-wider">Last Payment</span>
-              <span className="font-black text-slate-800 font-mono">
-                ₹{Number(subscriptionPrice).toLocaleString('en-IN')}.00
+              <span className="font-black text-slate-800 font-mono text-sm">
+                ₹{Number(lastPaymentAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
             <div className="flex justify-between items-center text-xs">
-              <span className="font-bold text-slate-400 uppercase tracking-wider">Next Payment</span>
-              <span className="font-black text-indigo-600 font-mono">
-                ₹{Number(subscriptionPrice).toLocaleString('en-IN')}.00
+              <div className="flex flex-col">
+                <span className="font-bold text-slate-400 uppercase tracking-wider">Next Payment</span>
+                {hasPaidSubscription ? (
+                  <span className="text-[10px] text-indigo-600 font-bold capitalize">
+                    ({activeCycleLabel} Plan)
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-amber-600 font-bold capitalize">
+                    (Plan Not Activated)
+                  </span>
+                )}
+              </div>
+              <span className="font-black text-indigo-600 font-mono text-sm">
+                ₹{Number(nextPaymentAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
           </div>
