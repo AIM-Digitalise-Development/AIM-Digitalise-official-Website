@@ -23,50 +23,7 @@ const cycleDisplayNames = {
   'monthly': 'Monthly'
 }
 
-// Standard backend cycle discounts for NEXGN Institute Pro (annual: 40%, half-yearly: 5%, etc.)
-const BACKEND_STANDARD_DISCOUNTS = {
-  annual: 40,
-  yearly: 40,
-  half_yearly: 5,
-  'half-yearly': 5,
-  quarterly: 0,
-  monthly: 0
-}
-
-const enrichCyclesWithBackendDiscounts = (cyclesData, studentCount) => {
-  if (!cyclesData || !cyclesData.cycles) return cyclesData
-  const enrichedCycles = { ...cyclesData.cycles }
-  Object.keys(enrichedCycles).forEach(key => {
-    const normKey = key.toLowerCase()
-    const stdDiscount = BACKEND_STANDARD_DISCOUNTS[normKey] || 0
-    const cycleItem = enrichedCycles[key]
-    if ((!cycleItem.discount || cycleItem.discount === 0) && stdDiscount > 0) {
-      const cycleMult = cycleItem.multiplier || 1
-      const count = studentCount?.student_count || 12
-      const unitRate = 10
-      const baseMonthly = cycleItem.base_monthly || (count * unitRate)
-      const discountedMonthly = Math.round(baseMonthly * (1 - stdDiscount / 100) * 100) / 100
-      const subtotal = Math.round(discountedMonthly * cycleMult * 100) / 100
-      const gst = Math.round(subtotal * 0.18 * 100) / 100
-      const total = Math.round((subtotal + gst) * 100) / 100
-      const savings = Math.round(((baseMonthly * cycleMult) - subtotal) * 100) / 100
-
-      enrichedCycles[key] = {
-        ...cycleItem,
-        discount: stdDiscount,
-        discounted_monthly: discountedMonthly,
-        subtotal: subtotal,
-        gst_amount: gst,
-        total: total,
-        savings: savings
-      }
-    }
-  })
-  return {
-    ...cyclesData,
-    cycles: enrichedCycles
-  }
-}
+// No hardcoded discounts — discount comes ONLY from backend APIs
 
 const ClientSubscription = () => {
   const { clientToken, isClientAuthenticated, profileData, productData, clientLogout } = useClientAuthStore()
@@ -206,8 +163,7 @@ const ClientSubscription = () => {
         return null
       })
       if (cyclesRes?.success) {
-        const enrichedData = enrichCyclesWithBackendDiscounts(cyclesRes.data, studentRes?.data)
-        setPaymentCycles(enrichedData)
+        setPaymentCycles(cyclesRes.data)
         if (cyclesRes.data.per_person !== undefined) {
           setPerPerson(cyclesRes.data.per_person)
         }
@@ -256,47 +212,10 @@ const ClientSubscription = () => {
         let calcData = { ...res.data }
         const calc = { ...(calcData.calculation || {}) }
 
-        // Check if this is extra students payment or has previous session cycle
-        const lastCycle = deliveryInfo?.last_payment_cycle || paymentStatus?.delivery_info?.last_payment_cycle || selectedCycle || 'annual'
-        const cycleToCheck = (cycle || lastCycle || 'annual').toLowerCase().replace('-', '_')
-        const sessionDiscount = BACKEND_STANDARD_DISCOUNTS[cycleToCheck] || (cycleToCheck === 'annual' || cycleToCheck === 'yearly' ? 40 : (cycleToCheck === 'half_yearly' ? 5 : 0))
-
+        // Check if this is extra students payment — trust backend discount_percentage directly
         const isExtra = Boolean(calcData.is_extra_students_payment || calc.is_extra_students_payment)
-        if (isExtra && (!calc.discount_percentage || calc.discount_percentage === 0) && sessionDiscount > 0) {
-          const baseMonthly = calc.base_monthly_amount || 0
-          const cycleMonths = calc.cycle_months || 1
-          const discountedMonthly = Math.round(baseMonthly * (1 - sessionDiscount / 100) * 100) / 100
-          const regularDiscounted = Math.round(discountedMonthly * cycleMonths * 100) / 100
-          const gst = Math.round(regularDiscounted * (calc.gst_percentage || 18)) / 100
-          const totalWithGst = Math.round((regularDiscounted + gst) * 100) / 100
-          const savings = Math.round(((baseMonthly * cycleMonths) - regularDiscounted) * 100) / 100
-
-          calc.discount_percentage = sessionDiscount
-          calc.discounted_monthly_amount = discountedMonthly
-          calc.subtotal = regularDiscounted
-          calc.regular_months_amount = regularDiscounted
-          calc.total_amount = totalWithGst
-          calc.gst_amount = gst
-          calc.savings = savings
-
-          calcData = {
-            ...calcData,
-            calculation: calc
-          }
-
-          if (calcData.breakdown) {
-            const studentCount = calc.student_count || 12
-            const perStudentRate = baseMonthly / (studentCount || 1)
-            calcData.breakdown = {
-              ...calcData.breakdown,
-              formula: `₹${perStudentRate.toFixed(2)} × ${studentCount} new students × ${cycleMonths} mo`,
-              with_discount: `₹${discountedMonthly.toFixed(2)} (${sessionDiscount}% session discount applied)`,
-              subtotal: `₹${regularDiscounted.toFixed(2)}`,
-              gst: `₹${gst.toFixed(2)} (18%)`,
-              total_for_cycle: `Total = ₹${totalWithGst.toFixed(2)}`
-            }
-          }
-        }
+        // If backend returned discount_percentage, use it as-is. No hardcoded overrides.
+        // For extra students with 0% discount from backend, respect it as 0%.
 
         setCalculatedAmount(calcData)
         setSelectedCycle(cycle)
@@ -350,10 +269,7 @@ const ClientSubscription = () => {
     // Get values from calculation
     const baseMonthlyAmount = calc.base_monthly_amount || 0
     let discountPercentage = calc.discount_percentage || 0
-    if ((data.is_extra_students_payment || calc.is_extra_students_payment) && (!discountPercentage || discountPercentage === 0)) {
-      const cycleKey = (cycle || 'annual').toLowerCase().replace('-', '_')
-      discountPercentage = BACKEND_STANDARD_DISCOUNTS[cycleKey] || (cycleKey === 'annual' || cycleKey === 'yearly' ? 40 : 0)
-    }
+    // Trust backend discount_percentage directly — no hardcoded overrides
     const cycleMonths = calc.cycle_months || 1
     const carryoverFraction = calc.carryover_fraction || 0
     const carryoverDays = calc.carryover_days || 0
@@ -643,8 +559,7 @@ const ClientSubscription = () => {
         : (profileData?.per_person !== undefined ? profileData.per_person : 1)
 
       if (cyclesRes?.success) {
-        const enrichedData = enrichCyclesWithBackendDiscounts(cyclesRes.data, studentRes?.data)
-        setPaymentCycles(enrichedData)
+        setPaymentCycles(cyclesRes.data)
         if (selectedCycle && (studentRes?.data?.student_count > 0 || currentPerPerson !== 1)) {
           await calculateSubscriptionForCycle(selectedCycle, clientToken)
         }

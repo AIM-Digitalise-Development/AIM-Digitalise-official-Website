@@ -173,50 +173,24 @@ const ClientProducts = () => {
       const newRates = { ...cycleRates }
       let maxExtraStudents = 0
 
-      const BACKEND_STANDARD_DISCOUNTS = {
-        annual: 40,
-        yearly: 40,
-        half_yearly: 5,
-        'half-yearly': 5,
-        quarterly: 0,
-        monthly: 0
-      }
-
       cyclesList.forEach((cycle, idx) => {
         const res = calcResults[idx]
         const stateKey = cycle === 'half_yearly' ? 'half-yearly' : (cycle === 'annual' ? 'yearly' : cycle)
         const calc = (res?.success && res?.data?.calculation) ? res.data.calculation : null
 
-        // Priority 1: Discount directly from calculateSubscription (if > 0)
-        // Priority 2: Discount from getClientPaymentCycles (if > 0)
-        // Priority 3: Discount from product object (activeProduct.discounts / activeProduct.annual_discount etc.)
-        // Priority 4: Standard live backend discounts (Annual: 40%, Half-Yearly: 5%, Quarterly: 0%, Monthly: 0%)
-        let resolvedDiscount = null
-        if (calc && calc.discount_percentage !== undefined && calc.discount_percentage !== null && Number(calc.discount_percentage) > 0) {
+        // Simple discount resolution: backend is the ONLY source of truth
+        // Priority 1: discount_percentage from calculateSubscription API
+        // Priority 2: discount from getClientPaymentCycles API
+        // No hardcoded fallbacks — if backend says 0%, it's 0%
+        let resolvedDiscount = 0
+        if (calc && calc.discount_percentage !== undefined && calc.discount_percentage !== null) {
           resolvedDiscount = Number(calc.discount_percentage)
-        } else {
+        }
+        if (resolvedDiscount === 0) {
           const cycleObj = backendCycles[cycle] || backendCycles[stateKey] || (cycle === 'annual' ? backendCycles['yearly'] : (cycle === 'half_yearly' ? backendCycles['half-yearly'] : null))
           if (cycleObj && (Number(cycleObj.discount) > 0 || Number(cycleObj.discount_percentage) > 0)) {
             resolvedDiscount = Number(cycleObj.discount ?? cycleObj.discount_percentage)
-          } else if (activeProd?.discounts) {
-            const prodDisc = activeProd.discounts[cycle] ?? activeProd.discounts[stateKey] ?? (cycle === 'annual' ? activeProd.discounts.annual : (cycle === 'half_yearly' ? activeProd.discounts.half_yearly : null))
-            if (prodDisc !== undefined && prodDisc !== null && Number(prodDisc) > 0) {
-              resolvedDiscount = Number(prodDisc)
-            }
-          } else if (cycle === 'annual' && activeProd?.annual_discount !== undefined && Number(activeProd.annual_discount) > 0) {
-            resolvedDiscount = Number(activeProd.annual_discount)
-          } else if (cycle === 'half_yearly' && activeProd?.half_yearly_discount !== undefined && Number(activeProd.half_yearly_discount) > 0) {
-            resolvedDiscount = Number(activeProd.half_yearly_discount)
-          } else if (cycle === 'quarterly' && activeProd?.quarterly_discount !== undefined && Number(activeProd.quarterly_discount) > 0) {
-            resolvedDiscount = Number(activeProd.quarterly_discount)
-          } else if (cycle === 'monthly' && activeProd?.monthly_discount !== undefined && Number(activeProd.monthly_discount) > 0) {
-            resolvedDiscount = Number(activeProd.monthly_discount)
           }
-        }
-
-        // If backend returned 0% due to is_extra_students_payment, fallback to the backend's standard cycle discount
-        if (resolvedDiscount === null || resolvedDiscount === undefined || resolvedDiscount === 0) {
-          resolvedDiscount = BACKEND_STANDARD_DISCOUNTS[cycle] ?? BACKEND_STANDARD_DISCOUNTS[stateKey] ?? 0
         }
 
         const baseMultiplier = cycle === 'monthly' ? 1 : cycle === 'quarterly' ? 3 : cycle === 'half_yearly' ? 6 : 12
@@ -1198,7 +1172,7 @@ const ClientProducts = () => {
                   baseRate: calc.student_count > 0 ? (calc.base_monthly_amount / calc.student_count) : (prevRate.baseRate || (calc.monthly_subscription_rate ? Number(calc.monthly_subscription_rate) : null)),
                   cycleMonths: calc.cycle_months || (calc.is_extra_students_payment ? 1 : baseMultiplier),
                   multiplier: calc.multiplier || baseMultiplier,
-                  discount: (calc.discount_percentage && Number(calc.discount_percentage) > 0) ? Number(calc.discount_percentage) : prevRate.discount,
+                  discount: (calc.discount_percentage !== undefined && calc.discount_percentage !== null) ? Number(calc.discount_percentage) : (prevRate.discount ?? 0),
                   totalAmount: calc.is_extra_students_payment && calc.extra_students_amount ? Number(calc.extra_students_amount) : (Number(calc.subtotal) || prevRate.totalAmount),
                   totalAmountWithGst: calc.total_amount || 0,
                   gstAmount: calc.gst_amount || 0,
@@ -1442,33 +1416,22 @@ const ClientProducts = () => {
   const rateInfo = cycleRates[selectedCycle] || { discount: null, multiplier: 1 }
   const extraMonths = cycleRates[selectedCycle]?.cycleMonths || 1
 
-  // Resolve session discount dynamically from backend rates, past payment history, or standard cycle rates
+  // Discount comes ONLY from the backend — no hardcoded fallbacks, no history-derived guessing
   const sessionDiscount = (() => {
-    if (rateInfo.discount !== null && rateInfo.discount !== undefined && Number(rateInfo.discount) > 0) {
+    // Priority 1: Backend-resolved cycleRates discount (from calculateSubscription / getClientPaymentCycles)
+    if (rateInfo.discount !== null && rateInfo.discount !== undefined) {
       return Number(rateInfo.discount)
     }
+    // Priority 2: discount_percentage from the latest subscription payment record
     const latestSub = rechargeHistory.find(p => p.rawType === 'subscription')
-    if (latestSub?.raw?.discount_percentage && Number(latestSub.raw.discount_percentage) > 0) {
+    if (latestSub?.raw?.discount_percentage !== undefined && latestSub?.raw?.discount_percentage !== null) {
       return Number(latestSub.raw.discount_percentage)
     }
-    if (latestSub?.raw?.regular_amount_before_gst && latestSub?.raw?.student_count && latestSub?.raw?.months_paid) {
-      const baseExpected = latestSub.raw.student_count * (currentStudentRate || 10) * latestSub.raw.months_paid
-      if (baseExpected > 0 && latestSub.raw.regular_amount_before_gst < baseExpected) {
-        const derived = Math.round((1 - latestSub.raw.regular_amount_before_gst / baseExpected) * 100)
-        if (derived > 0) return derived
-      }
-    }
-    const prod = activeProduct || (Array.isArray(productData) ? productData[0] : {})
-    if (prod?.annual_discount && (selectedCycle === 'yearly' || selectedCycle === 'annual')) {
-      return Number(prod.annual_discount)
-    }
-    if (prod?.discounts?.[selectedCycle] && Number(prod.discounts[selectedCycle]) > 0) {
-      return Number(prod.discounts[selectedCycle])
-    }
-    return (selectedCycle === 'yearly' || selectedCycle === 'annual') ? 40 : (selectedCycle === 'half-yearly' ? 5 : 0)
+    // No fallback — if backend hasn't provided a discount, it's 0
+    return 0
   })()
 
-  const currentDiscount = (rateInfo.discount !== null && rateInfo.discount !== undefined && Number(rateInfo.discount) > 0)
+  const currentDiscount = (rateInfo.discount !== null && rateInfo.discount !== undefined)
     ? Number(rateInfo.discount)
     : sessionDiscount
   const currentMultiplier = rateInfo.multiplier || 1
@@ -1520,20 +1483,20 @@ const ClientProducts = () => {
     if (sc === 0) return 0
     const rate = cycleRates[selectedCycle]?.baseRate || currentStudentRate || 10
     const multiplier = cycleRates[selectedCycle]?.multiplier || 1
-    const discount = cycleRates[selectedCycle]?.discount ?? currentDiscount ?? 0
+    const discount = currentDiscount || 0
     return Math.round(sc * rate * multiplier * (1 - discount / 100))
   })()
 
-  // For extra students added in the same session: plan is locked and exact same backend discount is applied!
+  // For extra students added in the same session: same backend discount is applied
+  // Formula: new_students × rate × months × (1 - discount / 100)
   const subDueAmount = (() => {
     if (!isSubscriptionOverdue && !isNeverPaid) return 0
     if (hasMadePayment && unpaidStudentsCount > 0) {
       const rate = currentStudentRate || 10
       const months = extraMonths || 1
-      const preDiscountBase = unpaidStudentsCount * rate * months
-      const discountToApply = sessionDiscount || currentDiscount || 0
-      const discountedBase = Math.round(preDiscountBase * (1 - (discountToApply || 0) / 100) * 100) / 100
-      return discountedBase
+      const discountToApply = currentDiscount || 0
+      const total = Math.round(unpaidStudentsCount * rate * months * (1 - discountToApply / 100) * 100) / 100
+      return total
     }
     if (cycleRates[selectedCycle]?.totalAmount !== undefined && cycleRates[selectedCycle]?.totalAmount !== null) {
       return Number(cycleRates[selectedCycle].totalAmount)
@@ -1621,15 +1584,15 @@ const ClientProducts = () => {
     if (paymentStatus?.delivery_info?.last_payment_amount && Number(paymentStatus.delivery_info.last_payment_amount) > 0) {
       return Number(paymentStatus.delivery_info.last_payment_amount)
     }
-    // 3. Fallback calculation for total student count based on active subscription base & cycle
+    // 3. Fallback calculation: students × rate × months × (1 - discount/100) × 1.18 GST
     if (isInstitutePro || isNexgnSaas) {
       const sc = Number(effectiveTotalStudents) || 0
       if (sc > 0) {
         const cycle = activePaidCycle || selectedCycle || 'yearly'
         const rate = cycleRates[cycle]?.baseRate || currentStudentRate || 10
         const multiplier = cycleRates[cycle]?.multiplier || (cycle === 'yearly' ? 12 : cycle === 'half-yearly' ? 6 : cycle === 'quarterly' ? 3 : 1)
-        const discount = currentDiscount ?? cycleRates[cycle]?.discount ?? (cycle === 'yearly' ? 40 : cycle === 'half-yearly' ? 5 : 0)
-        const subtotal = sc * rate * multiplier * (1 - (discount || 0) / 100)
+        const discount = currentDiscount || 0
+        const subtotal = sc * rate * multiplier * (1 - discount / 100)
         return Math.round(subtotal * 1.18 * 100) / 100
       }
       return 0
@@ -1649,7 +1612,7 @@ const ClientProducts = () => {
     const cycle = activePaidCycle || selectedCycle || 'yearly'
     const rate = cycleRates[cycle]?.baseRate || currentStudentRate || 10
     const multiplier = cycleRates[cycle]?.multiplier || (cycle === 'yearly' ? 12 : cycle === 'half-yearly' ? 6 : cycle === 'quarterly' ? 3 : 1)
-    const discount = currentDiscount ?? cycleRates[cycle]?.discount ?? (cycle === 'yearly' ? 40 : cycle === 'half-yearly' ? 5 : 0)
+    const discount = currentDiscount || 0
 
     if (isInstitutePro || isNexgnSaas) {
       if (sc > 0) {
@@ -1661,7 +1624,8 @@ const ClientProducts = () => {
         if (isSubscriptionOverdue && subDueAmount > 0) {
           return Math.round(subDueAmount * 1.18 * 100) / 100
         }
-        const grossSubtotal = sc * rate * multiplier * (1 - (discount || 0) / 100)
+        // Simple formula: students × rate × months × (1 - discount/100)
+        const grossSubtotal = sc * rate * multiplier * (1 - discount / 100)
         return Math.round(grossSubtotal * 1.18 * 100) / 100
       }
       return 0
@@ -1670,7 +1634,7 @@ const ClientProducts = () => {
     if (!hasPaidSubscription) return 0
 
     // For fixed non-student products
-    const grossBase = Number(subscriptionPrice || 0) * multiplier * (1 - (discount || 0) / 100)
+    const grossBase = Number(subscriptionPrice || 0) * multiplier * (1 - discount / 100)
     return Math.round(grossBase * 1.18 * 100) / 100
   })()
 
@@ -2056,7 +2020,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                       </div>
                       <div className="text-slate-400 mt-0.5">
                         {cycleName} plan · {subtitleStudentCount} {unpaidStudentsCount > 0 && hasMadePayment ? 'new students' : 'students'}
-                        {currentDiscount > 0 && ` (${currentDiscount}% ${unpaidStudentsCount > 0 && hasMadePayment ? 'session ' : ''}discount applied)`}
+                        {currentDiscount > 0 && ` (${currentDiscount}% discount applied)`}
                       </div>
                     </td>
                     <td className="text-right py-4 font-mono font-bold text-slate-700">
@@ -2339,7 +2303,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                         ₹{Number(currentStudentRate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} × {unpaidStudentsCount} new students × {extraMonths} mo
                         {currentDiscount > 0 && (
                           <span className="text-emerald-600 font-black ml-1">
-                            ({currentDiscount}% session discount applied)
+                            ({currentDiscount}% discount applied)
                           </span>
                         )}
                       </>
@@ -2348,7 +2312,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                         ₹{Number(currentStudentRate).toLocaleString('en-IN')} × {subtitleStudentCount} students × {currentMultiplier} mo
                         {currentDiscount > 0 && (
                           <span className="text-emerald-600 font-bold ml-1">
-                            ({currentDiscount}% discount applied)
+                            ({currentDiscount}% plan discount)
                           </span>
                         )}
                         {cycleRates[selectedCycle]?.carryoverDays > 0 && (
