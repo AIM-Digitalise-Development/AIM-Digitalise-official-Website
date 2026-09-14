@@ -2524,15 +2524,15 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-100 text-center space-y-3">
+         {/* <div className="pt-2 border-t border-slate-100 text-center space-y-3">
             <p className="text-xs font-bold text-slate-400">If not completed yet complete your profile</p>
-            <button
+           <button
               onClick={() => navigate('/client/portal/profile')}
               className="w-full py-3 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-black rounded-xl text-xs transition-all shadow-md active:scale-[0.98] cursor-pointer"
             >
               Complete Now
             </button>
-          </div>
+          </div>*/}
 
           {/* Teacher count, Student count, Last Payment, Next Payment in the blank portion of this card */}
           <div className="pt-4 border-t border-slate-100 space-y-3.5">
