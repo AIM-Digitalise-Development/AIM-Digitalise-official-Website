@@ -83,8 +83,8 @@ const ClientProducts = () => {
   const [paySuccess, setPaySuccess] = useState('')
 
   const cycleOptions = [
-    { key: 'yearly', label: 'Annual', labelShort: 'Annual' },
-    { key: 'half-yearly', label: 'Half Year', labelShort: 'Half Year' },
+    { key: 'yearly', label: 'Annually', labelShort: 'Annually' },
+    { key: 'half-yearly', label: 'Half-yearly', labelShort: 'Half-yearly' },
     { key: 'quarterly', label: 'Quarterly', labelShort: 'Quarterly' },
     { key: 'monthly', label: 'Monthly', labelShort: 'Monthly' }
   ]
@@ -1563,8 +1563,8 @@ const ClientProducts = () => {
   const activeCycleLabel = (() => {
     if (!hasPaidSubscription || !activePaidCycle) return null
     const cycleKey = activePaidCycle.toLowerCase()
-    if (cycleKey === 'annual' || cycleKey === 'yearly') return 'Annual'
-    if (cycleKey === 'half_yearly' || cycleKey === 'half-yearly') return 'Half Year'
+    if (cycleKey === 'annual' || cycleKey === 'yearly') return 'Annually'
+    if (cycleKey === 'half_yearly' || cycleKey === 'half-yearly') return 'Half-yearly'
     if (cycleKey === 'quarterly') return 'Quarterly'
     if (cycleKey === 'monthly') return 'Monthly'
     return activePaidCycle
@@ -2245,7 +2245,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                   title={isCycleDropdownDisabled ? 'Plan cycle locked for active session' : 'Change Plan Cycle'}
                 >
                   {isCycleDropdownDisabled && <span className="text-[9px]">🔒</span>}
-                  {cycleOptions.find(opt => opt.key === selectedCycle)?.labelShort || 'Annual'}
+                  {cycleOptions.find(opt => opt.key === selectedCycle)?.labelShort || 'Annually'}
                   {isCycleDropdownDisabled && <span className="text-[7.5px] opacity-80 font-bold ml-0.5"></span>}
                   {!isCycleDropdownDisabled && (
                     <svg className={`w-2 h-2 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">

@@ -17,8 +17,8 @@ import PaymentCyclesCard from '../../components/client/subscription/PaymentCycle
 import PaymentSummaryCard from '../../components/client/subscription/PaymentSummaryCard'
 
 const cycleDisplayNames = {
-  'annual': 'Annual',
-  'half_yearly': 'Half Yearly',
+  'annual': 'Annually',
+  'half_yearly': 'Half-yearly',
   'quarterly': 'Quarterly',
   'monthly': 'Monthly'
 }

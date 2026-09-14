@@ -2,8 +2,8 @@ import { motion } from 'framer-motion'
 
 const cycleOrder = ['annual', 'half_yearly', 'quarterly', 'monthly']
 const cycleDisplayNames = {
-  'annual': 'Annual',
-  'half_yearly': 'Half Yearly',
+  'annual': 'Annually',
+  'half_yearly': 'Half-yearly',
   'quarterly': 'Quarterly',
   'monthly': 'Monthly'
 }

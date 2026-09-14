@@ -269,8 +269,8 @@ const AdminSaasClients = () => {
   const RENEWAL_CYCLE_OPTIONS = [
     { value: 'monthly', label: 'Monthly (1 Month)' },
     { value: 'quarterly', label: 'Quarterly (3 Months)' },
-    { value: 'half_yearly', label: 'Half Yearly (6 Months)' },
-    { value: 'annual', label: 'Annual (12 Months)' },
+    { value: 'half_yearly', label: 'Half-yearly (6 Months)' },
+    { value: 'annual', label: 'Annually (12 Months)' },
   ]
 
   const getAgeBadgeInfo = (client) => {
