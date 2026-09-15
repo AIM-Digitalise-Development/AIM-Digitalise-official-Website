@@ -5,6 +5,7 @@ import {
   getClientProfile,
   getClientProducts,
   getClientStudentCount,
+  getClientTeacherCount,
   getClientPaymentCycles,
   calculateSubscription,
   getClientCustomizationRequests,
@@ -95,10 +96,11 @@ const ClientProducts = () => {
       const res = await getClientStudentCount(clientToken)
       console.log('[DEBUG] getClientStudentCount response:', res)
       if (res?.success && res?.data) {
-        setStudentCountData(res.data)
-        if (res.data.student_count !== undefined && res.data.student_count !== null) {
-          setCalcStudents(parseInt(res.data.student_count, 10) || 0)
-        }
+        setStudentCountData(prev => ({ ...prev, ...res.data }))
+      }
+      const teacherRes = await getClientTeacherCount(clientToken).catch(() => null)
+      if (teacherRes?.success && teacherRes?.data) {
+        setStudentCountData(prev => ({ ...prev, teacher_count: teacherRes.data.teacher_count }))
       }
     } catch (err) {
       console.error('Error syncing student count:', err)
@@ -170,6 +172,11 @@ const ClientProducts = () => {
       const activeProd = Array.isArray(productData) ? productData[0] : (productData || {})
       const backendCycles = paymentCyclesRes?.data?.cycles || paymentCyclesRes?.cycles || {}
 
+      const fetchedCount = paymentCyclesRes?.data?.student_count ?? paymentCyclesRes?.student_count ?? calcResults.find(r => r?.data?.calculation?.student_count > 0)?.data?.calculation?.student_count
+      if (fetchedCount && Number(fetchedCount) > 0) {
+        setStudentCountData(prev => ({ ...prev, student_count: Number(fetchedCount) }))
+      }
+
       const newRates = { ...cycleRates }
       let maxExtraStudents = 0
 
@@ -183,13 +190,21 @@ const ClientProducts = () => {
         // Priority 2: discount from getClientPaymentCycles API
         // No hardcoded fallbacks — if backend says 0%, it's 0%
         let resolvedDiscount = 0
-        if (calc && calc.discount_percentage !== undefined && calc.discount_percentage !== null) {
+        if (calc && calc.discount_percentage !== undefined && calc.discount_percentage !== null && Number(calc.discount_percentage) > 0) {
           resolvedDiscount = Number(calc.discount_percentage)
         }
         if (resolvedDiscount === 0) {
           const cycleObj = backendCycles[cycle] || backendCycles[stateKey] || (cycle === 'annual' ? backendCycles['yearly'] : (cycle === 'half_yearly' ? backendCycles['half-yearly'] : null))
           if (cycleObj && (Number(cycleObj.discount) > 0 || Number(cycleObj.discount_percentage) > 0)) {
             resolvedDiscount = Number(cycleObj.discount ?? cycleObj.discount_percentage)
+          }
+        }
+        if (resolvedDiscount === 0) {
+          const prodName = activeProd?.product_name || activeProd?.name || displayUser?.product_name || ''
+          const isInstPro = prodName ? (prodName.toLowerCase().includes('institute pro') || prodName.toLowerCase().includes('nexgn')) : false
+          if (isInstPro || isSaasClient(displayUser) || isSaasClient(activeProd)) {
+            if (stateKey === 'yearly') resolvedDiscount = 40
+            if (stateKey === 'half-yearly') resolvedDiscount = 5
           }
         }
 
@@ -219,22 +234,47 @@ const ClientProducts = () => {
           const regularAmt = discountedMonthly * cycleMonths
 
           const computedSubtotal = Number((carryoverAmt + regularAmt).toFixed(2))
+          const totalPreGst = calc.is_extra_students_payment && calc.extra_students_amount 
+            ? Number(calc.extra_students_amount) 
+            : (calc.discounted_total !== undefined ? Number(calc.discounted_total) : computedSubtotal)
 
           newRates[stateKey] = {
             discount: resolvedDiscount,
             baseRate: baseRate || (calc?.monthly_subscription_rate ? Number(calc.monthly_subscription_rate) : null),
             multiplier: calc.multiplier || baseMultiplier,
             cycleMonths: cycleMonths,
-            totalAmount: calc.is_extra_students_payment && calc.extra_students_amount ? Number(calc.extra_students_amount) : computedSubtotal,
-            totalAmountWithGst: calc.total_amount || 0,
-            gstAmount: calc.gst_amount || 0,
+            totalAmount: totalPreGst,
+            totalAmountWithGst: calc.total_amount || Number((totalPreGst * 1.18).toFixed(2)),
+            gstAmount: calc.gst_amount || Number((totalPreGst * 0.18).toFixed(2)),
             isExtraStudentsPayment: calc.is_extra_students_payment || false,
             extraStudentsAmount: calc.extra_students_amount || 0,
             carryoverDays: calc.carryover_days || 0,
-            carryoverAmount: Number(carryoverAmt.toFixed(2))
+            carryoverAmount: Number(carryoverAmt.toFixed(2)),
+            student_count: calc.student_count || undefined
+          }
+        } else if (cycleObj) {
+          const totalPreGst = cycleObj.discounted_total !== undefined 
+            ? Number(cycleObj.discounted_total) 
+            : (cycleObj.total ? Number((cycleObj.total / 1.18).toFixed(2)) : 0)
+          const cDays = cycleObj.carryover_days || backendCycles.carryover_days || 0
+          const cAmt = cycleObj.carryover_amount || (cDays > 0 ? (totalPreGst * (cDays / (12 * 30))) : 0)
+
+          newRates[stateKey] = {
+            ...newRates[stateKey],
+            discount: resolvedDiscount,
+            baseRate: cycleObj.monthly_subscription_rate || currentStudentRate || 10,
+            multiplier: cycleObj.cycle_months || baseMultiplier,
+            cycleMonths: cycleObj.cycle_months || baseMultiplier,
+            totalAmount: totalPreGst || undefined,
+            totalAmountWithGst: cycleObj.total ? Number(cycleObj.total) : (totalPreGst ? Number((totalPreGst * 1.18).toFixed(2)) : undefined),
+            gstAmount: cycleObj.gst_amount ? Number(cycleObj.gst_amount) : (totalPreGst ? Number((totalPreGst * 0.18).toFixed(2)) : undefined),
+            isExtraStudentsPayment: cycleObj.is_extra_students_payment || false,
+            extraStudentsAmount: cycleObj.extra_students_amount || 0,
+            carryoverDays: cDays,
+            carryoverAmount: Number(cAmt.toFixed(2)),
+            student_count: cycleObj.student_count || undefined
           }
         } else {
-          // If no calculation returned (e.g. 0 students), update the cycle rate with the backend discount!
           newRates[stateKey] = {
             ...newRates[stateKey],
             discount: resolvedDiscount,
@@ -1165,19 +1205,38 @@ const ClientProducts = () => {
             setCycleRates(prev => {
               const prevRate = prev[selectedCycle] || {}
               const baseMultiplier = selectedCycle === 'monthly' ? 1 : selectedCycle === 'quarterly' ? 3 : selectedCycle === 'half-yearly' ? 6 : 12
+
+              const baseMonthly = Number(calc.base_monthly_amount) || 0
+              const carryoverFrac = Number(calc.carryover_fraction) || 0
+              const cycleMonths = Number(calc.cycle_months) || (calc.is_extra_students_payment ? 1 : baseMultiplier)
+              const disc = (calc.discount_percentage !== undefined && calc.discount_percentage !== null)
+                ? Number(calc.discount_percentage)
+                : (prevRate.discount ?? 0)
+
+              const discountedMonthly = baseMonthly * (1 - disc / 100)
+              const carryoverAmt = discountedMonthly * carryoverFrac
+              const regularAmt = discountedMonthly * cycleMonths
+
+              const computedSubtotal = Number((carryoverAmt + regularAmt).toFixed(2))
+              const totalPreGst = calc.is_extra_students_payment && calc.extra_students_amount 
+                ? Number(calc.extra_students_amount) 
+                : (calc.discounted_total !== undefined ? Number(calc.discounted_total) : computedSubtotal)
+
               return {
                 ...prev,
                 [selectedCycle]: {
                   ...prevRate,
                   baseRate: calc.student_count > 0 ? (calc.base_monthly_amount / calc.student_count) : (prevRate.baseRate || (calc.monthly_subscription_rate ? Number(calc.monthly_subscription_rate) : null)),
-                  cycleMonths: calc.cycle_months || (calc.is_extra_students_payment ? 1 : baseMultiplier),
+                  cycleMonths: cycleMonths,
                   multiplier: calc.multiplier || baseMultiplier,
-                  discount: (calc.discount_percentage !== undefined && calc.discount_percentage !== null) ? Number(calc.discount_percentage) : (prevRate.discount ?? 0),
-                  totalAmount: calc.is_extra_students_payment && calc.extra_students_amount ? Number(calc.extra_students_amount) : (Number(calc.subtotal) || prevRate.totalAmount),
-                  totalAmountWithGst: calc.total_amount || 0,
-                  gstAmount: calc.gst_amount || 0,
+                  discount: disc,
+                  totalAmount: totalPreGst,
+                  totalAmountWithGst: calc.total_amount || Number((totalPreGst * 1.18).toFixed(2)),
+                  gstAmount: calc.gst_amount || Number((totalPreGst * 0.18).toFixed(2)),
                   isExtraStudentsPayment: calc.is_extra_students_payment || false,
-                  extraStudentsAmount: calc.extra_students_amount || 0
+                  extraStudentsAmount: calc.extra_students_amount || 0,
+                  carryoverDays: calc.carryover_days || 0,
+                  carryoverAmount: Number(carryoverAmt.toFixed(2))
                 }
               }
             })
@@ -1188,10 +1247,10 @@ const ClientProducts = () => {
   }, [selectedCycle, clientToken, isClientAuthenticated])
 
   useEffect(() => {
-    if (isClientAuthenticated && clientToken && (productData || paymentStatus)) {
+    if (isClientAuthenticated && clientToken && (productData || paymentStatus || studentCountData)) {
       fetchEstimatesData()
     }
-  }, [productData, paymentStatus?.delivery_info?.last_payment_cycle])
+  }, [productData, paymentStatus?.delivery_info?.last_payment_cycle, studentCountData])
 
   useEffect(() => {
     if (!productsFetched) setLoading(true)
@@ -1205,106 +1264,7 @@ const ClientProducts = () => {
     console.log('[DEBUG DATES] paymentStatus:', paymentStatus)
   }, [productData, profileData, paymentStatus])
 
-  // Dynamic sandbox price calculations based on slider student volume
-  const estimates = useMemo(() => {
-    const num = Number(calcStudents) || 0
-
-    const localDisplayUser = profileData || clientUser || {}
-    const localDisplayProducts = productData || []
-    const localActiveProduct = localDisplayProducts[0] || {}
-    const localProductName = localActiveProduct?.name || localActiveProduct?.product_name || localDisplayUser?.product_name || ''
-    const localIsInstitutePro = localProductName ? (localProductName.toLowerCase().includes('institute pro') || localProductName.toLowerCase().includes('nexgn')) : false
-    const localIsNexgnSaas = isSaasClient(localDisplayUser) || isSaasClient(localActiveProduct) || (localProductName && localProductName.toLowerCase().includes('nexgn'))
-    const localSubscriptionPrice = localActiveProduct?.monthly_subscription ?? localDisplayUser?.monthly_subscription ?? 0
-
-    const currentStudentRate = (() => {
-      if (localIsNexgnSaas || localIsInstitutePro) {
-        if (cycleRates[selectedCycle]?.baseRate && cycleRates[selectedCycle].baseRate >= 1) {
-          return cycleRates[selectedCycle].baseRate
-        }
-        const monthlySub = Number(localActiveProduct?.monthly_subscription ?? localDisplayUser?.monthly_subscription ?? 0)
-        const isPerPerson = localActiveProduct?.per_person ?? localDisplayUser?.per_person ?? true
-        if (isPerPerson || (monthlySub > 0 && monthlySub <= 100)) {
-          return monthlySub > 0 ? monthlySub : 10
-        }
-        const totalStudents = studentCountData?.student_count || localActiveProduct?.total_students || 0
-        return (totalStudents > 0 && monthlySub > 0) ? (monthlySub / totalStudents) : (monthlySub || 10)
-      }
-      return localSubscriptionPrice
-    })()
-
-    const getCycleUnitRate = (cycleKey) => {
-      const rateObj = cycleRates[cycleKey]
-      if (rateObj?.baseRate && rateObj.baseRate >= 1) {
-        return rateObj.baseRate
-      }
-      return currentStudentRate || 10
-    }
-
-    return [
-      {
-        duration: '1 Month',
-        title: 'Monthly Plan',
-        pricePerStudent: getCycleUnitRate('monthly') * (1 - (cycleRates.monthly?.discount || 0) / 100),
-        discount: cycleRates.monthly?.discount,
-        multiplier: cycleRates.monthly?.multiplier || 1,
-        badge: 'Short-term'
-      },
-      {
-        duration: '3 Months',
-        title: 'Quarterly Plan',
-        pricePerStudent: getCycleUnitRate('quarterly') * (1 - (cycleRates.quarterly?.discount || 0) / 100),
-        discount: cycleRates.quarterly?.discount,
-        multiplier: cycleRates.quarterly?.multiplier || 3,
-        badge: 'Popular'
-      },
-      {
-        duration: '6 Months',
-        title: 'Half-Yearly Plan',
-        pricePerStudent: getCycleUnitRate('half-yearly') * (1 - (cycleRates['half-yearly']?.discount || 0) / 100),
-        discount: cycleRates['half-yearly']?.discount,
-        multiplier: cycleRates['half-yearly']?.multiplier || 6,
-        badge: 'Recommended'
-      },
-      {
-        duration: '12 Months',
-        title: 'Yearly Plan',
-        pricePerStudent: getCycleUnitRate('yearly') * (1 - (cycleRates.yearly?.discount || 0) / 100),
-        discount: cycleRates.yearly?.discount,
-        multiplier: cycleRates.yearly?.multiplier || 12,
-        badge: 'Best Value'
-      }
-    ].map(plan => {
-      const baseTermCost = num * plan.pricePerStudent * plan.multiplier
-      const gstAmount = baseTermCost * 0.18 // 18% GST
-      const hasDiscount = plan.discount !== null && plan.discount !== undefined
-      return {
-        ...plan,
-        total: Math.round(baseTermCost + gstAmount),
-        savings: hasDiscount ? (plan.discount > 0 ? `${plan.discount}% Off` : 'Base Rate') : '—'
-      }
-    })
-  }, [calcStudents, cycleRates, selectedCycle, studentCountData, profileData, clientUser, productData])
-
-  // Pagination
-  const itemsPerPage = 10
-  const totalPages = Math.ceil(rechargeHistory.length / itemsPerPage)
-  const paginatedHistory = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage
-    return rechargeHistory.slice(start, start + itemsPerPage)
-  }, [rechargeHistory, currentPage])
-
-  if (loading && !profileData && !productData) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <svg className="w-6 h-6 animate-spin text-indigo-500" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-        </svg>
-      </div>
-    )
-  }
-
+  // ─── User Profile & Product Data Helpers ───
   const displayUser = profileData || clientUser || {}
   const displayProducts = productData || []
   const activeProduct = displayProducts[0] || {}
@@ -1316,7 +1276,6 @@ const ClientProducts = () => {
   const getOrderField = (obj, field) => {
     if (!obj || typeof obj !== 'object') return null;
 
-    // Check client_order or other standard keys directly
     const orderObj = obj.client_order ||
       (Array.isArray(obj.client_orders) ? obj.client_orders[0] : obj.client_orders) ||
       obj.order ||
@@ -1385,6 +1344,149 @@ const ClientProducts = () => {
     return null;
   })()
 
+  // ─── Total Effective Students Count for subscription calculation ───
+  // Fallback: If live student enrollment is 0 or missing, check cycle rates then Tentative Student Count from onboarding.
+  const effectiveTotalStudents = (() => {
+    const realTimeCount = Number(studentCountData?.student_count)
+    if (!isNaN(realTimeCount) && realTimeCount > 0) {
+      return realTimeCount
+    }
+    const cycleStudentCount = Number(
+      cycleRates[selectedCycle]?.student_count || 
+      Object.values(cycleRates).find(r => r?.student_count > 0)?.student_count
+    )
+    if (!isNaN(cycleStudentCount) && cycleStudentCount > 0) {
+      return cycleStudentCount
+    }
+    const tentative = Number(tentativeStudentCount)
+    if (!isNaN(tentative) && tentative > 0) {
+      return tentative
+    }
+    const prodCount = Number(activeProduct?.total_students || displayUser?.total_students)
+    if (!isNaN(prodCount) && prodCount > 0) {
+      return prodCount
+    }
+    return 0
+  })()
+
+  useEffect(() => {
+    if (effectiveTotalStudents > 0) {
+      setCalcStudents(effectiveTotalStudents)
+    }
+  }, [studentCountData?.student_count, tentativeStudentCount])
+
+  // Dynamic sandbox price calculations based on slider student volume
+  const estimates = useMemo(() => {
+    const num = Number(calcStudents) || 0
+
+    const localDisplayUser = profileData || clientUser || {}
+    const localDisplayProducts = productData || []
+    const localActiveProduct = localDisplayProducts[0] || {}
+    const localProductName = localActiveProduct?.name || localActiveProduct?.product_name || localDisplayUser?.product_name || ''
+    const localIsInstitutePro = localProductName ? (localProductName.toLowerCase().includes('institute pro') || localProductName.toLowerCase().includes('nexgn')) : false
+    const localIsNexgnSaas = isSaasClient(localDisplayUser) || isSaasClient(localActiveProduct) || (localProductName && localProductName.toLowerCase().includes('nexgn'))
+    const localSubscriptionPrice = localActiveProduct?.monthly_subscription ?? localDisplayUser?.monthly_subscription ?? 0
+
+    const currentStudentRate = (() => {
+      if (localIsNexgnSaas || localIsInstitutePro) {
+        if (cycleRates[selectedCycle]?.baseRate && cycleRates[selectedCycle].baseRate >= 1) {
+          return cycleRates[selectedCycle].baseRate
+        }
+        const monthlySub = Number(localActiveProduct?.monthly_subscription ?? localDisplayUser?.monthly_subscription ?? 0)
+        const isPerPerson = localActiveProduct?.per_person ?? localDisplayUser?.per_person ?? true
+        if (isPerPerson || (monthlySub > 0 && monthlySub <= 100)) {
+          return monthlySub > 0 ? monthlySub : 10
+        }
+        const totalStudents = effectiveTotalStudents
+        return (totalStudents > 0 && monthlySub > 0) ? (monthlySub / totalStudents) : (monthlySub || 10)
+      }
+      return localSubscriptionPrice
+    })()
+
+    const getCycleUnitRate = (cycleKey) => {
+      const rateObj = cycleRates[cycleKey]
+      if (rateObj?.baseRate && rateObj.baseRate >= 1) {
+        return rateObj.baseRate
+      }
+      return currentStudentRate || 10
+    }
+
+    const getCycleDiscount = (cycleKey) => {
+      const rateDiscount = cycleRates[cycleKey]?.discount
+      if (rateDiscount !== null && rateDiscount !== undefined && Number(rateDiscount) > 0) {
+        return Number(rateDiscount)
+      }
+      if (localIsNexgnSaas || localIsInstitutePro) {
+        if (cycleKey === 'yearly' || cycleKey === 'annual') return 40
+        if (cycleKey === 'half-yearly' || cycleKey === 'half_yearly') return 5
+      }
+      return (rateDiscount !== null && rateDiscount !== undefined) ? Number(rateDiscount) : 0
+    }
+
+    return [
+      {
+        duration: '1 Month',
+        title: 'Monthly Plan',
+        pricePerStudent: getCycleUnitRate('monthly') * (1 - getCycleDiscount('monthly') / 100),
+        discount: getCycleDiscount('monthly'),
+        multiplier: cycleRates.monthly?.multiplier || 1,
+        badge: 'Short-term'
+      },
+      {
+        duration: '3 Months',
+        title: 'Quarterly Plan',
+        pricePerStudent: getCycleUnitRate('quarterly') * (1 - getCycleDiscount('quarterly') / 100),
+        discount: getCycleDiscount('quarterly'),
+        multiplier: cycleRates.quarterly?.multiplier || 3,
+        badge: 'Popular'
+      },
+      {
+        duration: '6 Months',
+        title: 'Half-Yearly Plan',
+        pricePerStudent: getCycleUnitRate('half-yearly') * (1 - getCycleDiscount('half-yearly') / 100),
+        discount: getCycleDiscount('half-yearly'),
+        multiplier: cycleRates['half-yearly']?.multiplier || 6,
+        badge: 'Recommended'
+      },
+      {
+        duration: '12 Months',
+        title: 'Yearly Plan',
+        pricePerStudent: getCycleUnitRate('yearly') * (1 - getCycleDiscount('yearly') / 100),
+        discount: getCycleDiscount('yearly'),
+        multiplier: cycleRates.yearly?.multiplier || 12,
+        badge: 'Best Value'
+      }
+    ].map(plan => {
+      const baseTermCost = num * plan.pricePerStudent * plan.multiplier
+      const gstAmount = baseTermCost * 0.18 // 18% GST
+      const hasDiscount = plan.discount !== null && plan.discount !== undefined
+      return {
+        ...plan,
+        total: Math.round(baseTermCost + gstAmount),
+        savings: hasDiscount ? (plan.discount > 0 ? `${plan.discount}% Off` : 'Base Rate') : '—'
+      }
+    })
+  }, [calcStudents, cycleRates, selectedCycle, studentCountData, profileData, clientUser, productData])
+
+  // Pagination
+  const itemsPerPage = 10
+  const totalPages = Math.ceil(rechargeHistory.length / itemsPerPage)
+  const paginatedHistory = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage
+    return rechargeHistory.slice(start, start + itemsPerPage)
+  }, [rechargeHistory, currentPage])
+
+  if (loading && !profileData && !productData) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <svg className="w-6 h-6 animate-spin text-indigo-500" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+        </svg>
+      </div>
+    )
+  }
+
   const securityDeposit = activeProduct?.processing_fee ?? displayUser?.processing_fee ?? 0
   const subscriptionPrice = activeProduct?.monthly_subscription ?? displayUser?.monthly_subscription ?? 0
 
@@ -1401,7 +1503,7 @@ const ClientProducts = () => {
       if (isPerPerson || (monthlySub > 0 && monthlySub <= 100)) {
         return monthlySub > 0 ? monthlySub : 10
       }
-      const totalStudents = studentCountData?.student_count || activeProduct?.total_students || 0
+      const totalStudents = effectiveTotalStudents
       return (totalStudents > 0 && monthlySub > 0) ? (monthlySub / totalStudents) : (monthlySub || 10)
     }
     return subscriptionPrice
@@ -1435,8 +1537,13 @@ const ClientProducts = () => {
     ? Number(rateInfo.discount)
     : sessionDiscount
   const currentMultiplier = rateInfo.multiplier || 1
-  const students = studentCountData?.student_count || 0
-  const priceForSelectedCycle = currentStudentRate * students * currentMultiplier * (1 - (currentDiscount || 0) / 100)
+  const students = effectiveTotalStudents
+  const priceForSelectedCycle = (() => {
+    const regularAmount = currentStudentRate * students * currentMultiplier * (1 - (currentDiscount || 0) / 100)
+    const carryDays = cycleRates[selectedCycle]?.carryoverDays || 0
+    const carryAmt = cycleRates[selectedCycle]?.carryoverAmount || (carryDays > 0 ? (currentStudentRate * students * (1 - (currentDiscount || 0) / 100)) * (carryDays / 30) : 0)
+    return Number((regularAmount + carryAmt).toFixed(2))
+  })()
 
   // unpaidStudentsCount — how many new students have unpaid subscription fees.
   const unpaidStudentsCount = (() => {
@@ -1479,12 +1586,15 @@ const ClientProducts = () => {
   // For the 'never paid' fallback, compute using the selected cycle so it updates live when cycle is changed
   const cycleBasedFallback = (() => {
     if (!isInstitutePro) return subscriptionPrice
-    const sc = studentCountData?.student_count || 0
+    const sc = effectiveTotalStudents
     if (sc === 0) return 0
     const rate = cycleRates[selectedCycle]?.baseRate || currentStudentRate || 10
     const multiplier = cycleRates[selectedCycle]?.multiplier || 1
     const discount = currentDiscount || 0
-    return Math.round(sc * rate * multiplier * (1 - discount / 100))
+    const regularAmount = sc * rate * multiplier * (1 - discount / 100)
+    const carryDays = cycleRates[selectedCycle]?.carryoverDays || 0
+    const carryAmt = cycleRates[selectedCycle]?.carryoverAmount || (carryDays > 0 ? (sc * rate * (1 - discount / 100)) * (carryDays / 30) : 0)
+    return Math.round((regularAmount + carryAmt) * 100) / 100
   })()
 
   // For extra students added in the same session: same backend discount is applied
@@ -1536,9 +1646,6 @@ const ClientProducts = () => {
     if (apiTotal) return apiTotal
     return priceForSelectedCycle
   })()
-
-  // ─── Total Students Count for subscription calculation ───
-  const effectiveTotalStudents = studentCountData?.student_count ?? tentativeStudentCount ?? activeProduct?.total_students ?? displayUser?.total_students ?? 0
 
   // ─── Determine if client has paid for any subscription plan ───
   const latestSubPayment = rechargeHistory.find(p => p.rawType === 'subscription' && Number(p.amount) > 0)
@@ -1624,9 +1731,11 @@ const ClientProducts = () => {
         if (isSubscriptionOverdue && subDueAmount > 0) {
           return Math.round(subDueAmount * 1.18 * 100) / 100
         }
-        // Simple formula: students × rate × months × (1 - discount/100)
+        // Simple formula: students × rate × months × (1 - discount/100) + carryover
         const grossSubtotal = sc * rate * multiplier * (1 - discount / 100)
-        return Math.round(grossSubtotal * 1.18 * 100) / 100
+        const carryDays = cycleRates[cycle]?.carryoverDays || 0
+        const carryAmt = cycleRates[cycle]?.carryoverAmount || (carryDays > 0 ? (sc * rate * (1 - discount / 100)) * (carryDays / 30) : 0)
+        return Math.round((grossSubtotal + carryAmt) * 1.18 * 100) / 100
       }
       return 0
     }
@@ -2180,7 +2289,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-0.5">Student Enrollment</span>
               <div className="flex items-center gap-1.5 sm:justify-end">
                 <span className="text-2xl font-black text-slate-800 font-mono">
-                  {studentCountData?.student_count !== undefined ? studentCountData.student_count : '0'}
+                  {effectiveTotalStudents || 0}
                 </span>
                 <span className="text-[10px] text-slate-400 font-semibold uppercase">Total</span>
               </div>

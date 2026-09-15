@@ -6,7 +6,7 @@ import razorpayImg from '../../assets/images/razorpay.png'
 
 const ClientPgKyc = () => {
   const { clientToken, clientUser } = useClientAuthStore()
-  const [activeSubTab, setActiveSubTab] = useState('comparison')
+  const [activeSubTab, setActiveSubTab] = useState('kyc_form')
 
   // Dynamic API states
   const [kycData, setKycData] = useState(null)
@@ -175,16 +175,6 @@ const ClientPgKyc = () => {
           {/* Pill Capsule Subtab Switcher */}
           <div className="flex p-1 bg-slate-100 rounded-2xl shrink-0 self-start md:self-auto shadow-inner border border-slate-200/40">
             <button
-              onClick={() => setActiveSubTab('comparison')}
-              className={`py-2 px-4 rounded-xl text-xs font-black tracking-tight transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeSubTab === 'comparison'
-                  ? 'bg-white text-[#1e3e6b] shadow-sm'
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              <span>⚖️</span> Gateway Info
-            </button>
-            <button
               onClick={() => setActiveSubTab('kyc_form')}
               className={`py-2 px-4 rounded-xl text-xs font-black tracking-tight transition-all cursor-pointer flex items-center gap-1.5 ${
                 activeSubTab === 'kyc_form'
@@ -193,6 +183,16 @@ const ClientPgKyc = () => {
               }`}
             >
               <span>📝</span> Onboarding Form
+            </button>
+            <button
+              onClick={() => setActiveSubTab('comparison')}
+              className={`py-2 px-4 rounded-xl text-xs font-black tracking-tight transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeSubTab === 'comparison'
+                  ? 'bg-white text-[#1e3e6b] shadow-sm'
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <span>⚖️</span> Gateway Info
             </button>
           </div>
         </div>
@@ -220,7 +220,7 @@ const ClientPgKyc = () => {
                   <div className="flex gap-3 items-center">
                     <span className="flex-shrink-0 w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-lg">⚡</span>
                     <div>
-                      <h5 className="font-bold text-xs">2% Transaction Rate</h5>
+                      <h5 className="font-bold text-xs">Low Transaction Rate</h5>
                       <p className="text-[10px] text-slate-300 mt-0.5">Industry standard flat rates on domestic payment modes.</p>
                     </div>
                   </div>
@@ -259,7 +259,11 @@ const ClientPgKyc = () => {
                     <ul className="text-xs text-slate-600 mt-6 space-y-3.5 font-bold">
                       <li className="flex items-center gap-3">
                         <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center text-[10px]">✓</span>
-                        <span>Flat 2.0% transaction fee</span>
+                        <span>Low transaction fee</span>
+                      </li>
+                      <li className="flex items-center gap-3">
+                        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center text-[10px]">✓</span>
+                        <span>Zero Payment Gateway Cost to School — Gateway Charges Paid by Students</span>
                       </li>
                       <li className="flex items-center gap-3">
                         <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center text-[10px]">✓</span>

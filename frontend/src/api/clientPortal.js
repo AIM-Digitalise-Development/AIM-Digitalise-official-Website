@@ -51,6 +51,9 @@ export const clientLogout = (token) =>
 export const getClientStudentCount = (token) =>
   clientPortalFetch('GET', '/client/student-count', null, token)
 
+export const getClientTeacherCount = (token) =>
+  clientPortalFetch('GET', '/client/teacher-count', null, token)
+
 export const getClientPaymentCycles = (token) =>
   clientPortalFetch('GET', '/client/payment-cycles', null, token)
 
