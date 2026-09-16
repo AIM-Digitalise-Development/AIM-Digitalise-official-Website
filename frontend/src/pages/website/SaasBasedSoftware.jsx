@@ -865,12 +865,11 @@ const SaasBasedSoftware = () => {
 
                       <div className="flex gap-6 items-center">
                         <a
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            alert(`Initiating agreement guidelines download for Plan ${activePlan.id}: ${activePlan.name}`)
-                          }}
-                          className="text-xs font-bold text-aim-copy-muted hover:text-aim-gold flex items-center gap-1.5 transition"
+                          href={`${import.meta.env.VITE_API_BASE_URL || 'https://api.nexgn.in/api'}/public/download-agreement`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-bold text-aim-copy-muted hover:text-aim-gold flex items-center gap-1.5 transition cursor-pointer"
+                          title="Download Sample Rental Agreement"
                         >
                           <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
