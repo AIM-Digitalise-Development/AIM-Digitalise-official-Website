@@ -129,3 +129,20 @@ export const createUnifiedOrder = (cycle, token) =>
 export const verifyUnifiedPayment = (paymentData, token) =>
   clientPortalFetch('POST', '/client/unified/verify-payment', paymentData, token)
 
+export const getClientAgreementData = (token) =>
+  clientPortalFetch('GET', '/client/agreement/data', null, token)
+
+export const downloadAgreementPdf = async (token) => {
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.nexgn.in/api'
+  const response = await axios({
+    url: `${API_BASE_URL}/client/agreement/download`,
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`
+    },
+    responseType: 'blob'
+  })
+  return response.data
+}
+
+

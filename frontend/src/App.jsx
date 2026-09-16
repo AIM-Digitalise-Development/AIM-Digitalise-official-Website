@@ -69,6 +69,7 @@ import ClientSupport from './pages/client/Support'
 import ClientCustomization from './pages/client/Customization'
 import ClientAddonServices from './pages/client/AddonServices'
 import ClientPgKyc from './pages/client/PgKyc'
+import ClientDownloadAgreement from './pages/client/DownloadAgreement'
 import DemoPortal from './pages/demo/DemoPortal'
 import DemoDashboard from './pages/demo/DemoDashboard'
 import DemoEmployeePunchIn from './pages/demo/DemoEmployeePunchIn'
@@ -211,6 +212,7 @@ function App() {
             <Route path="customization" element={<ClientCustomization />} />
             <Route path="addon-services" element={<ClientAddonServices />} />
             <Route path="pg-kyc" element={<ClientPgKyc />} />
+            <Route path="download-agreement" element={<ClientDownloadAgreement />} />
           </Route>
 
           {/* ── Demo Portal (no auth required, dark admin-style with demo data) ── */}

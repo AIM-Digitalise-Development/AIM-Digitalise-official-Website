@@ -67,6 +67,7 @@ export const ROUTES = {
     CUSTOMIZATION: '/client/portal/customization',
     ADDON_SERVICES: '/client/portal/addon-services',
     PG_KYC: '/client/portal/pg-kyc',
+    DOWNLOAD_AGREEMENT: '/client/portal/download-agreement',
   },
   AUTH: {
     LOGIN: '/login',
