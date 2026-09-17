@@ -25,6 +25,30 @@ import {
 import { normalizeService } from '../employee/GeneralClients'
 import { usePartnerAuthStore } from '../../store/partnerAuthStore'
 
+export const LEAD_STATUS_OPTIONS = [
+  { value: 'attended', label: 'Attended' },
+  { value: 'not attended', label: 'Not Attended' },
+  { value: 'qualified', label: 'Qualified' },
+  { value: 'qotation send', label: 'Qotation Send' },
+  { value: 'persuing to purchase', label: 'Persuing to Purchase' },
+  { value: 'order closed', label: 'Order Closed' },
+  { value: 'not interested', label: 'Not Interested' }
+]
+
+function FieldError({ error }) {
+  if (!error) return null
+  return (
+    <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 text-[11px] leading-tight text-left animate-fade-in pl-0.5">
+      <span className="text-rose-400 font-medium">{error.mistake}</span>
+      {error.example && (
+        <span className="text-[10px] text-gray-400 font-normal">
+          (e.g. <span className="text-emerald-400 font-mono font-medium">{error.example}</span>)
+        </span>
+      )}
+    </p>
+  )
+}
+
 export default function PartnerLeads() {
   const { partnerUser } = usePartnerAuthStore()
   const partnerName = partnerUser?.name || partnerUser?.full_name || partnerUser?.partner_id || 'Partner'
@@ -88,7 +112,7 @@ export default function PartnerLeads() {
   const [followUpLead, setFollowUpLead] = useState(null)
   const [followUpForm, setFollowUpForm] = useState({
     next_date: '',
-    status: 'new',
+    status: 'attended',
     remark: ''
   })
 
@@ -117,7 +141,7 @@ export default function PartnerLeads() {
     gst_type: 'Intra-State',
     gstin: '',
     lead_source: 'Website',
-    lead_status: 'new',
+    lead_status: 'not attended',
     lead_priority: 'medium',
     notes: '',
     budget: '',
@@ -132,10 +156,13 @@ export default function PartnerLeads() {
   })
 
   const [statusForm, setStatusForm] = useState({
-    status: 'new',
+    status: 'attended',
     notes: '',
     lost_reason: ''
   })
+
+  const [touchedFields, setTouchedFields] = useState({})
+  const [isSubmitAttempted, setIsSubmitAttempted] = useState(false)
 
   const [activityForm, setActivityForm] = useState({
     activity_type: 'call',
@@ -235,6 +262,247 @@ export default function PartnerLeads() {
       return (p1 && p1 === currentCleaned) || (p2 && p2 === currentCleaned)
     })
   }, [leadForm.client_alternate_phone, existingPool, editingLead])
+
+  // Centralized real-time validation pointing out mistakes with correct examples
+  const getFieldErrors = (form = leadForm, isSubmitted = false) => {
+    const errors = {}
+
+    // 1. Client Name (Contact Person)
+    const nameVal = (form.client_name || '').trim()
+    if (!nameVal) {
+      if (isSubmitted || touchedFields.client_name) {
+        errors.client_name = {
+          mistake: 'Contact Person name is required.',
+          example: 'Rajesh Sharma'
+        }
+      }
+    } else if (nameVal.length < 2) {
+      errors.client_name = {
+        mistake: 'Name must be at least 2 characters.',
+        example: 'Amit Kumar'
+      }
+    } else if (/[0-9]/.test(nameVal)) {
+      errors.client_name = {
+        mistake: 'Name cannot contain numbers.',
+        example: 'Rahul Sharma'
+      }
+    } else if (/[!@#$%^&*()_+=[\]{};:"\\|<>/?~`]/.test(nameVal)) {
+      errors.client_name = {
+        mistake: 'Name cannot contain special symbols.',
+        example: 'Priya Patel'
+      }
+    }
+
+    // 2. Client Phone (Contact No)
+    const rawPhone = (form.client_phone || '').trim()
+    const digitsPhone = rawPhone.replace(/\D/g, '')
+    if (!rawPhone) {
+      if (isSubmitted || touchedFields.client_phone) {
+        errors.client_phone = {
+          mistake: 'Contact number is required.',
+          example: '9876543210'
+        }
+      }
+    } else if (isDuplicatePhone) {
+      errors.client_phone = {
+        mistake: 'Contact number is already registered.',
+        example: '9876543210'
+      }
+    } else if (/[a-zA-Z]/.test(rawPhone)) {
+      errors.client_phone = {
+        mistake: 'Phone numbers must be digits only.',
+        example: '9876543210'
+      }
+    } else if (digitsPhone.length === 12 && digitsPhone.startsWith('91')) {
+      const tenDigit = digitsPhone.slice(2)
+      if (!/^[6-9]/.test(tenDigit)) {
+        errors.client_phone = {
+          mistake: 'Mobile number must start with 6, 7, 8, or 9.',
+          example: '91 9876543210'
+        }
+      }
+    } else if (digitsPhone.length === 10) {
+      if (!/^[6-9]/.test(digitsPhone)) {
+        errors.client_phone = {
+          mistake: 'Mobile number must start with 6, 7, 8, or 9.',
+          example: '9876543210'
+        }
+      }
+    } else {
+      errors.client_phone = {
+        mistake: `Must be a valid 10-digit number (${digitsPhone.length} digits entered).`,
+        example: '9876543210'
+      }
+    }
+
+    // 3. Client Email
+    const emailVal = (form.client_email || '').trim()
+    if (emailVal) {
+      if (isDuplicateEmail) {
+        errors.client_email = {
+          mistake: 'Email is already registered.',
+          example: 'client@company.com'
+        }
+      } else if (/\s/.test(emailVal)) {
+        errors.client_email = {
+          mistake: 'Email cannot contain spaces.',
+          example: 'client@company.com'
+        }
+      } else if (!emailVal.includes('@')) {
+        errors.client_email = {
+          mistake: 'Missing "@" symbol in email.',
+          example: 'client@domain.com'
+        }
+      } else {
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+        if (!emailRegex.test(emailVal)) {
+          errors.client_email = {
+            mistake: 'Invalid email address format.',
+            example: 'client@example.com'
+          }
+        }
+      }
+    }
+
+    // 4. Alternate Phone
+    const altRaw = (form.client_alternate_phone || '').trim()
+    const altDigits = altRaw.replace(/\D/g, '')
+    if (altRaw) {
+      if (isDuplicateAltPhone) {
+        errors.client_alternate_phone = {
+          mistake: 'Alternate number is already registered.',
+          example: '9876543210'
+        }
+      } else if (rawPhone && normalizePhoneForCheck(altRaw) === normalizePhoneForCheck(rawPhone)) {
+        errors.client_alternate_phone = {
+          mistake: 'Alternate phone cannot match primary phone.',
+          example: 'Leave empty or use different number'
+        }
+      } else if (/[a-zA-Z]/.test(altRaw)) {
+        errors.client_alternate_phone = {
+          mistake: 'Phone numbers must be digits only.',
+          example: '9876543210'
+        }
+      } else if (altDigits.length === 12 && altDigits.startsWith('91')) {
+        const tenDigit = altDigits.slice(2)
+        if (!/^[6-9]/.test(tenDigit)) {
+          errors.client_alternate_phone = {
+            mistake: 'Mobile number must start with 6, 7, 8, or 9.',
+            example: '91 9876543210'
+          }
+        }
+      } else if (altDigits.length === 10) {
+        if (!/^[6-9]/.test(altDigits)) {
+          errors.client_alternate_phone = {
+            mistake: 'Mobile number must start with 6, 7, 8, or 9.',
+            example: '9876543210'
+          }
+        }
+      } else {
+        errors.client_alternate_phone = {
+          mistake: `Must be a valid 10-digit number (${altDigits.length} digits entered).`,
+          example: '9876543210'
+        }
+      }
+    }
+
+    // 5. Category Selection
+    if (!form.category_id) {
+      if (isSubmitted || touchedFields.category_id) {
+        errors.category_id = {
+          mistake: 'Category selection is required.',
+          example: 'General Client or School ERP'
+        }
+      }
+    }
+
+    // 6. General Client Deliverables OR Subscription Product Selection
+    if (form.category_id === 'general_client') {
+      if (!form.selected_services || form.selected_services.length === 0) {
+        if (isSubmitted || touchedFields.selected_services) {
+          errors.selected_services = {
+            mistake: 'Select at least one deliverable service.',
+            example: 'Check a service from catalog below'
+          }
+        }
+      }
+    } else if (form.category_id) {
+      if (!form.sub_category_id) {
+        if (isSubmitted || touchedFields.sub_category_id) {
+          errors.sub_category_id = {
+            mistake: 'Sub-Category is required.',
+            example: 'Choose from dropdown'
+          }
+        }
+      }
+      if (!form.product_id) {
+        if (isSubmitted || touchedFields.product_id) {
+          errors.product_id = {
+            mistake: 'Product selection is required.',
+            example: 'Choose from dropdown'
+          }
+        }
+      }
+    }
+
+    // 7. Pin Code
+    const pinVal = (form.pin_code || '').trim()
+    if (pinVal) {
+      const pinDigits = pinVal.replace(/\D/g, '')
+      if (/[^\d]/.test(pinVal)) {
+        errors.pin_code = {
+          mistake: 'PIN code must contain numbers only.',
+          example: '700001 or 110001'
+        }
+      } else if (pinDigits.length !== 6) {
+        errors.pin_code = {
+          mistake: `PIN code must be 6 digits (${pinDigits.length} entered).`,
+          example: '700001 or 110001'
+        }
+      }
+    }
+
+    // 8. Client GSTIN
+    const gstinVal = (form.gstin || '').trim().toUpperCase()
+    if (gstinVal) {
+      const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
+      if (gstinVal.length !== 15) {
+        errors.gstin = {
+          mistake: `GSTIN must be 15 characters (${gstinVal.length} entered).`,
+          example: '19AAPCS3828N1ZH'
+        }
+      } else if (!/^[0-9]{2}/.test(gstinVal)) {
+        errors.gstin = {
+          mistake: 'GSTIN must begin with a 2-digit state code.',
+          example: '19AAPCS3828N1ZH'
+        }
+      } else if (!gstinRegex.test(gstinVal)) {
+        errors.gstin = {
+          mistake: 'Invalid GSTIN structure.',
+          example: '19AAPCS3828N1ZH'
+        }
+      }
+    }
+
+    // 9. Lead Status
+    const validStatuses = LEAD_STATUS_OPTIONS.map(o => o.value)
+    if (form.lead_status && !validStatuses.includes(String(form.lead_status).toLowerCase())) {
+      errors.lead_status = {
+        mistake: 'Select a valid status option.',
+        example: 'Attended, Qualified, Order Closed, etc.'
+      }
+    }
+
+    return errors
+  }
+
+  const fieldErrors = useMemo(() => {
+    return getFieldErrors(leadForm, isSubmitAttempted)
+  }, [leadForm, isDuplicatePhone, isDuplicateEmail, isDuplicateAltPhone, touchedFields, isSubmitAttempted])
+
+  const hasErrors = useMemo(() => {
+    return Object.keys(fieldErrors).length > 0
+  }, [fieldErrors])
 
   // Background fetch full list of leads for duplicate validation across all pages
   const fetchAllExistingLeads = async () => {
@@ -348,11 +616,22 @@ export default function PartnerLeads() {
           : Array.isArray(gcRes.data) ? gcRes.data : []
 
         const statusMap = {
-          'Attended': 'new',
-          'Quotation Sent': 'proposal',
-          'Pursuing to Purchase': 'negotiation',
-          'Order Closed': 'converted',
-          'Not Interested': 'lost'
+          'Attended': 'attended',
+          'Not Attended': 'not attended',
+          'Qualified': 'qualified',
+          'Quotation Sent': 'qotation send',
+          'Quotation Send': 'qotation send',
+          'Pursuing to Purchase': 'persuing to purchase',
+          'Persuing to Purchase': 'persuing to purchase',
+          'Order Closed': 'order closed',
+          'Not Interested': 'not interested',
+          'new': 'not attended',
+          'contacted': 'attended',
+          'proposal': 'qotation send',
+          'negotiation': 'persuing to purchase',
+          'converted': 'order closed',
+          'lost': 'not interested',
+          'junk': 'not interested'
         }
 
         const formattedGenClients = gcList.map(gc => ({
@@ -372,7 +651,7 @@ export default function PartnerLeads() {
           country: gc.country_code === 'IN' ? 'India' : (gc.country_code || 'India'),
           country_code: gc.country_code || 'IN',
           lead_source: gc.lead_source || 'Direct Enquiry',
-          lead_status: statusMap[gc.status] || 'new',
+          lead_status: statusMap[gc.status] || 'not attended',
           raw_status: gc.status,
           lead_priority: 'medium',
           category_id: 'general_client',
@@ -761,7 +1040,7 @@ export default function PartnerLeads() {
       gst_type: 'Intra-State',
       gstin: '',
       lead_source: 'Website',
-      lead_status: 'new',
+      lead_status: 'not attended',
       lead_priority: 'medium',
       notes: '',
       budget: '',
@@ -780,6 +1059,8 @@ export default function PartnerLeads() {
     setSubcategories([])
     setProducts([])
     setModalError('')
+    setTouchedFields({})
+    setIsSubmitAttempted(false)
     setIsCreateEditOpen(true)
   }
 
@@ -809,7 +1090,7 @@ export default function PartnerLeads() {
       gst_type: lead.gst_type || 'Intra-State',
       gstin: lead.gstin || '',
       lead_source: lead.lead_source || 'Website',
-      lead_status: lead.lead_status || 'new',
+      lead_status: lead.lead_status || 'not attended',
       lead_priority: lead.lead_priority || 'medium',
       notes: lead.notes || '',
       budget: lead.budget || '',
@@ -845,6 +1126,8 @@ export default function PartnerLeads() {
       setProducts([])
     }
     setModalError('')
+    setTouchedFields({})
+    setIsSubmitAttempted(false)
     setIsCreateEditOpen(true)
   }
 
@@ -860,17 +1143,25 @@ export default function PartnerLeads() {
   const handleCreateEditSubmit = async (e) => {
     if (e?.preventDefault) e.preventDefault()
 
-    // Validate duplicate phone and email before submission
-    if (isDuplicatePhone) {
-      setModalError('This phone no is already exist')
-      return
+    setIsSubmitAttempted(true)
+    const allTouched = {
+      client_name: true,
+      client_phone: true,
+      client_email: true,
+      client_alternate_phone: true,
+      category_id: true,
+      sub_category_id: true,
+      product_id: true,
+      selected_services: true,
+      pin_code: true,
+      gstin: true,
+      lead_status: true
     }
-    if (isDuplicateEmail) {
-      setModalError('This email is already exist')
-      return
-    }
-    if (isDuplicateAltPhone) {
-      setModalError('This phone no is already exist')
+    setTouchedFields(allTouched)
+
+    const currentErrors = getFieldErrors(leadForm, true)
+    if (Object.keys(currentErrors).length > 0) {
+      setModalError('Please correct the highlighted inputs with valid examples before submitting.')
       return
     }
 
@@ -880,6 +1171,16 @@ export default function PartnerLeads() {
       const cleanedPhone = cleanAndFixPhone(leadForm.client_phone)
       const cleanedAltPhone = cleanAndFixPhone(leadForm.client_alternate_phone)
       const isGeneralClient = leadForm.category_id === 'general_client'
+
+      const reverseGcStatusMap = {
+        'attended': 'Attended',
+        'not attended': 'Not Attended',
+        'qualified': 'Qualified',
+        'qotation send': 'Quotation Sent',
+        'persuing to purchase': 'Pursuing to Purchase',
+        'order closed': 'Order Closed',
+        'not interested': 'Not Interested'
+      }
 
       if (isGeneralClient && (!leadForm.selected_services || leadForm.selected_services.length === 0)) {
         const errMsg = 'Please select at least one service from the General Services catalog.'
@@ -909,7 +1210,7 @@ export default function PartnerLeads() {
           lead_source: leadForm.lead_source || 'Direct Enquiry',
           referred_by: 'Direct / None',
           sold_by: partnerName,
-          status: 'Attended',
+          status: reverseGcStatusMap[leadForm.lead_status] || 'Attended',
           next_followup_date: leadForm.expected_close_date || '',
           software_requirements: servicesString,
           selected_services: leadForm.selected_services || [],
@@ -1001,8 +1302,10 @@ export default function PartnerLeads() {
 
   const openStatusModal = (lead) => {
     setStatusLead(lead)
+    const currentStatus = lead.lead_status ? String(lead.lead_status).toLowerCase() : 'attended'
+    const valid = LEAD_STATUS_OPTIONS.some(o => o.value === currentStatus)
     setStatusForm({
-      status: lead.lead_status || 'new',
+      status: valid ? currentStatus : 'attended',
       notes: '',
       lost_reason: lead.lost_reason || ''
     })
@@ -1011,13 +1314,26 @@ export default function PartnerLeads() {
 
   const handleStatusSubmit = async (e) => {
     e.preventDefault()
-    if (statusForm.status === 'lost' && !statusForm.lost_reason.trim()) {
-      alert('Lost reason is required when marking a lead as lost.')
-      return
-    }
     try {
       setSaving(true)
-      await updateLeadStatus(statusLead.id, statusForm)
+      if (statusLead?.is_general_client || String(statusLead?.id).startsWith('gc-')) {
+        const rawId = statusLead.rawId || String(statusLead.id).replace('gc-', '')
+        const reverseGcStatusMap = {
+          'attended': 'Attended',
+          'not attended': 'Not Attended',
+          'qualified': 'Qualified',
+          'qotation send': 'Quotation Sent',
+          'persuing to purchase': 'Pursuing to Purchase',
+          'order closed': 'Order Closed',
+          'not interested': 'Not Interested'
+        }
+        await updatePartnerGeneralClient(rawId, {
+          status: reverseGcStatusMap[statusForm.status] || 'Attended',
+          notes: statusForm.notes || undefined
+        })
+      } else {
+        await updateLeadStatus(statusLead.id, statusForm)
+      }
       triggerSuccess('Lead status updated successfully.')
       setIsStatusModalOpen(false)
       loadLeads()
@@ -1091,9 +1407,11 @@ export default function PartnerLeads() {
 
   const openFollowUpModal = (lead) => {
     setFollowUpLead(lead)
+    const currentStatus = lead.lead_status ? String(lead.lead_status).toLowerCase() : 'attended'
+    const valid = LEAD_STATUS_OPTIONS.some(o => o.value === currentStatus)
     setFollowUpForm({
       next_date: lead.follow_up_date ? lead.follow_up_date.split(' ')[0] : (lead.expected_close_date ? lead.expected_close_date.split(' ')[0] : ''),
-      status: lead.lead_status || 'new',
+      status: valid ? currentStatus : 'attended',
       remark: ''
     })
     setIsFollowUpModalOpen(true)
@@ -1202,19 +1520,37 @@ export default function PartnerLeads() {
 
   // Formatting utils
   const getStatusBadge = (status) => {
-    const badges = {
-      new: 'bg-gray-400/10 text-gray-450 border-gray-400/25',
-      contacted: 'bg-blue-400/10 text-blue-400 border-blue-400/25',
-      qualified: 'bg-cyan-400/10 text-cyan-400 border-cyan-400/25',
-      proposal: 'bg-yellow-400/10 text-yellow-400 border-yellow-400/25',
-      negotiation: 'bg-amber-400/10 text-amber-400 border-amber-400/25',
-      converted: 'bg-green-400/10 text-green-450 border-green-400/25',
-      lost: 'bg-red-400/10 text-red-450 border-red-400/25',
-      junk: 'bg-red-500/10 text-red-300 border-red-550/25'
+    const raw = (status || '').toLowerCase().trim()
+    let label = 'NOT ATTENDED'
+    let style = 'bg-amber-400/10 text-amber-400 border-amber-400/25'
+
+    if (raw === 'attended' || raw === 'contacted') {
+      label = 'ATTENDED'
+      style = 'bg-blue-400/10 text-blue-400 border-blue-400/25'
+    } else if (raw === 'not attended' || raw === 'not_attended' || raw === 'new') {
+      label = 'NOT ATTENDED'
+      style = 'bg-amber-400/10 text-amber-400 border-amber-400/25'
+    } else if (raw === 'qualified') {
+      label = 'QUALIFIED'
+      style = 'bg-cyan-400/10 text-cyan-400 border-cyan-400/25'
+    } else if (raw === 'qotation send' || raw === 'quotation send' || raw === 'quotation sent' || raw === 'quotation_sent' || raw === 'proposal') {
+      label = 'QOTATION SEND'
+      style = 'bg-purple-400/10 text-purple-400 border-purple-400/25'
+    } else if (raw === 'persuing to purchase' || raw === 'pursuing to purchase' || raw === 'pursuing_to_purchase' || raw === 'negotiation') {
+      label = 'PERSUING TO PURCHASE'
+      style = 'bg-orange-400/10 text-orange-400 border-orange-400/25'
+    } else if (raw === 'order closed' || raw === 'order_closed' || raw === 'converted' || raw === 'closed') {
+      label = 'ORDER CLOSED'
+      style = 'bg-emerald-400/10 text-emerald-400 border-emerald-400/25'
+    } else if (raw === 'not interested' || raw === 'not_interested' || raw === 'lost' || raw === 'junk') {
+      label = 'NOT INTERESTED'
+      style = 'bg-rose-400/10 text-rose-400 border-rose-400/25'
+    } else if (status) {
+      label = status.toUpperCase()
+      style = 'bg-gray-400/10 text-gray-400 border-gray-400/25'
     }
-    const label = status?.toUpperCase() || 'NEW'
-    const c = badges[status] || badges.new
-    return <span className={`inline-flex text-[9px] font-black uppercase tracking-wider border rounded-md px-2 py-0.5 ${c}`}>{label}</span>
+
+    return <span className={`inline-flex text-[9px] font-black uppercase tracking-wider border rounded-md px-2 py-0.5 ${style}`}>{label}</span>
   }
 
   const getPriorityBadge = (priority) => {
@@ -1316,7 +1652,7 @@ export default function PartnerLeads() {
             setFollowUpToday(!followUpToday)
             setPendingFollowUp(false)
             setTodayDemo(false)
-            if (statusFilter === 'converted') setStatusFilter('')
+            if (statusFilter === 'converted' || statusFilter === 'order closed') setStatusFilter('')
             setPage(1)
           }}
           className={`bg-gradient-to-br from-[#1a1d2b] to-[#1e2235] p-4 rounded-2xl flex items-center justify-between transition-all duration-200 text-left border hover:scale-[1.02] active:scale-95 cursor-pointer ${
@@ -1340,7 +1676,7 @@ export default function PartnerLeads() {
             setPendingFollowUp(!pendingFollowUp)
             setFollowUpToday(false)
             setTodayDemo(false)
-            if (statusFilter === 'converted') setStatusFilter('')
+            if (statusFilter === 'converted' || statusFilter === 'order closed') setStatusFilter('')
             setPage(1)
           }}
           className={`bg-gradient-to-br from-[#1a1d2b] to-[#1e2235] p-4 rounded-2xl flex items-center justify-between transition-all duration-200 text-left border hover:scale-[1.02] active:scale-95 cursor-pointer ${
@@ -1364,7 +1700,7 @@ export default function PartnerLeads() {
             setTodayDemo(!todayDemo)
             setFollowUpToday(false)
             setPendingFollowUp(false)
-            if (statusFilter === 'converted') setStatusFilter('')
+            if (statusFilter === 'converted' || statusFilter === 'order closed') setStatusFilter('')
             setPage(1)
           }}
           className={`bg-gradient-to-br from-[#1a1d2b] to-[#1e2235] p-4 rounded-2xl flex items-center justify-between transition-all duration-200 text-left border hover:scale-[1.02] active:scale-95 cursor-pointer ${
@@ -1385,14 +1721,14 @@ export default function PartnerLeads() {
         {/* Total Conversion */}
         <button
           onClick={() => {
-            setStatusFilter(statusFilter === 'converted' ? '' : 'converted')
+            setStatusFilter(statusFilter === 'order closed' || statusFilter === 'converted' ? '' : 'order closed')
             setFollowUpToday(false)
             setPendingFollowUp(false)
             setTodayDemo(false)
             setPage(1)
           }}
           className={`bg-gradient-to-br from-[#1a1d2b] to-[#1e2235] p-4 rounded-2xl flex items-center justify-between transition-all duration-200 text-left border hover:scale-[1.02] active:scale-95 cursor-pointer ${
-            statusFilter === 'converted'
+            statusFilter === 'order closed' || statusFilter === 'converted'
               ? 'border-green-500 shadow-lg shadow-green-500/10 scale-[1.02]'
               : 'border-white/5 hover:border-white/10'
           }`}
@@ -1421,7 +1757,7 @@ export default function PartnerLeads() {
           <div className="flex gap-2">
             {stats?.follow_ups?.today > 0 && (
               <button
-                onClick={() => { setFollowUpToday(true); setPendingFollowUp(false); setTodayDemo(false); if (statusFilter === 'converted') setStatusFilter(''); setPage(1); }}
+                onClick={() => { setFollowUpToday(true); setPendingFollowUp(false); setTodayDemo(false); if (statusFilter === 'converted' || statusFilter === 'order closed') setStatusFilter(''); setPage(1); }}
                 className="px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 text-amber-400 font-bold rounded-lg text-[10px] transition-all cursor-pointer"
               >
                 Show Today's
@@ -1429,7 +1765,7 @@ export default function PartnerLeads() {
             )}
             {stats?.follow_ups?.pending > 0 && (
               <button
-                onClick={() => { setPendingFollowUp(true); setFollowUpToday(false); setTodayDemo(false); if (statusFilter === 'converted') setStatusFilter(''); setPage(1); }}
+                onClick={() => { setPendingFollowUp(true); setFollowUpToday(false); setTodayDemo(false); if (statusFilter === 'converted' || statusFilter === 'order closed') setStatusFilter(''); setPage(1); }}
                 className="px-3 py-1.5 bg-[#ef4444]/10 border border-[#ef4444]/20 hover:bg-[#ef4444]/20 text-[#ef4444] font-bold rounded-lg text-[10px] transition-all cursor-pointer"
               >
                 Show Pending Overdue
@@ -1461,14 +1797,11 @@ export default function PartnerLeads() {
             className="bg-white/3 border border-white/5 hover:border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
           >
             <option value="" className="bg-[#13151f]">All Statuses</option>
-            <option value="new" className="bg-[#13151f]">New</option>
-            <option value="contacted" className="bg-[#13151f]">Contacted</option>
-            <option value="qualified" className="bg-[#13151f]">Qualified</option>
-            <option value="proposal" className="bg-[#13151f]">Proposal</option>
-            <option value="negotiation" className="bg-[#13151f]">Negotiation</option>
-            <option value="converted" className="bg-[#13151f]">Converted</option>
-            <option value="lost" className="bg-[#13151f]">Lost</option>
-            <option value="junk" className="bg-[#13151f]">Junk</option>
+            {LEAD_STATUS_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value} className="bg-[#13151f]">
+                {opt.label}
+              </option>
+            ))}
           </select>
 
           <select
@@ -1984,112 +2317,95 @@ export default function PartnerLeads() {
                       type="text"
                       required
                       value={leadForm.client_name}
-                      onChange={(e) => setLeadForm({ ...leadForm, client_name: e.target.value })}
+                      onChange={(e) => {
+                        setLeadForm({ ...leadForm, client_name: e.target.value })
+                        setTouchedFields(prev => ({ ...prev, client_name: true }))
+                        if (modalError) setModalError('')
+                      }}
+                      onBlur={() => setTouchedFields(prev => ({ ...prev, client_name: true }))}
                       placeholder="Enter full name"
-                      className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] font-bold"
+                      className={`w-full bg-white/3 border rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none font-bold transition-all ${
+                        fieldErrors.client_name
+                          ? 'border-rose-500/50 focus:border-rose-500'
+                          : 'border-white/5 focus:border-[#38b34a]'
+                      }`}
                     />
+                    <FieldError error={fieldErrors.client_name} />
                   </div>
 
                   {/* Client Phone */}
                   <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Contact No *</label>
-                      {isDuplicatePhone && (
-                        <span className="text-[10px] font-bold text-rose-400 flex items-center gap-1">
-                          ⚠️ Already exists
-                        </span>
-                      )}
-                    </div>
+                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Contact No *</label>
                     <input
                       type="text"
                       required
                       value={leadForm.client_phone}
                       onChange={(e) => {
                         setLeadForm({ ...leadForm, client_phone: e.target.value.replace(/\+/g, '') })
+                        setTouchedFields(prev => ({ ...prev, client_phone: true }))
                         if (modalError) setModalError('')
                       }}
                       onBlur={(e) => {
                         const fixed = cleanAndFixPhone(e.target.value)
                         setLeadForm({ ...leadForm, client_phone: fixed })
+                        setTouchedFields(prev => ({ ...prev, client_phone: true }))
                       }}
                       placeholder="e.g. 91 9876543210"
                       className={`w-full bg-white/3 border rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none font-bold transition-all ${
-                        isDuplicatePhone
-                          ? 'border-rose-500/80 focus:border-rose-500 bg-rose-500/5 ring-1 ring-rose-500/30'
+                        fieldErrors.client_phone
+                          ? 'border-rose-500/50 focus:border-rose-500'
                           : 'border-white/5 focus:border-[#38b34a]'
                       }`}
                     />
-                    {isDuplicatePhone && (
-                      <p className="text-[11px] font-semibold text-rose-400 mt-1 flex items-center gap-1 animate-fade-in">
-                        <span>⚠️</span> This phone no is already exist
-                      </p>
-                    )}
+                    <FieldError error={fieldErrors.client_phone} />
                   </div>
 
                   {/* Client Email */}
                   <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Email Address</label>
-                      {isDuplicateEmail && (
-                        <span className="text-[10px] font-bold text-rose-400 flex items-center gap-1">
-                          ⚠️ Already exists
-                        </span>
-                      )}
-                    </div>
+                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Email Address</label>
                     <input
                       type="email"
                       value={leadForm.client_email}
                       onChange={(e) => {
                         setLeadForm({ ...leadForm, client_email: e.target.value })
+                        setTouchedFields(prev => ({ ...prev, client_email: true }))
                         if (modalError) setModalError('')
                       }}
+                      onBlur={() => setTouchedFields(prev => ({ ...prev, client_email: true }))}
                       placeholder="e.g. client@example.com"
                       className={`w-full bg-white/3 border rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none transition-all ${
-                        isDuplicateEmail
-                          ? 'border-rose-500/80 focus:border-rose-500 bg-rose-500/5 ring-1 ring-rose-500/30'
+                        fieldErrors.client_email
+                          ? 'border-rose-500/50 focus:border-rose-500'
                           : 'border-white/5 focus:border-[#38b34a]'
                       }`}
                     />
-                    {isDuplicateEmail && (
-                      <p className="text-[11px] font-semibold text-rose-400 mt-1 flex items-center gap-1 animate-fade-in">
-                        <span>⚠️</span> This email is already exist
-                      </p>
-                    )}
+                    <FieldError error={fieldErrors.client_email} />
                   </div>
 
                   {/* Alternate Phone */}
                   <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Alternate Mobile</label>
-                      {isDuplicateAltPhone && (
-                        <span className="text-[10px] font-bold text-rose-400 flex items-center gap-1">
-                          ⚠️ Already exists
-                        </span>
-                      )}
-                    </div>
+                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Alternate Mobile</label>
                     <input
                       type="text"
                       value={leadForm.client_alternate_phone}
                       onChange={(e) => {
                         setLeadForm({ ...leadForm, client_alternate_phone: e.target.value.replace(/\+/g, '') })
+                        setTouchedFields(prev => ({ ...prev, client_alternate_phone: true }))
                         if (modalError) setModalError('')
                       }}
                       onBlur={(e) => {
                         const fixed = cleanAndFixPhone(e.target.value)
                         setLeadForm({ ...leadForm, client_alternate_phone: fixed })
+                        setTouchedFields(prev => ({ ...prev, client_alternate_phone: true }))
                       }}
                       placeholder="Backup mobile number (e.g. 91 9876543210)"
                       className={`w-full bg-white/3 border rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none transition-all ${
-                        isDuplicateAltPhone
-                          ? 'border-rose-500/80 focus:border-rose-500 bg-rose-500/5 ring-1 ring-rose-500/30'
+                        fieldErrors.client_alternate_phone
+                          ? 'border-rose-500/50 focus:border-rose-500'
                           : 'border-white/5 focus:border-[#38b34a]'
                       }`}
                     />
-                    {isDuplicateAltPhone && (
-                      <p className="text-[11px] font-semibold text-rose-400 mt-1 flex items-center gap-1 animate-fade-in">
-                        <span>⚠️</span> This phone no is already exist
-                      </p>
-                    )}
+                    <FieldError error={fieldErrors.client_alternate_phone} />
                   </div>
 
                   {/* Company Name */}
@@ -2117,9 +2433,17 @@ export default function PartnerLeads() {
                     </div>
                     <select
                       value={leadForm.category_id}
-                      onChange={handleCategoryChange}
+                      onChange={(e) => {
+                        handleCategoryChange(e)
+                        setTouchedFields(prev => ({ ...prev, category_id: true }))
+                      }}
+                      onBlur={() => setTouchedFields(prev => ({ ...prev, category_id: true }))}
                       required
-                      className="w-full bg-white/3 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
+                      className={`w-full bg-white/3 border rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none cursor-pointer font-bold transition-all ${
+                        fieldErrors.category_id
+                          ? 'border-rose-500/50 focus:border-rose-500'
+                          : 'border-white/5 focus:border-[#38b34a]'
+                      }`}
                     >
                       <option value="" className="bg-[#13151f]">Select Category</option>
                       <option value="general_client" className="bg-[#13151f] text-[#38b34a] font-bold">⭐ General Client (Services Catalog)</option>
@@ -2127,6 +2451,7 @@ export default function PartnerLeads() {
                         <option key={cat.id} value={cat.id} className="bg-[#13151f]">{cat.name}</option>
                       ))}
                     </select>
+                    <FieldError error={fieldErrors.category_id} />
                   </div>
 
                   {/* If General Client is selected: Render Services Catalog Picker */}
@@ -2189,6 +2514,8 @@ export default function PartnerLeads() {
                           </div>
                         </div>
                       )}
+
+                      <FieldError error={fieldErrors.selected_services} />
 
                       {/* Services List with Checkboxes */}
                       <div className="space-y-1">
@@ -2261,10 +2588,19 @@ export default function PartnerLeads() {
                           <input
                             type="text"
                             value={leadForm.gstin || ''}
-                            onChange={(e) => setLeadForm(prev => ({ ...prev, gstin: e.target.value.toUpperCase() }))}
+                            onChange={(e) => {
+                              setLeadForm(prev => ({ ...prev, gstin: e.target.value.toUpperCase() }))
+                              setTouchedFields(prev => ({ ...prev, gstin: true }))
+                            }}
+                            onBlur={() => setTouchedFields(prev => ({ ...prev, gstin: true }))}
                             placeholder="e.g. 19AAPCS3828N1ZH"
-                            className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#38b34a] uppercase font-mono"
+                            className={`w-full bg-black/40 border rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none uppercase font-mono transition-all ${
+                              fieldErrors.gstin
+                                ? 'border-rose-500/50 focus:border-rose-500'
+                                : 'border-white/10 focus:border-[#38b34a]'
+                            }`}
                           />
+                          <FieldError error={fieldErrors.gstin} />
                         </div>
                       </div>
                     </div>
@@ -2275,15 +2611,24 @@ export default function PartnerLeads() {
                         <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Sub-Category *</label>
                         <select
                           value={leadForm.sub_category_id}
-                          onChange={handleSubCategoryChange}
+                          onChange={(e) => {
+                            handleSubCategoryChange(e)
+                            setTouchedFields(prev => ({ ...prev, sub_category_id: true }))
+                          }}
+                          onBlur={() => setTouchedFields(prev => ({ ...prev, sub_category_id: true }))}
                           required
-                          className="w-full bg-white/3 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
+                          className={`w-full bg-white/3 border rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none cursor-pointer font-bold transition-all ${
+                            fieldErrors.sub_category_id
+                              ? 'border-rose-500/50 focus:border-rose-500'
+                              : 'border-white/5 focus:border-[#38b34a]'
+                          }`}
                         >
                           <option value="" className="bg-[#13151f]">Select Sub-Category</option>
                           {subcategories.map(sub => (
                             <option key={sub.id} value={sub.id} className="bg-[#13151f]">{sub.name}</option>
                           ))}
                         </select>
+                        <FieldError error={fieldErrors.sub_category_id} />
                       </div>
 
                       {/* Product Selection */}
@@ -2291,15 +2636,24 @@ export default function PartnerLeads() {
                         <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Product *</label>
                         <select
                           value={leadForm.product_id}
-                          onChange={handleProductSelect}
+                          onChange={(e) => {
+                            handleProductSelect(e)
+                            setTouchedFields(prev => ({ ...prev, product_id: true }))
+                          }}
+                          onBlur={() => setTouchedFields(prev => ({ ...prev, product_id: true }))}
                           required
-                          className="w-full bg-[#1a1d2b] border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
+                          className={`w-full bg-[#1a1d2b] border rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none cursor-pointer font-bold transition-all ${
+                            fieldErrors.product_id
+                              ? 'border-rose-500/50 focus:border-rose-500'
+                              : 'border-white/5 focus:border-[#38b34a]'
+                          }`}
                         >
                           <option value="" className="bg-[#13151f]">Select Product</option>
                           {products.map(prod => (
                             <option key={prod.id} value={prod.id} className="bg-[#13151f]">{prod.name}</option>
                           ))}
                         </select>
+                        <FieldError error={fieldErrors.product_id} />
                       </div>
 
                       {/* Processing Fee */}
@@ -2373,18 +2727,23 @@ export default function PartnerLeads() {
                     <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Lead Status</label>
                     <select
                       value={leadForm.lead_status}
-                      onChange={(e) => setLeadForm({ ...leadForm, lead_status: e.target.value })}
-                      className="w-full bg-white/3 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
+                      onChange={(e) => {
+                        setLeadForm({ ...leadForm, lead_status: e.target.value })
+                        setTouchedFields(prev => ({ ...prev, lead_status: true }))
+                      }}
+                      className={`w-full bg-white/3 border rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none cursor-pointer font-bold transition-all ${
+                        fieldErrors.lead_status
+                          ? 'border-rose-500/50 focus:border-rose-500'
+                          : 'border-white/5 focus:border-[#38b34a]'
+                      }`}
                     >
-                      <option value="new" className="bg-[#13151f]">New</option>
-                      <option value="contacted" className="bg-[#13151f]">Contacted</option>
-                      <option value="qualified" className="bg-[#13151f]">Qualified</option>
-                      <option value="proposal" className="bg-[#13151f]">Proposal</option>
-                      <option value="negotiation" className="bg-[#13151f]">Negotiation</option>
-                      <option value="converted" className="bg-[#13151f]">Converted</option>
-                      <option value="lost" className="bg-[#13151f]">Lost</option>
-                      <option value="junk" className="bg-[#13151f]">Junk</option>
+                      {LEAD_STATUS_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value} className="bg-[#13151f]">
+                          {opt.label}
+                        </option>
+                      ))}
                     </select>
+                    <FieldError error={fieldErrors.lead_status} />
                   </div>
 
                   {/* Addressing fields */}
@@ -2430,10 +2789,19 @@ export default function PartnerLeads() {
                       <input
                         type="text"
                         value={leadForm.pin_code}
-                        onChange={(e) => setLeadForm({ ...leadForm, pin_code: e.target.value })}
+                        onChange={(e) => {
+                          setLeadForm({ ...leadForm, pin_code: e.target.value })
+                          setTouchedFields(prev => ({ ...prev, pin_code: true }))
+                        }}
+                        onBlur={() => setTouchedFields(prev => ({ ...prev, pin_code: true }))}
                         placeholder="Zip"
-                        className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] font-mono"
+                        className={`w-full bg-white/3 border rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none font-mono transition-all ${
+                          fieldErrors.pin_code
+                            ? 'border-rose-500/50 focus:border-rose-500'
+                            : 'border-white/5 focus:border-[#38b34a]'
+                        }`}
                       />
+                      <FieldError error={fieldErrors.pin_code} />
                     </div>
                   </div>
 
@@ -2463,16 +2831,14 @@ export default function PartnerLeads() {
                 <button
                   type="button"
                   onClick={handleCreateEditSubmit}
-                  disabled={saving || isDuplicatePhone || isDuplicateEmail || isDuplicateAltPhone}
+                  disabled={saving || hasErrors}
                   title={
-                    isDuplicatePhone || isDuplicateAltPhone
-                      ? 'This phone no is already exist'
-                      : isDuplicateEmail
-                      ? 'This email is already exist'
+                    hasErrors
+                      ? 'Please resolve the highlighted input errors with correct examples before submitting'
                       : ''
                   }
                   className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 ${
-                    saving || isDuplicatePhone || isDuplicateEmail || isDuplicateAltPhone
+                    saving || hasErrors
                       ? 'bg-gray-700/60 text-gray-400 cursor-not-allowed border border-white/5 opacity-50'
                       : 'bg-[#38b34a] text-black hover:bg-[#38b34a]/85 cursor-pointer active:scale-95'
                   }`}
@@ -2520,27 +2886,21 @@ export default function PartnerLeads() {
                     onChange={(e) => setStatusForm({ ...statusForm, status: e.target.value })}
                     className="w-full bg-white/3 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
                   >
-                    <option value="new" className="bg-[#13151f]">New</option>
-                    <option value="contacted" className="bg-[#13151f]">Contacted</option>
-                    <option value="qualified" className="bg-[#13151f]">Qualified</option>
-                    <option value="proposal" className="bg-[#13151f]">Proposal</option>
-                    <option value="negotiation" className="bg-[#13151f]">Negotiation</option>
-                    <option value="converted" className="bg-[#13151f]">Converted</option>
-                    <option value="lost" className="bg-[#13151f]">Lost</option>
-                    <option value="junk" className="bg-[#13151f]">Junk</option>
+                    {LEAD_STATUS_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value} className="bg-[#13151f]">{opt.label}</option>
+                    ))}
                   </select>
                 </div>
 
-                {statusForm.status === 'lost' && (
+                {(statusForm.status === 'not interested' || statusForm.status === 'lost') && (
                   <div className="space-y-1 animate-fade-in">
-                    <label className="text-[9px] font-black text-red-400 uppercase tracking-widest block">Reason for Loss *</label>
+                    <label className="text-[9px] font-black text-rose-400 uppercase tracking-widest block">Reason for Not Interested / Loss</label>
                     <textarea
-                      required
                       value={statusForm.lost_reason}
                       onChange={(e) => setStatusForm({ ...statusForm, lost_reason: e.target.value })}
-                      placeholder="Why was the lead lost? (e.g. competitor pricing, budget cuts, unresponsive)"
+                      placeholder="Why is the client not interested? (e.g. competitor pricing, budget cuts, unresponsive)"
                       rows="2"
-                      className="w-full bg-white/3 border border-red-500/20 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-red-500 leading-relaxed font-bold"
+                      className="w-full bg-white/3 border border-rose-500/20 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-rose-500 leading-relaxed font-bold"
                     />
                   </div>
                 )}
@@ -3162,14 +3522,11 @@ export default function PartnerLeads() {
                         onChange={(e) => setFollowUpForm({ ...followUpForm, status: e.target.value })}
                         className="w-full bg-[#161922] border border-white/5 rounded-xl px-3.5 py-2.5 mt-1 text-xs text-white focus:outline-none focus:border-[#38b34a] focus:ring-1 focus:ring-[#38b34a]/30 cursor-pointer font-bold transition-all"
                       >
-                        <option value="new" className="bg-[#13151f]">New</option>
-                        <option value="contacted" className="bg-[#13151f]">Contacted</option>
-                        <option value="qualified" className="bg-[#13151f]">Qualified</option>
-                        <option value="proposal" className="bg-[#13151f]">Proposal</option>
-                        <option value="negotiation" className="bg-[#13151f]">Negotiation</option>
-                        <option value="converted" className="bg-[#13151f]">Converted</option>
-                        <option value="lost" className="bg-[#13151f]">Lost</option>
-                        <option value="junk" className="bg-[#13151f]">Junk</option>
+                        {LEAD_STATUS_OPTIONS.map(opt => (
+                          <option key={opt.value} value={opt.value} className="bg-[#13151f]">
+                            {opt.label}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div className="md:col-span-2 space-y-1 text-left">
