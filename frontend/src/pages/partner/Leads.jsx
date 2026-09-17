@@ -9,7 +9,6 @@ import {
   updatePartnerLeadStatus as updateLeadStatus,
   addPartnerLeadActivity as addLeadActivity,
   bulkAssignLeads,
-  deletePartnerLead as deleteLead,
   sendPartnerDemoEmail as sendDemoEmail,
   getPartnerCategories as getCategories,
   getPartnerSubcategories as getSubcategories,
@@ -20,7 +19,6 @@ import {
   getPartnerAvailableDates as getAvailableDates,
   createPartnerGeneralClient,
   updatePartnerGeneralClient,
-  deletePartnerGeneralClient,
   getPartnerGeneralClients,
   getPartnerGeneralServices
 } from '../../api/partner'
@@ -33,9 +31,11 @@ export default function PartnerLeads() {
   // Stats and Listing State
   const [stats, setStats] = useState(null)
   const [leads, setLeads] = useState([])
+  const [allExistingLeads, setAllExistingLeads] = useState([])
   const [loading, setLoading] = useState(true)
   const [statsLoading, setStatsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [modalError, setModalError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
 
   // Query / Filter State
@@ -151,6 +151,157 @@ export default function PartnerLeads() {
 
   const [saving, setSaving] = useState(false)
 
+  // Helper: Normalize phone numbers for reliable comparison across formats
+  const normalizePhoneForCheck = (val) => {
+    if (!val) return ''
+    const digits = String(val).replace(/\D/g, '')
+    if (digits.length === 12 && digits.startsWith('91')) {
+      return digits.slice(2)
+    }
+    if (digits.length === 11 && digits.startsWith('0')) {
+      return digits.slice(1)
+    }
+    return digits
+  }
+
+  // Helper: Normalize email for case-insensitive comparison
+  const normalizeEmailForCheck = (val) => {
+    if (!val) return ''
+    return String(val).trim().toLowerCase()
+  }
+
+  // Combine loaded leads and background-fetched leads into a unified deduplication pool
+  const existingPool = useMemo(() => {
+    const map = new Map()
+    ;[...leads, ...allExistingLeads].forEach(item => {
+      if (!item) return
+      const key = item.id || item.rawId || item.lead_id || `${item.client_phone}-${item.client_email}`
+      if (!map.has(key)) {
+        map.set(key, item)
+      }
+    })
+    return Array.from(map.values())
+  }, [leads, allExistingLeads])
+
+  // Duplicate phone detection
+  const isDuplicatePhone = useMemo(() => {
+    const currentCleaned = normalizePhoneForCheck(leadForm.client_phone)
+    if (!currentCleaned || currentCleaned.length < 6) return false
+    return existingPool.some(l => {
+      if (editingLead && (
+        l.id === editingLead.id ||
+        l.rawId === editingLead.rawId ||
+        (l.lead_id && editingLead.lead_id && l.lead_id === editingLead.lead_id)
+      )) {
+        return false
+      }
+      const p1 = normalizePhoneForCheck(l.client_phone || l.contact_number || l.phone)
+      const p2 = normalizePhoneForCheck(l.client_alternate_phone || l.alt_contact_number)
+      return (p1 && p1 === currentCleaned) || (p2 && p2 === currentCleaned)
+    })
+  }, [leadForm.client_phone, existingPool, editingLead])
+
+  // Duplicate email detection
+  const isDuplicateEmail = useMemo(() => {
+    const currentEmail = normalizeEmailForCheck(leadForm.client_email)
+    if (!currentEmail || currentEmail.length < 3) return false
+    return existingPool.some(l => {
+      if (editingLead && (
+        l.id === editingLead.id ||
+        l.rawId === editingLead.rawId ||
+        (l.lead_id && editingLead.lead_id && l.lead_id === editingLead.lead_id)
+      )) {
+        return false
+      }
+      const lEmail = normalizeEmailForCheck(l.client_email || l.email)
+      return lEmail && lEmail === currentEmail
+    })
+  }, [leadForm.client_email, existingPool, editingLead])
+
+  // Duplicate alternate phone detection
+  const isDuplicateAltPhone = useMemo(() => {
+    const currentCleaned = normalizePhoneForCheck(leadForm.client_alternate_phone)
+    if (!currentCleaned || currentCleaned.length < 6) return false
+    return existingPool.some(l => {
+      if (editingLead && (
+        l.id === editingLead.id ||
+        l.rawId === editingLead.rawId ||
+        (l.lead_id && editingLead.lead_id && l.lead_id === editingLead.lead_id)
+      )) {
+        return false
+      }
+      const p1 = normalizePhoneForCheck(l.client_phone || l.contact_number || l.phone)
+      const p2 = normalizePhoneForCheck(l.client_alternate_phone || l.alt_contact_number)
+      return (p1 && p1 === currentCleaned) || (p2 && p2 === currentCleaned)
+    })
+  }, [leadForm.client_alternate_phone, existingPool, editingLead])
+
+  // Background fetch full list of leads for duplicate validation across all pages
+  const fetchAllExistingLeads = async () => {
+    try {
+      const [leadsRes, gcRes] = await Promise.allSettled([
+        getLeads({ per_page: 500 }),
+        getPartnerGeneralClients()
+      ])
+      let std = []
+      if (leadsRes.status === 'fulfilled') {
+        const d = leadsRes.value?.data
+        std = d?.data?.data || (Array.isArray(d?.data) ? d.data : Array.isArray(d) ? d : [])
+      }
+      let gc = []
+      if (gcRes.status === 'fulfilled') {
+        const d = gcRes.value?.data
+        gc = d?.data && Array.isArray(d.data) ? d.data : Array.isArray(d) ? d : []
+      }
+      setAllExistingLeads([...std, ...gc])
+    } catch (err) {
+      console.warn('Error fetching all existing leads for validation:', err)
+    }
+  }
+
+  // Helper: Extract valid timestamp from lead for accurate descending date sorting
+  const getLeadTimestamp = (lead) => {
+    if (!lead) return 0
+    const val = lead.created_at || lead.reg_date || lead.updated_at
+    if (val) {
+      const t = new Date(val).getTime()
+      if (!isNaN(t)) return t
+
+      const match = String(val).match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?(?:\s*(am|pm))?)?/i)
+      if (match) {
+        const [, day, month, year, h = '0', m = '0', s = '0', ampm] = match
+        let hour = parseInt(h, 10)
+        if (ampm) {
+          if (ampm.toLowerCase() === 'pm' && hour < 12) hour += 12
+          if (ampm.toLowerCase() === 'am' && hour === 12) hour = 0
+        }
+        const parsed = new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10), hour, parseInt(m, 10), parseInt(s, 10)).getTime()
+        if (!isNaN(parsed)) return parsed
+      }
+    }
+    const rawIdStr = String(lead.rawId || lead.id || '').replace(/\D/g, '')
+    const numId = parseInt(rawIdStr, 10)
+    return !isNaN(numId) ? numId : 0
+  }
+
+  // Sort list from newest to oldest leads
+  const sortLeadsNewestFirst = (list) => {
+    if (!Array.isArray(list)) return []
+    return [...list].sort((a, b) => {
+      const timeA = getLeadTimestamp(a)
+      const timeB = getLeadTimestamp(b)
+      if (timeB !== timeA) {
+        return timeB - timeA
+      }
+      const idA = parseInt(String(a.rawId || a.id || '').replace(/\D/g, ''), 10) || 0
+      const idB = parseInt(String(b.rawId || b.id || '').replace(/\D/g, ''), 10) || 0
+      return idB - idA
+    })
+  }
+
+  // Memoized leads list sorted newest to oldest
+  const displayLeads = useMemo(() => sortLeadsNewestFirst(leads), [leads])
+
   // 1. Fetch Stats & Leads
   const loadStats = async () => {
     try {
@@ -177,7 +328,11 @@ export default function PartnerLeads() {
         priority: priorityFilter || undefined,
         follow_up_today: followUpToday || undefined,
         pending_follow_up: pendingFollowUp || undefined,
-        today_demo: todayDemo || undefined
+        today_demo: todayDemo || undefined,
+        sort: 'created_at',
+        order: 'desc',
+        sort_by: 'created_at',
+        sort_direction: 'desc'
       }
       const res = await getLeads(params)
       let standardLeads = []
@@ -211,7 +366,7 @@ export default function PartnerLeads() {
           client_alternate_phone: gc.alt_contact_number || null,
           client_email: gc.email || '',
           address: gc.address || '',
-          city: gc.district || '',
+          district: gc.district || '',
           state: gc.state || '',
           pin_code: gc.pin_code || '',
           country: gc.country_code === 'IN' ? 'India' : (gc.country_code || 'India'),
@@ -254,10 +409,10 @@ export default function PartnerLeads() {
           ...filteredGc,
           ...standardLeads.filter(l => !filteredGc.some(g => g.client_phone && g.client_phone === l.client_phone))
         ]
-        setLeads(combined)
+        setLeads(sortLeadsNewestFirst(combined))
       } catch (gcErr) {
         console.warn('Could not load general clients for partner leads view:', gcErr)
-        setLeads(standardLeads)
+        setLeads(sortLeadsNewestFirst(standardLeads))
       }
     } catch (err) {
       console.error('Error fetching leads:', err)
@@ -556,6 +711,7 @@ export default function PartnerLeads() {
     loadStats()
     fetchCategories()
     fetchAvailableDemoSlots()
+    fetchAllExistingLeads()
   }, [])
 
   useEffect(() => {
@@ -623,6 +779,7 @@ export default function PartnerLeads() {
     setSelectedSubCategoryId('')
     setSubcategories([])
     setProducts([])
+    setModalError('')
     setIsCreateEditOpen(true)
   }
 
@@ -687,6 +844,7 @@ export default function PartnerLeads() {
       setSubcategories([])
       setProducts([])
     }
+    setModalError('')
     setIsCreateEditOpen(true)
   }
 
@@ -700,15 +858,33 @@ export default function PartnerLeads() {
   }
 
   const handleCreateEditSubmit = async (e) => {
-    e.preventDefault()
+    if (e?.preventDefault) e.preventDefault()
+
+    // Validate duplicate phone and email before submission
+    if (isDuplicatePhone) {
+      setModalError('This phone no is already exist')
+      return
+    }
+    if (isDuplicateEmail) {
+      setModalError('This email is already exist')
+      return
+    }
+    if (isDuplicateAltPhone) {
+      setModalError('This phone no is already exist')
+      return
+    }
+
     try {
       setSaving(true)
+      setModalError('')
       const cleanedPhone = cleanAndFixPhone(leadForm.client_phone)
       const cleanedAltPhone = cleanAndFixPhone(leadForm.client_alternate_phone)
       const isGeneralClient = leadForm.category_id === 'general_client'
 
       if (isGeneralClient && (!leadForm.selected_services || leadForm.selected_services.length === 0)) {
-        setError('Please select at least one service from the General Services catalog.')
+        const errMsg = 'Please select at least one service from the General Services catalog.'
+        setModalError(errMsg)
+        setError(errMsg)
         setSaving(false)
         return
       }
@@ -778,7 +954,7 @@ export default function PartnerLeads() {
             console.warn('Note: Backend leads table requires subscription fields. Client successfully saved to Partner General Clients registry:', leadSyncErr?.response?.data || leadSyncErr.message)
           }
 
-          triggerSuccess('✅ General Client created successfully! Reflected in both Leads and General Clients.')
+          triggerSuccess('Lead successfully added')
         }
       } else {
         // Standard Subscription Lead
@@ -793,19 +969,31 @@ export default function PartnerLeads() {
           triggerSuccess('Lead updated successfully.')
         } else {
           await createLead(payload)
-          triggerSuccess('Lead created successfully.')
+          triggerSuccess('Lead successfully added')
         }
       }
 
       setIsCreateEditOpen(false)
+      setPage(1)
       loadLeads()
       loadStats()
+      fetchAllExistingLeads()
     } catch (err) {
       console.error(err)
       const errDetail = err?.response?.data?.errors
         ? Object.values(err.response.data.errors).flat().join(', ')
         : (err?.response?.data?.message || err?.message || 'Failed to submit lead form.')
-      setError(errDetail)
+      
+      let friendlyError = errDetail
+      const lower = String(errDetail).toLowerCase()
+      if (lower.includes('phone') && (lower.includes('already') || lower.includes('taken') || lower.includes('exist'))) {
+        friendlyError = 'This phone no is already exist'
+      } else if (lower.includes('email') && (lower.includes('already') || lower.includes('taken') || lower.includes('exist'))) {
+        friendlyError = 'This email is already exist'
+      }
+
+      setModalError(friendlyError)
+      setError(friendlyError)
     } finally {
       setSaving(false)
     }
@@ -890,27 +1078,6 @@ export default function PartnerLeads() {
       alert(err?.response?.data?.message || 'Failed to perform bulk assignment.')
     } finally {
       setSaving(false)
-    }
-  }
-
-  const handleDeleteLead = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this lead? This action cannot be undone.')) return
-    try {
-      if (String(id).startsWith('gc-')) {
-        const rawId = String(id).replace('gc-', '')
-        await deletePartnerGeneralClient(rawId)
-      } else {
-        await deleteLead(id)
-      }
-      triggerSuccess('Lead deleted successfully.')
-      if (selectedDrawerLead?.id === id) {
-        setSelectedDrawerLead(null)
-      }
-      loadLeads()
-      loadStats()
-    } catch (err) {
-      console.error(err)
-      alert(err?.response?.data?.message || 'Failed to delete lead.')
     }
   }
 
@@ -1021,7 +1188,7 @@ export default function PartnerLeads() {
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedLeadIds(leads.map(l => l.id))
+      setSelectedLeadIds(displayLeads.map(l => l.id))
     } else {
       setSelectedLeadIds([])
     }
@@ -1079,6 +1246,34 @@ export default function PartnerLeads() {
         <title>AIM Partner | Leads</title>
         <meta name="description" content="Manage leads, schedule follow-ups, and coordinate product demos." />
       </Helmet>
+
+      {/* Floating Toast Notification for immediate visual feedback */}
+      <AnimatePresence>
+        {successMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="fixed top-6 right-6 z-[99999] max-w-md bg-[#13151f]/95 border border-[#38b34a]/40 backdrop-blur-xl text-white px-5 py-3.5 rounded-2xl shadow-2xl shadow-[#38b34a]/20 flex items-center gap-3"
+          >
+            <div className="w-8 h-8 rounded-xl bg-[#38b34a]/20 border border-[#38b34a]/30 flex items-center justify-center text-[#38b34a] text-base shrink-0 font-bold">
+              ✓
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-black text-[#38b34a] uppercase tracking-widest">Notification</p>
+              <p className="text-xs sm:text-sm font-bold text-white mt-0.5 break-words">{successMsg}</p>
+            </div>
+            <button
+              onClick={() => setSuccessMsg('')}
+              className="text-gray-400 hover:text-white text-xs p-1 rounded-lg hover:bg-white/10 transition-colors ml-2 cursor-pointer"
+            >
+              ✕
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="space-y-6 select-none animate-fade-in text-gray-400 font-sans text-left">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/5">
@@ -1096,8 +1291,20 @@ export default function PartnerLeads() {
 
       {/* Success Notification */}
       {successMsg && (
-        <div className="p-4 bg-green-500/10 border border-green-500/20 text-[#38b34a] rounded-xl text-xs font-bold text-center animate-fade-in">
-          {successMsg}
+        <div className="p-4 bg-green-500/10 border border-green-500/20 text-[#38b34a] rounded-xl text-xs font-bold text-center animate-fade-in flex items-center justify-center gap-2">
+          <span>✅</span>
+          <span>{successMsg}</span>
+        </div>
+      )}
+
+      {/* Error Notification */}
+      {error && (
+        <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-xs font-bold text-center animate-fade-in flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span>⚠️</span>
+            <span>{error}</span>
+          </div>
+          <button onClick={() => setError('')} className="text-gray-400 hover:text-white text-xs cursor-pointer ml-3">✕</button>
         </div>
       )}
 
@@ -1327,7 +1534,7 @@ export default function PartnerLeads() {
                 <th className="p-4 w-12 text-center">
                   <input
                     type="checkbox"
-                    checked={leads.length > 0 && selectedLeadIds.length === leads.length}
+                    checked={displayLeads.length > 0 && selectedLeadIds.length === displayLeads.length}
                     onChange={handleSelectAll}
                     className="rounded text-[#38b34a] focus:ring-0 focus:ring-offset-0 bg-white/5 border border-white/10 cursor-pointer"
                   />
@@ -1347,7 +1554,7 @@ export default function PartnerLeads() {
                     Loading Leads registry...
                   </td>
                 </tr>
-              ) : leads.length === 0 ? (
+              ) : displayLeads.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="p-12 text-center">
                     <span className="text-2xl block mb-2">📁</span>
@@ -1356,7 +1563,7 @@ export default function PartnerLeads() {
                   </td>
                 </tr>
               ) : (
-                leads.map((lead) => {
+                displayLeads.map((lead) => {
                   const isSelected = selectedLeadIds.includes(lead.id)
                   const followUpText = lead.follow_up_date
                     ? new Date(lead.follow_up_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -1592,14 +1799,6 @@ export default function PartnerLeads() {
                   >
                     ✏️ Edit Lead
                   </button>
-                  {!selectedDrawerLead.is_converted && (
-                    <button
-                      onClick={() => handleDeleteLead(selectedDrawerLead.id)}
-                      className="px-3.5 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl text-xs font-bold border border-red-500/20 transition-all cursor-pointer"
-                    >
-                      🗑️ Delete
-                    </button>
-                  )}
                 </div>
 
                 {/* Details grid */}
@@ -1771,6 +1970,12 @@ export default function PartnerLeads() {
 
               {/* Scrollable Form body */}
               <form onSubmit={handleCreateEditSubmit} className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
+                {modalError && (
+                  <div className="p-3.5 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl text-xs font-bold flex items-center gap-2.5 animate-fade-in">
+                    <span className="text-base leading-none">⚠️</span>
+                    <span>{modalError}</span>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Client Name */}
                   <div className="space-y-1">
@@ -1787,47 +1992,104 @@ export default function PartnerLeads() {
 
                   {/* Client Phone */}
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Contact No*</label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Contact No *</label>
+                      {isDuplicatePhone && (
+                        <span className="text-[10px] font-bold text-rose-400 flex items-center gap-1">
+                          ⚠️ Already exists
+                        </span>
+                      )}
+                    </div>
                     <input
                       type="text"
                       required
                       value={leadForm.client_phone}
-                      onChange={(e) => setLeadForm({ ...leadForm, client_phone: e.target.value.replace(/\+/g, '') })}
+                      onChange={(e) => {
+                        setLeadForm({ ...leadForm, client_phone: e.target.value.replace(/\+/g, '') })
+                        if (modalError) setModalError('')
+                      }}
                       onBlur={(e) => {
                         const fixed = cleanAndFixPhone(e.target.value)
                         setLeadForm({ ...leadForm, client_phone: fixed })
                       }}
                       placeholder="e.g. 91 9876543210"
-                      className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] font-bold"
+                      className={`w-full bg-white/3 border rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none font-bold transition-all ${
+                        isDuplicatePhone
+                          ? 'border-rose-500/80 focus:border-rose-500 bg-rose-500/5 ring-1 ring-rose-500/30'
+                          : 'border-white/5 focus:border-[#38b34a]'
+                      }`}
                     />
+                    {isDuplicatePhone && (
+                      <p className="text-[11px] font-semibold text-rose-400 mt-1 flex items-center gap-1 animate-fade-in">
+                        <span>⚠️</span> This phone no is already exist
+                      </p>
+                    )}
                   </div>
 
                   {/* Client Email */}
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Email Address</label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Email Address</label>
+                      {isDuplicateEmail && (
+                        <span className="text-[10px] font-bold text-rose-400 flex items-center gap-1">
+                          ⚠️ Already exists
+                        </span>
+                      )}
+                    </div>
                     <input
                       type="email"
                       value={leadForm.client_email}
-                      onChange={(e) => setLeadForm({ ...leadForm, client_email: e.target.value })}
+                      onChange={(e) => {
+                        setLeadForm({ ...leadForm, client_email: e.target.value })
+                        if (modalError) setModalError('')
+                      }}
                       placeholder="e.g. client@example.com"
-                      className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a]"
+                      className={`w-full bg-white/3 border rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none transition-all ${
+                        isDuplicateEmail
+                          ? 'border-rose-500/80 focus:border-rose-500 bg-rose-500/5 ring-1 ring-rose-500/30'
+                          : 'border-white/5 focus:border-[#38b34a]'
+                      }`}
                     />
+                    {isDuplicateEmail && (
+                      <p className="text-[11px] font-semibold text-rose-400 mt-1 flex items-center gap-1 animate-fade-in">
+                        <span>⚠️</span> This email is already exist
+                      </p>
+                    )}
                   </div>
 
                   {/* Alternate Phone */}
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Alternate Mobile</label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Alternate Mobile</label>
+                      {isDuplicateAltPhone && (
+                        <span className="text-[10px] font-bold text-rose-400 flex items-center gap-1">
+                          ⚠️ Already exists
+                        </span>
+                      )}
+                    </div>
                     <input
                       type="text"
                       value={leadForm.client_alternate_phone}
-                      onChange={(e) => setLeadForm({ ...leadForm, client_alternate_phone: e.target.value.replace(/\+/g, '') })}
+                      onChange={(e) => {
+                        setLeadForm({ ...leadForm, client_alternate_phone: e.target.value.replace(/\+/g, '') })
+                        if (modalError) setModalError('')
+                      }}
                       onBlur={(e) => {
                         const fixed = cleanAndFixPhone(e.target.value)
                         setLeadForm({ ...leadForm, client_alternate_phone: fixed })
                       }}
                       placeholder="Backup mobile number (e.g. 91 9876543210)"
-                      className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a]"
+                      className={`w-full bg-white/3 border rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none transition-all ${
+                        isDuplicateAltPhone
+                          ? 'border-rose-500/80 focus:border-rose-500 bg-rose-500/5 ring-1 ring-rose-500/30'
+                          : 'border-white/5 focus:border-[#38b34a]'
+                      }`}
                     />
+                    {isDuplicateAltPhone && (
+                      <p className="text-[11px] font-semibold text-rose-400 mt-1 flex items-center gap-1 animate-fade-in">
+                        <span>⚠️</span> This phone no is already exist
+                      </p>
+                    )}
                   </div>
 
                   {/* Company Name */}
@@ -2199,9 +2461,21 @@ export default function PartnerLeads() {
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={handleCreateEditSubmit}
-                  disabled={saving}
-                  className="px-5 py-2.5 bg-[#38b34a] text-black hover:bg-[#38b34a]/85 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                  disabled={saving || isDuplicatePhone || isDuplicateEmail || isDuplicateAltPhone}
+                  title={
+                    isDuplicatePhone || isDuplicateAltPhone
+                      ? 'This phone no is already exist'
+                      : isDuplicateEmail
+                      ? 'This email is already exist'
+                      : ''
+                  }
+                  className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 ${
+                    saving || isDuplicatePhone || isDuplicateEmail || isDuplicateAltPhone
+                      ? 'bg-gray-700/60 text-gray-400 cursor-not-allowed border border-white/5 opacity-50'
+                      : 'bg-[#38b34a] text-black hover:bg-[#38b34a]/85 cursor-pointer active:scale-95'
+                  }`}
                 >
                   {saving ? 'Saving...' : editingLead ? 'Save Changes' : 'Register Lead'}
                 </button>
