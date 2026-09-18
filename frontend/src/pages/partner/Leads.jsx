@@ -313,14 +313,22 @@ export default function PartnerLeads() {
     })
   }
 
+  const formatCategoryDisplayName = (name) => {
+    if (!name) return ''
+    const lower = name.toLowerCase()
+    if (lower.includes('saas')) return 'SAAS Based Services'
+    if (lower.includes('subscription')) return 'Subscription Based Services'
+    if (lower.includes('general')) return 'General Services'
+    return name
+  }
+
   const filteredGeneralServices = useMemo(() => {
     if (!serviceSearchTerm.trim()) return generalServices
     const q = serviceSearchTerm.toLowerCase()
-    return generalServices.filter(s =>
-      s.name?.toLowerCase().includes(q) ||
-      s.category?.toLowerCase().includes(q) ||
-      s.description?.toLowerCase().includes(q)
-    )
+    return generalServices.filter(s => {
+      const name = (s.service_name || s.name || '').toLowerCase()
+      return name.includes(q)
+    })
   }, [generalServices, serviceSearchTerm])
 
   const fetchCategories = async () => {
@@ -1860,10 +1868,10 @@ export default function PartnerLeads() {
                       className="w-full bg-white/3 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
                     >
                       <option value="" className="bg-[#13151f]">Select Category</option>
-                      <option value="general_client" className="bg-[#13151f] text-[#38b34a] font-bold">⭐ General Client (Services Catalog)</option>
                       {categories.map(cat => (
-                        <option key={cat.id} value={cat.id} className="bg-[#13151f]">{cat.name}</option>
+                        <option key={cat.id} value={cat.id} className="bg-[#13151f]">{formatCategoryDisplayName(cat.name)}</option>
                       ))}
+                      <option value="general_client" className="bg-[#13151f]">General Services</option>
                     </select>
                   </div>
 
@@ -1890,7 +1898,7 @@ export default function PartnerLeads() {
                           type="text"
                           value={serviceSearchTerm}
                           onChange={(e) => setServiceSearchTerm(e.target.value)}
-                          placeholder="Search deliverables by name or category..."
+                          placeholder="Search deliverables by name..."
                           className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#38b34a]"
                         />
                         {serviceSearchTerm && (

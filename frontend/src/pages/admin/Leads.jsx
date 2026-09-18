@@ -139,8 +139,27 @@ export default function AdminLeads() {
   const [products, setProducts] = useState([])
   const [generalServices, setGeneralServices] = useState(cachedAdminServices || [])
   const [loadingGeneralServices, setLoadingGeneralServices] = useState(false)
+  const [serviceSearchTerm, setServiceSearchTerm] = useState('')
   const [availableDemoSlots, setAvailableDemoSlots] = useState(cachedAdminDemoSlots || [])
   const [selectedCategoryId, setSelectedCategoryId] = useState('')
+
+  const formatCategoryDisplayName = (name) => {
+    if (!name) return ''
+    const lower = name.toLowerCase()
+    if (lower.includes('saas')) return 'SAAS Based Services'
+    if (lower.includes('subscription')) return 'Subscription Based Services'
+    if (lower.includes('general')) return 'General Services'
+    return name
+  }
+
+  const filteredGeneralServices = useMemo(() => {
+    if (!serviceSearchTerm.trim()) return generalServices
+    const q = serviceSearchTerm.toLowerCase()
+    return generalServices.filter(s => {
+      const name = (s.service_name || s.name || '').toLowerCase()
+      return name.includes(q)
+    })
+  }, [generalServices, serviceSearchTerm])
   const [selectedSubCategoryId, setSelectedSubCategoryId] = useState('')
 
   // Assign Demo Slot states
@@ -2027,12 +2046,10 @@ export default function AdminLeads() {
                       className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs text-slate-700 focus:outline-none cursor-pointer"
                     >
                       <option value="">Select Category</option>
-                      <option value="general_client" className="font-bold text-sky-600 bg-sky-50">
-                        📄 General Client (Non-Subscription)
-                      </option>
                       {categories.map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
+                        <option key={c.id} value={c.id}>{formatCategoryDisplayName(c.name)}</option>
                       ))}
+                      <option value="general_client">General Services</option>
                     </select>
                   </div>
 
@@ -2090,7 +2107,7 @@ export default function AdminLeads() {
 
                       {/* Software / Service Requirements Checkboxes */}
                       <div>
-                        <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
                           <label className="text-[10px] font-bold text-slate-600">
                             Software / Service Requirements (Select items for custom quotation):
                           </label>
@@ -2099,15 +2116,34 @@ export default function AdminLeads() {
                           </span>
                         </div>
 
+                        <div className="relative mb-2">
+                          <input
+                            type="text"
+                            value={serviceSearchTerm}
+                            onChange={(e) => setServiceSearchTerm(e.target.value)}
+                            placeholder="Search services by name..."
+                            className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-sky-500"
+                          />
+                          {serviceSearchTerm && (
+                            <button
+                              type="button"
+                              onClick={() => setServiceSearchTerm('')}
+                              className="absolute right-2.5 top-1.5 text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+
                         {loadingGeneralServices ? (
                           <div className="p-3 text-center text-xs text-slate-400">Loading catalog services...</div>
-                        ) : generalServices.length === 0 ? (
+                        ) : filteredGeneralServices.length === 0 ? (
                           <div className="p-3 text-center text-xs text-slate-400 bg-white rounded-xl border border-slate-200">
-                            No general services found. Add services in General Client panel.
+                            No matching services found. Add services in General Client panel.
                           </div>
                         ) : (
                           <div className="bg-white border border-slate-200 rounded-xl p-2.5 grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto">
-                            {generalServices.map(srv => {
+                            {filteredGeneralServices.map(srv => {
                               const sName = srv.name || srv.service_name
                               const isSelected = (leadForm.selected_services || []).includes(sName)
                               return (
