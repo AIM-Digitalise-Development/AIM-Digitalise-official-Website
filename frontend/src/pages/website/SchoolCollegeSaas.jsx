@@ -621,77 +621,7 @@ const SchoolCollegeSaas = () => {
             10 features each (9 checkpoints + 1 "See More" button)
         ══════════════════════════════════════════════════════════ */}
 
-
-        {/* ══════════════════════════════════════════════════════════
-            SECTION 3: 12 Master Operational Modules
-        ══════════════════════════════════════════════════════════ */}
-        <section className="py-20 relative overflow-hidden bg-slate-900/60 border-b border-white/10">
-          <div className="container-custom relative z-10 space-y-12">
-            <div className="text-center max-w-3xl mx-auto space-y-3">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-bold uppercase tracking-widest border border-blue-500/20">
-                ⚡ Complete Institutional Ecosystem
-              </div>
-              <h2 className="text-3xl sm:text-4xl font-black text-white">
-                12 Master <span className="text-aim-gold">Operational Modules</span>
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-400">From pre-admission leads to graduation alumni networks, NEXGN digitizes every administrative workflow.</p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-              {/* Left col */}
-              <div className="space-y-4">
-                <div className="px-3 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-between text-xs font-black text-blue-300 uppercase tracking-wider">
-                  <span>🎓 Academics, Admissions &amp; Student Portals</span>
-                  <span>Modules</span>
-                </div>
-                {LEFT_MODULES.map((mod, i) => (
-                  <div key={i} className="p-5 rounded-2xl bg-aim-navy-card/90 border border-white/10 hover:border-aim-gold/40 transition-all shadow-md space-y-2.5 group">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-2xl">{mod.icon}</span>
-                        <h4 className="text-base font-black text-white group-hover:text-aim-gold transition-colors">{mod.title}</h4>
-                      </div>
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase border ${mod.color}`}>{mod.badge}</span>
-                    </div>
-                    <p className="text-xs text-slate-300 leading-relaxed">{mod.desc}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {mod.perks.map((p, j) => (
-                        <span key={j} className="text-[10px] px-2 py-0.5 rounded bg-white/5 text-slate-300">✓ {p}</span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Right col */}
-              <div className="space-y-4">
-                <div className="px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between text-xs font-black text-aim-gold uppercase tracking-wider">
-                  <span>💳 Fees, Attendance, Safety &amp; Governance</span>
-                  <span>Modules</span>
-                </div>
-                {RIGHT_MODULES.map((mod, i) => (
-                  <div key={i} className="p-5 rounded-2xl bg-aim-navy-card/90 border border-white/10 hover:border-aim-gold/40 transition-all shadow-md space-y-2.5 group">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-2xl">{mod.icon}</span>
-                        <h4 className="text-base font-black text-white group-hover:text-aim-gold transition-colors">{mod.title}</h4>
-                      </div>
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase border ${mod.color}`}>{mod.badge}</span>
-                    </div>
-                    <p className="text-xs text-slate-300 leading-relaxed">{mod.desc}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {mod.perks.map((p, j) => (
-                        <span key={j} className="text-[10px] px-2 py-0.5 rounded bg-white/5 text-slate-300">✓ {p}</span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="py-20 relative overflow-hidden bg-slate-950/90 border-b border-white/10">
+<section className="py-20 relative overflow-hidden bg-slate-950/90 border-b border-white/10">
           <div className="container-custom relative z-10 space-y-12">
             <div className="text-center max-w-3xl mx-auto space-y-3">
               <div className="inline-flex items-center justify-center px-6 py-3 rounded-2xl  ">
@@ -825,6 +755,76 @@ const SchoolCollegeSaas = () => {
             </div>
           </div>
         </section>
+        {/* ══════════════════════════════════════════════════════════
+            SECTION 3: 12 Master Operational Modules
+        ══════════════════════════════════════════════════════════ */}
+        <section className="py-20 relative overflow-hidden bg-slate-900/60 border-b border-white/10">
+          <div className="container-custom relative z-10 space-y-12">
+            <div className="text-center max-w-3xl mx-auto space-y-3">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-bold uppercase tracking-widest border border-blue-500/20">
+                ⚡ Complete Institutional Ecosystem
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-black text-white">
+                12 Master <span className="text-aim-gold">Operational Modules</span>
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-400">From pre-admission leads to graduation alumni networks, NEXGN digitizes every administrative workflow.</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+              {/* Left col */}
+              <div className="space-y-4">
+                <div className="px-3 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-between text-xs font-black text-blue-300 uppercase tracking-wider">
+                  <span>🎓 Academics, Admissions &amp; Student Portals</span>
+                  <span>Modules</span>
+                </div>
+                {LEFT_MODULES.map((mod, i) => (
+                  <div key={i} className="p-5 rounded-2xl bg-aim-navy-card/90 border border-white/10 hover:border-aim-gold/40 transition-all shadow-md space-y-2.5 group">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-2xl">{mod.icon}</span>
+                        <h4 className="text-base font-black text-white group-hover:text-aim-gold transition-colors">{mod.title}</h4>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase border ${mod.color}`}>{mod.badge}</span>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed">{mod.desc}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {mod.perks.map((p, j) => (
+                        <span key={j} className="text-[10px] px-2 py-0.5 rounded bg-white/5 text-slate-300">✓ {p}</span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Right col */}
+              <div className="space-y-4">
+                <div className="px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between text-xs font-black text-aim-gold uppercase tracking-wider">
+                  <span>💳 Fees, Attendance, Safety &amp; Governance</span>
+                  <span>Modules</span>
+                </div>
+                {RIGHT_MODULES.map((mod, i) => (
+                  <div key={i} className="p-5 rounded-2xl bg-aim-navy-card/90 border border-white/10 hover:border-aim-gold/40 transition-all shadow-md space-y-2.5 group">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-2xl">{mod.icon}</span>
+                        <h4 className="text-base font-black text-white group-hover:text-aim-gold transition-colors">{mod.title}</h4>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase border ${mod.color}`}>{mod.badge}</span>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed">{mod.desc}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {mod.perks.map((p, j) => (
+                        <span key={j} className="text-[10px] px-2 py-0.5 rounded bg-white/5 text-slate-300">✓ {p}</span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        
 
         {/* ══════════════════════════════════════════════════════════
             SECTION 4: Brochures PDF Viewer
