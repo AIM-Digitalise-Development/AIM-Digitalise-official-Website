@@ -1890,7 +1890,7 @@ export default function EmployeeLeads() {
 
                   {/* Company Name */}
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Company /Org. Name</label>
+                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Company / Org. Name</label>
                     <input
                       type="text"
                       value={leadForm.company_name}
@@ -1898,6 +1898,65 @@ export default function EmployeeLeads() {
                       placeholder="Organization / Institution"
                       className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] font-semibold"
                     />
+                  </div>
+
+                  {/* GST Number */}
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">GST No. (Optional)</label>
+                    <input
+                      type="text"
+                      value={leadForm.gstin || ''}
+                      onChange={(e) => setLeadForm({ ...leadForm, gstin: e.target.value })}
+                      placeholder="e.g. 19AAAAA0000A1Z5"
+                      className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] font-semibold"
+                    />
+                  </div>
+
+                  {/* Addressing fields (RESIDENCE SETUP) */}
+                  <div className="sm:col-span-2 pt-2 border-t border-white/5 space-y-3">
+                    <h4 className="text-[10px] font-black text-[#38b34a] uppercase tracking-widest">Residence Setup</h4>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Street Address</label>
+                      <input
+                        type="text"
+                        value={leadForm.address}
+                        onChange={(e) => setLeadForm({ ...leadForm, address: e.target.value })}
+                        placeholder="Building, street name"
+                        className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a]"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">City</label>
+                        <input
+                          type="text"
+                          value={leadForm.city}
+                          onChange={(e) => setLeadForm({ ...leadForm, city: e.target.value })}
+                          placeholder="City"
+                          className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a]"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">State</label>
+                        <input
+                          type="text"
+                          value={leadForm.state}
+                          onChange={(e) => setLeadForm({ ...leadForm, state: e.target.value })}
+                          placeholder="State"
+                          className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a]"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Pin Code</label>
+                        <input
+                          type="text"
+                          value={leadForm.pin_code}
+                          onChange={(e) => setLeadForm({ ...leadForm, pin_code: e.target.value })}
+                          placeholder="Zip"
+                          className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] font-mono"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   {/* Product Interest */}
@@ -2082,45 +2141,8 @@ export default function EmployeeLeads() {
                           ))}
                         </select>
                       </div>
-
-                      {/* Processing Fee */}
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Processing Fee (INR)</label>
-                        <input
-                          type="number"
-                          value={leadForm.product_processing_fee}
-                          onChange={(e) => setLeadForm(prev => ({ ...prev, product_processing_fee: e.target.value }))}
-                          placeholder="Processing Fee"
-                          className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] font-mono font-bold"
-                        />
-                      </div>
-
-                      {/* Monthly Subscription */}
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Monthly Subscription (INR)</label>
-                        <input
-                          type="number"
-                          value={leadForm.product_monthly_subscription}
-                          onChange={(e) => setLeadForm(prev => ({ ...prev, product_monthly_subscription: e.target.value }))}
-                          placeholder="Monthly Subscription"
-                          className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] font-mono font-bold"
-                        />
-                      </div>
                     </>
                   )}
-
-
-                  {/* Budget */}
-                  {/* <div className="space-y-1">
-                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Pipeline Budget (INR)</label>
-                    <input
-                      type="number"
-                      value={leadForm.budget}
-                      onChange={(e) => setLeadForm({ ...leadForm, budget: e.target.value })}
-                      placeholder="e.g. 150000"
-                      className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] font-mono font-bold"
-                    />
-                  </div> */}
 
                   {/* Close date */}
                   <div className="space-y-1">
@@ -2141,12 +2163,16 @@ export default function EmployeeLeads() {
                       onChange={(e) => setLeadForm({ ...leadForm, lead_source: e.target.value })}
                       className="w-full bg-white/3 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
                     >
-                      <option value="Website" className="bg-[#13151f]">Website</option>
-                      <option value="Referral" className="bg-[#13151f]">Referral</option>
-                      <option value="Cold Call" className="bg-[#13151f]">Cold Call</option>
-                      <option value="SMM" className="bg-[#13151f]">Social Media</option>
-                      <option value="Campaign" className="bg-[#13151f]">Marketing Campaign</option>
-                      <option value="Other" className="bg-[#13151f]">Other</option>
+                      <option value="facebook" className="bg-[#13151f]">facebook</option>
+                      <option value="google" className="bg-[#13151f]">google</option>
+                      <option value="GMB" className="bg-[#13151f]">GMB</option>
+                      <option value="indiamart" className="bg-[#13151f]">indiamart</option>
+                      <option value="field visit" className="bg-[#13151f]">field visit</option>
+                      <option value="cold calling" className="bg-[#13151f]">cold calling</option>
+                      <option value="telecalling" className="bg-[#13151f]">telecalling</option>
+                      <option value="website" className="bg-[#13151f]">website</option>
+                      <option value="referral" className="bg-[#13151f]">referral</option>
+                      <option value="others" className="bg-[#13151f]">others</option>
                     </select>
                   </div>
 
@@ -2166,56 +2192,6 @@ export default function EmployeeLeads() {
                       <option value="lost" className="bg-[#13151f]">Lost</option>
                       <option value="junk" className="bg-[#13151f]">Junk</option>
                     </select>
-                  </div>
-
-                  {/* Addressing fields */}
-                  <div className="sm:col-span-2 pt-2 border-t border-white/5">
-                    <h4 className="text-[10px] font-black text-[#38b34a] uppercase tracking-widest mb-3">Residence Setup</h4>
-                  </div>
-                  
-                  <div className="space-y-1 sm:col-span-2">
-                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Street Address</label>
-                    <input
-                      type="text"
-                      value={leadForm.address}
-                      onChange={(e) => setLeadForm({ ...leadForm, address: e.target.value })}
-                      placeholder="Building, street name"
-                      className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a]"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">City</label>
-                    <input
-                      type="text"
-                      value={leadForm.city}
-                      onChange={(e) => setLeadForm({ ...leadForm, city: e.target.value })}
-                      placeholder="City"
-                      className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a]"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">State</label>
-                      <input
-                        type="text"
-                        value={leadForm.state}
-                        onChange={(e) => setLeadForm({ ...leadForm, state: e.target.value })}
-                        placeholder="State"
-                        className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a]"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Pin Code</label>
-                      <input
-                        type="text"
-                        value={leadForm.pin_code}
-                        onChange={(e) => setLeadForm({ ...leadForm, pin_code: e.target.value })}
-                        placeholder="Zip"
-                        className="w-full bg-white/3 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] font-mono"
-                      />
-                    </div>
                   </div>
 
                   <div className="sm:col-span-2 space-y-1">

@@ -207,6 +207,7 @@ export default function AdminLeads() {
     client_phone: '',
     client_alternate_phone: '',
     company_name: '',
+    gstin: '',
     address: '',
     city: '',
     state: '',
@@ -2025,7 +2026,7 @@ export default function AdminLeads() {
 
                   {/* Company Name */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">Company Name</label>
+                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">Company / Org. Name</label>
                     <input
                       type="text"
                       placeholder="e.g. Acme Corp"
@@ -2033,6 +2034,65 @@ export default function AdminLeads() {
                       onChange={e => setLeadForm(prev => ({ ...prev, company_name: e.target.value }))}
                       className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4.5 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a]"
                     />
+                  </div>
+
+                  {/* GST Number */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">GST No. (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 19AAAAA0000A1Z5"
+                      value={leadForm.gstin || ''}
+                      onChange={e => setLeadForm(prev => ({ ...prev, gstin: e.target.value }))}
+                      className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4.5 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a]"
+                    />
+                  </div>
+
+                  {/* Address block (RESIDENCE SETUP) */}
+                  <div className="md:col-span-2 border-t border-slate-100 pt-3 space-y-3">
+                    <h4 className="text-[10px] font-black text-slate-450 uppercase tracking-widest">RESIDENCE SETUP</h4>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">STREET ADDRESS</label>
+                      <input
+                        type="text"
+                        placeholder="Building, street name"
+                        value={leadForm.address}
+                        onChange={e => setLeadForm(prev => ({ ...prev, address: e.target.value }))}
+                        className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4.5 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a]"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">CITY</label>
+                        <input
+                          type="text"
+                          placeholder="City"
+                          value={leadForm.city}
+                          onChange={e => setLeadForm(prev => ({ ...prev, city: e.target.value }))}
+                          className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4.5 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a]"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">STATE</label>
+                        <input
+                          type="text"
+                          placeholder="State"
+                          value={leadForm.state}
+                          onChange={e => setLeadForm(prev => ({ ...prev, state: e.target.value }))}
+                          className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4.5 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a]"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">PIN CODE</label>
+                        <input
+                          type="text"
+                          placeholder="Zip"
+                          value={leadForm.pin_code}
+                          onChange={e => setLeadForm(prev => ({ ...prev, pin_code: e.target.value }))}
+                          className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4.5 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a]"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   {/* Category dropdown */}
@@ -2232,6 +2292,27 @@ export default function AdminLeads() {
                     </>
                   )}
 
+                  {/* Lead Source */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">Lead Source</label>
+                    <select
+                      value={leadForm.lead_source || 'website'}
+                      onChange={e => setLeadForm(prev => ({ ...prev, lead_source: e.target.value }))}
+                      className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs text-slate-650 focus:outline-none cursor-pointer"
+                    >
+                      <option value="facebook">facebook</option>
+                      <option value="google">google</option>
+                      <option value="GMB">GMB</option>
+                      <option value="indiamart">indiamart</option>
+                      <option value="field visit">field visit</option>
+                      <option value="cold calling">cold calling</option>
+                      <option value="telecalling">telecalling</option>
+                      <option value="website">website</option>
+                      <option value="referral">referral</option>
+                      <option value="others">others</option>
+                    </select>
+                  </div>
+
                   {/* Follow-up target date */}
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">Initial Follow-up Date</label>
@@ -2269,53 +2350,6 @@ export default function AdminLeads() {
                     onChange={e => setLeadForm(prev => ({ ...prev, notes: e.target.value }))}
                     className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4.5 py-2.5 text-xs text-slate-750 placeholder-slate-400 focus:outline-none focus:border-[#38b34a] resize-none"
                   />
-                </div>
-
-                {/* Address block */}
-                <div className="border-t border-slate-100 pt-4 space-y-4">
-                  <h4 className="text-[10px] font-black text-slate-450 uppercase tracking-widest">Location details</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="space-y-1.5 sm:col-span-3">
-                      <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">Full Address</label>
-                      <input
-                        type="text"
-                        placeholder="Street details..."
-                        value={leadForm.address}
-                        onChange={e => setLeadForm(prev => ({ ...prev, address: e.target.value }))}
-                        className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4.5 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a]"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">City</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Mumbai"
-                        value={leadForm.city}
-                        onChange={e => setLeadForm(prev => ({ ...prev, city: e.target.value }))}
-                        className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4.5 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a]"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">State</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Maharashtra"
-                        value={leadForm.state}
-                        onChange={e => setLeadForm(prev => ({ ...prev, state: e.target.value }))}
-                        className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4.5 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a]"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">PIN Code</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. 400001"
-                        value={leadForm.pin_code}
-                        onChange={e => setLeadForm(prev => ({ ...prev, pin_code: e.target.value }))}
-                        className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4.5 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a]"
-                      />
-                    </div>
-                  </div>
                 </div>
 
                 <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
