@@ -29,8 +29,8 @@ export const LEAD_STATUS_OPTIONS = [
   { value: 'attended', label: 'Attended' },
   { value: 'not attended', label: 'Not Attended' },
   { value: 'qualified', label: 'Qualified' },
-  { value: 'qotation send', label: 'Qotation Send' },
-  { value: 'persuing to purchase', label: 'Persuing to Purchase' },
+  { value: 'qotation send', label: 'Quotation Sent' },
+  { value: 'persuing to purchase', label: 'Pursuing to Purchase' },
   { value: 'order closed', label: 'Order Closed' },
   { value: 'not interested', label: 'Not Interested' }
 ]
@@ -485,13 +485,7 @@ export default function PartnerLeads() {
     }
 
     // 9. Lead Status
-    const validStatuses = LEAD_STATUS_OPTIONS.map(o => o.value)
-    if (form.lead_status && !validStatuses.includes(String(form.lead_status).toLowerCase())) {
-      errors.lead_status = {
-        mistake: 'Select a valid status option.',
-        example: 'Attended, Qualified, Order Closed, etc.'
-      }
-    }
+    // Lead Status validation skipped to allow any selected status
 
     return errors
   }
@@ -1181,13 +1175,20 @@ export default function PartnerLeads() {
       const isGeneralClient = leadForm.category_id === 'general_client'
 
       const reverseGcStatusMap = {
+        'new': 'Attended',
+        'contacted': 'Attended',
         'attended': 'Attended',
         'not attended': 'Not Attended',
         'qualified': 'Qualified',
+        'proposal': 'Quotation Sent',
         'qotation send': 'Quotation Sent',
+        'negotiation': 'Pursuing to Purchase',
         'persuing to purchase': 'Pursuing to Purchase',
+        'converted': 'Order Closed',
         'order closed': 'Order Closed',
-        'not interested': 'Not Interested'
+        'lost': 'Not Interested',
+        'not interested': 'Not Interested',
+        'junk': 'Not Interested'
       }
 
       if (isGeneralClient && (!leadForm.selected_services || leadForm.selected_services.length === 0)) {
@@ -1327,14 +1328,21 @@ export default function PartnerLeads() {
       if (statusLead?.is_general_client || String(statusLead?.id).startsWith('gc-')) {
         const rawId = statusLead.rawId || String(statusLead.id).replace('gc-', '')
         const reverseGcStatusMap = {
-          'attended': 'Attended',
-          'not attended': 'Not Attended',
-          'qualified': 'Qualified',
-          'qotation send': 'Quotation Sent',
-          'persuing to purchase': 'Pursuing to Purchase',
-          'order closed': 'Order Closed',
-          'not interested': 'Not Interested'
-        }
+        'new': 'Attended',
+        'contacted': 'Attended',
+        'attended': 'Attended',
+        'not attended': 'Not Attended',
+        'qualified': 'Qualified',
+        'proposal': 'Quotation Sent',
+        'qotation send': 'Quotation Sent',
+        'negotiation': 'Pursuing to Purchase',
+        'persuing to purchase': 'Pursuing to Purchase',
+        'converted': 'Order Closed',
+        'order closed': 'Order Closed',
+        'lost': 'Not Interested',
+        'not interested': 'Not Interested',
+        'junk': 'Not Interested'
+      }
         await updatePartnerGeneralClient(rawId, {
           status: reverseGcStatusMap[statusForm.status] || 'Attended',
           notes: statusForm.notes || undefined
@@ -1542,7 +1550,7 @@ export default function PartnerLeads() {
       label = 'QUALIFIED'
       style = 'bg-cyan-400/10 text-cyan-400 border-cyan-400/25'
     } else if (raw === 'qotation send' || raw === 'quotation send' || raw === 'quotation sent' || raw === 'quotation_sent' || raw === 'proposal') {
-      label = 'QOTATION SEND'
+      label = 'QUOTATION SENT'
       style = 'bg-purple-400/10 text-purple-400 border-purple-400/25'
     } else if (raw === 'persuing to purchase' || raw === 'pursuing to purchase' || raw === 'pursuing_to_purchase' || raw === 'negotiation') {
       label = 'PERSUING TO PURCHASE'

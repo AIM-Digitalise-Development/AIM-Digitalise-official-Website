@@ -218,7 +218,7 @@ export default function AdminLeads() {
     gstin: '',
     referred_by: 'Direct / None',
     lead_source: 'Website',
-    lead_status: 'new',
+    lead_status: 'not attended',
     lead_priority: 'medium',
     notes: '',
     budget: '',
@@ -737,7 +737,7 @@ export default function AdminLeads() {
       gstin: '',
       referred_by: 'Direct / None',
       lead_source: 'Website',
-      lead_status: 'new',
+      lead_status: 'not attended',
       lead_priority: 'medium',
       notes: '',
       budget: '',
@@ -1113,19 +1113,37 @@ export default function AdminLeads() {
   }
 
   const getStatusBadge = (status) => {
-    const badges = {
-      new: 'bg-gray-400/10 text-gray-400 border-gray-400/25',
-      contacted: 'bg-blue-400/10 text-blue-400 border-blue-400/25',
-      qualified: 'bg-cyan-400/10 text-cyan-400 border-cyan-400/25',
-      proposal: 'bg-yellow-400/10 text-yellow-400 border-yellow-400/25',
-      negotiation: 'bg-amber-400/10 text-amber-400 border-amber-400/25',
-      converted: 'bg-green-400/10 text-green-450 border-green-400/25',
-      lost: 'bg-red-400/10 text-red-450 border-red-400/25',
-      junk: 'bg-red-500/10 text-red-300 border-red-550/25'
+    const raw = (status || '').toLowerCase().trim()
+    let label = 'NOT ATTENDED'
+    let style = 'bg-amber-400/10 text-amber-400 border-amber-400/25'
+
+    if (raw === 'attended' || raw === 'contacted') {
+      label = 'ATTENDED'
+      style = 'bg-blue-400/10 text-blue-400 border-blue-400/25'
+    } else if (raw === 'not attended' || raw === 'not_attended' || raw === 'new') {
+      label = 'NOT ATTENDED'
+      style = 'bg-amber-400/10 text-amber-400 border-amber-400/25'
+    } else if (raw === 'qualified') {
+      label = 'QUALIFIED'
+      style = 'bg-cyan-400/10 text-cyan-400 border-cyan-400/25'
+    } else if (raw === 'qotation send' || raw === 'quotation send' || raw === 'quotation sent' || raw === 'quotation_sent' || raw === 'proposal') {
+      label = 'QUOTATION SENT'
+      style = 'bg-purple-400/10 text-purple-400 border-purple-400/25'
+    } else if (raw === 'persuing to purchase' || raw === 'pursuing to purchase' || raw === 'pursuing_to_purchase' || raw === 'negotiation') {
+      label = 'PERSUING TO PURCHASE'
+      style = 'bg-orange-400/10 text-orange-400 border-orange-400/25'
+    } else if (raw === 'order closed' || raw === 'order_closed' || raw === 'converted' || raw === 'closed') {
+      label = 'ORDER CLOSED'
+      style = 'bg-emerald-400/10 text-emerald-400 border-emerald-400/25'
+    } else if (raw === 'not interested' || raw === 'not_interested' || raw === 'lost' || raw === 'junk') {
+      label = 'NOT INTERESTED'
+      style = 'bg-rose-400/10 text-rose-400 border-rose-400/25'
+    } else if (status) {
+      label = status.toUpperCase()
+      style = 'bg-gray-400/10 text-gray-400 border-gray-400/25'
     }
-    const label = status?.toUpperCase() || 'NEW'
-    const c = badges[status] || badges.new
-    return <span className={`inline-flex text-[9px] font-black uppercase tracking-wider border rounded-md px-2 py-0.5 ${c}`}>{label}</span>
+
+    return <span className={`inline-flex text-[9px] font-black uppercase tracking-wider border rounded-md px-2 py-0.5 ${style}`}>{label}</span>
   }
 
   const getPriorityBadge = (priority) => {
@@ -1383,14 +1401,13 @@ export default function AdminLeads() {
                   className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs text-slate-600 focus:outline-none cursor-pointer"
                 >
                   <option value="">All Statuses</option>
-                  <option value="new">New</option>
-                  <option value="contacted">Contacted</option>
-                  <option value="qualified">Qualified</option>
-                  <option value="proposal">Proposal</option>
-                  <option value="negotiation">Negotiation</option>
-                  <option value="converted">Converted</option>
-                  <option value="lost">Lost</option>
-                  <option value="junk">Junk</option>
+                  <option value="attended">Attended</option>
+                      <option value="not attended">Not Attended</option>
+                      <option value="qualified">Qualified</option>
+                      <option value="qotation send">Quotation Sent</option>
+                      <option value="persuing to purchase">Pursuing to Purchase</option>
+                      <option value="order closed">Order Closed</option>
+                      <option value="not interested">Not Interested</option>
                 </select>
 
                 {/* Priority Filter */}
@@ -2324,6 +2341,24 @@ export default function AdminLeads() {
                     />
                   </div>
 
+                                    {/* Lead Status */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">Lead Status</label>
+                    <select
+                      value={leadForm.lead_status || 'new'}
+                      onChange={e => setLeadForm(prev => ({ ...prev, lead_status: e.target.value }))}
+                      className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs text-slate-650 focus:outline-none cursor-pointer"
+                    >
+                      <option value="attended">Attended</option>
+                      <option value="not attended">Not Attended</option>
+                      <option value="qualified">Qualified</option>
+                      <option value="qotation send">Quotation Sent</option>
+                      <option value="persuing to purchase">Pursuing to Purchase</option>
+                      <option value="order closed">Order Closed</option>
+                      <option value="not interested">Not Interested</option>
+                    </select>
+                  </div>
+
                   {/* Lead Priority */}
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">Lead Priority</label>
@@ -2396,14 +2431,13 @@ export default function AdminLeads() {
                     onChange={e => setStatusForm(prev => ({ ...prev, status: e.target.value }))}
                     className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs text-slate-650 focus:outline-none cursor-pointer"
                   >
-                    <option value="new">New</option>
-                    <option value="contacted">Contacted</option>
-                    <option value="qualified">Qualified</option>
-                    <option value="proposal">Proposal</option>
-                    <option value="negotiation">Negotiation</option>
-                    <option value="converted">Converted</option>
-                    <option value="lost">Lost</option>
-                    <option value="junk">Junk</option>
+                    <option value="attended">Attended</option>
+                      <option value="not attended">Not Attended</option>
+                      <option value="qualified">Qualified</option>
+                      <option value="qotation send">Quotation Sent</option>
+                      <option value="persuing to purchase">Pursuing to Purchase</option>
+                      <option value="order closed">Order Closed</option>
+                      <option value="not interested">Not Interested</option>
                   </select>
                 </div>
 
@@ -2475,14 +2509,13 @@ export default function AdminLeads() {
                     onChange={e => setFollowUpForm(prev => ({ ...prev, status: e.target.value }))}
                     className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs text-slate-650 focus:outline-none cursor-pointer"
                   >
-                    <option value="new">New</option>
-                    <option value="contacted">Contacted</option>
-                    <option value="qualified">Qualified</option>
-                    <option value="proposal">Proposal</option>
-                    <option value="negotiation">Negotiation</option>
-                    <option value="converted">Converted</option>
-                    <option value="lost">Lost</option>
-                    <option value="junk">Junk</option>
+                    <option value="attended">Attended</option>
+                      <option value="not attended">Not Attended</option>
+                      <option value="qualified">Qualified</option>
+                      <option value="qotation send">Quotation Sent</option>
+                      <option value="persuing to purchase">Pursuing to Purchase</option>
+                      <option value="order closed">Order Closed</option>
+                      <option value="not interested">Not Interested</option>
                   </select>
                 </div>
 

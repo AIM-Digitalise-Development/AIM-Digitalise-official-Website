@@ -124,7 +124,7 @@ export default function EmployeeLeads() {
     gst_type: 'Intra-State',
     gstin: '',
     lead_source: 'Website',
-    lead_status: 'new',
+    lead_status: 'not attended',
     lead_priority: 'medium',
     notes: '',
     budget: '',
@@ -680,7 +680,7 @@ export default function EmployeeLeads() {
       gst_type: 'Intra-State',
       gstin: '',
       lead_source: 'Website',
-      lead_status: 'new',
+      lead_status: 'not attended',
       lead_priority: 'medium',
       notes: '',
       budget: '',
@@ -1092,19 +1092,37 @@ export default function EmployeeLeads() {
 
   // Formatting utils
   const getStatusBadge = (status) => {
-    const badges = {
-      new: 'bg-gray-400/10 text-gray-450 border-gray-400/25',
-      contacted: 'bg-blue-400/10 text-blue-400 border-blue-400/25',
-      qualified: 'bg-cyan-400/10 text-cyan-400 border-cyan-400/25',
-      proposal: 'bg-yellow-400/10 text-yellow-400 border-yellow-400/25',
-      negotiation: 'bg-amber-400/10 text-amber-400 border-amber-400/25',
-      converted: 'bg-green-400/10 text-green-450 border-green-400/25',
-      lost: 'bg-red-400/10 text-red-450 border-red-400/25',
-      junk: 'bg-red-500/10 text-red-300 border-red-550/25'
+    const raw = (status || '').toLowerCase().trim()
+    let label = 'NOT ATTENDED'
+    let style = 'bg-amber-400/10 text-amber-400 border-amber-400/25'
+
+    if (raw === 'attended' || raw === 'contacted') {
+      label = 'ATTENDED'
+      style = 'bg-blue-400/10 text-blue-400 border-blue-400/25'
+    } else if (raw === 'not attended' || raw === 'not_attended' || raw === 'new') {
+      label = 'NOT ATTENDED'
+      style = 'bg-amber-400/10 text-amber-400 border-amber-400/25'
+    } else if (raw === 'qualified') {
+      label = 'QUALIFIED'
+      style = 'bg-cyan-400/10 text-cyan-400 border-cyan-400/25'
+    } else if (raw === 'qotation send' || raw === 'quotation send' || raw === 'quotation sent' || raw === 'quotation_sent' || raw === 'proposal') {
+      label = 'QUOTATION SENT'
+      style = 'bg-purple-400/10 text-purple-400 border-purple-400/25'
+    } else if (raw === 'persuing to purchase' || raw === 'pursuing to purchase' || raw === 'pursuing_to_purchase' || raw === 'negotiation') {
+      label = 'PERSUING TO PURCHASE'
+      style = 'bg-orange-400/10 text-orange-400 border-orange-400/25'
+    } else if (raw === 'order closed' || raw === 'order_closed' || raw === 'converted' || raw === 'closed') {
+      label = 'ORDER CLOSED'
+      style = 'bg-emerald-400/10 text-emerald-400 border-emerald-400/25'
+    } else if (raw === 'not interested' || raw === 'not_interested' || raw === 'lost' || raw === 'junk') {
+      label = 'NOT INTERESTED'
+      style = 'bg-rose-400/10 text-rose-400 border-rose-400/25'
+    } else if (status) {
+      label = status.toUpperCase()
+      style = 'bg-gray-400/10 text-gray-400 border-gray-400/25'
     }
-    const label = status?.toUpperCase() || 'NEW'
-    const c = badges[status] || badges.new
-    return <span className={`inline-flex text-[9px] font-black uppercase tracking-wider border rounded-md px-2 py-0.5 ${c}`}>{label}</span>
+
+    return <span className={`inline-flex text-[9px] font-black uppercase tracking-wider border rounded-md px-2 py-0.5 ${style}`}>{label}</span>
   }
 
   const getPriorityBadge = (priority) => {
@@ -1306,14 +1324,13 @@ export default function EmployeeLeads() {
             className="bg-white/3 border border-white/5 hover:border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
           >
             <option value="" className="bg-[#13151f]">All Statuses</option>
-            <option value="new" className="bg-[#13151f]">New</option>
-            <option value="contacted" className="bg-[#13151f]">Contacted</option>
-            <option value="qualified" className="bg-[#13151f]">Qualified</option>
-            <option value="proposal" className="bg-[#13151f]">Proposal</option>
-            <option value="negotiation" className="bg-[#13151f]">Negotiation</option>
-            <option value="converted" className="bg-[#13151f]">Converted</option>
-            <option value="lost" className="bg-[#13151f]">Lost</option>
-            <option value="junk" className="bg-[#13151f]">Junk</option>
+            <option value="attended" className="bg-[#13151f]">Attended</option>
+                      <option value="not attended" className="bg-[#13151f]">Not Attended</option>
+                      <option value="qualified" className="bg-[#13151f]">Qualified</option>
+                      <option value="qotation send" className="bg-[#13151f]">Quotation Sent</option>
+                      <option value="persuing to purchase" className="bg-[#13151f]">Pursuing to Purchase</option>
+                      <option value="order closed" className="bg-[#13151f]">Order Closed</option>
+                      <option value="not interested" className="bg-[#13151f]">Not Interested</option>
           </select>
 
           <select
@@ -2183,14 +2200,13 @@ export default function EmployeeLeads() {
                       onChange={(e) => setLeadForm({ ...leadForm, lead_status: e.target.value })}
                       className="w-full bg-white/3 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
                     >
-                      <option value="new" className="bg-[#13151f]">New</option>
-                      <option value="contacted" className="bg-[#13151f]">Contacted</option>
+                      <option value="attended" className="bg-[#13151f]">Attended</option>
+                      <option value="not attended" className="bg-[#13151f]">Not Attended</option>
                       <option value="qualified" className="bg-[#13151f]">Qualified</option>
-                      <option value="proposal" className="bg-[#13151f]">Proposal</option>
-                      <option value="negotiation" className="bg-[#13151f]">Negotiation</option>
-                      <option value="converted" className="bg-[#13151f]">Converted</option>
-                      <option value="lost" className="bg-[#13151f]">Lost</option>
-                      <option value="junk" className="bg-[#13151f]">Junk</option>
+                      <option value="qotation send" className="bg-[#13151f]">Quotation Sent</option>
+                      <option value="persuing to purchase" className="bg-[#13151f]">Pursuing to Purchase</option>
+                      <option value="order closed" className="bg-[#13151f]">Order Closed</option>
+                      <option value="not interested" className="bg-[#13151f]">Not Interested</option>
                     </select>
                   </div>
 
@@ -2265,14 +2281,13 @@ export default function EmployeeLeads() {
                     onChange={(e) => setStatusForm({ ...statusForm, status: e.target.value })}
                     className="w-full bg-white/3 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
                   >
-                    <option value="new" className="bg-[#13151f]">New</option>
-                    <option value="contacted" className="bg-[#13151f]">Contacted</option>
-                    <option value="qualified" className="bg-[#13151f]">Qualified</option>
-                    <option value="proposal" className="bg-[#13151f]">Proposal</option>
-                    <option value="negotiation" className="bg-[#13151f]">Negotiation</option>
-                    <option value="converted" className="bg-[#13151f]">Converted</option>
-                    <option value="lost" className="bg-[#13151f]">Lost</option>
-                    <option value="junk" className="bg-[#13151f]">Junk</option>
+                    <option value="attended" className="bg-[#13151f]">Attended</option>
+                      <option value="not attended" className="bg-[#13151f]">Not Attended</option>
+                      <option value="qualified" className="bg-[#13151f]">Qualified</option>
+                      <option value="qotation send" className="bg-[#13151f]">Quotation Sent</option>
+                      <option value="persuing to purchase" className="bg-[#13151f]">Pursuing to Purchase</option>
+                      <option value="order closed" className="bg-[#13151f]">Order Closed</option>
+                      <option value="not interested" className="bg-[#13151f]">Not Interested</option>
                   </select>
                 </div>
 
@@ -2906,14 +2921,13 @@ export default function EmployeeLeads() {
                         onChange={(e) => setFollowUpForm({ ...followUpForm, status: e.target.value })}
                         className="w-full bg-[#161922] border border-white/5 rounded-xl px-3.5 py-2.5 mt-1 text-xs text-white focus:outline-none focus:border-[#38b34a] focus:ring-1 focus:ring-[#38b34a]/30 cursor-pointer font-bold transition-all"
                       >
-                        <option value="new" className="bg-[#13151f]">New</option>
-                        <option value="contacted" className="bg-[#13151f]">Contacted</option>
-                        <option value="qualified" className="bg-[#13151f]">Qualified</option>
-                        <option value="proposal" className="bg-[#13151f]">Proposal</option>
-                        <option value="negotiation" className="bg-[#13151f]">Negotiation</option>
-                        <option value="converted" className="bg-[#13151f]">Converted</option>
-                        <option value="lost" className="bg-[#13151f]">Lost</option>
-                        <option value="junk" className="bg-[#13151f]">Junk</option>
+                        <option value="attended" className="bg-[#13151f]">Attended</option>
+                      <option value="not attended" className="bg-[#13151f]">Not Attended</option>
+                      <option value="qualified" className="bg-[#13151f]">Qualified</option>
+                      <option value="qotation send" className="bg-[#13151f]">Quotation Sent</option>
+                      <option value="persuing to purchase" className="bg-[#13151f]">Pursuing to Purchase</option>
+                      <option value="order closed" className="bg-[#13151f]">Order Closed</option>
+                      <option value="not interested" className="bg-[#13151f]">Not Interested</option>
                       </select>
                     </div>
                     <div className="md:col-span-2 space-y-1 text-left">
