@@ -1924,94 +1924,56 @@ const AdminUsers = () => {
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center pb-4 border-b border-slate-200 gap-3">
                     <div>
                       <h2 className="text-xl font-black text-[#1e3e6b] flex items-center gap-2">
-                        <span>📄 Dynamic Quotation Builder for General Client</span>
+                        <span>{selectedGenClient?.company_name || selectedGenClient?.client_name}</span>
                       </h2>
-                      <p className="text-xs text-slate-500 font-medium mt-1">
-                        Client: <strong className="text-slate-800">{selectedGenClient?.client_name}</strong> | ID:{' '}
-                        <code className="text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded font-mono font-bold">
-                          {selectedGenClient?.client_id || `GC-${selectedGenClient?.id}`}
-                        </code>{' '}
-                        | Executive: <strong className="text-slate-700">{selectedGenClient?.sold_by_name || 'Admin Sales'}</strong> | Branch:{' '}
-                        {selectedGenClient?.branch_name || 'Head Office'}
-                      </p>
+                      <div className="text-xs text-slate-500 font-medium mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span>
+                          Client: <strong className="text-slate-800">{selectedGenClient?.client_name || selectedGenClient?.company_name}</strong>
+                        </span>
+                        <span>|</span>
+                        <span>
+                          ID:{' '}
+                          <code className="text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded font-mono font-bold">
+                            {selectedGenClient?.client_id || `GC-${selectedGenClient?.id}`}
+                          </code>
+                        </span>
+                        {(selectedGenClient?.contact_person || selectedGenClient?.client_name) && (
+                          <>
+                            <span>|</span>
+                            <span>Contact Person: <strong className="text-slate-700">{selectedGenClient?.contact_person || selectedGenClient?.client_name}</strong></span>
+                          </>
+                        )}
+                        {selectedGenClient?.contact_number && (
+                          <>
+                            <span>|</span>
+                            <span>Contact: <strong className="text-slate-700">{selectedGenClient?.contact_number}</strong></span>
+                          </>
+                        )}
+                        {selectedGenClient?.email && (
+                          <>
+                            <span>|</span>
+                            <span>Email: <strong className="text-slate-700">{selectedGenClient?.email}</strong></span>
+                          </>
+                        )}
+                        <span>|</span>
+                        <span>Executive: <strong className="text-slate-700">{selectedGenClient?.sold_by_name || 'Admin Sales'}</strong></span>
+                        <span>|</span>
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                          Status: {selectedGenClient?.status || 'Attended'}
+                        </span>
+                      </div>
                     </div>
                     <button
                       onClick={() => setShowQuotationBuilder(false)}
-                      className="px-4 py-2 border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl transition-all shadow-sm"
+                      className="px-4 py-2 border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
                     >
                       ← Back to Show Clients Directory
                     </button>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Left Column (2 Cols): Client Details + Quotation Details + Line Items */}
+                    {/* Left Column (2 Cols): Quotation Details + Line Items */}
                     <div className="lg:col-span-2 space-y-6">
-                      {/* Box 1: Client Details Summary */}
-                      <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 space-y-3">
-                        <h3 className="text-xs font-black text-slate-600 uppercase tracking-wider flex items-center justify-between">
-                          <span>Client Details:</span>
-                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                            Status: {selectedGenClient?.status || 'Attended'}
-                          </span>
-                        </h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                          <div>
-                            <label className="text-[10px] font-bold text-slate-400 block mb-1">Client Name & ID</label>
-                            <input
-                              type="text"
-                              readOnly
-                              value={`${selectedGenClient?.client_name || ''} | ID: ${selectedGenClient?.client_id || ''}`}
-                              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 font-bold text-slate-700"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[10px] font-bold text-slate-400 block mb-1">Contact Person</label>
-                            <input
-                              type="text"
-                              readOnly
-                              value={selectedGenClient?.contact_person || selectedGenClient?.client_name || ''}
-                              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 font-bold text-slate-700"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[10px] font-bold text-slate-400 block mb-1">Contact No.</label>
-                            <input
-                              type="text"
-                              readOnly
-                              value={selectedGenClient?.contact_number || ''}
-                              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 font-bold text-slate-700"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[10px] font-bold text-slate-400 block mb-1">Email Address</label>
-                            <input
-                              type="text"
-                              readOnly
-                              value={selectedGenClient?.email || ''}
-                              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 font-bold text-slate-700"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[10px] font-bold text-slate-400 block mb-1">Sold By Executive</label>
-                            <input
-                              type="text"
-                              readOnly
-                              value={selectedGenClient?.sold_by_name || 'Admin Sales Team'}
-                              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 font-bold text-slate-700"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[10px] font-bold text-slate-400 block mb-1">Branch</label>
-                            <input
-                              type="text"
-                              readOnly
-                              value={selectedGenClient?.branch_name || 'Head Office ( Kolkata)'}
-                              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 font-bold text-slate-700"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
                       {/* Box 2: Quotation Parameters Form */}
                       <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 space-y-3">
                         <h3 className="text-xs font-black text-slate-600 uppercase tracking-wider">Quotation Parameters:</h3>
@@ -2388,7 +2350,7 @@ const AdminUsers = () => {
 
                         {/* Save & Actions */}
                         <div className="space-y-2.5 pt-2">
-                          <button
+                          {/* <button
                             type="button"
                             disabled={loading || quotationItems.length === 0}
                             onClick={(e) => handleSaveQuotation(e, false)}
@@ -2396,7 +2358,7 @@ const AdminUsers = () => {
                           >
                             <span>💾</span>
                             <span>{loading ? 'Saving...' : 'Save & View Quotation Document'}</span>
-                          </button>
+                          </button> */}
 
                           <button
                             type="button"

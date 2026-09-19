@@ -26,7 +26,7 @@ const OrderDetails = ({ order, isOpen, onClose }) => {
         <div className="flex items-start justify-between pb-4 border-b border-white/10">
           <div>
             <div className="flex items-center gap-3 flex-wrap">
-              <h3 className="text-lg font-black text-white">{order.client_name}</h3>
+              <h3 className="text-lg font-black text-white">{order.company_name || order.school_name || order.client_name}</h3>
               <OrderStatusBadge status={order.payment_status} />
               <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                 order.is_active 

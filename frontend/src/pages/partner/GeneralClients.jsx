@@ -1738,16 +1738,44 @@ export default function PartnerGeneralClients() {
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center pb-4 border-b border-white/10 gap-3">
                     <div>
                       <h2 className="text-xl font-black text-white flex items-center gap-2">
-                        <span>📄 Dynamic Quotation Builder for General Client</span>
+                        <span>{selectedGenClient?.company_name || selectedGenClient?.client_name}</span>
                       </h2>
-                      <p className="text-xs text-gray-400 font-medium mt-1">
-                        Client: <strong className="text-white">{selectedGenClient?.client_name}</strong> | ID:{' '}
-                        <code className="text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded font-mono font-bold border border-blue-500/20">
-                          {selectedGenClient?.client_id || `AIMGC${selectedGenClient?.id}`}
-                        </code>{' '}
-                        | Executive: <strong className="text-gray-300">{selectedGenClient?.sold_by_name || selectedGenClient?.sold_by || partnerName}</strong> | Branch:{' '}
-                        {selectedGenClient?.branch_name || 'Head Office'}
-                      </p>
+                      <div className="text-xs text-gray-400 font-medium mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span>
+                          Client: <strong className="text-white">{selectedGenClient?.client_name || selectedGenClient?.company_name}</strong>
+                        </span>
+                        <span>|</span>
+                        <span>
+                          ID:{' '}
+                          <code className="text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded font-mono font-bold border border-blue-500/20">
+                            {selectedGenClient?.client_id || `AIMGC${selectedGenClient?.id}`}
+                          </code>
+                        </span>
+                        {(selectedGenClient?.contact_person || selectedGenClient?.client_name) && (
+                          <>
+                            <span>|</span>
+                            <span>Contact Person: <strong className="text-gray-300">{selectedGenClient?.contact_person || selectedGenClient?.client_name}</strong></span>
+                          </>
+                        )}
+                        {selectedGenClient?.contact_number && (
+                          <>
+                            <span>|</span>
+                            <span>Contact: <strong className="text-gray-300">{selectedGenClient?.contact_number}</strong></span>
+                          </>
+                        )}
+                        {selectedGenClient?.email && (
+                          <>
+                            <span>|</span>
+                            <span>Email: <strong className="text-gray-300">{selectedGenClient?.email}</strong></span>
+                          </>
+                        )}
+                        <span>|</span>
+                        <span>Executive: <strong className="text-gray-300">{selectedGenClient?.sold_by_name || selectedGenClient?.sold_by || partnerName}</strong></span>
+                        <span>|</span>
+                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                          Status: {selectedGenClient?.status || 'Attended'}
+                        </span>
+                      </div>
                     </div>
                     <button
                       onClick={() => setShowQuotationBuilder(false)}
@@ -1758,74 +1786,8 @@ export default function PartnerGeneralClients() {
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Left Column (2 Cols): Client Details + Parameters + Line Items */}
+                    {/* Left Column (2 Cols): Parameters + Line Items */}
                     <div className="lg:col-span-2 space-y-6">
-                      {/* Box 1: Client Details Summary */}
-                      <div className="bg-[#1a1e2d] border border-white/10 rounded-2xl p-4 space-y-3">
-                        <h3 className="text-xs font-black text-gray-400 uppercase tracking-wider flex items-center justify-between">
-                          <span>Client Details:</span>
-                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                            Status: {selectedGenClient?.status || 'Attended'}
-                          </span>
-                        </h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                          <div>
-                            <label className="text-[10px] font-bold text-gray-500 block mb-1">Client Name & ID</label>
-                            <input
-                              type="text"
-                              readOnly
-                              value={`${selectedGenClient?.client_name || ''} | ID: ${selectedGenClient?.client_id || ''}`}
-                              className="w-full bg-[#151722] border border-white/10 rounded-lg px-3 py-1.5 font-bold text-gray-200"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[10px] font-bold text-gray-500 block mb-1">Contact Person</label>
-                            <input
-                              type="text"
-                              readOnly
-                              value={selectedGenClient?.contact_person || selectedGenClient?.client_name || ''}
-                              className="w-full bg-[#151722] border border-white/10 rounded-lg px-3 py-1.5 font-bold text-gray-200"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[10px] font-bold text-gray-500 block mb-1">Contact No.</label>
-                            <input
-                              type="text"
-                              readOnly
-                              value={selectedGenClient?.contact_number || ''}
-                              className="w-full bg-[#151722] border border-white/10 rounded-lg px-3 py-1.5 font-bold text-gray-200"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[10px] font-bold text-gray-500 block mb-1">Email Address</label>
-                            <input
-                              type="text"
-                              readOnly
-                              value={selectedGenClient?.email || ''}
-                              className="w-full bg-[#151722] border border-white/10 rounded-lg px-3 py-1.5 font-bold text-gray-200"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[10px] font-bold text-gray-500 block mb-1">Sold By Executive</label>
-                            <input
-                              type="text"
-                              readOnly
-                              value={selectedGenClient?.sold_by_name || selectedGenClient?.sold_by || partnerName}
-                              className="w-full bg-[#151722] border border-white/10 rounded-lg px-3 py-1.5 font-bold text-gray-200"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[10px] font-bold text-gray-500 block mb-1">Branch</label>
-                            <input
-                              type="text"
-                              readOnly
-                              value={selectedGenClient?.branch_name || 'Head Office (Gurugram)'}
-                              className="w-full bg-[#151722] border border-white/10 rounded-lg px-3 py-1.5 font-bold text-gray-200"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
                       {/* Box 2: Quotation Parameters Form */}
                       <div className="bg-[#1a1e2d] border border-white/10 rounded-2xl p-4 space-y-3">
                         <h3 className="text-xs font-black text-gray-400 uppercase tracking-wider">Quotation Parameters:</h3>
@@ -2156,14 +2118,14 @@ export default function PartnerGeneralClients() {
 
                         {/* Save Quotation Actions */}
                         <div className="pt-2 space-y-2.5">
-                          <button
+                          {/* <button
                             onClick={() => handleSaveQuotation(false)}
                             disabled={loading}
                             className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                           >
                             <span>💾</span>
                             <span>Save & View Quotation Document</span>
-                          </button>
+                          </button> */}
 
                           <button
                             onClick={() => handleSaveQuotation(true)}

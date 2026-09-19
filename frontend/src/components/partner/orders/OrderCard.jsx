@@ -19,7 +19,7 @@ const OrderCard = ({ order, onClick }) => {
       <div className="space-y-1">
         <div className="flex items-center gap-3 flex-wrap">
           <h4 className="text-white font-bold text-base group-hover:text-aim-gold transition-colors">
-            {order.client_name}
+            {order.company_name || order.school_name || order.client_name}
           </h4>
           <OrderStatusBadge status={order.payment_status} />
         </div>

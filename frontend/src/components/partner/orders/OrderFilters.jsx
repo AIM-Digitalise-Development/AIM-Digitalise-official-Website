@@ -27,7 +27,7 @@ const OrderFilters = ({ onFilterChange }) => {
           type="text"
           value={search}
           onChange={(e) => handleSearch(e.target.value)}
-          placeholder="Search by Order ID or Client Name..."
+          placeholder="Search by Order ID, Company, or Client Name..."
           className="w-full bg-aim-navy-light/60 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-aim-copy-muted focus:outline-none focus:border-aim-gold/60 focus:ring-1 focus:ring-aim-gold/30 transition-all"
         />
       </div>

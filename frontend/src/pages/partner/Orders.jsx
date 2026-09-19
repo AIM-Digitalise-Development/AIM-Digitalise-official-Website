@@ -71,7 +71,8 @@ const PartnerOrders = () => {
           client_name: localFound.client_name,
           email: 'demo-client@domain.com',
           contact_number: '+91 99999 88888',
-          company_name: localFound.client_name,
+          company_name: localFound.company_name || localFound.school_name || localFound.client_name,
+          school_name: localFound.school_name,
           gstin: '19AAAAA0000A1Z0',
           product_name: localFound.product_name,
           product_category: 'NEXGN Software Suite',
@@ -96,6 +97,8 @@ const PartnerOrders = () => {
 
   const filteredOrders = (orders || []).filter((order) => {
     const matchesSearch = 
+      order.company_name?.toLowerCase().includes(filters.search.toLowerCase()) || 
+      order.school_name?.toLowerCase().includes(filters.search.toLowerCase()) || 
       order.client_name?.toLowerCase().includes(filters.search.toLowerCase()) || 
       order.client_id?.toString().toLowerCase().includes(filters.search.toLowerCase()) ||
       order.product_name?.toLowerCase().includes(filters.search.toLowerCase())
@@ -144,7 +147,8 @@ const PartnerOrders = () => {
                     {
                       id: 1,
                       client_id: 'CLI-4821',
-                      client_name: 'TechCorp India',
+                      client_name: 'Rahul Sharma',
+                      company_name: 'TechCorp India',
                       product_name: 'NEXGN School Pro',
                       processing_fee: 12500,
                       monthly_subscription: 1875,
@@ -154,7 +158,8 @@ const PartnerOrders = () => {
                     {
                       id: 2,
                       client_id: 'CLI-4820',
-                      client_name: 'Spark Solutions',
+                      client_name: 'Anish Kumar',
+                      company_name: 'Spark Solutions',
                       product_name: 'NEXGN SaaS Suite',
                       processing_fee: 8200,
                       monthly_subscription: 1230,
