@@ -77,6 +77,36 @@ let cachedAdminCategories = null
 let cachedAdminServices = null
 let cachedAdminDemoSlots = null
 
+
+const formatForDateTimeInput = (dateStr) => {
+  if (!dateStr) return ''
+  if (typeof dateStr === 'string' && dateStr.includes('T')) {
+    return dateStr.slice(0, 16)
+  }
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return ''
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const hours = String(d.getHours()).padStart(2, '0')
+  const minutes = String(d.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day}T${hours}:${minutes}`
+}
+
+const formatFollowUpDisplay = (dateStr) => {
+  if (!dateStr) return 'Set Date'
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return dateStr
+  return d.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  })
+}
+
 export default function AdminLeads() {
   // Navigation Tabs State
   const [searchParams, setSearchParams] = useSearchParams()
@@ -784,7 +814,7 @@ export default function AdminLeads() {
       lead_priority: lead.lead_priority || 'medium',
       notes: lead.notes || '',
       budget: lead.budget || '',
-      expected_close_date: lead.follow_up_date ? lead.follow_up_date.split(' ')[0] : (lead.expected_close_date || ''),
+      expected_close_date: formatForDateTimeInput(lead.follow_up_date || lead.expected_close_date),
       category_id: isGc ? 'general_client' : (lead.category_id || ''),
       sub_category_id: lead.sub_category_id || '',
       product_id: lead.product_id || '',
@@ -1028,7 +1058,7 @@ export default function AdminLeads() {
   const openFollowUpModal = (lead) => {
     setFollowUpLead(lead)
     setFollowUpForm({
-      next_date: lead.follow_up_date ? lead.follow_up_date.split(' ')[0] : (lead.expected_close_date ? lead.expected_close_date.split(' ')[0] : ''),
+      next_date: formatForDateTimeInput(lead.follow_up_date || lead.expected_close_date),
       status: lead.lead_status || 'new',
       remark: ''
     })
@@ -1545,7 +1575,7 @@ export default function AdminLeads() {
                                 </span>
                                 {lead.follow_up_date && (
                                   <span className="text-[10px] text-amber-500 font-bold mt-0.5 block">
-                                    📅 Next F/Up: {lead.follow_up_date.split(' ')[0]}
+                                    📅 Next F/Up: {formatFollowUpDisplay(lead.follow_up_date)}
                                   </span>
                                 )}
                               </div>
@@ -2333,9 +2363,7 @@ export default function AdminLeads() {
                   {/* Follow-up target date */}
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">Initial Follow-up Date</label>
-                    <input
-                      type="date"
-                      value={leadForm.expected_close_date}
+                    <input type="datetime-local" min={new Date().toISOString().slice(0, 10) + 'T00:00'} value={leadForm.expected_close_date}
                       onChange={e => setLeadForm(prev => ({ ...prev, expected_close_date: e.target.value }))}
                       className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4.5 py-2.5 text-xs text-slate-750 focus:outline-none cursor-pointer"
                     />
@@ -2493,10 +2521,7 @@ export default function AdminLeads() {
               <form onSubmit={handleFollowUpSubmit} className="space-y-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block">Next Follow-up Date <span className="text-red-500">*</span></label>
-                  <input
-                    type="date"
-                    required
-                    value={followUpForm.next_date}
+                  <input type="datetime-local" min={new Date().toISOString().slice(0, 10) + 'T00:00'} required value={followUpForm.next_date}
                     onChange={e => setFollowUpForm(prev => ({ ...prev, next_date: e.target.value }))}
                     className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4.5 py-2.5 text-xs text-slate-750 focus:outline-none cursor-pointer"
                   />
