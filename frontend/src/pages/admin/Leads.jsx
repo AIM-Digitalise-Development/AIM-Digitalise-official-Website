@@ -1084,6 +1084,15 @@ export default function AdminLeads() {
       const res = await scheduleFollowUp(followUpLead.id, payload)
       if (res.data?.success) {
         triggerSuccess('Follow-up scheduled and updated successfully.')
+        const newAct = res.data.data?.activity
+        if (newAct) {
+          setFollowUpLead(prev => prev ? {
+            ...prev,
+            follow_up_date: followUpForm.next_date,
+            lead_status: followUpForm.status,
+            activities: [newAct, ...(prev.activities || [])]
+          } : null)
+        }
         setIsFollowUpModalOpen(false)
         loadLeads()
         loadStats()

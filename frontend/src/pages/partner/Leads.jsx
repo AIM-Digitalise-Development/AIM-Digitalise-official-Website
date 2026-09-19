@@ -1506,7 +1506,16 @@ export default function PartnerLeads() {
         notes: followUpForm.remark || 'No remark provided.',
         scheduled_date: followUpForm.next_date
       }
-      await addLeadActivity(followUpLead.id, activityPayload)
+      const actRes = await addLeadActivity(followUpLead.id, activityPayload)
+      const newAct = actRes?.data?.data || actRes?.data
+      if (newAct) {
+        setFollowUpLead(prev => prev ? {
+          ...prev,
+          follow_up_date: followUpForm.next_date,
+          lead_status: followUpForm.status,
+          activities: [newAct, ...(prev.activities || [])]
+        } : null)
+      }
 
       triggerSuccess('Follow-up updated and activity logged successfully.')
       setIsFollowUpModalOpen(false)
@@ -3589,9 +3598,9 @@ export default function PartnerLeads() {
                       </thead>
                       <tbody className="divide-y divide-white/5">
                         {(() => {
-                          const sortedActivities = followUpLead.activities
-                            ? [...followUpLead.activities].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-                            : []
+                          const sortedActivities = (followUpLead?.activities || [])
+                            .slice()
+                            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
                           
                           if (sortedActivities.length === 0) {
                             return (
@@ -3604,10 +3613,8 @@ export default function PartnerLeads() {
                           }
 
                           return sortedActivities.map((act, index) => {
-                            const dateStr = new Date(act.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-                            const nextDateStr = act.scheduled_date
-                              ? new Date(act.scheduled_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-                              : '—'
+                            const dateStr = formatFollowUpDisplay(act.created_at)
+                            const nextDateStr = act.scheduled_date ? formatFollowUpDisplay(act.scheduled_date) : '—'
                             return (
                               <tr key={act.id} className="hover:bg-white/[0.02] transition-colors">
                                 <td className="p-3 text-center font-mono border-r border-white/5 text-gray-500">{index + 1}</td>

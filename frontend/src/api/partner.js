@@ -349,4 +349,13 @@ export const setCountryPrice = (productId, data) => partnerFetch('POST', `/admin
 export const getPublicProductsForCountry = (countryCode = 'IN') =>
   partnerFetch('GET', `/public/products?country=${countryCode}`)
 export const getSubscriptionClients = () => partnerFetch('GET', '/partner/my-orders')
-
+
+
+export const getPartnerSignedAgreementDownloadUrl = () => {
+  const token = localStorage.getItem('partner_token') || ''
+  return `${PARTNER_API}/partner/download-signed-agreement?token=${token}`
+}
+
+export const downloadPartnerSignedAgreement = () =>
+  partnerFetch('GET', '/partner/download-signed-agreement')
+

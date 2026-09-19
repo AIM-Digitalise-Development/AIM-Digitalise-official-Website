@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { ROUTES } from '../constants/routes'
 import { usePartnerAuthStore } from '../store/partnerAuthStore'
-import { partnerLogout as apiLogout } from '../api/partner'
+import { partnerLogout as apiLogout, getPartnerProfile, PARTNER_API, getPartnerSignedAgreementDownloadUrl } from '../api/partner'
 import logoImg from '../assets/images/plogo.jpeg'
 
 const navItems = [
@@ -90,7 +90,7 @@ const navItems = [
 ]
 
 const PartnerLayout = () => {
-  const { isPartnerAuthenticated, partnerUser, partnerLogout } = usePartnerAuthStore()
+  const { isPartnerAuthenticated, partnerUser, setPartnerUser, partnerLogout } = usePartnerAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -100,6 +100,21 @@ const PartnerLayout = () => {
   useEffect(() => {
     document.documentElement.classList.add('dark')
   }, [])
+
+  
+  // Auto-sync fresh partner profile on mount
+  useEffect(() => {
+    if (isPartnerAuthenticated) {
+      getPartnerProfile()
+        .then(res => {
+          const pData = res?.data?.partner || res?.data
+          if (pData && Object.keys(pData).length > 0 && typeof setPartnerUser === 'function') {
+            setPartnerUser(pData)
+          }
+        })
+        .catch(err => console.error('Auto-sync partner profile error:', err))
+    }
+  }, [isPartnerAuthenticated])
 
   // Route guard
   useEffect(() => {
@@ -114,6 +129,43 @@ const PartnerLayout = () => {
     try { await apiLogout() } catch (_) { /* ignore if token expired */ }
     partnerLogout()
     navigate(ROUTES.PARTNER.LOGIN)
+  }
+
+  
+  const getDocumentUrl = (filePath) => {
+    if (!filePath) return ''
+    if (filePath.startsWith('http://') || filePath.startsWith('https://')) return filePath
+    
+    let base = import.meta.env.VITE_PARTNER_API_URL || import.meta.env.VITE_API_BASE_URL || PARTNER_API || 'https://api.nexgn.in/api'
+    
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      if (!import.meta.env.VITE_PARTNER_API_URL && !import.meta.env.VITE_API_BASE_URL) {
+        base = 'http://localhost/aim-backend/public/api'
+      }
+    }
+
+    const host = base.replace(/\/api\/?$/, '')
+
+    if (filePath.startsWith('storage/') || filePath.startsWith('/storage/')) {
+      return `${host}${filePath.startsWith('/') ? '' : '/'}${filePath}`
+    }
+    return `${host}/storage/${filePath}`
+  }
+
+    const handleDownloadAgreement = async () => {
+    try {
+      const url = getPartnerSignedAgreementDownloadUrl()
+      const a = document.createElement('a')
+      a.href = url
+      a.target = '_blank'
+      a.download = `Signed_Partner_Agreement_${partnerUser?.partner_id || 'Document'}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    } catch (err) {
+      console.error('Error downloading signed agreement:', err)
+      alert('Failed to download signed agreement. Please try again.')
+    }
   }
 
   const isActive = (path) => location.pathname === path
@@ -219,6 +271,20 @@ const PartnerLayout = () => {
               {item.label}
             </Link>
           ))}
+
+          {/* Download Agreement button under Support */}
+          <button
+            type="button"
+            onClick={handleDownloadAgreement}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-aim-copy-muted hover:text-aim-gold hover:bg-white/5 border border-transparent transition-all duration-200 cursor-pointer text-left mt-1"
+          >
+            <span className="text-aim-copy-muted">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </span>
+            Download Agreement
+          </button>
         </nav>
 
         {/* Logout */}
