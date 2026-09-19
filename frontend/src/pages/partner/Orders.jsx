@@ -110,14 +110,14 @@ const PartnerOrders = () => {
   return (
     <>
       <Helmet>
-        <title>Client Details | AIM Partner</title>
+        <title>Subscription Clients | AIM Partner</title>
       </Helmet>
 
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-2xl font-black text-white">Client Details</h1>
+            <h1 className="text-2xl font-black text-white">Subscription Clients</h1>
             <p className="text-aim-copy-muted text-xs mt-1">
               Track subscriptions, client details, and activation statuses for products you sold.
             </p>
