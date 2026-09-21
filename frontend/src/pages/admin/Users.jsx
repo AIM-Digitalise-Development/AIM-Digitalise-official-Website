@@ -48,6 +48,177 @@ export const renderCreatorBadge = (creatorCode) => {
   )
 }
 
+// Rich Text Editor Component for Annexure (with Toolbar & Hide/Collapse Toggle)
+export const RichAnnexureEditor = ({ value, onChange, theme = 'light' }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false)
+  const editorRef = useRef(null)
+
+  useEffect(() => {
+    if (editorRef.current && editorRef.current.innerHTML !== (value || '')) {
+      editorRef.current.innerHTML = value || ''
+    }
+  }, [value, isCollapsed])
+
+  const handleCommand = (command, val = null) => {
+    if (editorRef.current) {
+      editorRef.current.focus()
+    }
+    if (command === 'clear') {
+      document.execCommand('removeFormat', false, null)
+      document.execCommand('formatBlock', false, 'p')
+    } else {
+      document.execCommand(command, false, val)
+    }
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML)
+    }
+  }
+
+  const isDark = theme === 'dark'
+
+  return (
+    <div className={`rounded-2xl border ${isDark ? 'bg-[#1a1e2d] border-white/10' : 'bg-slate-50 border-slate-200'} p-4 space-y-3 transition-all shadow-sm mb-4`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-base">📝</span>
+          <h4 className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-gray-200' : 'text-slate-800'}`}>
+            Annexure Specifications & Technical Details
+          </h4>
+          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+            Annexure Included
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className={`px-3 py-1 rounded-xl text-xs font-bold transition-all border cursor-pointer flex items-center gap-1.5 ${
+            isDark
+              ? 'bg-[#151722] border-white/10 text-gray-300 hover:bg-white/10'
+              : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100 shadow-sm'
+          }`}
+        >
+          <span>{isCollapsed ? '👁️ Show / Edit Annexure' : '🙈 Hide Section'}</span>
+        </button>
+      </div>
+
+      {!isCollapsed ? (
+        <div className="space-y-2">
+          {/* Advanced Formatting Toolbar */}
+          <div className={`flex flex-wrap items-center gap-1 p-1.5 rounded-xl border ${isDark ? 'bg-[#151722] border-white/10 text-gray-200' : 'bg-white border-slate-200 text-slate-700'}`}>
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => handleCommand('bold')}
+              title="Bold (Ctrl+B)"
+              className="px-2 py-1 rounded font-black text-xs border border-transparent hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 cursor-pointer"
+            >
+              B
+            </button>
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => handleCommand('italic')}
+              title="Italic (Ctrl+I)"
+              className="px-2 py-1 rounded italic font-bold text-xs border border-transparent hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 cursor-pointer"
+            >
+              I
+            </button>
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => handleCommand('underline')}
+              title="Underline (Ctrl+U)"
+              className="px-2 py-1 rounded underline font-bold text-xs border border-transparent hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 cursor-pointer"
+            >
+              U
+            </button>
+            <div className="h-4 w-px bg-slate-200 dark:bg-white/20 mx-1" />
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => handleCommand('formatBlock', 'h2')}
+              title="Heading 2"
+              className="px-2 py-1 rounded font-bold text-xs border border-transparent hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 cursor-pointer"
+            >
+              H2
+            </button>
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => handleCommand('formatBlock', 'h3')}
+              title="Heading 3"
+              className="px-2 py-1 rounded font-bold text-xs border border-transparent hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 cursor-pointer"
+            >
+              H3
+            </button>
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => handleCommand('formatBlock', 'p')}
+              title="Paragraph"
+              className="px-2 py-1 rounded text-xs border border-transparent hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 cursor-pointer"
+            >
+              P
+            </button>
+            <div className="h-4 w-px bg-slate-200 dark:bg-white/20 mx-1" />
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => handleCommand('insertUnorderedList')}
+              title="Bullet Points / List"
+              className="px-2 py-1 rounded font-bold text-xs border border-transparent hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 cursor-pointer flex items-center gap-1"
+            >
+              <span>•</span>
+              <span>Bullet List</span>
+            </button>
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => handleCommand('insertOrderedList')}
+              title="Numbered List"
+              className="px-2 py-1 rounded font-bold text-xs border border-transparent hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 cursor-pointer flex items-center gap-1"
+            >
+              <span>1.</span>
+              <span>Numbered List</span>
+            </button>
+            <div className="h-4 w-px bg-slate-200 dark:bg-white/20 mx-1" />
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => handleCommand('clear')}
+              title="Clear Formatting"
+              className="px-2 py-1 rounded text-xs text-rose-500 font-bold hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer"
+            >
+              Clear
+            </button>
+          </div>
+
+          {/* Rich Contenteditable Editor Input */}
+          <div
+            ref={editorRef}
+            contentEditable
+            onInput={(e) => onChange(e.currentTarget.innerHTML)}
+            onBlur={(e) => onChange(e.currentTarget.innerHTML)}
+            className={`w-full min-h-[140px] max-h-[280px] overflow-y-auto p-3.5 rounded-xl border text-xs font-normal leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#38b34a] [&_h2]:text-sm [&_h2]:font-bold [&_h2]:mt-2 [&_h2]:mb-1 [&_h3]:text-xs [&_h3]:font-bold [&_h3]:mt-1.5 [&_h3]:mb-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1 [&_p]:my-1 ${
+              isDark
+                ? 'bg-[#151722] border-white/10 text-gray-200'
+                : 'bg-white border-slate-200 text-slate-800'
+            }`}
+          />
+          <p className="text-[10px] text-slate-400 dark:text-gray-400 italic">
+            Format your annexure content using bold, headings, and bullet points. This formatted content will be saved against the quotation and rendered above Terms & Conditions.
+          </p>
+        </div>
+      ) : (
+        <div className={`p-2.5 rounded-xl border text-xs font-medium italic ${isDark ? 'bg-[#151722] border-white/5 text-gray-400' : 'bg-white border-slate-200 text-slate-500'}`}>
+          <span>Annexure content hidden ({value ? value.replace(/<[^>]*>?/gm, '').length : 0} characters stored). Click "Show / Edit Annexure" to expand.</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export const normalizeService = (srv) => {
   if (!srv || typeof srv !== 'object') return srv
   return {
@@ -738,6 +909,7 @@ const AdminUsers = () => {
       gst_type: client.gst_type || 'Intra-State',
       gstin: client.gstin || '',
       anexture: 'NO',
+      anexture_content: '',
     })
 
     // Pre-populate quotation items from client's selected services / software requirements!
@@ -2100,6 +2272,15 @@ const AdminUsers = () => {
                           </div>
                         </div>
                       </div>
+
+                      {/* Rich Text Editor for Annexure (Appears just above Quotation Line Items when Annexure Included = YES) */}
+                      {quotationForm.anexture === 'YES' && (
+                        <RichAnnexureEditor
+                          value={quotationForm.anexture_content || ''}
+                          onChange={(val) => setQuotationForm((prev) => ({ ...prev, anexture_content: val }))}
+                          theme="light"
+                        />
+                      )}
 
                       {/* Box 3: Line Items Table */}
                       <div className="space-y-3">
@@ -4350,9 +4531,9 @@ const AdminUsers = () => {
                                 <p className="font-extrabold text-slate-900 leading-snug">
                                   {item.product_name || item.name || item.service_name || 'Service Item'}
                                 </p>
-                                {item.description && (
+                                {(item.description || item.scope || item.details || item.service_description) && (
                                   <p className="text-[11px] text-slate-500 mt-1 leading-relaxed whitespace-pre-line">
-                                    {item.description}
+                                    {item.description || item.scope || item.details || item.service_description}
                                   </p>
                                 )}
                               </td>
@@ -4463,6 +4644,22 @@ const AdminUsers = () => {
                     {numberToIndianWords(viewingQuotationDoc.grand_total)}
                   </p>
                 </div>
+
+                {/* Annexure Details (Positioned fixed above Terms & Conditions) */}
+                {(viewingQuotationDoc.anexture === 'YES' || viewingQuotationDoc.anexture_content) && viewingQuotationDoc.anexture_content && (
+                  <div className="quotation-annexure-block p-4 bg-slate-50/80 rounded-2xl border border-slate-200 text-xs space-y-2 mb-4" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                    <div className="flex items-center gap-1.5 border-b border-slate-200 pb-1.5">
+                      <span className="text-sm">📑</span>
+                      <h4 className="font-black text-slate-800 uppercase tracking-wider text-xs">
+                        ANNEXURE / TECHNICAL SPECIFICATIONS:
+                      </h4>
+                    </div>
+                    <div
+                      className="prose prose-slate max-w-none text-xs text-slate-700 font-medium leading-relaxed [&_h2]:text-sm [&_h2]:font-bold [&_h2]:text-slate-900 [&_h2]:mt-2 [&_h2]:mb-1 [&_h3]:text-xs [&_h3]:font-bold [&_h3]:text-slate-800 [&_h3]:mt-1.5 [&_h3]:mb-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1 [&_p]:my-1"
+                      dangerouslySetInnerHTML={{ __html: viewingQuotationDoc.anexture_content }}
+                    />
+                  </div>
+                )}
 
                 {/* 5. Terms & Signature */}
                 <div className="quotation-terms-signature grid grid-cols-1 sm:grid-cols-3 gap-5 pt-3 border-t border-slate-200 text-xs" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>

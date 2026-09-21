@@ -283,7 +283,11 @@ const GeneralQuotationPay = () => {
                         <td className="px-4 py-3 font-bold text-slate-400">{idx + 1}</td>
                         <td className="px-4 py-3">
                           <p className="font-bold text-slate-900">{item.product_name || item.title || 'Custom Line Item'}</p>
-                          {item.description && <p className="text-[11px] text-slate-500 mt-0.5">{item.description}</p>}
+                          {(item.description || item.scope || item.details || item.service_description) && (
+                            <p className="text-[11px] text-slate-500 mt-0.5 whitespace-pre-line leading-relaxed">
+                              {item.description || item.scope || item.details || item.service_description}
+                            </p>
+                          )}
                         </td>
                         <td className="px-4 py-3 font-mono text-slate-600">{item.hsn || '9983'}</td>
                         <td className="px-4 py-3 text-center font-bold">{qty} {item.unit || 'Unit'}</td>
@@ -296,6 +300,22 @@ const GeneralQuotationPay = () => {
                 </tbody>
               </table>
             </div>
+
+            {/* Annexure Section (Positioned fixed above Notes & Terms) */}
+            {(quotation.anexture === 'YES' || quotation.anexture_content) && quotation.anexture_content && (
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-2 mb-4">
+                <div className="flex items-center gap-1.5 border-b border-slate-200 pb-1.5">
+                  <span className="text-sm">📑</span>
+                  <h4 className="font-black text-slate-800 uppercase tracking-wider text-xs">
+                    ANNEXURE / TECHNICAL SPECIFICATIONS:
+                  </h4>
+                </div>
+                <div
+                  className="prose prose-slate max-w-none text-xs text-slate-700 font-medium leading-relaxed [&_h2]:text-sm [&_h2]:font-bold [&_h2]:text-slate-900 [&_h2]:mt-2 [&_h2]:mb-1 [&_h3]:text-xs [&_h3]:font-bold [&_h3]:text-slate-800 [&_h3]:mt-1.5 [&_h3]:mb-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1 [&_p]:my-1"
+                  dangerouslySetInnerHTML={{ __html: quotation.anexture_content }}
+                />
+              </div>
+            )}
 
             {/* Financial Summary */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 pt-4 border-t border-slate-100">
