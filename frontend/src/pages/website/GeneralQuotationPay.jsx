@@ -215,7 +215,7 @@ const GeneralQuotationPay = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-6">
               <div>
                 <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md">
-                  Official Quotation
+                  Proforma Invoice
                 </span>
                 <h2 className="text-2xl font-black text-slate-900 mt-1">
                   {quotation.quotation_number || `QUO-${quotation.id}`}
@@ -226,9 +226,7 @@ const GeneralQuotationPay = () => {
               </div>
 
               <div className="text-left sm:text-right">
-                <p className="text-xs text-slate-400 font-semibold">Payment Terms</p>
-                <p className="text-sm font-extrabold text-slate-800">{quotation.payment_terms || 'Due on Receipt'}</p>
-                <p className="text-xs font-bold text-blue-600 mt-1">
+                <p className="text-xs font-bold text-blue-600">
                   GST Tax: {gstType} ({isIntra ? 'CGST 9% + SGST 9%' : 'IGST 18%'})
                 </p>
               </div>
@@ -319,41 +317,82 @@ const GeneralQuotationPay = () => {
 
             {/* Financial Summary */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 pt-4 border-t border-slate-100">
-              <div className="text-xs text-slate-500 space-y-1 max-w-sm">
-                <p className="font-bold text-slate-700">📌 Notes & Terms:</p>
-                <p>1. All amounts are quoted in Indian Rupees (INR) unless specified otherwise.</p>
-                <p>2. Payment verification generates an instant official Tax Invoice PDF emailed to your inbox.</p>
+              <div className="text-xs text-slate-500 space-y-2 max-w-sm">
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">
+                    Payment Terms:
+                  </span>
+                  <p className="font-bold text-slate-800 leading-relaxed text-xs">
+                    {quotation.payment_terms || 'Due on Receipt'}
+                  </p>
+                </div>
+                <div className="space-y-0.5">
+                  <p className="font-bold text-slate-700">📌 Notes & Terms:</p>
+                  <p>1. All amounts are quoted in Indian Rupees (INR) unless specified otherwise.</p>
+                  <p>2. Payment verification generates an instant official Tax Invoice PDF emailed to your inbox.</p>
+                </div>
               </div>
 
-              <div className="w-full sm:w-72 bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-2 text-xs">
-                <div className="flex justify-between text-slate-600 font-medium">
-                  <span>Subtotal:</span>
-                  <span className="font-bold text-slate-900">₹{subtotal.toLocaleString('en-IN')}</span>
-                </div>
-                {isIntra ? (
-                  <>
-                    <div className="flex justify-between text-slate-500 text-[11px]">
-                      <span>CGST (9%):</span>
-                      <span>₹{(Number(quotation.cgst) || Math.round(taxTotal / 2)).toLocaleString('en-IN')}</span>
-                    </div>
-                    <div className="flex justify-between text-slate-500 text-[11px]">
-                      <span>SGST (9%):</span>
-                      <span>₹{(Number(quotation.sgst) || Math.round(taxTotal / 2)).toLocaleString('en-IN')}</span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex justify-between text-slate-500 text-[11px]">
-                    <span>IGST (18%):</span>
-                    <span>₹{(Number(quotation.igst) || taxTotal).toLocaleString('en-IN')}</span>
+              <div className="w-full sm:w-72 space-y-4">
+                <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-2 text-xs">
+                  <div className="flex justify-between text-slate-600 font-medium">
+                    <span>Subtotal:</span>
+                    <span className="font-bold text-slate-900">₹{subtotal.toLocaleString('en-IN')}</span>
                   </div>
-                )}
-                <div className="flex justify-between text-slate-700 font-bold border-t border-slate-200 pt-2">
-                  <span>Total Tax (18%):</span>
-                  <span>₹{taxTotal.toLocaleString('en-IN')}</span>
+                  {isIntra ? (
+                    <>
+                      <div className="flex justify-between text-slate-500 text-[11px]">
+                        <span>CGST (9%):</span>
+                        <span>₹{(Number(quotation.cgst) || Math.round(taxTotal / 2)).toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-500 text-[11px]">
+                        <span>SGST (9%):</span>
+                        <span>₹{(Number(quotation.sgst) || Math.round(taxTotal / 2)).toLocaleString('en-IN')}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-between text-slate-500 text-[11px]">
+                      <span>IGST (18%):</span>
+                      <span>₹{(Number(quotation.igst) || taxTotal).toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-slate-700 font-bold border-t border-slate-200 pt-2">
+                    <span>Total Tax (18%):</span>
+                    <span>₹{taxTotal.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between items-center border-t-2 border-slate-300 pt-2.5 text-base font-black text-slate-900">
+                    <span>Grand Total:</span>
+                    <span className="text-xl text-[#38b34a]">₹{grandTotal.toLocaleString('en-IN')}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center border-t-2 border-slate-300 pt-2.5 text-base font-black text-slate-900">
-                  <span>Grand Total:</span>
-                  <span className="text-xl text-[#38b34a]">₹{grandTotal.toLocaleString('en-IN')}</span>
+
+                <div className="text-right space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
+                    For AIM Digitalise Pvt. Ltd.
+                  </span>
+                  <div className="inline-block text-center space-y-1">
+                    <img
+                      src="https://api.nexgn.in/public/signature_1.png"
+                      alt="Boss Signature"
+                      className="h-14 w-auto object-contain mx-auto my-1"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        if (target.src.includes('https://api.nexgn.in/public/signature_1.png')) {
+                          target.src = 'https://api.nexgn.in/signature_1.png';
+                        } else if (target.src.includes('https://api.nexgn.in/signature_1.png')) {
+                          target.src = 'http://localhost:8000/signature_1.png';
+                        } else if (target.src.includes('http://localhost:8000/signature_1.png')) {
+                          target.src = '/signature_1.png';
+                        } else {
+                          target.onerror = null;
+                        }
+                      }}
+                    />
+                    <div className="border-t border-slate-400 pt-1 min-w-[140px]">
+                      <span className="font-black text-slate-800 text-xs block">Authorized Signatory</span>
+                      <span className="text-[9px] text-slate-400 block font-medium">Digital Signature & Stamp</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

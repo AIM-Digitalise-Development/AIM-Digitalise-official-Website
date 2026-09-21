@@ -4385,21 +4385,20 @@ const AdminUsers = () => {
             </div>
 
             {/* Document Body (A4 Style Paper) */}
-            <div className="flex-1 overflow-y-auto p-6 sm:p-10 bg-slate-100/60 print:p-0 print:bg-white print:overflow-visible font-sans">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-5 bg-slate-100/60 print:p-0 print:bg-white print:overflow-visible font-sans">
               <div
                 id="quotation-document-paper"
-                className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 sm:p-8 md:p-10 space-y-5 sm:space-y-6 print:border-none print:shadow-none print:p-0 max-w-3xl mx-auto"
+                className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 sm:p-6 md:p-7 space-y-3 sm:space-y-4 print:border-none print:shadow-none print:p-0 max-w-3xl mx-auto"
               >
-                {/* 1. Official Quotation Blue Title at Center */}
-                <div className="text-center pb-1">
-                  <h1 className="text-2xl sm:text-3xl font-black text-[#1e3e6b] tracking-wider uppercase font-sans">
-                    OFFICIAL QUOTATION
+                {/* 1. Proforma Invoice Title at Top Most Position */}
+                <div className="text-center -mt-1 sm:-mt-2 pt-0 pb-0.5">
+                  <h1 className="text-xs sm:text-sm font-black text-[#1e3e6b] tracking-[0.25em] uppercase font-sans">
+                    PROFORMA INVOICE
                   </h1>
-                  <div className="w-24 h-1 bg-[#1e3e6b] mx-auto mt-2 rounded-full"></div>
                 </div>
 
                 {/* 2. Letterhead & Brand Header with Company Logo */}
-                <div className="flex flex-col sm:flex-row justify-between items-start gap-6 pb-5 border-b-2 border-slate-800">
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-3 sm:pb-4 border-b-2 border-slate-800">
                   <div className="space-y-2">
                     <div className="flex items-center gap-3.5">
                       <img
@@ -4435,9 +4434,6 @@ const AdminUsers = () => {
                       </div>
                       <p className="text-slate-500 font-medium">
                         Date: <strong className="text-slate-800">{formatDateDisplay(viewingQuotationDoc.quotation_date)}</strong>
-                      </p>
-                      <p className="text-slate-500 font-medium">
-                        Payment Terms: <strong className="text-slate-800">{viewingQuotationDoc.payment_terms || 'Due on Receipt'}</strong>
                       </p>
                     </div>
                   </div>
@@ -4645,6 +4641,16 @@ const AdminUsers = () => {
                   </p>
                 </div>
 
+                {/* Payment Terms (Positioned fixed right below Amount in Words) */}
+                <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200 text-xs space-y-1">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">
+                    Payment Terms:
+                  </span>
+                  <p className="font-bold text-slate-800 leading-relaxed">
+                    {viewingQuotationDoc.payment_terms || 'Due on Receipt'}
+                  </p>
+                </div>
+
                 {/* Annexure Details (Positioned fixed above Terms & Conditions) */}
                 {(viewingQuotationDoc.anexture === 'YES' || viewingQuotationDoc.anexture_content) && viewingQuotationDoc.anexture_content && (
                   <div className="quotation-annexure-block p-4 bg-slate-50/80 rounded-2xl border border-slate-200 text-xs space-y-2 mb-4" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
@@ -4673,13 +4679,32 @@ const AdminUsers = () => {
                     </ol>
                   </div>
 
-                  <div className="quotation-signature-block text-center sm:text-right space-y-5 pt-1" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                  <div className="quotation-signature-block text-center sm:text-right space-y-1 pt-1" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
                       For AIM Digitalise Pvt. Ltd.
                     </span>
-                    <div className="border-t border-slate-400 pt-1 inline-block min-w-[140px] text-center">
-                      <span className="font-black text-slate-800 text-xs block">Authorized Signatory</span>
-                      <span className="text-[9px] text-slate-400 block font-medium">Digital Signature & Stamp</span>
+                    <div className="inline-block text-center space-y-1">
+                      <img
+                        src="https://api.nexgn.in/public/signature_1.png"
+                        alt="Boss Signature"
+                        className="h-14 w-auto object-contain mx-auto my-1"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          if (target.src.includes('https://api.nexgn.in/public/signature_1.png')) {
+                            target.src = 'https://api.nexgn.in/signature_1.png';
+                          } else if (target.src.includes('https://api.nexgn.in/signature_1.png')) {
+                            target.src = 'http://localhost:8000/signature_1.png';
+                          } else if (target.src.includes('http://localhost:8000/signature_1.png')) {
+                            target.src = '/signature_1.png';
+                          } else {
+                            target.onerror = null;
+                          }
+                        }}
+                      />
+                      <div className="border-t border-slate-400 pt-1 min-w-[140px]">
+                        <span className="font-black text-slate-800 text-xs block">Authorized Signatory</span>
+                        <span className="text-[9px] text-slate-400 block font-medium">Digital Signature & Stamp</span>
+                      </div>
                     </div>
                   </div>
                 </div>
