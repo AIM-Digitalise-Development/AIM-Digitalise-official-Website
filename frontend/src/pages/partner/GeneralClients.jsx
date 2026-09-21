@@ -3463,23 +3463,24 @@ export default function PartnerGeneralClients() {
                     </div>
                   </div>
 
-                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">
-                      Amount in Words:
-                    </span>
-                    <p className="font-bold text-slate-800 italic leading-relaxed">
-                      {numberToIndianWords(viewingQuotationDoc.grand_total || viewingQuotationDoc.grandTotal)}
-                    </p>
-                  </div>
-
-                  {/* Payment Terms (Positioned fixed right below Amount in Words) */}
-                  <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200 text-xs space-y-1">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">
-                      Payment Terms:
-                    </span>
-                    <p className="font-bold text-slate-800 leading-relaxed">
-                      {viewingQuotationDoc.payment_terms || 'Due on Receipt'}
-                    </p>
+                  {/* Combined Amount in Words & Payment Terms Box */}
+                  <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200 text-xs space-y-2.5">
+                    <div>
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">
+                        Amount in Words:
+                      </span>
+                      <p className="font-bold text-slate-800 italic leading-relaxed">
+                        {numberToIndianWords(viewingQuotationDoc.grand_total || viewingQuotationDoc.grandTotal)}
+                      </p>
+                    </div>
+                    <div className="border-t border-slate-200/80 pt-2">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">
+                        Payment Terms:
+                      </span>
+                      <p className="font-bold text-slate-800 leading-relaxed">
+                        {viewingQuotationDoc.payment_terms || 'Due on Receipt'}
+                      </p>
+                    </div>
                   </div>
 
                   {/* Annexure Details (Positioned fixed above Terms & Conditions) */}
