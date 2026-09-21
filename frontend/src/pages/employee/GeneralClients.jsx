@@ -634,7 +634,7 @@ export default function EmployeeGeneralClients() {
       po_number: '',
       po_date: '',
       discount_description: 'Corporate Consideration',
-      payment_terms: 'Due on Receipt',
+      payment_terms: '',
       gst_type: client.gst_type || 'Intra-State',
       gstin: client.gstin || '',
       anexture: 'NO',
@@ -787,6 +787,11 @@ export default function EmployeeGeneralClients() {
     if (!selectedGenClient) return
     if (quotationItems.length === 0) {
       setErrorMsg('Please add at least one line item to the quotation.')
+      return
+    }
+
+    if (!quotationForm.payment_terms || !quotationForm.payment_terms.trim()) {
+      setErrorMsg('⚠️ Please select or enter Payment Terms for the quotation.')
       return
     }
 
@@ -1810,17 +1815,39 @@ export default function EmployeeGeneralClients() {
                             />
                           </div>
                           <div>
-                            <label className="text-[10px] font-bold text-gray-400 block mb-1">Payment Terms</label>
-                            <select
-                              value={quotationForm.payment_terms}
-                              onChange={(e) => setQuotationForm({ ...quotationForm, payment_terms: e.target.value })}
-                              className="w-full bg-[#151722] border border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-gray-200 focus:border-[#38b34a]"
-                            >
-                              <option value="Due on Receipt">Due on Receipt</option>
-                              <option value="50% Advance, 50% Delivery">50% Advance, 50% Delivery</option>
-                              <option value="Net 15 Days">Net 15 Days</option>
-                              <option value="Net 30 Days">Net 30 Days</option>
-                            </select>
+                            <label className="text-[10px] font-bold text-gray-400 block mb-1">
+                              Payment Terms <span className="text-rose-400 font-bold">*</span>
+                            </label>
+                            <div className="space-y-1.5">
+                              <select
+                                value={
+                                  ['Full payments in Advanced', '60% advanced, 40% on delivery', 'Due on receipt'].includes(quotationForm.payment_terms)
+                                    ? quotationForm.payment_terms
+                                    : quotationForm.payment_terms
+                                    ? 'Custom'
+                                    : ''
+                                }
+                                onChange={(e) => {
+                                  if (e.target.value !== 'Custom') {
+                                    setQuotationForm({ ...quotationForm, payment_terms: e.target.value })
+                                  }
+                                }}
+                                className="w-full bg-[#151722] border border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold text-gray-200 focus:border-[#38b34a]"
+                              >
+                                <option value="">-- Select Payment Terms --</option>
+                                <option value="Full payments in Advanced">Full payments in Advanced</option>
+                                <option value="60% advanced, 40% on delivery">60% advanced, 40% on delivery</option>
+                                <option value="Due on receipt">Due on receipt</option>
+                                <option value="Custom">✏️ Custom / Edit Terms</option>
+                              </select>
+                              <input
+                                type="text"
+                                value={quotationForm.payment_terms || ''}
+                                onChange={(e) => setQuotationForm({ ...quotationForm, payment_terms: e.target.value })}
+                                placeholder="Select or enter payment terms (Mandatory)"
+                                className="w-full bg-[#151722] border border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold text-gray-200 focus:border-[#38b34a]"
+                              />
+                            </div>
                           </div>
 
                           <div>
