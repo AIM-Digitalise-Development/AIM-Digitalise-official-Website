@@ -13,6 +13,7 @@ import {
   updatePartnerGeneralService,
   deletePartnerGeneralService,
   createPartnerQuotation,
+  updatePartnerQuotation,
   sendPartnerQuotationEmail,
   getPartnerInvoiceDownloadUrl,
   recordPartnerQuotationPayment,
@@ -398,6 +399,7 @@ export default function PartnerGeneralClients() {
   // ============================================================
   const [selectedGenClient, setSelectedGenClient] = useState(null)
   const [showQuotationBuilder, setShowQuotationBuilder] = useState(false)
+  const [editingQuotationId, setEditingQuotationId] = useState(null)
   const [sidebarServiceSearch, setSidebarServiceSearch] = useState('')
   const [quotationForm, setQuotationForm] = useState({
     quotation_date: new Date().toISOString().substring(0, 10),
@@ -791,6 +793,7 @@ export default function PartnerGeneralClients() {
   // Quotation Builder Logic
   const handleOpenQuotationBuilder = (client) => {
     setSelectedGenClient(client)
+    setEditingQuotationId(null)
     setShowQuotationBuilder(true)
     setActiveTab('show_clients')
 
@@ -862,6 +865,55 @@ export default function PartnerGeneralClients() {
     }
 
     setQuotationItems(prefilledItems)
+  }
+
+  const handleEditQuotation = (quotation, client = null) => {
+    const targetClient = client || quotation.client || selectedGenClient
+    if (targetClient) {
+      setSelectedGenClient(targetClient)
+    }
+    setEditingQuotationId(quotation.id)
+    setShowQuotationDocModal(false)
+    setShowQuotationsListModal(false)
+    setShowQuotationBuilder(true)
+    setActiveTab('show_clients')
+
+    setQuotationForm({
+      quotation_date: quotation.quotation_date ? String(quotation.quotation_date).substring(0, 10) : new Date().toISOString().substring(0, 10),
+      quotation_number: quotation.quotation_number || '',
+      po_number: quotation.po_number || '',
+      po_date: quotation.po_date ? String(quotation.po_date).substring(0, 10) : '',
+      discount_description: quotation.discount_description || 'Corporate Consideration',
+      payment_terms: quotation.payment_terms || '',
+      gst_type: quotation.gst_type || (targetClient?.gst_type || 'Intra-State'),
+      gstin: quotation.gstin || (targetClient?.gstin || ''),
+      anexture: quotation.anexture || 'NO',
+      anexture_content: quotation.anexture_content || '',
+    })
+
+    const existingItems = (quotation.items || []).map((it, idx) => ({
+      id: it.id || (Date.now() + idx),
+      product_id: it.product_id || null,
+      product_name: it.product_name || it.title || 'Service Item',
+      hsn: it.hsn || '998314',
+      qty: Number(it.qty || it.quantity || 1),
+      unit: it.unit || 'Unit',
+      selling_price: Number(it.selling_price || it.price || 0),
+      discount_percentage: Number(it.discount_percentage || it.discount || 0),
+      description: it.description || it.details || '',
+    }))
+
+    setQuotationItems(existingItems.length > 0 ? existingItems : [{
+      id: Date.now(),
+      product_id: null,
+      product_name: 'Custom Line Item',
+      hsn: '998314',
+      qty: 1,
+      unit: 'Unit',
+      selling_price: 15000,
+      discount_percentage: 0,
+      description: '',
+    }])
   }
 
   const handleAddQuotationItemFromCatalog = (service) => {
@@ -992,11 +1044,17 @@ export default function PartnerGeneralClients() {
     }
 
     try {
-      const res = await createPartnerQuotation(selectedGenClient.id, payload)
+      let res
+      if (editingQuotationId) {
+        res = await updatePartnerQuotation(editingQuotationId, payload)
+      } else {
+        res = await createPartnerQuotation(selectedGenClient.id, payload)
+      }
+
       if (res.data?.success || res.status === 200 || res.status === 201) {
         const quotationData = res.data?.data || res.data?.quotation || {
           ...payload,
-          id: res.data?.id || Date.now(),
+          id: editingQuotationId || res.data?.id || Date.now(),
         }
 
         let paymentUrl = quotationData.payment_url || ''
@@ -1007,14 +1065,15 @@ export default function PartnerGeneralClients() {
             if (emailRes.data?.payment_url) {
               paymentUrl = emailRes.data.payment_url
             }
-            setMessage(`✅ Quotation saved & sent to ${selectedGenClient.email || 'client'} with Razorpay payment link!`)
+            setMessage(editingQuotationId ? '✅ Quotation updated & sent to client!' : `✅ Quotation saved & sent to ${selectedGenClient.email || 'client'} with Razorpay payment link!`)
           } catch (e) {
             console.warn('Email sending notice:', e)
-            setMessage('✅ Quotation saved successfully!')
+            setMessage(editingQuotationId ? '✅ Quotation updated successfully!' : '✅ Quotation saved successfully!')
           }
         } else {
-          setMessage('✅ Quotation created successfully!')
+          setMessage(editingQuotationId ? '✅ Quotation updated successfully!' : '✅ Quotation created successfully!')
         }
+        setEditingQuotationId(null)
 
         handleOpenQuotationDoc(
           {
@@ -3128,6 +3187,12 @@ export default function PartnerGeneralClients() {
                           📄 View Document
                         </button>
                         <button
+                          onClick={() => handleEditQuotation(q, selectedGenClient)}
+                          className="px-3 py-1.5 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 rounded-xl font-bold shadow-sm cursor-pointer"
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button
                           onClick={() => handleSendSingleQuotationEmail(q)}
                           className="px-3 py-1.5 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 border border-blue-500/30 rounded-xl font-bold shadow-sm cursor-pointer"
                         >
@@ -3172,6 +3237,15 @@ export default function PartnerGeneralClients() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleEditQuotation(viewingQuotationDoc, viewingQuotationDoc.client)}
+                    className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
+                  >
+                    <span>✏️</span>
+                    <span>Edit Quotation</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={handlePrintQuotation}

@@ -70,6 +70,10 @@ export const deleteEmployeeGeneralClient = (id) =>
 export const createEmployeeQuotation = (clientId, data) =>
   client.post(`/employee/general-clients/${clientId}/quotation`, data)
 
+// Employee Update Quotation - PUT /employee/general-clients/quotations/:quotationId
+export const updateEmployeeQuotation = (quotationId, data) =>
+  client.put(`/employee/general-clients/quotations/${quotationId}`, data)
+
 // Employee Send Quotation Email & Get Razorpay Link - POST /employee/general-clients/quotations/:quotationId/send-email
 export const sendEmployeeQuotation = (quotationId) =>
   client.post(`/employee/general-clients/quotations/${quotationId}/send-email`)

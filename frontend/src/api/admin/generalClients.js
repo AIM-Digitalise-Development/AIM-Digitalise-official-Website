@@ -46,6 +46,9 @@ export const deleteGeneralService = (id) =>
 export const createQuotation = (clientId, data) =>
   client.post(`/admin/general-clients/${clientId}/quotations`, data)
 
+export const updateQuotation = (quotationId, data) =>
+  client.put(`/admin/quotations/${quotationId}`, data)
+
 export const sendQuotation = (quotationId) =>
   client.post(`/admin/quotations/${quotationId}/send`)
 

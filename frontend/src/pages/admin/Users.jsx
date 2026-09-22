@@ -13,6 +13,7 @@ import {
   updateGeneralService,
   deleteGeneralService,
   createQuotation,
+  updateQuotation,
   sendQuotation,
   getAdminInvoiceDownloadUrl,
   getCountryTaxes,
@@ -438,6 +439,7 @@ const AdminUsers = () => {
   // ============================================================
   const [selectedGenClient, setSelectedGenClient] = useState(null)
   const [showQuotationBuilder, setShowQuotationBuilder] = useState(false)
+  const [editingQuotationId, setEditingQuotationId] = useState(null)
   const [sidebarTab, setSidebarTab] = useState('services') // 'services'
   const [sidebarServiceSearch, setSidebarServiceSearch] = useState('')
   const [sidebarCategoryFilter, setSidebarCategoryFilter] = useState('All')
@@ -895,6 +897,7 @@ const AdminUsers = () => {
   // ============================================================
   const handleOpenQuotationBuilder = (client) => {
     setSelectedGenClient(client)
+    setEditingQuotationId(null)
     const todayStr = new Date().toISOString().substring(0, 10)
     const dateSeq = new Date().toLocaleDateString('en-GB').replace(/\//g, '')
     const randSeq = Math.floor(100 + Math.random() * 900)
@@ -967,6 +970,55 @@ const AdminUsers = () => {
 
     setQuotationItems(prefilledItems)
     setShowQuotationBuilder(true)
+  }
+
+  const handleEditQuotation = (quotation, client = null) => {
+    const targetClient = client || quotation.client || selectedGenClient
+    if (targetClient) {
+      setSelectedGenClient(targetClient)
+    }
+    setEditingQuotationId(quotation.id)
+    setShowQuotationDocModal(false)
+    setShowQuotationsListModal(false)
+    setShowQuotationBuilder(true)
+    setActiveTab('show_clients')
+
+    setQuotationForm({
+      quotation_date: quotation.quotation_date ? String(quotation.quotation_date).substring(0, 10) : new Date().toISOString().substring(0, 10),
+      quotation_number: quotation.quotation_number || '',
+      po_number: quotation.po_number || '',
+      po_date: quotation.po_date ? String(quotation.po_date).substring(0, 10) : '',
+      discount_description: quotation.discount_description || 'Corporate Consideration',
+      payment_terms: quotation.payment_terms || '',
+      gst_type: quotation.gst_type || (targetClient?.gst_type || 'Intra-State'),
+      gstin: quotation.gstin || (targetClient?.gstin || ''),
+      anexture: quotation.anexture || 'NO',
+      anexture_content: quotation.anexture_content || '',
+    })
+
+    const existingItems = (quotation.items || []).map((it, idx) => ({
+      id: it.id || (Date.now() + idx),
+      product_id: it.product_id || null,
+      product_name: it.product_name || it.title || 'Service Item',
+      hsn: it.hsn || '998314',
+      qty: Number(it.qty || it.quantity || 1),
+      unit: it.unit || 'Unit',
+      selling_price: Number(it.selling_price || it.price || 0),
+      discount_percentage: Number(it.discount_percentage || it.discount || 0),
+      description: it.description || it.details || '',
+    }))
+
+    setQuotationItems(existingItems.length > 0 ? existingItems : [{
+      id: Date.now(),
+      product_id: null,
+      product_name: 'Custom Line Item',
+      hsn: '998314',
+      qty: 1,
+      unit: 'Unit',
+      selling_price: 15000,
+      discount_percentage: 0,
+      description: '',
+    }])
   }
 
   // Add Service from General Services Catalog to Line Items
@@ -1089,13 +1141,19 @@ const AdminUsers = () => {
     }
 
     try {
-      const res = await createQuotation(selectedGenClient.id, payload)
+      let res
+      if (editingQuotationId) {
+        res = await updateQuotation(editingQuotationId, payload)
+      } else {
+        res = await createQuotation(selectedGenClient.id, payload)
+      }
       const result = res.data
       if (result.success) {
         const quotationData = result.data
-        setMessage(`✅ Quotation "${quotationData.quotation_number}" created successfully!`)
+        setMessage(editingQuotationId ? `✅ Quotation "${quotationData.quotation_number}" updated successfully!` : `✅ Quotation "${quotationData.quotation_number}" created successfully!`)
 
         let payUrl = `${window.location.origin}/general-quotation-pay.html?uuid=${quotationData.uuid || ('quotation-' + quotationData.id)}`
+        setEditingQuotationId(null)
         if (sendImmediately) {
           try {
             const sendRes = await sendQuotation(quotationData.id)
@@ -4263,6 +4321,18 @@ const AdminUsers = () => {
                                 <span>View Document</span>
                               </button>
 
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowQuotationsListModal(false)
+                                  handleEditQuotation(q, selectedGenClient)
+                                }}
+                                className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-[11px] font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer active:scale-95"
+                              >
+                                <span>✏️</span>
+                                <span>Edit</span>
+                              </button>
+
                               {isPaid && (
                                 <a
                                   href={getAdminInvoiceDownloadUrl(q.id)}
@@ -4341,6 +4411,15 @@ const AdminUsers = () => {
               </div>
 
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleEditQuotation(viewingQuotationDoc, viewingQuotationDoc.client)}
+                  className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
+                >
+                  <span>✏️</span>
+                  <span>Edit Quotation</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={handlePrintQuotation}

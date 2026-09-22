@@ -185,7 +185,6 @@ export const getPartnerOrderDetail = (orderId) =>
 export const getDashboardStats = () =>
   partnerFetch('GET', '/partner/dashboard-stats')
 
-// ─── Commission Report ───────────────────────────────────────────────────────
 export const getCommissionReport = () =>
   partnerFetch('GET', '/partner/commission-report')
 
@@ -332,6 +331,9 @@ export const deletePartnerGeneralService = (id) =>
 export const createPartnerQuotation = (clientId, data) =>
   partnerFetch('POST', `/partner/general-clients/${clientId}/quotation`, data)
 
+export const updatePartnerQuotation = (quotationId, data) =>
+  partnerFetch('PUT', `/partner/general-clients/quotations/${quotationId}`, data)
+
 export const sendPartnerQuotationEmail = (quotationId) =>
   partnerFetch('POST', `/partner/general-clients/quotations/${quotationId}/send-email`)
 
@@ -349,7 +351,6 @@ export const setCountryPrice = (productId, data) => partnerFetch('POST', `/admin
 export const getPublicProductsForCountry = (countryCode = 'IN') =>
   partnerFetch('GET', `/public/products?country=${countryCode}`)
 export const getSubscriptionClients = () => partnerFetch('GET', '/partner/my-orders')
-
 
 export const getPartnerSignedAgreementDownloadUrl = () => {
   const token = localStorage.getItem('partner_token') || ''
