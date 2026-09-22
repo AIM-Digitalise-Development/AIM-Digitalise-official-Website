@@ -7,6 +7,7 @@ import nexgnLogo from '../../assets/images/nexgnlogo.png'
 import nexgnVideo from '../../assets/videos/craete_a_video_where_kids_tea.mp4'
 
 import { sendProposalOtp, verifyProposalOtp, submitProposal } from '../../api/proposals'
+import { createPublicIdCardOrder, verifyPublicIdCardPayment } from '../../api/publicIdCardService'
 
 // Official Documents
 import officialBrochureImg from '../../assets/doc/OfficialBrochure.jpg'
@@ -337,6 +338,142 @@ const SchoolCollegeSaas = () => {
 
   // ── Feature Explorer Modal State ──
   const [featureModal, setFeatureModal] = useState(null) // 'school' | 'college' | null
+
+  // ── Standalone Type A ID Card State (Non-clients) ──
+  const [idCardQuantity, setIdCardQuantity] = useState(100)
+  const [isIdCardModalOpen, setIsIdCardModalOpen] = useState(false)
+  const [idCardForm, setIdCardForm] = useState({
+    client_name: '',
+    institution_name: '',
+    email: '',
+    phone: '',
+    address: '',
+    district: '',
+    state: '',
+    pin_code: '',
+  })
+  const [idCardSubmitting, setIdCardSubmitting] = useState(false)
+  const [idCardError, setIdCardError] = useState('')
+  const [idCardSuccessData, setIdCardSuccessData] = useState(null)
+
+  const loadRazorpayScript = () => {
+    return new Promise((resolve, reject) => {
+      if (window.Razorpay) {
+        resolve(true)
+        return
+      }
+      const script = document.createElement('script')
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+      script.onload = () => resolve(true)
+      script.onerror = () => reject(new Error('Failed to load Razorpay SDK'))
+      document.body.appendChild(script)
+    })
+  }
+
+  const handleOpenIdCardModal = () => {
+    setIdCardError('')
+    setIdCardSuccessData(null)
+    setIsIdCardModalOpen(true)
+  }
+
+  const handleIdCardOrderSubmit = async (e) => {
+    e.preventDefault()
+    setIdCardError('')
+
+    if (!idCardForm.client_name || !idCardForm.institution_name || !idCardForm.email || !idCardForm.phone || !idCardForm.address || !idCardForm.district || !idCardForm.state || !idCardForm.pin_code) {
+      setIdCardError('Please complete all required fields.')
+      return
+    }
+
+    const qty = Math.max(1, parseInt(idCardQuantity) || 1)
+    setIdCardSubmitting(true)
+
+    try {
+      const orderRes = await createPublicIdCardOrder({
+        ...idCardForm,
+        quantity: qty,
+      })
+
+      if (!orderRes.success) {
+        throw new Error(orderRes.message || 'Failed to create order.')
+      }
+
+      // Handle simulated payment mode
+      if (orderRes.simulated) {
+        const verifyRes = await verifyPublicIdCardPayment({
+          order_id: orderRes.order_id,
+          razorpay_payment_id: 'sim_pay_' + Date.now(),
+          razorpay_order_id: orderRes.order_id,
+          razorpay_signature: 'sim_signature_' + Date.now()
+        })
+
+        if (verifyRes.success) {
+          setIdCardSuccessData(verifyRes.data)
+        } else {
+          setIdCardError(verifyRes.message || 'Payment simulation failed.')
+        }
+        setIdCardSubmitting(false)
+        return
+      }
+
+      // Live Razorpay payment
+      await loadRazorpayScript()
+
+      const options = {
+        key: orderRes.key,
+        amount: Math.round(orderRes.amount * 100),
+        currency: orderRes.currency || 'INR',
+        name: 'AIM Digitalise',
+        description: 'Type A (Super PVC) ID Card Order',
+        order_id: orderRes.order_id,
+        handler: async (response) => {
+          try {
+            const verifyRes = await verifyPublicIdCardPayment({
+              order_id: orderRes.order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature
+            })
+
+            if (verifyRes.success) {
+              setIdCardSuccessData(verifyRes.data)
+            } else {
+              setIdCardError(verifyRes.message || 'Payment verification failed.')
+            }
+          } catch (err) {
+            setIdCardError('Verification error: ' + (err.response?.data?.message || err.message))
+          } finally {
+            setIdCardSubmitting(false)
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setIdCardError('Payment process cancelled.')
+            setIdCardSubmitting(false)
+          }
+        },
+        prefill: {
+          name: idCardForm.client_name,
+          email: idCardForm.email,
+          contact: idCardForm.phone,
+        },
+        theme: {
+          color: '#10b981',
+        },
+      }
+
+      const rzp = new window.Razorpay(options)
+      rzp.on('payment.failed', (response) => {
+        setIdCardError('Payment failed: ' + (response.error?.description || 'Transaction error'))
+        setIdCardSubmitting(false)
+      })
+      rzp.open()
+
+    } catch (err) {
+      setIdCardError(err.response?.data?.message || err.message || 'Order failed.')
+      setIdCardSubmitting(false)
+    }
+  }
 
   // ── Handlers ──
   const handleSelectDoc = (docId) => {
@@ -753,6 +890,131 @@ const SchoolCollegeSaas = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════════════════════
+            STANDALONE SMART ID CARD SERVICE SECTION (Type A SUPER PVC - Non-Clients)
+        ══════════════════════════════════════════════════════════ */}
+        <section className="py-16 relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 border-b border-white/10">
+          <div className="container-custom relative z-10 space-y-10">
+            
+            {/* Section Header */}
+            <div className="text-center max-w-3xl mx-auto space-y-3">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold uppercase tracking-widest border border-emerald-500/30 shadow-sm">
+                <span>🪪</span> Standalone Printing Service (No SaaS Subscription Required)
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                Direct Smart ID Card Printing — <span className="text-emerald-400">Type A (Super PVC)</span>
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-300 max-w-2xl mx-auto leading-relaxed">
+                Designed for non-client institutions, schools, colleges, institutes &amp; organizations who only require high-durability, ready-to-use smart ID cards. Select student quantity, calculate live cost, and order directly.
+              </p>
+            </div>
+
+            {/* Standalone Card Box */}
+            <div className="max-w-4xl mx-auto rounded-3xl bg-aim-navy-card/95 border border-emerald-500/30 p-6 sm:p-9 shadow-2xl hover:border-emerald-400 transition-all duration-300">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                
+                {/* Left Column: Product Info & Live Estimator */}
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-3xl">🪪</div>
+                      <div>
+                        <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">SUPER PVC</span>
+                        <h3 className="text-lg font-black text-white mt-1">Students &amp; Teachers ID Card (Type A)</h3>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Ready Card (20 mm Multi color Ribbon, PVC supper Card, Card Holder &amp; clip). High durability gloss finish. Thermal dye-sublimation print quality with long life span.
+                  </p>
+
+                  <div className="space-y-2 text-xs text-slate-300">
+                    <div className="flex items-center gap-2">
+                      <span className="text-emerald-400 font-bold">✓</span> 20mm Multi-Color Premium Printed Ribbon
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-emerald-400 font-bold">✓</span> High Durability Waterproof Super PVC Gloss Card
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-emerald-400 font-bold">✓</span> Protective Transparent Card Holder &amp; Metal Clip Included
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-emerald-400 font-bold">✓</span> Free Student Photo &amp; Data Template Format Included
+                    </div>
+                  </div>
+
+                  {/* Quantity & Live Price Estimator */}
+                  <div className="p-4 rounded-2xl bg-slate-900/90 border border-white/10 space-y-3">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Quantity (Students / Staff)</label>
+                        <span className="text-[10px] text-slate-500">Rate: ₹60.00 / card</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="1"
+                          value={idCardQuantity}
+                          onChange={(e) => setIdCardQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="w-24 px-3 py-1.5 text-center font-bold text-sm bg-slate-800 border border-white/20 rounded-xl text-white focus:outline-none focus:border-emerald-400 font-mono shadow-inner"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="border-t border-white/10 pt-2.5 flex justify-between items-end">
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Estimated Cost</span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          (Subtotal: ₹{(Math.max(1, parseInt(idCardQuantity) || 1) * 60).toLocaleString('en-IN')} + 18% GST)
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xl font-black text-emerald-400 font-mono">
+                          ₹{((Math.max(1, parseInt(idCardQuantity) || 1) * 60) * 1.18).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleOpenIdCardModal}
+                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs sm:text-sm uppercase tracking-wider text-center shadow-xl hover:scale-[1.01] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span>🪪</span>
+                    <span>Order Super PVC ID Cards Now</span>
+                    <span>→</span>
+                  </button>
+
+                </div>
+
+                {/* Right Column: Visual Card Highlight */}
+                <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 border border-white/10 text-center space-y-4 shadow-inner">
+                  <div className="relative w-48 h-64 rounded-2xl bg-gradient-to-b from-emerald-600 via-slate-800 to-slate-900 p-4 border-2 border-emerald-400/40 shadow-2xl flex flex-col justify-between overflow-hidden">
+                    <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-emerald-400 text-slate-950 text-[8px] font-black uppercase">TYPE A</div>
+                    <div className="w-12 h-12 mx-auto rounded-full bg-slate-700/80 border border-white/20 flex items-center justify-center text-xl mt-2">👤</div>
+                    <div className="space-y-1">
+                      <div className="h-2 w-3/4 bg-emerald-400/80 rounded mx-auto"></div>
+                      <div className="h-1.5 w-1/2 bg-slate-400 rounded mx-auto"></div>
+                      <div className="h-1.5 w-2/3 bg-slate-500 rounded mx-auto"></div>
+                    </div>
+                    <div className="pt-2 border-t border-white/10 flex justify-between text-[8px] font-mono text-slate-400">
+                      <span>SUPER PVC</span>
+                      <span>₹60.00 / Card</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider">Premium Finished Ready Cards</h4>
+                    <p className="text-[11px] text-slate-400">Includes 20mm multicolor lanyard ribbon, heavy-duty pouch &amp; clip.</p>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
           </div>
         </section>
         {/* ══════════════════════════════════════════════════════════
@@ -1312,6 +1574,248 @@ const SchoolCollegeSaas = () => {
                   </Link>
                 </div>
               </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* ── Standalone Type A ID Card Purchase Modal ── */}
+        {isIdCardModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-[#071226] border border-emerald-500/40 rounded-3xl shadow-2xl p-6 sm:p-8 space-y-6"
+            >
+              {/* Close */}
+              <button
+                onClick={() => setIsIdCardModalOpen(false)}
+                className="absolute top-5 right-5 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-slate-300 hover:text-white hover:bg-white/20 transition-colors text-sm font-bold cursor-pointer"
+              >✕</button>
+
+              {idCardSuccessData ? (
+                /* Success Receipt View */
+                <div className="space-y-6 text-center py-4">
+                  <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-400 flex items-center justify-center text-3xl mx-auto">
+                    ✅
+                  </div>
+                  <div className="space-y-2">
+                    <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-wider border border-emerald-500/30">Order Confirmed &amp; Paid</span>
+                    <h3 className="text-2xl font-black text-white">ID Card Order Confirmation</h3>
+                    <p className="text-xs text-slate-300">Thank you! Your order for Type A Super PVC ID cards has been successfully placed.</p>
+                  </div>
+
+                  <div className="p-5 rounded-2xl bg-slate-900/90 border border-white/10 text-left space-y-3 font-sans text-xs">
+                    <div className="flex justify-between border-b border-white/10 pb-2">
+                      <span className="text-slate-400">Order Reference #:</span>
+                      <strong className="text-emerald-400 font-mono font-bold">{idCardSuccessData.order_number}</strong>
+                    </div>
+                    <div className="flex justify-between border-b border-white/10 pb-2">
+                      <span className="text-slate-400">Institution / Client:</span>
+                      <strong className="text-white">{idCardSuccessData.institution_name} ({idCardSuccessData.client_name})</strong>
+                    </div>
+                    <div className="flex justify-between border-b border-white/10 pb-2">
+                      <span className="text-slate-400">Card Specification:</span>
+                      <strong className="text-white">Type A - SUPER PVC (₹60.00 / card)</strong>
+                    </div>
+                    <div className="flex justify-between border-b border-white/10 pb-2">
+                      <span className="text-slate-400">Quantity Ordered:</span>
+                      <strong className="text-white font-mono">{idCardSuccessData.quantity} Cards</strong>
+                    </div>
+                    <div className="flex justify-between border-b border-white/10 pb-2">
+                      <span className="text-slate-400">Subtotal:</span>
+                      <strong className="text-slate-200 font-mono">₹{parseFloat(idCardSuccessData.subtotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                    </div>
+                    <div className="flex justify-between border-b border-white/10 pb-2">
+                      <span className="text-slate-400">GST (18%):</span>
+                      <strong className="text-slate-200 font-mono">₹{parseFloat(idCardSuccessData.gst_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                    </div>
+                    <div className="flex justify-between pt-1">
+                      <span className="text-white font-bold">Total Amount Paid:</span>
+                      <strong className="text-emerald-400 text-base font-mono font-black">₹{parseFloat(idCardSuccessData.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setIsIdCardModalOpen(false)}
+                    className="w-full py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-lg"
+                  >
+                    Done &amp; Close Receipt
+                  </button>
+                </div>
+              ) : (
+                /* Order Form View */
+                <form onSubmit={handleIdCardOrderSubmit} className="space-y-5">
+                  <div className="border-b border-white/10 pb-4 space-y-1">
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-wider border border-emerald-500/30">
+                      Standalone Purchase
+                    </span>
+                    <h3 className="text-xl sm:text-2xl font-black text-white mt-1">
+                      Order Type A (Super PVC) ID Cards
+                    </h3>
+                    <p className="text-xs text-slate-300">
+                      Enter your shipping and billing details below. Our team will contact you to collect photo templates and data.
+                    </p>
+                  </div>
+
+                  {idCardError && (
+                    <div className="p-3.5 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-bold">
+                      ⚠️ {idCardError}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                    <div className="space-y-1">
+                      <label className="text-slate-300 font-bold block">Institution / Organization Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. St. Mark International Academy"
+                        value={idCardForm.institution_name}
+                        onChange={(e) => setIdCardForm({ ...idCardForm, institution_name: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-white/15 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-slate-300 font-bold block">Contact Person Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Rahul Sharma"
+                        value={idCardForm.client_name}
+                        onChange={(e) => setIdCardForm({ ...idCardForm, client_name: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-white/15 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-slate-300 font-bold block">Email Address *</label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="official@school.edu.in"
+                        value={idCardForm.email}
+                        onChange={(e) => setIdCardForm({ ...idCardForm, email: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-white/15 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-slate-300 font-bold block">Phone / WhatsApp Number *</label>
+                      <input
+                        type="tel"
+                        required
+                        placeholder="+91 98765 43210"
+                        value={idCardForm.phone}
+                        onChange={(e) => setIdCardForm({ ...idCardForm, phone: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-white/15 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2 space-y-1">
+                      <label className="text-slate-300 font-bold block">Full Delivery Address *</label>
+                      <textarea
+                        required
+                        rows="2"
+                        placeholder="Campus address where cards will be delivered"
+                        value={idCardForm.address}
+                        onChange={(e) => setIdCardForm({ ...idCardForm, address: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-white/15 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 resize-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-slate-300 font-bold block">District *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="District"
+                        value={idCardForm.district}
+                        onChange={(e) => setIdCardForm({ ...idCardForm, district: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-white/15 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-slate-300 font-bold block">State *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="State"
+                        value={idCardForm.state}
+                        onChange={(e) => setIdCardForm({ ...idCardForm, state: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-white/15 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="text-slate-300 font-bold block">PIN Code *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="6-digit PIN code"
+                        value={idCardForm.pin_code}
+                        onChange={(e) => setIdCardForm({ ...idCardForm, pin_code: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-white/15 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Summary Box */}
+                  <div className="p-4 rounded-2xl bg-slate-900/90 border border-white/10 space-y-2 text-xs">
+                    <div className="flex justify-between items-center text-slate-300">
+                      <span>Card Quantity:</span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="1"
+                          value={idCardQuantity}
+                          onChange={(e) => setIdCardQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="w-20 px-2 py-1 text-center font-bold text-xs bg-slate-800 border border-white/20 rounded-lg text-white font-mono"
+                        />
+                        <span>Cards @ ₹60.00</span>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center text-slate-300">
+                      <span>Subtotal:</span>
+                      <span className="font-mono">₹{(Math.max(1, parseInt(idCardQuantity) || 1) * 60).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center text-slate-300">
+                      <span>GST (18%):</span>
+                      <span className="font-mono">₹{((Math.max(1, parseInt(idCardQuantity) || 1) * 60) * 0.18).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    </div>
+
+                    <div className="border-t border-white/10 pt-2 flex justify-between items-center font-bold text-sm text-white">
+                      <span>Grand Total Amount Due:</span>
+                      <span className="text-emerald-400 font-mono text-base font-black">
+                        ₹{((Math.max(1, parseInt(idCardQuantity) || 1) * 60) * 1.18).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={idCardSubmitting}
+                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs sm:text-sm uppercase tracking-wider transition-all cursor-pointer shadow-xl flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {idCardSubmitting ? (
+                      <>
+                        <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                        <span>Processing Order &amp; Gateway...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>💳</span>
+                        <span>Pay ₹{((Math.max(1, parseInt(idCardQuantity) || 1) * 60) * 1.18).toLocaleString('en-IN', { minimumFractionDigits: 2 })} &amp; Confirm Order</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
             </motion.div>
           </div>
         )}
