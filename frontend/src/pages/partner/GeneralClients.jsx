@@ -1562,12 +1562,14 @@ export default function PartnerGeneralClients() {
                       >
                         <span>📦 + Add Service</span>
                       </button>
+                      {/* 
                       <button
                         onClick={handleOpenAddClientModal}
                         className="px-4 py-2 bg-[#38b34a] hover:bg-[#38b34a]/85 text-black text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
                       >
                         <span>➕ Add Client</span>
                       </button>
+                      */}
                     </div>
                   </div>
 

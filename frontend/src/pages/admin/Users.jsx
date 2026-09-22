@@ -1683,12 +1683,14 @@ const AdminUsers = () => {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
+                      {/* 
                       <button
                         onClick={handleOpenAddClientModal}
                         className="px-4 py-2 bg-[#38b34a] hover:bg-[#2d963b] text-white text-xs font-black rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer uppercase tracking-wider"
                       >
                         <span>➕ Add General Client</span>
                       </button>
+                      */}
                       <button
                         onClick={handleOpenAddServiceModal}
                         className="px-3.5 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold rounded-xl border border-purple-200 transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
