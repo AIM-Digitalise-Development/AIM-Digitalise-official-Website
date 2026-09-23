@@ -340,7 +340,20 @@ const SchoolCollegeSaas = () => {
   const [featureModal, setFeatureModal] = useState(null) // 'school' | 'college' | null
 
   // ── Standalone Type A ID Card State (Non-clients) ──
-  const [idCardQuantity, setIdCardQuantity] = useState(100)
+  const [activeIdCardImgIndex, setActiveIdCardImgIndex] = useState(0)
+  const idCardImages = [
+    'https://api.nexgn.in/public/id_card.png',
+    'https://api.nexgn.in/public/id_card2.png'
+  ]
+
+  const handlePrevIdCardImg = () => {
+    setActiveIdCardImgIndex((prev) => (prev === 0 ? idCardImages.length - 1 : prev - 1))
+  }
+  const handleNextIdCardImg = () => {
+    setActiveIdCardImgIndex((prev) => (prev === idCardImages.length - 1 ? 0 : prev + 1))
+  }
+
+  const [idCardQuantity, setIdCardQuantity] = useState(1)
   const [isIdCardModalOpen, setIsIdCardModalOpen] = useState(false)
   const [idCardForm, setIdCardForm] = useState({
     client_name: '',
@@ -965,16 +978,16 @@ const SchoolCollegeSaas = () => {
                       </div>
                     </div>
 
-                    <div className="border-t border-white/10 pt-2.5 flex justify-between items-end">
+                                      <div className="border-t border-white/10 pt-2.5 flex justify-between items-end">
                       <div>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Estimated Cost</span>
                         <span className="text-[10px] text-slate-400 font-mono">
-                          (Subtotal: ₹{(Math.max(1, parseInt(idCardQuantity) || 1) * 60).toLocaleString('en-IN')} + 18% GST)
+                          (Subtotal: ₹{(Math.max(1, parseInt(idCardQuantity) || 1) * 60).toLocaleString('en-IN')} + 18% GST extra)
                         </span>
                       </div>
                       <div className="text-right">
                         <span className="text-xl font-black text-emerald-400 font-mono">
-                          ₹{((Math.max(1, parseInt(idCardQuantity) || 1) * 60) * 1.18).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ₹{(Math.max(1, parseInt(idCardQuantity) || 1) * 60).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </div>
                     </div>
@@ -993,17 +1006,45 @@ const SchoolCollegeSaas = () => {
 
                 {/* Right Column: Visual Card Highlight */}
                 <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 border border-white/10 text-center space-y-4 shadow-inner">
-                  <div className="relative w-48 h-64 rounded-2xl bg-gradient-to-b from-emerald-600 via-slate-800 to-slate-900 p-4 border-2 border-emerald-400/40 shadow-2xl flex flex-col justify-between overflow-hidden">
-                    <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-emerald-400 text-slate-950 text-[8px] font-black uppercase">TYPE A</div>
-                    <div className="w-12 h-12 mx-auto rounded-full bg-slate-700/80 border border-white/20 flex items-center justify-center text-xl mt-2">👤</div>
-                    <div className="space-y-1">
-                      <div className="h-2 w-3/4 bg-emerald-400/80 rounded mx-auto"></div>
-                      <div className="h-1.5 w-1/2 bg-slate-400 rounded mx-auto"></div>
-                      <div className="h-1.5 w-2/3 bg-slate-500 rounded mx-auto"></div>
-                    </div>
-                    <div className="pt-2 border-t border-white/10 flex justify-between text-[8px] font-mono text-slate-400">
-                      <span>SUPER PVC</span>
-                      <span>₹60.00 / Card</span>
+                  <div className="relative w-full max-w-[220px] aspect-[3/4] rounded-2xl border-2 border-emerald-400/40 shadow-2xl overflow-hidden bg-slate-950 flex items-center justify-center group">
+                    <img
+                      src={idCardImages[activeIdCardImgIndex]}
+                      alt={`Super PVC ID Card Preview ${activeIdCardImgIndex + 1}`}
+                      className="w-full h-full object-contain p-2 transition-all duration-300"
+                    />
+
+                    {/* Left Arrow Button */}
+                    <button
+                      type="button"
+                      onClick={handlePrevIdCardImg}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-900/80 hover:bg-emerald-500 border border-white/20 hover:border-emerald-400 text-white hover:text-slate-950 flex items-center justify-center text-lg font-bold transition-all duration-200 shadow-lg cursor-pointer z-10"
+                      title="Previous Image"
+                    >
+                      ‹
+                    </button>
+
+                    {/* Right Arrow Button */}
+                    <button
+                      type="button"
+                      onClick={handleNextIdCardImg}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-900/80 hover:bg-emerald-500 border border-white/20 hover:border-emerald-400 text-white hover:text-slate-950 flex items-center justify-center text-lg font-bold transition-all duration-200 shadow-lg cursor-pointer z-10"
+                      title="Next Image"
+                    >
+                      ›
+                    </button>
+
+                    {/* Slide indicator dots */}
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2 py-1 rounded-full bg-slate-950/70 border border-white/10 backdrop-blur-sm z-10">
+                      {idCardImages.map((_, idx) => (
+                        <button
+                          type="button"
+                          key={idx}
+                          onClick={() => setActiveIdCardImgIndex(idx)}
+                          className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                            activeIdCardImgIndex === idx ? 'w-4 bg-emerald-400' : 'w-1.5 bg-slate-500 hover:bg-slate-300'
+                          }`}
+                        />
+                      ))}
                     </div>
                   </div>
                   <div className="space-y-1">
