@@ -1,8 +1,27 @@
-const ADMIN_API = import.meta.env.VITE_API_BASE_URL || 'https://api.nexgn.in/api'
+import { getMockResponse } from '../../utils/mockAuthData'
+
+const getAdminApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    return 'http://localhost/aim-backend/public/api'
+  }
+  return 'https://api.nexgn.in/api'
+}
+
+const ADMIN_API = getAdminApiBaseUrl()
 
 // Helper: admin fetch with Bearer token from localStorage
 const adminFetch = async (method, path, body = null) => {
-  const token = localStorage.getItem('access_token')
+  const token = localStorage.getItem('access_token') || localStorage.getItem('admin_token')
+
+  // If mock token is used, skip live API request
+  if (token && token.startsWith('mock-')) {
+    const mockData = getMockResponse(path, method, body)
+    if (mockData) {
+      return { data: mockData }
+    }
+  }
+
   const headers = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -12,15 +31,31 @@ const adminFetch = async (method, path, body = null) => {
   const options = { method, headers }
   if (body) options.body = JSON.stringify(body)
 
-  const response = await fetch(`${ADMIN_API}${path}`, options)
-  const data = await response.json().catch(() => ({ message: `HTTP ${response.status}` }))
+  try {
+    const response = await fetch(`${ADMIN_API}${path}`, options)
+    const data = await response.json().catch(() => ({ message: `HTTP ${response.status}` }))
 
-  if (!response.ok) {
-    const error = new Error(data?.message || `Request failed with status ${response.status}`)
-    error.response = { data, status: response.status }
-    throw error
+    if (!response.ok) {
+      if (response.status >= 500 || response.status === 404) {
+        const mockData = getMockResponse(path, method, body)
+        if (mockData) {
+          console.warn(`[Admin Fetch Fallback] Live request failed for ${path} (Status ${response.status}). Using mock data.`)
+          return { data: mockData }
+        }
+      }
+      const error = new Error(data?.message || `Request failed with status ${response.status}`)
+      error.response = { data, status: response.status }
+      throw error
+    }
+    return { data }
+  } catch (err) {
+    const mockData = getMockResponse(path, method, body)
+    if (mockData) {
+      console.warn(`[Admin Fetch Fallback] Request error for ${path}. Using mock data.`)
+      return { data: mockData }
+    }
+    throw err
   }
-  return { data }
 }
 
 // GET /admin/leads

@@ -49,6 +49,12 @@ export const createQuotation = (clientId, data) =>
 export const updateQuotation = (quotationId, data) =>
   client.put(`/admin/quotations/${quotationId}`, data)
 
+export const getClientQuotations = (clientId) =>
+  client.get(`/admin/general-clients/${clientId}/quotations`)
+
+export const recordQuotationPayment = (quotationId, data) =>
+  client.post(`/admin/quotations/${quotationId}/record-payment`, data)
+
 export const sendQuotation = (quotationId) =>
   client.post(`/admin/quotations/${quotationId}/send`)
 

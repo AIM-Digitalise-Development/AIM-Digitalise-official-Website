@@ -25,22 +25,33 @@ import {
 } from '../../api/admin/leads'
 import {
   getGeneralClients,
+  getGeneralClientById,
   createGeneralClient,
   updateGeneralClient,
   deleteGeneralClient,
-  getGeneralServices
+  getGeneralServices,
+  createQuotation,
+  updateQuotation,
+  sendQuotation,
+  getClientQuotations,
+  recordQuotationPayment,
+  getAdminInvoiceDownloadUrl
 } from '../../api/admin/generalClients'
+import { RichAnnexureEditor, numberToIndianWords } from './Users'
+import companyLogo from '../../assets/images/logo.png'
 
-export const renderCreatorBadge = (creatorCode) => {
-  const code = String(creatorCode || 'Admin')
-  if (code.startsWith('PIDIN') || code.toLowerCase().includes('partner')) {
+export const renderCreatorBadge = (creatorCode, leadObj = null) => {
+  const code = String(creatorCode || leadObj?.employee_id || 'Admin')
+  const codeLower = code.toLowerCase()
+  const isPartner = code.startsWith('PID') || code.startsWith('PTR') || code.startsWith('PAR') || code.startsWith('P-') || codeLower.includes('partner') || Boolean(leadObj?.partner) || leadObj?.category_name === 'Partner'
+  if (isPartner) {
     return (
       <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-300">
         🤝 Partner ({code})
       </span>
     )
   }
-  if (code.startsWith('AIM') || code.toLowerCase().includes('employee')) {
+  if (code.startsWith('AIM') || codeLower.includes('employee')) {
     return (
       <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-700 border border-sky-300">
         👔 Employee ({code})
@@ -230,6 +241,524 @@ export default function AdminLeads() {
   })
   const [sendingMail, setSendingMail] = useState(false)
 
+  // ── GENERAL CLIENT QUOTATIONS & PAYMENT MODALS STATE ──
+  const [showQuotationBuilder, setShowQuotationBuilder] = useState(false)
+  const [selectedGenClient, setSelectedGenClient] = useState(null)
+  const [editingQuotationId, setEditingQuotationId] = useState(null)
+  const [quotationItems, setQuotationItems] = useState([])
+  const [quotationForm, setQuotationForm] = useState({
+    quotation_number: '',
+    quotation_date: new Date().toISOString().split('T')[0],
+    po_number: '',
+    po_date: '',
+    gst_type: 'Intra-State',
+    gstin: '',
+    payment_terms: 'Due on Receipt',
+    discount_description: '',
+    anexture: false,
+    anexture_content: '',
+  })
+  const [sidebarServiceSearch, setSidebarServiceSearch] = useState('')
+  const [copiedPayLink, setCopiedPayLink] = useState(false)
+  const [savingQuotation, setSavingQuotation] = useState(false)
+
+  // Quotations List Modal State
+  const [showQuotationsListModal, setShowQuotationsListModal] = useState(false)
+  const [selectedClientQuotations, setSelectedClientQuotations] = useState([])
+  const [loadingQuotationsList, setLoadingQuotationsList] = useState(false)
+
+  // Quotation Document Modal State
+  const [showQuotationDocModal, setShowQuotationDocModal] = useState(false)
+  const [viewingQuotationDoc, setViewingQuotationDoc] = useState(null)
+
+  // Record Manual Payment Modal State
+  const [showRecordPaymentModal, setShowRecordPaymentModal] = useState(false)
+  const [paymentQuotation, setPaymentQuotation] = useState(null)
+  const [paymentForm, setPaymentForm] = useState({
+    amount: '',
+    payment_method: 'Bank Transfer',
+    transaction_id: '',
+    reference_number: '',
+    paid_at: new Date().toISOString().split('T')[0],
+    notes: 'Payment confirmed by Admin'
+  })
+  const [recordingPayment, setRecordingPayment] = useState(false)
+
+  // Load General Services database on mount for quotation builder sidebar
+  useEffect(() => {
+    getGeneralServices().then(res => {
+      if (res?.data?.success && Array.isArray(res.data.data)) {
+        setGeneralServices(res.data.data)
+      }
+    }).catch(err => console.warn('Could not load general services for quotation builder:', err))
+  }, [])
+
+  // Helper to ensure a general client database record exists for standard leads
+  const ensureGenClient = async (lead) => {
+    if (lead.rawId) {
+      return { id: lead.rawId, ...lead }
+    }
+    try {
+      const cleanedPhone = cleanAndFixPhone(lead.client_phone)
+      const res = await createGeneralClient({
+        client_name: lead.client_name,
+        company_name: lead.company_name || lead.client_name,
+        contact_number: cleanedPhone,
+        alt_contact_number: cleanAndFixPhone(lead.client_alternate_phone) || null,
+        email: lead.client_email || '',
+        country_code: lead.country_code || 'IN',
+        address: lead.address || '',
+        city: lead.city || '',
+        state: lead.state || '',
+        pin_code: lead.pin_code || '',
+        software_requirements: lead.software_requirements || lead.product_name || 'General Client Services',
+        sold_by: lead.sold_by || 'Admin'
+      })
+      if (res?.data?.data) {
+        lead.rawId = res.data.data.id
+        lead.is_general_client = true
+        return res.data.data
+      }
+    } catch (err) {
+      console.warn('Auto sync general client record notice:', err)
+    }
+    return lead
+  }
+
+  // Open Quotation Builder
+  const handleOpenQuotationBuilder = async (lead) => {
+    const clientObj = await ensureGenClient(lead)
+    setSelectedGenClient(clientObj)
+    setEditingQuotationId(null)
+    const randomSuffix = Math.floor(100 + Math.random() * 900)
+    const randomMid = Math.floor(100000 + Math.random() * 900000)
+    setQuotationForm({
+      quotation_date: new Date().toISOString().split('T')[0],
+      quotation_number: `AIM-${randomMid}-${randomSuffix}`,
+      po_number: '',
+      po_date: '',
+      gst_type: clientObj.gst_type || 'Intra-State',
+      gstin: clientObj.gstin || '',
+      payment_terms: 'Full payments in Advanced',
+      discount_description: 'Special offer / seasonal discount',
+      anexture: 'NO',
+      anexture_content: '',
+    })
+
+    const reqs = clientObj.software_requirements || clientObj.product_name || ''
+    const prefilledItems = reqs ? reqs.split(',').map(s => s.trim()).filter(Boolean).map(s => ({
+      product_name: s,
+      hsn: '998314',
+      unit: 'Unit',
+      qty: 1,
+      selling_price: 0,
+      discount_percentage: 0,
+      description: `Scope & specifications for ${s}`
+    })) : [{
+      product_name: 'General Client Services',
+      hsn: '998314',
+      unit: 'Unit',
+      qty: 1,
+      selling_price: 0,
+      discount_percentage: 0,
+      description: ''
+    }]
+
+    setQuotationItems(prefilledItems)
+    setShowQuotationBuilder(true)
+  }
+
+  // Edit Existing Quotation
+  const handleEditQuotation = (quotation, clientObj = null) => {
+    setEditingQuotationId(quotation.id)
+    if (clientObj) setSelectedGenClient(clientObj)
+    setShowQuotationDocModal(false)
+    setShowQuotationsListModal(false)
+    setShowQuotationBuilder(true)
+
+    setQuotationForm({
+      quotation_number: quotation.quotation_number || '',
+      quotation_date: quotation.quotation_date ? String(quotation.quotation_date).split('T')[0] : new Date().toISOString().split('T')[0],
+      po_number: quotation.po_number || '',
+      po_date: quotation.po_date ? String(quotation.po_date).split('T')[0] : '',
+      gst_type: quotation.gst_type || 'Intra-State',
+      gstin: quotation.gstin || '',
+      payment_terms: quotation.payment_terms || 'Full payments in Advanced',
+      discount_description: quotation.discount_description || '',
+      anexture: quotation.anexture === 'YES' || quotation.anexture === true ? 'YES' : 'NO',
+      anexture_content: quotation.anexture_content || '',
+    })
+
+    const existingItems = (quotation.items || []).map(it => ({
+      product_name: it.product_name || it.name || 'Service Item',
+      hsn: it.hsn || it.hsn_code || '998314',
+      unit: it.unit || 'Unit',
+      qty: Number(it.qty || it.quantity || 1),
+      selling_price: Number(it.selling_price || it.price || 0),
+      discount_percentage: Number(it.discount_percentage || it.discount || 0),
+      description: it.description || '',
+    }))
+
+    setQuotationItems(existingItems.length > 0 ? existingItems : [{
+      product_name: 'Service Item',
+      hsn: '998314',
+      unit: 'Unit',
+      qty: 1,
+      selling_price: 0,
+      discount_percentage: 0,
+      description: ''
+    }])
+  }
+
+  const handleAddGeneralServiceToQuotation = (service) => {
+    const newItem = {
+      product_name: service.service_name || service.name || 'Service Item',
+      hsn: service.hsn || '998314',
+      unit: service.unit || 'Unit',
+      qty: 1,
+      selling_price: Number(service.selling_price || service.price || 0),
+      discount_percentage: 0,
+      description: service.description || '',
+    }
+    setQuotationItems(prev => [...prev, newItem])
+  }
+
+  const handleAddEmptyItem = () => {
+    setQuotationItems((prev) => [
+      ...prev,
+      {
+        product_id: null,
+        product_name: '',
+        hsn: '998314',
+        qty: 1,
+        unit: 'Unit',
+        selling_price: 0,
+        discount_percentage: 0,
+        description: '',
+      },
+    ])
+  }
+
+  const handleItemChange = (index, field, val) => {
+    setQuotationItems(prev => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], [field]: val }
+      return updated
+    })
+  }
+
+  const handleRemoveItem = (index) => {
+    setQuotationItems(prev => prev.filter((_, idx) => idx !== index))
+  }
+
+  const computeQuotationTotals = () => {
+    const subtotal = quotationItems.reduce((sum, item) => {
+      const qty = Number(item.qty || 1)
+      const price = Number(item.selling_price || 0)
+      const disc = Number(item.discount_percentage || 0)
+      const lineTotal = qty * price * (1 - disc / 100)
+      return sum + lineTotal
+    }, 0)
+
+    const roundedSubtotal = Math.round(subtotal * 100) / 100
+    const isIndia = (selectedGenClient?.country_code || 'IN') === 'IN'
+    const isIntra = quotationForm.gst_type === 'Intra-State'
+
+    let cgst = 0, sgst = 0, igst = 0, taxTotal = 0
+    if (isIndia) {
+      if (isIntra) {
+        cgst = Math.round(roundedSubtotal * 0.09 * 100) / 100
+        sgst = Math.round(roundedSubtotal * 0.09 * 100) / 100
+        taxTotal = Math.round((cgst + sgst) * 100) / 100
+      } else {
+        igst = Math.round(roundedSubtotal * 0.18 * 100) / 100
+        taxTotal = igst
+      }
+    } else {
+      taxTotal = Math.round(roundedSubtotal * 0.18 * 100) / 100
+    }
+
+    const grandTotal = Math.round((roundedSubtotal + taxTotal) * 100) / 100
+    return { subtotal: roundedSubtotal, cgst, sgst, igst, taxTotal, grandTotal }
+  }
+
+  const handleSaveQuotation = async (e, sendImmediately = false) => {
+    e.preventDefault()
+    if (!selectedGenClient?.id && !selectedGenClient?.rawId) {
+      triggerSuccess('Error: Missing General Client reference ID', 'error')
+      return
+    }
+    const clientId = selectedGenClient.rawId || selectedGenClient.id
+    const totals = computeQuotationTotals()
+
+    const payload = {
+      quotation_number: quotationForm.quotation_number || undefined,
+      quotation_date: quotationForm.quotation_date,
+      po_number: quotationForm.po_number || null,
+      po_date: quotationForm.po_date || null,
+      gst_type: quotationForm.gst_type,
+      gstin: quotationForm.gstin || null,
+      payment_terms: quotationForm.payment_terms,
+      discount_description: quotationForm.discount_description || null,
+      anexture: quotationForm.anexture ? 'YES' : 'NO',
+      anexture_content: quotationForm.anexture ? quotationForm.anexture_content : '',
+      subtotal: totals.subtotal,
+      cgst_amount: totals.cgst,
+      sgst_amount: totals.sgst,
+      igst_amount: totals.igst,
+      tax_amount: totals.taxTotal,
+      total_amount: totals.grandTotal,
+      currency: selectedGenClient?.country_code === 'IN' ? 'INR' : 'USD',
+      country_code: selectedGenClient?.country_code || 'IN',
+      items: quotationItems.map(it => ({
+        product_name: it.product_name,
+        hsn: it.hsn,
+        unit: it.unit,
+        qty: Number(it.qty || 1),
+        selling_price: Number(it.selling_price || 0),
+        discount_percentage: Number(it.discount_percentage || 0),
+        description: it.description || '',
+      }))
+    }
+
+    try {
+      setSavingQuotation(true)
+      let res
+      if (editingQuotationId) {
+        res = await updateQuotation(editingQuotationId, payload)
+      } else {
+        res = await createQuotation(clientId, payload)
+      }
+
+      if (res?.data?.success) {
+        const quoData = res.data.data || res.data.quotation || {}
+        if (sendImmediately && quoData.id) {
+          try {
+            await sendQuotation(quoData.id)
+          } catch (_) {}
+        }
+
+        triggerSuccess(editingQuotationId ? '✅ Quotation updated successfully!' : '✅ Quotation created successfully!')
+        handleOpenQuotationDoc({
+          ...quoData,
+          items: quotationItems,
+          subtotal: totals.subtotal,
+          tax_total: totals.taxTotal,
+          cgst: totals.cgst,
+          sgst: totals.sgst,
+          igst: totals.igst,
+          grand_total: totals.grandTotal
+        }, selectedGenClient)
+
+        setShowQuotationBuilder(false)
+        setEditingQuotationId(null)
+        loadLeads()
+      }
+    } catch (err) {
+      console.error('Error saving quotation:', err)
+      triggerSuccess(err.response?.data?.message || 'Failed to save quotation', 'error')
+    } finally {
+      setSavingQuotation(false)
+    }
+  }
+
+  // Open Full Official Quotation Document Viewer
+  const handleOpenQuotationDoc = (quotation, clientObj = null) => {
+    const client = clientObj || selectedGenClient || quotation.client || {}
+    const items = (quotation.items || []).map(it => ({
+      product_name: it.product_name || it.name || 'Service Item',
+      hsn: it.hsn || it.hsn_code || '998314',
+      qty: Number(it.qty || it.quantity || 1),
+      unit: it.unit || 'Unit',
+      selling_price: Number(it.selling_price || it.price || 0),
+      discount_percentage: Number(it.discount_percentage || it.discount || 0),
+      description: it.description || '',
+    }))
+
+    const calcSubtotal = items.reduce((sum, it) => sum + (it.qty * it.selling_price * (1 - it.discount_percentage / 100)), 0)
+    const isIntra = (quotation.gst_type || client.gst_type || 'Intra-State') === 'Intra-State'
+    const isIndia = (client.country_code || 'IN') === 'IN'
+
+    let cgst = 0, sgst = 0, igst = 0, taxTotal = 0
+    if (isIndia) {
+      if (isIntra) {
+        cgst = Math.round(calcSubtotal * 0.09 * 100) / 100
+        sgst = Math.round(calcSubtotal * 0.09 * 100) / 100
+        taxTotal = cgst + sgst
+      } else {
+        igst = Math.round(calcSubtotal * 0.18 * 100) / 100
+        taxTotal = igst
+      }
+    } else {
+      taxTotal = Math.round(calcSubtotal * 0.18 * 100) / 100
+    }
+    const grandTotal = Number(quotation.grand_total || quotation.total_amount) || Math.round((calcSubtotal + taxTotal) * 100) / 100
+    const targetUuid = quotation.uuid || `quotation-${quotation.id}`
+    const payUrl = quotation.payment_url || `${window.location.origin}/general-quotation-pay.html?uuid=${targetUuid}`
+
+    setViewingQuotationDoc({
+      ...quotation,
+      client,
+      items,
+      subtotal: Number(quotation.subtotal) || calcSubtotal,
+      cgst: quotation.cgst !== undefined ? Number(quotation.cgst) : cgst,
+      sgst: quotation.sgst !== undefined ? Number(quotation.sgst) : sgst,
+      igst: quotation.igst !== undefined ? Number(quotation.igst) : igst,
+      tax_total: Number(quotation.tax_total) || taxTotal,
+      grand_total: grandTotal,
+      payment_url: payUrl,
+    })
+    setShowQuotationDocModal(true)
+  }
+
+  // High Fidelity Print
+  const handlePrintQuotation = () => {
+    const printElement = document.getElementById('quotation-document-paper-leads')
+    if (!printElement) {
+      window.print()
+      return
+    }
+
+    const iframe = document.createElement('iframe')
+    iframe.style.position = 'fixed'
+    iframe.style.right = '0'
+    iframe.style.bottom = '0'
+    iframe.style.width = '0px'
+    iframe.style.height = '0px'
+    iframe.style.border = '0px'
+    iframe.setAttribute('title', 'Quotation Print Preview')
+    document.body.appendChild(iframe)
+
+    const doc = iframe.contentWindow.document
+    const headElements = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+      .map(node => node.outerHTML)
+      .join('\n')
+
+    doc.open()
+    doc.write(`
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8" />
+          <title></title>
+          ${headElements}
+          <style>
+            @page { size: A4 portrait; margin: 0 !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; box-sizing: border-box; }
+            html, body { margin: 0 !important; padding: 0 !important; background: #ffffff !important; font-family: 'Inter', sans-serif !important; color: #0f172a !important; width: 100% !important; }
+            #quotation-document-paper-leads { box-shadow: none !important; border: none !important; padding: 6mm 10mm !important; margin: 0 auto !important; width: 100% !important; max-width: 100% !important; }
+            .quotation-terms-signature, .quotation-signature-block { page-break-inside: avoid !important; break-inside: avoid !important; }
+            table { border-collapse: collapse !important; width: 100% !important; }
+          </style>
+        </head>
+        <body>
+          ${printElement.outerHTML}
+        </body>
+      </html>
+    `)
+    doc.close()
+
+    const triggerPrint = () => {
+      try {
+        iframe.contentWindow.focus()
+        iframe.contentWindow.print()
+      } catch (err) {
+        console.error('Print trigger error:', err)
+      } finally {
+        setTimeout(() => {
+          if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe)
+          }
+        }, 2000)
+      }
+    }
+
+    const images = iframe.contentWindow.document.querySelectorAll('img')
+    let loaded = 0
+    const total = images.length
+    if (total === 0) {
+      setTimeout(triggerPrint, 200)
+    } else {
+      let triggered = false
+      const onImgDone = () => {
+        loaded++
+        if (loaded >= total && !triggered) {
+          triggered = true
+          setTimeout(triggerPrint, 200)
+        }
+      }
+      for (let i = 0; i < total; i++) {
+        if (images[i].complete) onImgDone()
+        else { images[i].onload = onImgDone; images[i].onerror = onImgDone; }
+      }
+      setTimeout(() => { if (!triggered) { triggered = true; triggerPrint() } }, 1000)
+    }
+  }
+
+  // View Client's Previous Quotations List Modal
+  const handleViewClientQuotations = async (lead) => {
+    const clientObj = await ensureGenClient(lead)
+    setSelectedGenClient(clientObj)
+    setLoadingQuotationsList(true)
+    try {
+      const res = await getClientQuotations(clientObj.id || clientObj.rawId)
+      const result = res.data
+      if (result.success && Array.isArray(result.data)) {
+        setSelectedClientQuotations(result.data)
+        setShowQuotationsListModal(true)
+      } else {
+        const detailsRes = await getGeneralClientById(clientObj.id || clientObj.rawId)
+        if (detailsRes?.data?.data?.quotations) {
+          setSelectedClientQuotations(detailsRes.data.data.quotations)
+          setShowQuotationsListModal(true)
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching client quotations:', err)
+    } finally {
+      setLoadingQuotationsList(false)
+    }
+  }
+
+  // Record Manual Payment Handlers
+  const handleOpenRecordPayment = (quotation, clientObj = null) => {
+    if (clientObj) setSelectedGenClient(clientObj)
+    setPaymentQuotation(quotation)
+    setPaymentForm({
+      amount: quotation.total_amount || quotation.grand_total || quotation.amount || '',
+      payment_method: 'Bank Transfer',
+      transaction_id: '',
+      reference_number: '',
+      paid_at: new Date().toISOString().split('T')[0],
+      notes: 'Manual payment recorded by Admin'
+    })
+    setShowRecordPaymentModal(true)
+  }
+
+  const handleRecordPaymentSubmit = async (e) => {
+    e.preventDefault()
+    if (!paymentQuotation?.id) return
+    setRecordingPayment(true)
+    try {
+      const res = await recordQuotationPayment(paymentQuotation.id, paymentForm)
+      if (res?.data?.success) {
+        triggerSuccess('🎉 Payment recorded successfully! Client order closed & moved to General Clients directory.')
+        setShowRecordPaymentModal(false)
+        setShowQuotationsListModal(false)
+        setShowQuotationDocModal(false)
+        loadLeads()
+        loadStats()
+      } else {
+        triggerSuccess(res?.data?.message || 'Failed to record payment', 'error')
+      }
+    } catch (err) {
+      console.error('Error recording payment:', err)
+      triggerSuccess(err.response?.data?.message || 'Error recording payment', 'error')
+    } finally {
+      setRecordingPayment(false)
+    }
+  }
+
   // Form states
   const [leadForm, setLeadForm] = useState({
     client_name: '',
@@ -331,6 +860,7 @@ export default function AdminLeads() {
         sold_by: broughtByFilter !== 'all' ? broughtByFilter : undefined,
         sort_dir: sortDir || undefined,
         search: search || undefined,
+        only_unpaid: 1,
       }
 
       // Parallel execution for 2x faster load time
@@ -427,9 +957,17 @@ export default function AdminLeads() {
         })
       }
 
+      const unpaidStandardLeads = standardLeads.filter(l => {
+        const isGc = l.category_name === 'General Client' || l.category_id === 'general_client'
+        if (isGc && (l.is_converted || l.lead_status === 'converted' || l.lead_status === 'Order Closed' || l.raw_status === 'Order Closed')) {
+          return false
+        }
+        return true
+      })
+
       const combined = [
         ...filteredGc,
-        ...standardLeads.filter(l => !filteredGc.some(g => g.client_phone && g.client_phone === l.client_phone))
+        ...unpaidStandardLeads.filter(l => !filteredGc.some(g => g.client_phone && g.client_phone === l.client_phone))
       ]
 
       if (sortDir === 'asc') {
@@ -1326,7 +1864,9 @@ export default function AdminLeads() {
 
         {/* ── TAB 1: LEADS DATABASE ── */}
         {activeTab === 'leads' && (
-          <div className="space-y-6">
+          <div>
+            {!showQuotationBuilder ? (
+              <div className="space-y-6">
             {/* Action Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-3xl border border-slate-200/85 shadow-sm">
               <div>
@@ -1563,12 +2103,32 @@ export default function AdminLeads() {
                                       💼 General Client
                                     </span>
                                   )}
-                                  {renderCreatorBadge(lead.sold_by || lead.employee?.employee_id || lead.employee?.full_name || 'Admin')}
+                                  {renderCreatorBadge(lead.sold_by || lead.employee?.employee_id || lead.employee?.full_name || lead.employee_id || 'Admin', lead)}
                                 </div>
                                 <span className="text-slate-400 font-medium block mt-0.5">
                                   {lead.client_name && lead.company_name && lead.client_name !== lead.company_name ? `👤 ${lead.client_name} · ` : ''}
                                   {lead.client_phone}
                                 </span>
+                                {(lead.is_general_client || lead.category_name === 'General Client' || lead.category_id === 'general_client') && (
+                                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenQuotationBuilder(lead)}
+                                      className="text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1 cursor-pointer transition shadow-xs"
+                                    >
+                                      <span>📝</span>
+                                      <span>+ Quotation</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleViewClientQuotations(lead)}
+                                      className="text-[10px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2 py-0.5 rounded-md flex items-center gap-1 cursor-pointer transition shadow-xs"
+                                    >
+                                      <span>📋</span>
+                                      <span>Quotes</span>
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             </td>
                             <td className="px-4 py-4 min-w-[140px] whitespace-nowrap">
@@ -1596,6 +2156,24 @@ export default function AdminLeads() {
                             </td>
                             <td className={`px-4 py-4 text-center whitespace-nowrap min-w-[220px] w-56 sticky right-0 transition-colors shadow-[-6px_0_12px_rgba(0,0,0,0.06)] ${isSelected ? 'bg-slate-50' : 'bg-white group-hover:bg-slate-50'}`}>
                               <div className="flex items-center justify-center gap-1">
+                                {(lead.is_general_client || lead.category_name === 'General Client' || lead.category_id === 'general_client') && (
+                                  <>
+                                    <button
+                                      onClick={() => handleOpenQuotationBuilder(lead)}
+                                      title="Create Quotation"
+                                      className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-xl transition cursor-pointer font-bold"
+                                    >
+                                      📝
+                                    </button>
+                                    <button
+                                      onClick={() => handleViewClientQuotations(lead)}
+                                      title="View Client Quotations"
+                                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-xl transition cursor-pointer font-bold"
+                                    >
+                                      📋
+                                    </button>
+                                  </>
+                                )}
                                 <button
                                   onClick={() => openFollowUpModal(lead)}
                                   title="Schedule Follow-up"
@@ -1673,6 +2251,476 @@ export default function AdminLeads() {
                 </div>
               </div>
             </div>
+          </div>
+        ) : (
+              /* Dynamic Quotation Builder UI (Matching Users.jsx Image 2 Exactly) */
+              <div className="bg-white rounded-3xl border border-slate-200/80 shadow-md p-6 space-y-6 animate-fade-in">
+                {/* Builder Header */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center pb-4 border-b border-slate-200 gap-3">
+                  <div>
+                    <h2 className="text-xl font-black text-[#1e3e6b] flex items-center gap-2">
+                      <span>{selectedGenClient?.company_name || selectedGenClient?.client_name}</span>
+                    </h2>
+                    <div className="text-xs text-slate-500 font-medium mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span>
+                        Client: <strong className="text-slate-800">{selectedGenClient?.client_name || selectedGenClient?.company_name}</strong>
+                      </span>
+                      <span>|</span>
+                      <span>
+                        ID:{' '}
+                        <code className="text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded font-mono font-bold">
+                          {selectedGenClient?.client_id || `GC-${selectedGenClient?.id}`}
+                        </code>
+                      </span>
+                      {(selectedGenClient?.contact_person || selectedGenClient?.client_name) && (
+                        <>
+                          <span>|</span>
+                          <span>Contact Person: <strong className="text-slate-700">{selectedGenClient?.contact_person || selectedGenClient?.client_name}</strong></span>
+                        </>
+                      )}
+                      {selectedGenClient?.contact_number && (
+                        <>
+                          <span>|</span>
+                          <span>Contact: <strong className="text-slate-700">{selectedGenClient?.contact_number}</strong></span>
+                        </>
+                      )}
+                      {selectedGenClient?.email && (
+                        <>
+                          <span>|</span>
+                          <span>Email: <strong className="text-slate-700">{selectedGenClient?.email}</strong></span>
+                        </>
+                      )}
+                      <span>|</span>
+                      <span>Executive: <strong className="text-slate-700">{selectedGenClient?.sold_by_name || 'Admin Sales'}</strong></span>
+                      <span>|</span>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        Status: {selectedGenClient?.status || 'Attended'}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowQuotationBuilder(false)}
+                    className="px-4 py-2 border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
+                  >
+                    ← Back to Leads Directory
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Left Column (2 Cols): Quotation Details + Line Items */}
+                  <div className="lg:col-span-2 space-y-6">
+                    {/* Box 2: Quotation Parameters Form */}
+                    <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+                      <h3 className="text-xs font-black text-slate-600 uppercase tracking-wider">QUOTATION PARAMETERS:</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1">Quotation Date</label>
+                          <input
+                            type="date"
+                            value={quotationForm.quotation_date}
+                            onChange={(e) => setQuotationForm({ ...quotationForm, quotation_date: e.target.value })}
+                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:border-[#38b34a]"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1">Quotation Number</label>
+                          <input
+                            type="text"
+                            value={quotationForm.quotation_number}
+                            onChange={(e) => setQuotationForm({ ...quotationForm, quotation_number: e.target.value })}
+                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-700 focus:border-[#38b34a]"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1">
+                            Payment Terms <span className="text-rose-500 font-bold">*</span>
+                          </label>
+                          <div className="space-y-1.5">
+                            <select
+                              value={
+                                ['Full payments in Advanced', '60% advanced, 40% on delivery', 'Due on receipt'].includes(quotationForm.payment_terms)
+                                  ? quotationForm.payment_terms
+                                  : quotationForm.payment_terms
+                                  ? 'Custom'
+                                  : ''
+                              }
+                              onChange={(e) => {
+                                if (e.target.value !== 'Custom') {
+                                  setQuotationForm({ ...quotationForm, payment_terms: e.target.value })
+                                }
+                              }}
+                              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-700 focus:border-[#38b34a] shadow-sm"
+                            >
+                              <option value="">-- Select Payment Terms --</option>
+                              <option value="Full payments in Advanced">Full payments in Advanced</option>
+                              <option value="60% advanced, 40% on delivery">60% advanced, 40% on delivery</option>
+                              <option value="Due on receipt">Due on receipt</option>
+                              <option value="Custom">✏️ Custom / Edit Terms</option>
+                            </select>
+                            <input
+                              type="text"
+                              value={quotationForm.payment_terms || ''}
+                              onChange={(e) => setQuotationForm({ ...quotationForm, payment_terms: e.target.value })}
+                              placeholder="Select or enter payment terms [Mandatory]"
+                              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-700 focus:border-[#38b34a] shadow-sm"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1">P.O. Number</label>
+                          <input
+                            type="text"
+                            placeholder="Optional PO number"
+                            value={quotationForm.po_number}
+                            onChange={(e) => setQuotationForm({ ...quotationForm, po_number: e.target.value })}
+                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:border-[#38b34a]"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1">P.O. Date</label>
+                          <input
+                            type="date"
+                            value={quotationForm.po_date}
+                            onChange={(e) => setQuotationForm({ ...quotationForm, po_date: e.target.value })}
+                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:border-[#38b34a]"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1">GST Tax Supply Type</label>
+                          <select
+                            value={quotationForm.gst_type}
+                            onChange={(e) => setQuotationForm({ ...quotationForm, gst_type: e.target.value })}
+                            className="w-full bg-[#ffffff] border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:border-[#38b34a]"
+                          >
+                            <option value="Intra-State">Intra-State (CGST 9% + SGST 9%)</option>
+                            <option value="Inter-State">Inter-State (IGST 18%)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1">Client GSTIN / Tax ID</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. 36AACTM775F1ZP"
+                            value={quotationForm.gstin}
+                            onChange={(e) => setQuotationForm({ ...quotationForm, gstin: e.target.value })}
+                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-700 focus:border-[#38b34a]"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1">Discount Description</label>
+                          <input
+                            type="text"
+                            placeholder="Special offer / seasonal discount"
+                            value={quotationForm.discount_description}
+                            onChange={(e) => setQuotationForm({ ...quotationForm, discount_description: e.target.value })}
+                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:border-[#38b34a]"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1">Annexure Included?</label>
+                          <select
+                            value={quotationForm.anexture}
+                            onChange={(e) => setQuotationForm({ ...quotationForm, anexture: e.target.value })}
+                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:border-[#38b34a]"
+                          >
+                            <option value="NO">NO</option>
+                            <option value="YES">YES</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Rich Text Editor for Annexure */}
+                    {quotationForm.anexture === 'YES' && (
+                      <RichAnnexureEditor
+                        value={quotationForm.anexture_content || ''}
+                        onChange={(val) => setQuotationForm((prev) => ({ ...prev, anexture_content: val }))}
+                        theme="light"
+                      />
+                    )}
+
+                    {/* Box 3: Line Items Table */}
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">
+                          QUOTATION LINE ITEMS ({quotationItems.length})
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={handleAddEmptyItem}
+                          className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl border border-blue-200 shadow-sm transition-all cursor-pointer"
+                        >
+                          + Add Custom Line Item
+                        </button>
+                      </div>
+
+                      {quotationItems.length === 0 ? (
+                        <div className="p-8 border-2 border-dashed border-slate-200 rounded-2xl text-center text-slate-400 space-y-2">
+                          <span className="text-3xl block">📦</span>
+                          <p className="text-xs font-bold">No items added to quotation yet.</p>
+                          <p className="text-[11px] text-slate-400">
+                            Click any item from the catalog on the right or click "+ Add Custom Line Item" above.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {quotationItems.map((item, idx) => {
+                            const qty = parseFloat(item.qty) || 0
+                            const price = parseFloat(item.selling_price) || 0
+                            const disc = parseFloat(item.discount_percentage) || 0
+                            const itemTotal = Math.round(qty * price * (1 - disc / 100) * 100) / 100
+
+                            return (
+                              <div key={idx} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 relative">
+                                <div className="flex items-center justify-between border-b border-slate-200/60 pb-2">
+                                  <span className="text-xs font-black text-blue-600">Item #{idx + 1}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveItem(idx)}
+                                    className="text-rose-500 hover:text-rose-700 text-xs font-bold hover:underline cursor-pointer"
+                                  >
+                                    🗑️ Remove Item
+                                  </button>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+                                  <div className="sm:col-span-2">
+                                    <label className="text-[10px] font-bold text-slate-500 block mb-1">Product / Service Title</label>
+                                    <input
+                                      type="text"
+                                      value={item.product_name}
+                                      onChange={(e) => handleItemChange(idx, 'product_name', e.target.value)}
+                                      placeholder="e.g. Ref by Prakash Sir / Mobile App"
+                                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 font-bold text-slate-800"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[10px] font-bold text-slate-500 block mb-1">HSN / SAC Code</label>
+                                    <input
+                                      type="text"
+                                      value={item.hsn}
+                                      onChange={(e) => handleItemChange(idx, 'hsn', e.target.value)}
+                                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 font-mono font-bold text-slate-700"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[10px] font-bold text-slate-500 block mb-1">Unit</label>
+                                    <input
+                                      type="text"
+                                      value={item.unit}
+                                      onChange={(e) => handleItemChange(idx, 'unit', e.target.value)}
+                                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 font-bold text-slate-700"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[10px] font-bold text-slate-500 block mb-1">Quantity</label>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      value={item.qty}
+                                      onChange={(e) => handleItemChange(idx, 'qty', e.target.value)}
+                                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 font-bold text-slate-800"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[10px] font-bold text-slate-500 block mb-1">Selling Price (₹)</label>
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      value={item.selling_price}
+                                      onChange={(e) => handleItemChange(idx, 'selling_price', e.target.value)}
+                                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 font-bold text-slate-800"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[10px] font-bold text-slate-500 block mb-1">Discount (%)</label>
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      value={item.discount_percentage}
+                                      onChange={(e) => handleItemChange(idx, 'discount_percentage', e.target.value)}
+                                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 font-bold text-slate-800"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[10px] font-bold text-slate-500 block mb-1">Line Total</label>
+                                    <div className="w-full bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-1.5 font-black text-emerald-700 text-xs flex items-center justify-between">
+                                      <span>₹{itemTotal.toLocaleString('en-IN')}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <label className="text-[10px] font-bold text-slate-500 block mb-1">Scope & Specifications / Description</label>
+                                  <textarea
+                                    rows="2"
+                                    value={item.description}
+                                    onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
+                                    placeholder="Custom specifications and scope for line item..."
+                                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 focus:border-[#38b34a]"
+                                  ></textarea>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right Column (1 Col): Services Database Sidebar + Totals */}
+                  <div className="space-y-6">
+                    {/* Services Database Sidebar */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm">
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                        <div>
+                          <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>🎯</span>
+                            <span>SERVICES DATABASE ({generalServices.length})</span>
+                          </h3>
+                          <p className="text-[10px] text-slate-400 font-medium">Click to add services to line items</p>
+                        </div>
+                      </div>
+
+                      {/* Search Catalog */}
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
+                        <input
+                          type="text"
+                          placeholder="Search catalog services..."
+                          value={sidebarServiceSearch}
+                          onChange={(e) => setSidebarServiceSearch(e.target.value)}
+                          className="w-full bg-white border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-purple-500"
+                        />
+                      </div>
+
+                      {/* Services Catalog Cards List */}
+                      <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+                        {(() => {
+                          const filteredSidebarServices = generalServices.filter((srv) => {
+                            const q = sidebarServiceSearch.trim().toLowerCase()
+                            return !q || (srv.name && srv.name.toLowerCase().includes(q)) || (srv.category && srv.category.toLowerCase().includes(q)) || (srv.description && srv.description.toLowerCase().includes(q))
+                          })
+
+                          if (filteredSidebarServices.length === 0) {
+                            return (
+                              <div className="text-center py-8 text-slate-400 text-xs space-y-1">
+                                <span className="text-2xl block">🔍</span>
+                                <p className="font-bold">No services matching search</p>
+                              </div>
+                            )
+                          }
+
+                          return filteredSidebarServices.map((srv) => (
+                            <div
+                              key={srv.id}
+                              className="bg-white border border-slate-200 rounded-xl p-3 transition-all shadow-sm hover:border-purple-400 hover:shadow-md space-y-1.5"
+                            >
+                              <div className="flex justify-between items-start gap-2">
+                                <p className="font-extrabold text-xs text-slate-800 leading-snug">
+                                  {srv.name || srv.service_name || 'Service Item'}
+                                </p>
+                                <span className="text-[10px] font-mono text-purple-700 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded shrink-0">
+                                  {srv.hsn || '998314'}
+                                </span>
+                              </div>
+
+                              {srv.description && (
+                                <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
+                                  {srv.description}
+                                </p>
+                              )}
+
+                              <div className="flex justify-between items-center text-xs pt-1.5 border-t border-slate-100">
+                                <span className="font-black text-purple-700">
+                                  ₹{Number(srv.selling_price || srv.price || 0).toLocaleString('en-IN')}{' '}
+                                  <span className="text-[10px] font-normal text-slate-400">/ {srv.unit || 'Unit'}</span>
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddGeneralServiceToQuotation(srv)}
+                                  className="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold text-[11px] shadow-sm transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+                                >
+                                  <span>+ Add to Quote</span>
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* Totals Summary Box */}
+                    {(() => {
+                      const totals = computeQuotationTotals()
+                      return (
+                        <div className="bg-white border-2 border-[#1e3e6b]/20 rounded-2xl p-5 shadow-lg space-y-4">
+                          <h3 className="text-sm font-black text-[#1e3e6b] uppercase tracking-wider border-b border-slate-100 pb-2">
+                            FINANCIAL SUMMARY
+                          </h3>
+
+                          <div className="space-y-2 text-xs font-medium text-slate-600">
+                            <div className="flex justify-between">
+                              <span>Subtotal:</span>
+                              <span className="font-bold text-slate-800">₹{totals.subtotal.toLocaleString('en-IN')}</span>
+                            </div>
+
+                            {(selectedGenClient?.country_code || 'IN') === 'IN' ? (
+                              quotationForm.gst_type === 'Intra-State' ? (
+                                <>
+                                  <div className="flex justify-between text-slate-500 text-[11px]">
+                                    <span>CGST (9%):</span>
+                                    <span>₹{totals.cgst.toLocaleString('en-IN')}</span>
+                                  </div>
+                                  <div className="flex justify-between text-slate-500 text-[11px]">
+                                    <span>SGST (9%):</span>
+                                    <span>₹{totals.sgst.toLocaleString('en-IN')}</span>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="flex justify-between text-slate-500 text-[11px]">
+                                  <span>IGST (18%):</span>
+                                  <span>₹{totals.igst.toLocaleString('en-IN')}</span>
+                                </div>
+                              )
+                            ) : (
+                              <div className="flex justify-between text-slate-500 text-[11px]">
+                                <span>Export Tax (18%):</span>
+                                <span>₹{totals.taxTotal.toLocaleString('en-IN')}</span>
+                              </div>
+                            )}
+
+                            <div className="flex justify-between text-slate-700 font-bold border-t border-slate-100 pt-2">
+                              <span>Total Tax:</span>
+                              <span>₹{totals.taxTotal.toLocaleString('en-IN')}</span>
+                            </div>
+
+                            <div className="flex justify-between items-center border-t-2 border-slate-200 pt-3 text-base font-black text-slate-900">
+                              <span>Grand Total:</span>
+                              <span className="text-xl text-[#38b34a]">₹{totals.grandTotal.toLocaleString('en-IN')}</span>
+                            </div>
+                          </div>
+
+                          <div className="pt-2">
+                            <button
+                              type="button"
+                              disabled={savingQuotation || quotationItems.length === 0}
+                              onClick={(e) => handleSaveQuotation(e, true)}
+                              className="w-full py-3.5 bg-gradient-to-r from-[#38b34a] to-emerald-600 hover:from-[#329f42] hover:to-emerald-700 disabled:opacity-50 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-lg transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1.5"
+                            >
+                              <span>⚡</span>
+                              <span>{savingQuotation ? 'Processing...' : 'SAVE & GENERATE PAYMENT LINK'}</span>
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1871,36 +2919,27 @@ export default function AdminLeads() {
                             {/* Quick Contact buttons */}
                             <td className="px-4 py-4 min-w-[140px] whitespace-nowrap">
                               <div className="flex items-center gap-1.5">
-                                {lead.client_phone && (
+                                {rawPhone ? (
                                   <>
                                     <a
-                                      href={`tel:${lead.client_phone}`}
-                                      title={`Call ${lead.client_phone}`}
-                                      className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold transition flex items-center gap-1"
-                                    >
-                                      <span>📞</span>
-                                      <span>Call</span>
-                                    </a>
-                                    <a
-                                      href={`https://wa.me/${rawPhone}`}
+                                      href={`https://wa.me/${rawPhone}?text=${encodeURIComponent(`Hello ${lead.client_name || lead.company_name || ''}, regarding your inquiry with AIM Digitalise...`)}`}
                                       target="_blank"
-                                      rel="noreferrer"
-                                      title={`WhatsApp ${lead.client_phone}`}
-                                      className="px-2.5 py-1 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded-lg text-xs font-bold transition flex items-center gap-1"
+                                      rel="noopener noreferrer"
+                                      className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200 rounded-xl font-bold transition text-xs flex items-center gap-1 cursor-pointer"
+                                      title="Open WhatsApp chat"
                                     >
                                       <span>💬</span>
-                                      <span>Chat</span>
+                                    </a>
+                                    <a
+                                      href={`tel:${rawPhone}`}
+                                      className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 rounded-xl font-bold transition text-xs flex items-center gap-1 cursor-pointer"
+                                      title="Call via softphone / mobile"
+                                    >
+                                      <span>📞</span>
                                     </a>
                                   </>
-                                )}
-                                {lead.client_email && (
-                                  <a
-                                    href={`mailto:${lead.client_email}`}
-                                    title={`Email ${lead.client_email}`}
-                                    className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition flex items-center gap-1"
-                                  >
-                                    <span>✉️</span>
-                                  </a>
+                                ) : (
+                                  <span className="text-slate-300 italic text-[11px]">No phone</span>
                                 )}
                               </div>
                             </td>
@@ -1908,37 +2947,50 @@ export default function AdminLeads() {
                             {/* Scheduled Date */}
                             <td className="px-4 py-4 min-w-[140px] whitespace-nowrap">
                               <div>
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs border ${statusInfo.badge}`}>
-                                  <span>📅</span>
-                                  <span>{statusInfo.label}</span>
+                                <span className="font-bold text-slate-800 block">
+                                  {formatFollowUpDisplay(fDate)}
                                 </span>
-                                <span className="text-[10px] text-slate-400 font-semibold block mt-1">
-                                  Target: {statusInfo.formattedDate}
-                                </span>
+                                {statusInfo && (
+                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black border mt-1 ${statusInfo.badge}`}>
+                                    <span>{statusInfo.icon}</span>
+                                    <span>{statusInfo.label}</span>
+                                  </span>
+                                )}
                               </div>
                             </td>
 
                             {/* Status & Priority */}
                             <td className="px-4 py-4 min-w-[130px] whitespace-nowrap">
-                              <div className="flex flex-wrap gap-1.5">
-                                {getStatusBadge(lead.lead_status)}
-                                {getPriorityBadge(lead.lead_priority)}
+                              <div className="space-y-1">
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-slate-100 text-slate-700 border border-slate-200 inline-block uppercase">
+                                  {lead.status || 'New'}
+                                </span>
+                                {lead.priority && (
+                                  <div>
+                                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase border ${lead.priority === 'urgent' ? 'bg-red-50 text-red-700 border-red-200' :
+                                      lead.priority === 'high' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                        lead.priority === 'medium' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                          'bg-slate-50 text-slate-600 border-slate-200'
+                                      }`}>
+                                      {lead.priority}
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             </td>
 
-                            {/* Last Remarks */}
+                            {/* Discussion / Remarks */}
                             <td className="px-4 py-4 min-w-[160px] max-w-xs">
-                              <p className="truncate text-slate-600 font-medium" title={getLatestRemark(lead)}>
-                                {getLatestRemark(lead)}
+                              <p className="text-slate-600 text-xs line-clamp-2 italic bg-slate-50 p-2 rounded-xl border border-slate-100">
+                                "{lead.follow_up_remark || lead.remarks || lead.notes || 'No remarks recorded yet.'}"
                               </p>
                             </td>
 
                             {/* Actions */}
-                            <td className="px-4 py-4 text-center whitespace-nowrap min-w-[220px] w-56 sticky right-0 bg-white group-hover:bg-slate-50 transition-colors shadow-[-6px_0_12px_rgba(0,0,0,0.06)]">
-                              <div className="flex items-center justify-center gap-1">
+                            <td className="px-4 py-4 text-center whitespace-nowrap min-w-[220px] w-56 sticky right-0 bg-white group-hover:bg-slate-50/70 z-10 shadow-[-6px_0_12px_rgba(0,0,0,0.06)]">
+                              <div className="flex items-center justify-center gap-1.5">
                                 <button
                                   onClick={() => openFollowUpModal(lead)}
-                                  title="Reschedule / Log Follow-up"
                                   className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow-sm"
                                 >
                                   <span>📅</span>
@@ -3126,6 +4178,474 @@ export default function AdminLeads() {
             </motion.div>
           </div>
         )}
+
+      {/* 2. QUOTATIONS HISTORY LIST MODAL (Matching Image 1) */}
+      {showQuotationsListModal && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-3xl p-6 text-slate-800 space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-lg font-black text-[#1e3e6b]">📋 Quotations History</h3>
+                <p className="text-xs text-slate-400">
+                  Client: <strong>{selectedGenClient?.client_name || selectedGenClient?.company_name}</strong> (ID: {selectedGenClient?.client_id || `GC-${selectedGenClient?.id}`})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowQuotationsListModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold flex items-center justify-center transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {loadingQuotationsList ? (
+              <div className="p-8 text-center text-slate-400 font-bold text-xs">Loading quotations history...</div>
+            ) : selectedClientQuotations.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 text-xs font-bold">
+                No quotations generated for this client yet.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50 text-slate-400 font-bold uppercase tracking-wider">
+                      <th className="px-4 py-3">QUOTATION NO.</th>
+                      <th className="px-4 py-3">DATE</th>
+                      <th className="px-4 py-3">STATUS</th>
+                      <th className="px-4 py-3">PAYMENT TERMS</th>
+                      <th className="px-4 py-3 text-right">GRAND TOTAL</th>
+                      <th className="px-4 py-3 text-center">ACTIONS & INVOICE</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                    {selectedClientQuotations.map((q) => {
+                      const calcTotal = () => {
+                        if (!q) return 0
+                        const candidates = [q.grand_total, q.total_amount, q.grandTotal, q.total, q.amount, q.net_amount, q.final_amount]
+                        for (const val of candidates) {
+                          if (val !== undefined && val !== null && !isNaN(Number(val)) && Number(val) > 0) {
+                            return Number(val)
+                          }
+                        }
+                        if (Array.isArray(q.items) && q.items.length > 0) {
+                          return q.items.reduce((sum, item) => {
+                            const qty = Number(item.qty || item.quantity || 1)
+                            const price = Number(item.selling_price || item.price || item.unit_price || 0)
+                            const disc = Number(item.discount_percentage || item.discount || 0)
+                            return sum + Math.round(qty * price * (1 - disc / 100) * 100) / 100
+                          }, 0)
+                        }
+                        return 0
+                      }
+
+                      const totalAmt = calcTotal()
+                      const isPaid = q.status === 'paid' || q.is_paid === true
+
+                      return (
+                        <tr key={q.id}>
+                          <td className="px-4 py-3 font-mono font-bold text-blue-600">{q.quotation_number || `QUO-${q.id}`}</td>
+                          <td className="px-4 py-3 text-slate-500">
+                            {q.quotation_date ? String(q.quotation_date).split('T')[0] : 'N/A'}
+                          </td>
+                          <td className="px-4 py-3">
+                            {isPaid ? (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                ✅ PAID
+                              </span>
+                            ) : q.status === 'sent' ? (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-blue-50 text-blue-700 border border-blue-200">
+                                📨 SENT
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-slate-100 text-slate-600 border border-slate-200">
+                                📝 {q.status || 'Draft'}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 font-medium text-slate-600">{q.payment_terms || 'Due on Receipt'}</td>
+                          <td className="px-4 py-3 text-right font-black text-emerald-700 text-sm">
+                            ₹{totalAmt.toLocaleString('en-IN')}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              {/* Direct View Quotation Document */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowQuotationsListModal(false)
+                                  handleOpenQuotationDoc(q, selectedGenClient)
+                                }}
+                                className="px-3 py-1.5 bg-[#1e3e6b] hover:bg-[#152e50] text-white rounded-lg text-[11px] font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
+                              >
+                                <span>👁️</span>
+                                <span>View Document</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowQuotationsListModal(false)
+                                  handleEditQuotation(q, selectedGenClient)
+                                }}
+                                className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-[11px] font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer active:scale-95"
+                              >
+                                <span>✏️</span>
+                                <span>Edit</span>
+                              </button>
+
+                              {isPaid && (
+                                <a
+                                  href={getAdminInvoiceDownloadUrl(q.id)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-bold inline-flex items-center gap-1 shadow-sm transition-all"
+                                >
+                                  📥 Tax Invoice PDF
+                                </a>
+                              )}
+
+                              {!isPaid && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setShowQuotationsListModal(false)
+                                    handleOpenRecordPayment(q, selectedGenClient)
+                                  }}
+                                  className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer active:scale-95"
+                                >
+                                  <span>💳</span>
+                                  <span>Record Payment</span>
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                title="Copy Payment Link"
+                                onClick={async () => {
+                                  let payUrl = q.payment_url || q.pay_url
+                                  if (!payUrl && q.id) {
+                                    try {
+                                      const sendRes = await sendQuotation(q.id)
+                                      if (sendRes?.data?.payment_url) {
+                                        payUrl = sendRes.data.payment_url
+                                        q.payment_url = payUrl
+                                      }
+                                    } catch (_) { }
+                                  }
+                                  if (!payUrl) {
+                                    const targetUuid = q.uuid || `quotation-uuid-${q.id}`
+                                    payUrl = `${window.location.origin}/general-quotation-pay.html?uuid=${targetUuid}`
+                                  }
+                                  if (navigator.clipboard && navigator.clipboard.writeText) {
+                                    await navigator.clipboard.writeText(payUrl)
+                                    triggerSuccess(`📋 Payment Link copied to clipboard:\n\n${payUrl}`)
+                                  }
+                                }}
+                                className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                              >
+                                🔗
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 3. PROFORMA INVOICE DOCUMENT VIEWER MODAL */}
+      {showQuotationDocModal && viewingQuotationDoc && (
+        <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/75 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto animate-fade-in print:p-0 print:bg-white">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col text-slate-800 overflow-hidden print:max-h-none print:shadow-none print:border-none print:rounded-none">
+            {/* Top Controls Bar */}
+            <div className="px-6 py-3.5 bg-slate-900 text-white flex items-center justify-between gap-3 shrink-0 print:hidden">
+              <div className="flex items-center gap-2.5">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  Official Quotation Document
+                </span>
+                <span className="font-mono text-xs font-bold text-slate-300">
+                  {viewingQuotationDoc.quotation_number || `QUO-${viewingQuotationDoc.id}`}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleEditQuotation(viewingQuotationDoc, viewingQuotationDoc.client)}
+                  className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>✏️</span>
+                  <span>Edit</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePrintQuotation}
+                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>🖨️</span>
+                  <span>Print / Save PDF</span>
+                </button>
+
+                {viewingQuotationDoc.status !== 'paid' && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenRecordPayment(viewingQuotationDoc, viewingQuotationDoc.client)}
+                    className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>💳</span>
+                    <span>Record Payment</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setShowQuotationDocModal(false)}
+                  className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center transition-colors ml-2 cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Document Body Paper */}
+            <div className="flex-1 overflow-y-auto p-3 sm:p-5 bg-slate-100/60 print:p-0 print:bg-white print:overflow-visible font-sans">
+              <div
+                id="quotation-document-paper-leads"
+                className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 sm:p-6 md:p-7 space-y-3 sm:space-y-4 print:border-none print:shadow-none print:p-0 max-w-3xl mx-auto"
+              >
+                <div className="text-center -mt-1 sm:-mt-2 pt-0 pb-0.5">
+                  <h1 className="text-xs sm:text-sm font-black text-[#1e3e6b] tracking-[0.25em] uppercase font-sans">
+                    PROFORMA INVOICE
+                  </h1>
+                </div>
+
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-3 sm:pb-4 border-b-2 border-slate-800">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3.5">
+                      <img src={companyLogo} alt="AIM Digitalise Logo" className="h-13 sm:h-15 w-auto object-contain shrink-0" />
+                      <div>
+                        <h2 className="text-lg sm:text-xl font-black text-[#1e3e6b] tracking-tight uppercase leading-tight">
+                          AIM Digitalise Pvt. Ltd.
+                        </h2>
+                        <p className="text-[11px] font-bold text-slate-500">
+                          Digital Nation तो Developed Nation
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-[10px] text-slate-500 leading-relaxed pt-1">
+                      <p>Corporate Office: #139, 3rd Floor, Rajdanga Main Road, Kolkata - 700107, India</p>
+                      <p>GSTIN: <strong>19ABCCA9672L1Z0</strong> | CIN: <strong>U62013WB2025PTC279684</strong></p>
+                      <p>Email: <span className="text-blue-600">support@aimdigitalise.com</span> | Web: <strong>www.aimdigitalise.com</strong></p>
+                    </div>
+                  </div>
+
+                  <div className="text-left sm:text-right space-y-1.5 bg-slate-50 sm:bg-transparent p-4 sm:p-0 rounded-2xl border sm:border-none border-slate-200 w-full sm:w-auto shrink-0">
+                    <div className="text-xs pt-1 space-y-1">
+                      <div>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block font-sans">QUOTATION NO.</span>
+                        <p className="font-mono font-black text-[#1e3e6b] text-base">
+                          {viewingQuotationDoc.quotation_number || `QUO-${viewingQuotationDoc.id}`}
+                        </p>
+                      </div>
+                      <p className="text-slate-500 font-medium">Date: <strong className="text-slate-800">{viewingQuotationDoc.quotation_date ? String(viewingQuotationDoc.quotation_date).split('T')[0] : 'N/A'}</strong></p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50/80 rounded-2xl p-4 sm:p-5 border border-slate-200/80 text-xs">
+                  <div className="space-y-1">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block font-sans">QUOTATION FOR (BILL TO):</span>
+                    <h3 className="font-extrabold text-slate-900 text-sm">
+                      {viewingQuotationDoc.client?.company_name || viewingQuotationDoc.client?.client_name || 'Valued Client'}
+                    </h3>
+                    <p className="text-slate-600">{viewingQuotationDoc.client?.email || '—'}</p>
+                    <p className="text-slate-600">{viewingQuotationDoc.client?.contact_number || viewingQuotationDoc.client?.client_phone || '—'}</p>
+                  </div>
+                </div>
+
+                {/* Items Table */}
+                <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-100 text-slate-600 font-bold uppercase text-[10px]">
+                        <th className="px-4 py-3">#</th>
+                        <th className="px-4 py-3">Scope & Item Description</th>
+                        <th className="px-4 py-3 text-center">HSN</th>
+                        <th className="px-4 py-3 text-center">Qty</th>
+                        <th className="px-4 py-3 text-right">Selling Price</th>
+                        <th className="px-4 py-3 text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {viewingQuotationDoc.items?.map((it, idx) => {
+                        const lineTotal = Math.round(it.qty * it.selling_price * (1 - (it.discount_percentage || 0) / 100) * 100) / 100
+                        return (
+                          <tr key={idx}>
+                            <td className="px-4 py-3 font-bold text-slate-400">{idx + 1}</td>
+                            <td className="px-4 py-3">
+                              <p className="font-extrabold text-slate-800">{it.product_name}</p>
+                              {it.description && <p className="text-[11px] text-slate-500">{it.description}</p>}
+                            </td>
+                            <td className="px-4 py-3 text-center font-mono text-slate-500">{it.hsn}</td>
+                            <td className="px-4 py-3 text-center font-bold">{it.qty} {it.unit}</td>
+                            <td className="px-4 py-3 text-right font-medium">₹{it.selling_price.toLocaleString('en-IN')}</td>
+                            <td className="px-4 py-3 text-right font-bold text-slate-900">₹{lineTotal.toLocaleString('en-IN')}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Financial Summary */}
+                <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200 text-xs space-y-2.5">
+                  <div>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Amount in Words:</span>
+                    <p className="font-bold text-slate-800 italic leading-relaxed">
+                      {numberToIndianWords(viewingQuotationDoc.grand_total || viewingQuotationDoc.grandTotal)}
+                    </p>
+                  </div>
+                  <div className="border-t border-slate-200/80 pt-2 flex justify-between items-center">
+                    <div>
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Payment Terms:</span>
+                      <p className="font-bold text-slate-800">{viewingQuotationDoc.payment_terms || 'Due on Receipt'}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase block">Grand Total</span>
+                      <span className="text-lg font-black text-[#38b34a]">₹{Number(viewingQuotationDoc.grand_total || 0).toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Signatory */}
+                <div className="quotation-terms-signature flex justify-between items-end pt-4 border-t border-slate-200 text-xs">
+                  <div className="text-slate-500 text-[10px] space-y-1">
+                    <p className="font-bold text-slate-700">Terms & Conditions:</p>
+                    <p>1. Quotation valid for 30 days. 2. GST calculated per regulation.</p>
+                  </div>
+                  <div className="quotation-signature-block text-right">
+                    <span className="text-[10px] font-bold text-slate-400 block">For AIM Digitalise Pvt. Ltd.</span>
+                    <img
+                      src="https://api.nexgn.in/public/signature_1.png"
+                      alt="Boss Signature"
+                      className="h-12 w-auto object-contain ml-auto my-1"
+                      onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/signature_1.png' }}
+                    />
+                    <span className="font-black text-slate-800 text-xs block border-t border-slate-300 pt-1">Authorized Signatory</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. RECORD MANUAL PAYMENT MODAL */}
+      {showRecordPaymentModal && paymentQuotation && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md p-6 text-slate-800 space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-base font-black text-[#1e3e6b]">💳 Record Manual / Offline Payment</h3>
+                <p className="text-xs text-slate-400">
+                  Quotation: <strong>{paymentQuotation.quotation_number || `QUO-${paymentQuotation.id}`}</strong>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRecordPaymentModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold flex items-center justify-center transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleRecordPaymentSubmit} className="space-y-4 text-xs">
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 block mb-1">Amount Received (₹)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  required
+                  value={paymentForm.amount}
+                  onChange={(e) => setPaymentForm(f => ({ ...f, amount: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-black text-base text-emerald-700"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 block mb-1">Payment Method</label>
+                <select
+                  value={paymentForm.payment_method}
+                  onChange={(e) => setPaymentForm(f => ({ ...f, payment_method: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-800"
+                >
+                  <option value="Bank Transfer">Bank Transfer (NEFT / RTGS / IMPS)</option>
+                  <option value="UPI">UPI / GPay / PhonePe</option>
+                  <option value="Cheque">Cheque</option>
+                  <option value="Cash">Cash</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 block mb-1">Reference / UTR / Transaction No.</label>
+                <input
+                  type="text"
+                  placeholder="e.g. UTR1234567890"
+                  value={paymentForm.reference_number}
+                  onChange={(e) => setPaymentForm(f => ({ ...f, reference_number: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-mono font-bold text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 block mb-1">Payment Date</label>
+                <input
+                  type="date"
+                  value={paymentForm.paid_at}
+                  onChange={(e) => setPaymentForm(f => ({ ...f, paid_at: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 block mb-1">Notes / Remarks</label>
+                <textarea
+                  rows="2"
+                  value={paymentForm.notes}
+                  onChange={(e) => setPaymentForm(f => ({ ...f, notes: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700"
+                ></textarea>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowRecordPaymentModal(false)}
+                  className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={recordingPayment}
+                  className="px-5 py-2 bg-gradient-to-r from-emerald-600 to-[#38b34a] hover:from-emerald-700 hover:to-[#329f42] text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-md cursor-pointer"
+                >
+                  {recordingPayment ? 'Recording...' : 'Confirm & Mark Paid'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       </AnimatePresence>
     </>
   )

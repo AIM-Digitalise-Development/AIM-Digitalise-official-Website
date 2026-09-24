@@ -1,7 +1,16 @@
 import client from './client'
 import { getMockResponse } from '../utils/mockAuthData'
 
-export const PARTNER_API = import.meta.env.VITE_PARTNER_API_URL || 'https://api.nexgn.in/api'
+const getPartnerApiBaseUrl = () => {
+  if (import.meta.env.VITE_PARTNER_API_URL) return import.meta.env.VITE_PARTNER_API_URL
+  if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    return 'http://localhost/aim-backend/public/api'
+  }
+  return 'https://api.nexgn.in/api'
+}
+
+export const PARTNER_API = getPartnerApiBaseUrl()
 
 // Helper: build a separate axios-like fetch wrapper for partner API
 // (uses fetch directly so it can point at a different base URL)
