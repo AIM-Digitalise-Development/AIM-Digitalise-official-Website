@@ -331,11 +331,20 @@ export default function EmployeeLeads() {
   const fetchProducts = async (subCategoryId, categoryId) => {
     try {
       const res = await getProductsDropdown(subCategoryId, categoryId)
-      if (res.data?.success) {
-        setProducts(res.data.data)
+      let data = res.data?.data
+      if (data && !Array.isArray(data) && Array.isArray(data.products)) {
+        data = data.products
+      } else if (!data && Array.isArray(res.data)) {
+        data = res.data
+      }
+      if (Array.isArray(data)) {
+        setProducts(data)
+      } else {
+        setProducts([])
       }
     } catch (err) {
       console.error('Failed to fetch products:', err)
+      setProducts([])
     }
   }
 
@@ -471,7 +480,8 @@ export default function EmployeeLeads() {
 
   const handleProductSelect = (e) => {
     const productId = e.target.value
-    const selectedProduct = products.find(p => p.id == productId)
+    const safeProducts = Array.isArray(products) ? products : []
+    const selectedProduct = safeProducts.find(p => p.id == productId)
     setLeadForm(prev => ({
       ...prev,
       product_id: productId,
@@ -2192,7 +2202,7 @@ export default function EmployeeLeads() {
                           className="w-full bg-[#1a1d2b] border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#38b34a] cursor-pointer font-bold"
                         >
                           <option value="" className="bg-[#13151f]">Select Product</option>
-                          {products.map(prod => (
+                          {(Array.isArray(products) ? products : []).map(prod => (
                             <option key={prod.id} value={prod.id} className="bg-[#13151f]">{prod.name}</option>
                           ))}
                         </select>

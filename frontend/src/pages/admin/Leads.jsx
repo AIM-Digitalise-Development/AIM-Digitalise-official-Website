@@ -1042,11 +1042,20 @@ export default function AdminLeads() {
   const fetchProducts = async (subCategoryId, categoryId) => {
     try {
       const res = await getProductsDropdown(subCategoryId, categoryId)
-      if (res.data?.success) {
-        setProducts(res.data.data)
+      let data = res.data?.data
+      if (data && !Array.isArray(data) && Array.isArray(data.products)) {
+        data = data.products
+      } else if (!data && Array.isArray(res.data)) {
+        data = res.data
+      }
+      if (Array.isArray(data)) {
+        setProducts(data)
+      } else {
+        setProducts([])
       }
     } catch (err) {
       console.error('Failed to fetch products:', err)
+      setProducts([])
     }
   }
 
@@ -1111,7 +1120,8 @@ export default function AdminLeads() {
 
   const handleProductSelect = (e) => {
     const productId = e.target.value
-    const selectedProduct = products.find(p => p.id == productId)
+    const safeProducts = Array.isArray(products) ? products : []
+    const selectedProduct = safeProducts.find(p => p.id == productId)
     setLeadForm(prev => ({
       ...prev,
       product_id: productId,
@@ -3380,7 +3390,7 @@ export default function AdminLeads() {
                           className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs text-slate-650 focus:outline-none disabled:opacity-50 cursor-pointer"
                         >
                           <option value="">Select Product Package</option>
-                          {products.map(p => (
+                          {(Array.isArray(products) ? products : []).map(p => (
                             <option key={p.id} value={p.id}>{p.name}</option>
                           ))}
                         </select>
