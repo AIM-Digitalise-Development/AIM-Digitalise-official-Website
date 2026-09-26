@@ -79,6 +79,109 @@ const formatFollowUpDisplay = (dateStr) => {
   })
 }
 
+export const renderPartnerLeadOwnerCell = (lead, currentPartnerUser = null) => {
+  const code = String(lead?.sold_by || lead?.employee?.employee_id || lead?.employee_id || currentPartnerUser?.partner_id || 'Partner')
+  const codeLower = code.toLowerCase()
+  const isPartner = code.startsWith('PID') || code.startsWith('PTR') || code.startsWith('PAR') || code.startsWith('P-') || codeLower.includes('partner') || Boolean(lead?.partner) || lead?.category_name === 'Partner'
+
+  if (isPartner && (lead?.partner || currentPartnerUser)) {
+    const pName = lead?.partner?.partner_name || lead?.partner?.organization_name || currentPartnerUser?.partner_name || currentPartnerUser?.name || 'Partner'
+    const pId = lead?.partner?.partner_id || currentPartnerUser?.partner_id || code
+    return (
+      <div className="flex items-center gap-1 flex-wrap">
+        <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30">
+          🤝 {pName} ({pId})
+        </span>
+      </div>
+    )
+  }
+
+  if (isPartner) {
+    return (
+      <div className="flex items-center gap-1 flex-wrap">
+        <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30">
+          🤝 Partner ({code})
+        </span>
+      </div>
+    )
+  }
+
+  if (code.startsWith('AIM') || codeLower.includes('employee') || Boolean(lead?.employee)) {
+    const empName = lead?.employee?.full_name || 'Employee'
+    const empId = lead?.employee?.employee_id || code
+    return (
+      <div className="flex items-center gap-1 flex-wrap">
+        <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30">
+          👔 {empName} ({empId})
+        </span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+        🏢 Admin (ADMIN)
+      </span>
+    </div>
+  )
+}
+
+export const renderPartnerMasterPartnerCell = (lead, currentPartnerUser = null) => {
+  let parent = lead?.partner?.parent || currentPartnerUser?.parent || currentPartnerUser?.parent_partner
+  if (!parent) {
+    return <span className="text-gray-500 font-medium">—</span>
+  }
+  const masterName = parent.partner_name || parent.organization_name || 'Master Partner'
+  const masterId = parent.partner_id || `PIDIN${parent.id}`
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+        👑 {masterName} - {masterId}
+      </span>
+    </div>
+  )
+}
+
+export const isGeneralClientLead = (lead) => {
+  if (!lead) return false
+  if (lead.is_general_client) return true
+  if (lead.category_name === 'General Client' || lead.category_id === 'general_client') return true
+  if (lead.software_requirements && lead.software_requirements.trim() !== '') return true
+  if (lead.notes && typeof lead.notes === 'string' && lead.notes.toLowerCase().includes('general client:')) return true
+  return false
+}
+
+export const getLeadProductDisplay = (lead) => {
+  if (!lead) return 'Generic Inquiry'
+  if (lead.is_general_client) {
+    const srv = lead.software_requirements || lead.product_name || lead.product_interest || 'Services'
+    return `General Client (${srv})`
+  }
+  if (lead.product_name && lead.product_name.trim() !== '') {
+    return lead.product_name
+  }
+  if (lead.software_requirements && lead.software_requirements.trim() !== '') {
+    return `General Client (${lead.software_requirements})`
+  }
+  if (lead.product_interest && lead.product_interest.trim() !== '') {
+    return lead.product_interest
+  }
+  if (lead.notes && typeof lead.notes === 'string' && lead.notes.toLowerCase().includes('general client:')) {
+    const parts = lead.notes.split(/general client:/i)
+    if (parts.length > 1) {
+      const extracted = parts[1].split('.')[0].trim()
+      if (extracted) {
+        return `General Client (${extracted})`
+      }
+    }
+  }
+  if (lead.category_name === 'General Client' || lead.category_id === 'general_client') {
+    return 'General Client Services'
+  }
+  return 'Generic Inquiry'
+}
+
 export default function PartnerLeads() {
   const { partnerUser } = usePartnerAuthStore()
   const partnerName = partnerUser?.name || partnerUser?.full_name || partnerUser?.partner_id || 'Partner'
@@ -1937,24 +2040,27 @@ export default function PartnerLeads() {
                     className="rounded text-[#38b34a] focus:ring-0 focus:ring-offset-0 bg-white/5 border border-white/10 cursor-pointer"
                   />
                 </th>
-                <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left">Lead Details</th>
+                <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left">Client Name</th>
+                <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left">Contact Person & Phone</th>
+                <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left min-w-[160px]">Lead Owner</th>
+                <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left min-w-[170px]">Master Partner</th>
+                <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left">Generate Date</th>
                 <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left">Pipeline Status</th>
                 <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left">Next Follow-up</th>
-                                <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left">Demo Status</th>
-
+                <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left">Demo Status</th>
                 <th className="p-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="p-12 text-center text-xs font-black text-gray-500 uppercase tracking-wider animate-pulse">
+                  <td colSpan="10" className="p-12 text-center text-xs font-black text-gray-500 uppercase tracking-wider animate-pulse">
                     Loading Leads registry...
                   </td>
                 </tr>
               ) : displayLeads.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="p-12 text-center">
+                  <td colSpan="10" className="p-12 text-center">
                     <span className="text-2xl block mb-2">📁</span>
                     <p className="text-xs font-bold text-white">No leads found</p>
                     <p className="text-[11px] text-gray-550 mt-1">Try modifying your query search criteria or filter flags.</p>
@@ -1982,7 +2088,7 @@ export default function PartnerLeads() {
                         />
                       </td>
 
-                      {/* Lead Details */}
+                      {/* Client Name */}
                       <td className="p-4">
                         <div className="text-left">
                           <button
@@ -1992,13 +2098,46 @@ export default function PartnerLeads() {
                             {lead.company_name || lead.client_name}
                           </button>
                           <span className="text-[9px] font-bold text-cyan-400 font-mono tracking-wider block mt-1">{lead.lead_id}</span>
-                          {lead.created_at && (
-                            <span className="text-[9px] text-gray-550 block mt-0.5">
-                              📅 {new Date(lead.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          {isGeneralClientLead(lead) && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mt-1">
+                              💼 General Client
                             </span>
                           )}
-                          <span className="text-[10px] text-gray-400 font-semibold block mt-0.5">
-                            👤 {lead.client_name} {lead.client_phone ? `(${lead.client_phone})` : ''}
+                        </div>
+                      </td>
+
+                      {/* Contact Person & Phone */}
+                      <td className="p-4">
+                        <div className="text-left">
+                          <span className="text-xs font-bold text-gray-200 block">
+                            👤 {lead.client_name || 'N/A'}
+                          </span>
+                          <span className="text-[11px] text-gray-400 font-medium block mt-0.5">
+                            📞 {lead.client_phone || 'N/A'}
+                          </span>
+                          {lead.client_alternate_phone && (
+                            <span className="text-[10px] text-gray-500 font-medium block">
+                              📱 Alt: {lead.client_alternate_phone}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Lead Owner */}
+                      <td className="p-4 whitespace-nowrap">
+                        {renderPartnerLeadOwnerCell(lead, partnerUser)}
+                      </td>
+
+                      {/* Master Partner */}
+                      <td className="p-4 whitespace-nowrap">
+                        {renderPartnerMasterPartnerCell(lead, partnerUser)}
+                      </td>
+
+                      {/* Generate Date */}
+                      <td className="p-4 whitespace-nowrap">
+                        <div className="text-left">
+                          <span className="text-[11px] font-semibold text-gray-300 block">
+                            📅 {lead.created_at ? new Date(lead.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
                           </span>
                         </div>
                       </td>
@@ -2006,12 +2145,12 @@ export default function PartnerLeads() {
                       {/* Pipeline Status — Product + Status badge */}
                       <td className="p-4">
                         <div className="text-left space-y-1">
-                          {(lead.is_general_client || lead.category_id === 'general_client') && (
+                          {isGeneralClientLead(lead) && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-1">
                               💼 General Client
                             </span>
                           )}
-                          <span className="text-[10px] text-gray-400 font-bold block">{lead.product_name || lead.product_interest || 'N/A'}</span>
+                          <span className="text-[10px] text-gray-400 font-bold block">{getLeadProductDisplay(lead)}</span>
                           {getStatusBadge(lead.lead_status)}
                         </div>
                       </td>

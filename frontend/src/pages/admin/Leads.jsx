@@ -37,57 +37,155 @@ import {
   recordQuotationPayment,
   getAdminInvoiceDownloadUrl
 } from '../../api/admin/generalClients'
+import { getAdminPartners } from '../../api/admin/partners'
 import { RichAnnexureEditor, numberToIndianWords } from './Users'
 import companyLogo from '../../assets/images/logo.png'
+import payQrCode from '../../assets/images/payqr.png'
 
-export const renderCreatorBadge = (creatorCode, leadObj = null) => {
-  const code = String(creatorCode || leadObj?.employee_id || 'Admin')
-  const codeLower = code.toLowerCase()
-  const isPartner = code.startsWith('PID') || code.startsWith('PTR') || code.startsWith('PAR') || code.startsWith('P-') || codeLower.includes('partner') || Boolean(leadObj?.partner) || leadObj?.category_name === 'Partner'
+const countryFlags = {
+  IN: '🇮🇳',
+  NP: '🇳🇵',
+  BT: '🇧🇹',
+}
+
+const formatDateDisplay = (dateStr) => {
+  if (!dateStr) return 'N/A'
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return String(dateStr).split('T')[0]
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  } catch (_) {
+    return dateStr
+  }
+}
+
+export const renderLeadOwnerCell = (lead, partnerMap = null) => {
+  const code = String(lead?.sold_by || lead?.employee?.employee_id || lead?.employee_id || 'Admin')
+  const codeLower = code.toLowerCase().trim()
+  const isPartner = code.startsWith('PID') || code.startsWith('PTR') || code.startsWith('PAR') || code.startsWith('P-') || codeLower.includes('partner') || Boolean(lead?.partner) || lead?.category_name === 'Partner'
+
   if (isPartner) {
+    let pObj = lead?.partner
+    if (!pObj && partnerMap) {
+      pObj = partnerMap.get(code) || partnerMap.get(codeLower) || partnerMap.get(String(lead?.partner_id))
+      if (!pObj) {
+        const match = code.match(/PIDIN\d+/i) || code.match(/PID\d+/i)
+        if (match) {
+          pObj = partnerMap.get(match[0].toUpperCase())
+        }
+      }
+    }
+    const pName = pObj?.partner_name || pObj?.organization_name || (code.includes('(') ? code.split('(')[0].trim() : code) || 'Partner'
+    const pId = pObj?.partner_id || (code.match(/PIDIN\d+/i)?.[0]) || code
     return (
-      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-300">
-        🤝 Partner ({code})
-      </span>
+      <div className="flex items-center gap-1 flex-wrap">
+        <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-300 shadow-xs">
+          🤝 {pName} ({pId})
+        </span>
+      </div>
     )
   }
-  if (code.startsWith('AIM') || codeLower.includes('employee')) {
+
+  if (code.startsWith('AIM') || codeLower.includes('employee') || Boolean(lead?.employee)) {
+    const empName = lead?.employee?.full_name || 'Employee'
+    const empId = lead?.employee?.employee_id || code
     return (
-      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-700 border border-sky-300">
-        👔 Employee ({code})
-      </span>
+      <div className="flex items-center gap-1 flex-wrap">
+        <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-300 shadow-xs">
+          👔 {empName} ({empId})
+        </span>
+      </div>
     )
   }
+
   return (
-    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-300">
-      🏢 Admin ({code})
-    </span>
+    <div className="flex items-center gap-1 flex-wrap">
+      <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-xs">
+        🏢 Admin (ADMIN)
+      </span>
+    </div>
   )
 }
 
-const normalizeService = (srv) => {
-  if (!srv || typeof srv !== 'object') return srv
-  return {
-    ...srv,
-    id: srv.id || srv._id || srv.service_id,
-    name: srv.service_name || srv.name || srv.title || 'General Service',
-    service_name: srv.service_name || srv.name || srv.title || 'General Service',
-    service_price: Number(srv.service_price ?? srv.selling_price ?? srv.price ?? 0),
-    selling_price: Number(srv.service_price ?? srv.selling_price ?? srv.price ?? 0),
-    hsn: srv.hsn || srv.hsn_code || '998314',
-    unit: srv.unit || 'Unit',
-    description: srv.service_description || srv.description || '',
-    is_active: srv.is_active !== undefined ? srv.is_active : true,
+export const renderMasterPartnerCell = (lead, partnerMap = null) => {
+  // 1. Eager-loaded parent relation directly on lead.partner
+  let parent = lead?.partner?.parent
+
+  // 2. Direct parent_partner_id on lead.partner
+  if (!parent && lead?.partner?.parent_partner_id && partnerMap) {
+    parent = partnerMap.get(String(lead.partner.parent_partner_id))
   }
+
+  // 3. Extract partner ID / code from lead.sold_by or lead.employee_id
+  if (!parent && partnerMap) {
+    const rawCode = String(lead?.sold_by || lead?.employee_id || '')
+    const pidMatch = rawCode.match(/PIDIN\d+/i) || rawCode.match(/PID\d+/i)
+    const codeKey = pidMatch ? pidMatch[0].toUpperCase() : rawCode.toLowerCase().trim()
+    
+    const ownerPartner = partnerMap.get(codeKey) || partnerMap.get(rawCode.toLowerCase().trim())
+    if (ownerPartner?.parent_partner_id) {
+      parent = partnerMap.get(String(ownerPartner.parent_partner_id))
+    }
+  }
+
+  if (!parent) {
+    return <span className="text-slate-400 font-medium">—</span>
+  }
+
+  const masterName = parent.partner_name || parent.organization_name || 'Master Partner'
+  const masterId = parent.partner_id || `PIDIN${parent.id}`
+
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 shadow-xs">
+        👑 {masterName} - {masterId}
+      </span>
+    </div>
+  )
 }
 
-// Module-level in-memory caches to keep data instantly available across tab/page switches
-let cachedAdminLeads = null
-let cachedAdminStats = null
-let cachedAdminCategories = null
-let cachedAdminServices = null
-let cachedAdminDemoSlots = null
+export const renderCreatorBadge = (creatorCode, leadObj = null) => {
+  return renderLeadOwnerCell(leadObj || { sold_by: creatorCode })
+}
 
+export const isGeneralClientLead = (lead) => {
+  if (!lead) return false
+  if (lead.is_general_client) return true
+  if (lead.category_name === 'General Client' || lead.category_id === 'general_client') return true
+  if (lead.software_requirements && lead.software_requirements.trim() !== '') return true
+  if (lead.notes && typeof lead.notes === 'string' && lead.notes.toLowerCase().includes('general client:')) return true
+  return false
+}
+
+export const getLeadProductDisplay = (lead) => {
+  if (!lead) return 'Generic Inquiry'
+  if (lead.is_general_client) {
+    const srv = lead.software_requirements || lead.product_name || lead.product_interest || 'Services'
+    return `General Client (${srv})`
+  }
+  if (lead.product_name && lead.product_name.trim() !== '') {
+    return lead.product_name
+  }
+  if (lead.software_requirements && lead.software_requirements.trim() !== '') {
+    return `General Client (${lead.software_requirements})`
+  }
+  if (lead.product_interest && lead.product_interest.trim() !== '') {
+    return lead.product_interest
+  }
+  if (lead.notes && typeof lead.notes === 'string' && lead.notes.toLowerCase().includes('general client:')) {
+    const parts = lead.notes.split(/general client:/i)
+    if (parts.length > 1) {
+      const extracted = parts[1].split('.')[0].trim()
+      if (extracted) {
+        return `General Client (${extracted})`
+      }
+    }
+  }
+  if (lead.category_name === 'General Client' || lead.category_id === 'general_client') {
+    return 'General Client Services'
+  }
+  return 'Generic Inquiry'
+}
 
 const formatForDateTimeInput = (dateStr) => {
   if (!dateStr) return ''
@@ -118,6 +216,29 @@ const formatFollowUpDisplay = (dateStr) => {
   })
 }
 
+const normalizeService = (srv) => {
+  if (!srv || typeof srv !== 'object') return srv
+  return {
+    ...srv,
+    id: srv.id || srv._id || srv.service_id,
+    name: srv.service_name || srv.name || srv.title || 'General Service',
+    service_name: srv.service_name || srv.name || srv.title || 'General Service',
+    service_price: Number(srv.service_price ?? srv.selling_price ?? srv.price ?? 0),
+    selling_price: Number(srv.service_price ?? srv.selling_price ?? srv.price ?? 0),
+    hsn: srv.hsn || srv.hsn_code || '998314',
+    unit: srv.unit || 'Unit',
+    description: srv.service_description || srv.description || '',
+    is_active: srv.is_active !== undefined ? srv.is_active : true,
+  }
+}
+
+// Module-level in-memory caches to keep data instantly available across tab/page switches
+let cachedAdminLeads = null
+let cachedAdminStats = null
+let cachedAdminCategories = null
+let cachedAdminServices = null
+let cachedAdminDemoSlots = null
+
 export default function AdminLeads() {
   // Navigation Tabs State
   const [searchParams, setSearchParams] = useSearchParams()
@@ -144,11 +265,47 @@ export default function AdminLeads() {
   // Stats and Listing State (Pre-populated from cache for 0ms reloads)
   const [stats, setStats] = useState(cachedAdminStats)
   const [leads, setLeads] = useState(cachedAdminLeads || [])
+  const [partnersList, setPartnersList] = useState([])
   const [loading, setLoading] = useState(!cachedAdminLeads)
   const [statsLoading, setStatsLoading] = useState(!cachedAdminStats)
   const [isRevalidating, setIsRevalidating] = useState(false)
   const [error, setError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
+
+  const partnerMap = useMemo(() => {
+    const map = new Map()
+    partnersList.forEach(p => {
+      if (p.id !== undefined && p.id !== null) map.set(String(p.id), p)
+      if (p.partner_id) map.set(String(p.partner_id).toUpperCase().trim(), p)
+      if (p.partner_name) map.set(String(p.partner_name).toLowerCase().trim(), p)
+      if (p.organization_name) map.set(String(p.organization_name).toLowerCase().trim(), p)
+    })
+    return map
+  }, [partnersList])
+
+  const fetchPartnersList = async () => {
+    try {
+      const res = await getAdminPartners()
+      let list = []
+      if (res.data?.success && res.data?.data) {
+        const d = res.data.data
+        if (Array.isArray(d)) {
+          list = d
+        } else if (Array.isArray(d.all_partners)) {
+          list = d.all_partners
+        } else if (Array.isArray(d.partners_by_sales)) {
+          list = d.partners_by_sales
+        } else if (Array.isArray(d.partners)) {
+          list = d.partners
+        }
+      } else if (Array.isArray(res.data)) {
+        list = res.data
+      }
+      setPartnersList(list)
+    } catch (err) {
+      console.warn('Failed to fetch partners list:', err)
+    }
+  }
 
   // Query / Filter State
   const [searchInput, setSearchInput] = useState('')
@@ -295,9 +452,84 @@ export default function AdminLeads() {
 
   // Helper to ensure a general client database record exists for standard leads
   const ensureGenClient = async (lead) => {
-    if (lead.rawId) {
-      return { id: lead.rawId, ...lead }
+    // Check if lead already has a linked general client ID
+    const existingGenId = lead.rawId || lead.converted_to_client_id || lead.general_client_id
+    if (existingGenId) {
+      try {
+        const directRes = await getGeneralClientById(existingGenId)
+        if (directRes?.data?.data) {
+          const directMatch = directRes.data.data
+          lead.rawId = directMatch.id
+          lead.client_id = directMatch.client_id
+          lead.is_general_client = true
+          return directMatch
+        }
+      } catch (_) {}
     }
+
+    const cleanLeadPhone = (lead.client_phone || '').replace(/\D/g, '').slice(-10)
+    const leadEmailLower = (lead.client_email || '').toLowerCase().trim()
+    const leadCompLower = (lead.company_name || '').toLowerCase().trim()
+    const leadClientLower = (lead.client_name || '').toLowerCase().trim()
+
+    // Helper matcher function
+    const findMatchingClient = (clientsList) => {
+      if (!Array.isArray(clientsList) || clientsList.length === 0) return null
+      return clientsList.find(c => {
+        const cPhone = (c.contact_number || '').replace(/\D/g, '').slice(-10)
+        const cEmail = (c.email || '').toLowerCase().trim()
+        const cComp = (c.company_name || '').toLowerCase().trim()
+        const cClient = (c.client_name || '').toLowerCase().trim()
+
+        if (existingGenId && Number(c.id) === Number(existingGenId)) return true
+        if (lead.client_id && c.client_id && c.client_id === lead.client_id) return true
+        if (cleanLeadPhone && cPhone && cPhone === cleanLeadPhone) return true
+        if (leadEmailLower && cEmail && cEmail === leadEmailLower) return true
+        if (leadCompLower && cComp && leadClientLower && cClient && cComp === leadCompLower && cClient === leadClientLower) return true
+        return false
+      })
+    }
+
+    // 1. Search using specific parameters (10-digit phone, email, client_id, client_name)
+    try {
+      const searchTerms = [
+        cleanLeadPhone,
+        leadEmailLower,
+        lead.client_id,
+        lead.client_name
+      ].filter(Boolean)
+
+      for (const term of searchTerms) {
+        const searchRes = await getGeneralClients({ search: term })
+        const foundClients = searchRes?.data?.data || searchRes?.data?.clients || (Array.isArray(searchRes?.data) ? searchRes.data : [])
+        const match = findMatchingClient(foundClients)
+        if (match) {
+          lead.rawId = match.id
+          lead.client_id = match.client_id
+          lead.is_general_client = true
+          return match
+        }
+      }
+    } catch (searchErr) {
+      console.warn('Search existing general client notice:', searchErr)
+    }
+
+    // 2. Fetch all general clients list if targeted search didn't match
+    try {
+      const allClientsRes = await getGeneralClients()
+      const allClients = allClientsRes?.data?.data || allClientsRes?.data?.clients || (Array.isArray(allClientsRes?.data) ? allClientsRes.data : [])
+      const match = findMatchingClient(allClients)
+      if (match) {
+        lead.rawId = match.id
+        lead.client_id = match.client_id
+        lead.is_general_client = true
+        return match
+      }
+    } catch (allClientsErr) {
+      console.warn('Fetch all general clients fallback notice:', allClientsErr)
+    }
+
+    // 3. Otherwise create a new general client record
     try {
       const cleanedPhone = cleanAndFixPhone(lead.client_phone)
       const res = await createGeneralClient({
@@ -316,11 +548,24 @@ export default function AdminLeads() {
       })
       if (res?.data?.data) {
         lead.rawId = res.data.data.id
+        lead.client_id = res.data.data.client_id
         lead.is_general_client = true
         return res.data.data
       }
     } catch (err) {
       console.warn('Auto sync general client record notice:', err)
+      // Retry lookup if creation failed (e.g. duplicate contact number/email)
+      try {
+        const retryRes = await getGeneralClients()
+        const retryClients = retryRes?.data?.data || retryRes?.data?.clients || []
+        const retryMatch = findMatchingClient(retryClients) || retryClients[0]
+        if (retryMatch) {
+          lead.rawId = retryMatch.id
+          lead.client_id = retryMatch.client_id
+          lead.is_general_client = true
+          return retryMatch
+        }
+      } catch (_) {}
     }
     return lead
   }
@@ -1258,6 +1503,7 @@ export default function AdminLeads() {
 
   useEffect(() => {
     // Parallel fetch metadata if not already cached
+    fetchPartnersList()
     const tasks = []
     if (!cachedAdminStats) tasks.push(loadStats())
     if (!cachedAdminCategories) tasks.push(fetchCategories())
@@ -2060,7 +2306,11 @@ export default function AdminLeads() {
                           className="w-4 h-4 rounded text-[#38b34a] border-slate-300 focus:ring-[#38b34a]"
                         />
                       </th>
-                      <th className="px-5 py-4 min-w-[220px]">Client Detail</th>
+                      <th className="px-5 py-4 min-w-[200px]">Client Name</th>
+                      <th className="px-4 py-4 min-w-[190px] whitespace-nowrap">Contact Person & Number</th>
+                      <th className="px-4 py-4 min-w-[160px] whitespace-nowrap">Lead Owner</th>
+                      <th className="px-4 py-4 min-w-[170px] whitespace-nowrap">Master Partner</th>
+                      <th className="px-4 py-4 min-w-[140px] whitespace-nowrap">Generate Date</th>
                       <th className="px-4 py-4 min-w-[140px] whitespace-nowrap">Status & Priority</th>
                       <th className="px-5 py-4 min-w-[200px]">Product Category</th>
                       <th className="px-4 py-4 min-w-[160px] max-w-xs">Last Logged Remarks</th>
@@ -2070,7 +2320,7 @@ export default function AdminLeads() {
                   <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
                     {loading ? (
                       <tr>
-                        <td colSpan="6" className="px-6 py-12 text-center text-slate-400 font-bold">
+                        <td colSpan="10" className="px-6 py-12 text-center text-slate-400 font-bold">
                           <div className="flex flex-col items-center justify-center gap-2">
                             <div className="w-8 h-8 rounded-full border-4 border-slate-100 border-t-[#38b34a] animate-spin" />
                             <span>Loading leads database...</span>
@@ -2079,7 +2329,7 @@ export default function AdminLeads() {
                       </tr>
                     ) : leads.length === 0 ? (
                       <tr>
-                        <td colSpan="6" className="px-6 py-12 text-center text-slate-400 font-bold">
+                        <td colSpan="10" className="px-6 py-12 text-center text-slate-400 font-bold">
                           No matching leads found.
                         </td>
                       </tr>
@@ -2099,7 +2349,7 @@ export default function AdminLeads() {
                                 className="w-4 h-4 rounded text-[#38b34a] border-slate-300 focus:ring-[#38b34a]"
                               />
                             </td>
-                            <td className="px-5 py-4 min-w-[220px]">
+                            <td className="px-5 py-4 min-w-[200px]">
                               <div>
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                   <span
@@ -2108,38 +2358,39 @@ export default function AdminLeads() {
                                   >
                                     {lead.company_name || lead.client_name}
                                   </span>
-                                  {lead.is_general_client && (
+                                  {isGeneralClientLead(lead) && (
                                     <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-blue-800 border border-blue-200">
                                       💼 General Client
                                     </span>
                                   )}
-                                  {renderCreatorBadge(lead.sold_by || lead.employee?.employee_id || lead.employee?.full_name || lead.employee_id || 'Admin', lead)}
                                 </div>
-                                <span className="text-slate-400 font-medium block mt-0.5">
-                                  {lead.client_name && lead.company_name && lead.client_name !== lead.company_name ? `👤 ${lead.client_name} · ` : ''}
-                                  {lead.client_phone}
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 min-w-[190px] whitespace-nowrap">
+                              <div>
+                                <span className="font-bold text-slate-700 flex items-center gap-1">
+                                  <span>👤</span> {lead.client_name || 'N/A'}
                                 </span>
-                                {(lead.is_general_client || lead.category_name === 'General Client' || lead.category_id === 'general_client') && (
-                                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenQuotationBuilder(lead)}
-                                      className="text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1 cursor-pointer transition shadow-xs"
-                                    >
-                                      <span>📝</span>
-                                      <span>+ Quotation</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleViewClientQuotations(lead)}
-                                      className="text-[10px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2 py-0.5 rounded-md flex items-center gap-1 cursor-pointer transition shadow-xs"
-                                    >
-                                      <span>📋</span>
-                                      <span>Quotes</span>
-                                    </button>
-                                  </div>
+                                <span className="text-slate-500 font-medium block mt-0.5 text-[11px]">
+                                  📞 {lead.client_phone || 'N/A'}
+                                </span>
+                                {lead.client_alternate_phone && (
+                                  <span className="text-slate-400 font-medium block text-[10px]">
+                                    📱 Alt: {lead.client_alternate_phone}
+                                  </span>
                                 )}
                               </div>
+                            </td>
+                            <td className="px-4 py-4 min-w-[160px] whitespace-nowrap">
+                              {renderLeadOwnerCell(lead, partnerMap)}
+                            </td>
+                            <td className="px-4 py-4 min-w-[170px] whitespace-nowrap">
+                              {renderMasterPartnerCell(lead, partnerMap)}
+                            </td>
+                            <td className="px-4 py-4 min-w-[140px] whitespace-nowrap">
+                              <span className="text-slate-600 font-semibold text-[11px] flex items-center gap-1">
+                                <span>📅</span> {formatFollowUpDisplay(lead.created_at || lead.createdAt)}
+                              </span>
                             </td>
                             <td className="px-4 py-4 min-w-[140px] whitespace-nowrap">
                               <div className="flex flex-wrap gap-1.5">
@@ -2150,7 +2401,7 @@ export default function AdminLeads() {
                             <td className="px-5 py-4 min-w-[200px]">
                               <div>
                                 <span className="font-bold text-slate-700 block">
-                                  {lead.is_general_client ? `General Client (${lead.software_requirements || 'Services'})` : (lead.product_name || 'Generic Inquiry')}
+                                  {getLeadProductDisplay(lead)}
                                 </span>
                                 {lead.follow_up_date && (
                                   <span className="text-[10px] text-amber-500 font-bold mt-0.5 block">
@@ -2164,23 +2415,27 @@ export default function AdminLeads() {
                                 {getLatestRemark(lead)}
                               </p>
                             </td>
-                            <td className={`px-4 py-4 text-center whitespace-nowrap min-w-[220px] w-56 sticky right-0 transition-colors shadow-[-6px_0_12px_rgba(0,0,0,0.06)] ${isSelected ? 'bg-slate-50' : 'bg-white group-hover:bg-slate-50'}`}>
-                              <div className="flex items-center justify-center gap-1">
-                                {(lead.is_general_client || lead.category_name === 'General Client' || lead.category_id === 'general_client') && (
+                            <td className={`px-4 py-4 text-center whitespace-nowrap min-w-[260px] sticky right-0 transition-colors shadow-[-6px_0_12px_rgba(0,0,0,0.06)] ${isSelected ? 'bg-slate-50' : 'bg-white group-hover:bg-slate-50'}`}>
+                              <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                                {isGeneralClientLead(lead) && (
                                   <>
                                     <button
+                                      type="button"
                                       onClick={() => handleOpenQuotationBuilder(lead)}
                                       title="Create Quotation"
-                                      className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-xl transition cursor-pointer font-bold"
+                                      className="text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-1 rounded-md flex items-center gap-1 cursor-pointer transition shadow-xs"
                                     >
-                                      📝
+                                      <span>📝</span>
+                                      <span>+ Quotation</span>
                                     </button>
                                     <button
+                                      type="button"
                                       onClick={() => handleViewClientQuotations(lead)}
                                       title="View Client Quotations"
-                                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-xl transition cursor-pointer font-bold"
+                                      className="text-[10px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2 py-1 rounded-md flex items-center gap-1 cursor-pointer transition shadow-xs"
                                     >
-                                      📋
+                                      <span>📋</span>
+                                      <span>Quotes</span>
                                     </button>
                                   </>
                                 )}
@@ -4373,7 +4628,7 @@ export default function AdminLeads() {
       {showQuotationDocModal && viewingQuotationDoc && (
         <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/75 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto animate-fade-in print:p-0 print:bg-white">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col text-slate-800 overflow-hidden print:max-h-none print:shadow-none print:border-none print:rounded-none">
-            {/* Top Controls Bar */}
+            {/* Modal Controls Top Bar (Hidden on Print) */}
             <div className="px-6 py-3.5 bg-slate-900 text-white flex items-center justify-between gap-3 shrink-0 print:hidden">
               <div className="flex items-center gap-2.5">
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
@@ -4388,31 +4643,44 @@ export default function AdminLeads() {
                 <button
                   type="button"
                   onClick={() => handleEditQuotation(viewingQuotationDoc, viewingQuotationDoc.client)}
-                  className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
                 >
                   <span>✏️</span>
-                  <span>Edit</span>
+                  <span>Edit Quotation</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={handlePrintQuotation}
-                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
                 >
                   <span>🖨️</span>
                   <span>Print / Save PDF</span>
                 </button>
 
-                {viewingQuotationDoc.status !== 'paid' && (
-                  <button
-                    type="button"
-                    onClick={() => handleOpenRecordPayment(viewingQuotationDoc, viewingQuotationDoc.client)}
-                    className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>💳</span>
-                    <span>Record Payment</span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const payUrl = viewingQuotationDoc.payment_url || `${window.location.origin}/general-quotation-pay.html?uuid=${viewingQuotationDoc.uuid || ('quotation-' + viewingQuotationDoc.id)}`
+                    navigator.clipboard.writeText(payUrl)
+                    setCopiedPayLink(true)
+                    setTimeout(() => setCopiedPayLink(false), 2500)
+                  }}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>{copiedPayLink ? '✅' : '🔗'}</span>
+                  <span>{copiedPayLink ? 'Link Copied!' : 'Copy Pay Link'}</span>
+                </button>
+
+                <a
+                  href={viewingQuotationDoc.payment_url || `${window.location.origin}/general-quotation-pay.html?uuid=${viewingQuotationDoc.uuid || ('quotation-' + viewingQuotationDoc.id)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+                >
+                  <span>🌐</span>
+                  <span>Public View</span>
+                </a>
 
                 <button
                   type="button"
@@ -4424,22 +4692,28 @@ export default function AdminLeads() {
               </div>
             </div>
 
-            {/* Document Body Paper */}
+            {/* Document Body (A4 Style Paper) */}
             <div className="flex-1 overflow-y-auto p-3 sm:p-5 bg-slate-100/60 print:p-0 print:bg-white print:overflow-visible font-sans">
               <div
-                id="quotation-document-paper-leads"
+                id="quotation-document-paper"
                 className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 sm:p-6 md:p-7 space-y-3 sm:space-y-4 print:border-none print:shadow-none print:p-0 max-w-3xl mx-auto"
               >
+                {/* 1. Proforma Invoice Title at Top Most Position */}
                 <div className="text-center -mt-1 sm:-mt-2 pt-0 pb-0.5">
                   <h1 className="text-xs sm:text-sm font-black text-[#1e3e6b] tracking-[0.25em] uppercase font-sans">
                     PROFORMA INVOICE
                   </h1>
                 </div>
 
+                {/* 2. Letterhead & Brand Header with Company Logo */}
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-3 sm:pb-4 border-b-2 border-slate-800">
                   <div className="space-y-2">
                     <div className="flex items-center gap-3.5">
-                      <img src={companyLogo} alt="AIM Digitalise Logo" className="h-13 sm:h-15 w-auto object-contain shrink-0" />
+                      <img
+                        src={companyLogo}
+                        alt="AIM Digitalise Logo"
+                        className="h-13 sm:h-15 w-auto object-contain shrink-0"
+                      />
                       <div>
                         <h2 className="text-lg sm:text-xl font-black text-[#1e3e6b] tracking-tight uppercase leading-tight">
                           AIM Digitalise Pvt. Ltd.
@@ -4459,98 +4733,348 @@ export default function AdminLeads() {
                   <div className="text-left sm:text-right space-y-1.5 bg-slate-50 sm:bg-transparent p-4 sm:p-0 rounded-2xl border sm:border-none border-slate-200 w-full sm:w-auto shrink-0">
                     <div className="text-xs pt-1 space-y-1">
                       <div>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block font-sans">QUOTATION NO.</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block font-sans">
+                          QUOTATION NO.
+                        </span>
                         <p className="font-mono font-black text-[#1e3e6b] text-base">
                           {viewingQuotationDoc.quotation_number || `QUO-${viewingQuotationDoc.id}`}
                         </p>
                       </div>
-                      <p className="text-slate-500 font-medium">Date: <strong className="text-slate-800">{viewingQuotationDoc.quotation_date ? String(viewingQuotationDoc.quotation_date).split('T')[0] : 'N/A'}</strong></p>
+                      <p className="text-slate-500 font-medium">
+                        Date: <strong className="text-slate-800">{formatDateDisplay(viewingQuotationDoc.quotation_date)}</strong>
+                      </p>
                     </div>
                   </div>
                 </div>
 
+                {/* 2. Client / Billing Information */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50/80 rounded-2xl p-4 sm:p-5 border border-slate-200/80 text-xs">
                   <div className="space-y-1">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block font-sans">QUOTATION FOR (BILL TO):</span>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block font-sans">
+                      QUOTATION FOR (BILL TO):
+                    </span>
                     <h3 className="font-extrabold text-slate-900 text-sm">
                       {viewingQuotationDoc.client?.company_name || viewingQuotationDoc.client?.client_name || 'Valued Client'}
                     </h3>
+                    {viewingQuotationDoc.client?.contact_person && (
+                      <p className="text-slate-600 font-medium">
+                        Attn: <strong>{viewingQuotationDoc.client.contact_person}</strong>
+                      </p>
+                    )}
                     <p className="text-slate-600">{viewingQuotationDoc.client?.email || '—'}</p>
                     <p className="text-slate-600">{viewingQuotationDoc.client?.contact_number || viewingQuotationDoc.client?.client_phone || '—'}</p>
+                    {viewingQuotationDoc.client?.address && (
+                      <p className="text-slate-500 pt-0.5 leading-snug">
+                        {viewingQuotationDoc.client.address}
+                        {viewingQuotationDoc.client.district ? `, ${viewingQuotationDoc.client.district}` : ''}
+                        {viewingQuotationDoc.client.state ? `, ${viewingQuotationDoc.client.state}` : ''}
+                        {viewingQuotationDoc.client.pin_code ? ` - ${viewingQuotationDoc.client.pin_code}` : ''}
+                      </p>
+                    )}
+                    {viewingQuotationDoc.client?.gstin && (
+                      <p className="font-mono text-slate-700 font-bold pt-1">
+                        GSTIN: {viewingQuotationDoc.client.gstin}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1 sm:border-l sm:border-slate-200 sm:pl-6">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block font-sans">
+                      EXECUTIVE & ORDER METADATA:
+                    </span>
+                    <p className="text-slate-700">
+                      Sold / Prepared By: <strong>{viewingQuotationDoc.client?.sold_by_name || 'Admin Sales Team'}</strong>
+                    </p>
+                    <p className="text-slate-700">
+                      Branch: <strong>{viewingQuotationDoc.client?.branch_name || 'Head Office ( Kolkata)'}</strong>
+                    </p>
+                    <p className="text-slate-700">
+                      Tax Regime: <strong>{viewingQuotationDoc.gst_type || viewingQuotationDoc.client?.gst_type || 'Intra-State'}</strong>
+                    </p>
+                    <p className="text-slate-700">
+                      Country: <strong>{countryFlags[viewingQuotationDoc.client?.country_code] || '🇮🇳'} {viewingQuotationDoc.client?.country_code || 'IN'}</strong>
+                    </p>
+                    {viewingQuotationDoc.po_number && (
+                      <p className="text-slate-700">
+                        PO Number: <strong>{viewingQuotationDoc.po_number}</strong> ({viewingQuotationDoc.po_date || 'N/A'})
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                {/* Items Table */}
-                <div className="overflow-x-auto rounded-2xl border border-slate-200">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-slate-100 text-slate-600 font-bold uppercase text-[10px]">
-                        <th className="px-4 py-3">#</th>
-                        <th className="px-4 py-3">Scope & Item Description</th>
-                        <th className="px-4 py-3 text-center">HSN</th>
-                        <th className="px-4 py-3 text-center">Qty</th>
-                        <th className="px-4 py-3 text-right">Selling Price</th>
-                        <th className="px-4 py-3 text-right">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {viewingQuotationDoc.items?.map((it, idx) => {
-                        const lineTotal = Math.round(it.qty * it.selling_price * (1 - (it.discount_percentage || 0) / 100) * 100) / 100
-                        return (
-                          <tr key={idx}>
-                            <td className="px-4 py-3 font-bold text-slate-400">{idx + 1}</td>
-                            <td className="px-4 py-3">
-                              <p className="font-extrabold text-slate-800">{it.product_name}</p>
-                              {it.description && <p className="text-[11px] text-slate-500">{it.description}</p>}
-                            </td>
-                            <td className="px-4 py-3 text-center font-mono text-slate-500">{it.hsn}</td>
-                            <td className="px-4 py-3 text-center font-bold">{it.qty} {it.unit}</td>
-                            <td className="px-4 py-3 text-right font-medium">₹{it.selling_price.toLocaleString('en-IN')}</td>
-                            <td className="px-4 py-3 text-right font-bold text-slate-900">₹{lineTotal.toLocaleString('en-IN')}</td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
+                {/* 3. Scope & Itemized Breakdown Table */}
+                <div className="space-y-2">
+                  <span className="text-[10px] font-black text-slate-700 uppercase tracking-wider block">
+                    Scope of Services & Line Items:
+                  </span>
+
+                  <div className="border border-slate-300 rounded-xl overflow-hidden shadow-xs">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-900 text-white font-bold text-[10px] uppercase tracking-wider">
+                          <th className="px-3.5 py-2.5 text-center w-10">#</th>
+                          <th className="px-4 py-2.5">Service Description & Technical Scope</th>
+                          <th className="px-3 py-2.5 text-center w-20">HSN/SAC</th>
+                          <th className="px-3 py-2.5 text-center w-16">Qty</th>
+                          <th className="px-3 py-2.5 text-right w-24">Rate (₹)</th>
+                          <th className="px-3 py-2.5 text-center w-16">Disc</th>
+                          <th className="px-4 py-2.5 text-right w-28">Amount (₹)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 text-slate-800">
+                        {(viewingQuotationDoc.items || []).map((item, idx) => {
+                          const qty = Number(item.qty || item.quantity || 1)
+                          const price = Number(item.selling_price || item.price || 0)
+                          const disc = Number(item.discount_percentage || item.discount || 0)
+                          const lineTotal = Math.round(qty * price * (1 - disc / 100) * 100) / 100
+
+                          return (
+                            <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                              <td className="px-3.5 py-3 text-center text-slate-400 font-bold">{idx + 1}</td>
+                              <td className="px-4 py-3">
+                                <p className="font-extrabold text-slate-900 leading-snug">
+                                  {item.product_name || item.name || item.service_name || 'Service Item'}
+                                </p>
+                                {(item.description || item.scope || item.details || item.service_description) && (
+                                  <p className="text-[11px] text-slate-500 mt-1 leading-relaxed whitespace-pre-line">
+                                    {item.description || item.scope || item.details || item.service_description}
+                                  </p>
+                                )}
+                              </td>
+                              <td className="px-3 py-3 text-center font-mono text-[11px] text-slate-600">
+                                {item.hsn || '998314'}
+                              </td>
+                              <td className="px-3 py-3 text-center font-bold">
+                                {qty} <span className="text-[10px] font-normal text-slate-400">{item.unit || 'Unit'}</span>
+                              </td>
+                              <td className="px-3 py-3 text-right font-medium">
+                                ₹{price.toLocaleString('en-IN')}
+                              </td>
+                              <td className="px-3 py-3 text-center font-medium text-slate-500">
+                                {disc > 0 ? `${disc}%` : '—'}
+                              </td>
+                              <td className="px-4 py-3 text-right font-black text-slate-900">
+                                ₹{lineTotal.toLocaleString('en-IN')}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
-                {/* Financial Summary */}
+                {/* 4. Financial Calculations & Bank Details */}
+                <div className="quotation-financials-block grid grid-cols-1 sm:grid-cols-2 gap-5 pt-1" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                  <div className="space-y-4">
+                    <div className="p-3.5 sm:p-4 bg-blue-50/70 rounded-2xl border border-blue-100 text-xs space-y-2">
+                      <span className="text-[10px] font-black text-blue-700 uppercase tracking-widest block">
+                        Bank Transfer & UPI Details:
+                      </span>
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <div className="text-[11px] text-slate-700 space-y-1 flex-1">
+                          <p>Bank: <strong>State Bank of India</strong></p>
+                          <p>Branch: <strong>SPECIALISED TEA BRANCH</strong></p>
+                          <p>A/C Name: <strong>AIM DIGITALISE PVT LTD</strong></p>
+                          <p>A/C No: <strong>41541042687</strong> | IFSC: <strong>SBIN0015197</strong></p>
+                          <p className="pt-0.5">UPI ID: <strong className="text-blue-700 font-bold">91106425507@ybl</strong></p>
+                        </div>
+                        <div className="flex flex-col items-center p-1.5 bg-white rounded-xl border border-blue-200/80 shadow-xs shrink-0">
+                          <img
+                            src={payQrCode}
+                            alt="UPI Barcode"
+                            className="w-20 h-20 sm:w-24 sm:h-24 object-contain rounded-lg"
+                          />
+                          <span className="text-[8px] font-black text-slate-600 mt-0.5 uppercase tracking-wider text-center">
+                            Scan to Pay (UPI)
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200 space-y-2 text-xs">
+                    <div className="flex justify-between text-slate-600 font-medium">
+                      <span>Subtotal:</span>
+                      <span className="font-bold text-slate-800">
+                        ₹{Number(viewingQuotationDoc.subtotal || 0).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+
+                    {(viewingQuotationDoc.client?.country_code || 'IN') === 'IN' ? (
+                      (viewingQuotationDoc.gst_type || 'Intra-State') === 'Intra-State' ? (
+                        <>
+                          <div className="flex justify-between text-slate-500 text-[11px]">
+                            <span>CGST (9%):</span>
+                            <span>₹{Number(viewingQuotationDoc.cgst || (viewingQuotationDoc.tax_total / 2) || 0).toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="flex justify-between text-slate-500 text-[11px]">
+                            <span>SGST (9%):</span>
+                            <span>₹{Number(viewingQuotationDoc.sgst || (viewingQuotationDoc.tax_total / 2) || 0).toLocaleString('en-IN')}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex justify-between text-slate-500 text-[11px]">
+                          <span>IGST (18%):</span>
+                          <span>₹{Number(viewingQuotationDoc.igst || viewingQuotationDoc.tax_total || 0).toLocaleString('en-IN')}</span>
+                        </div>
+                      )
+                    ) : (
+                      <div className="flex justify-between text-slate-500 text-[11px]">
+                        <span>Export Tax (18%):</span>
+                        <span>₹{Number(viewingQuotationDoc.tax_total || 0).toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between text-slate-700 font-bold border-t border-slate-200 pt-2">
+                      <span>Total Tax:</span>
+                      <span>₹{Number(viewingQuotationDoc.tax_total || 0).toLocaleString('en-IN')}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center border-t-2 border-slate-800 pt-2.5 text-base font-black text-slate-900">
+                      <span>Grand Total:</span>
+                      <span className="text-xl text-[#38b34a]">
+                        ₹{Number(viewingQuotationDoc.grand_total || 0).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Combined Amount in Words & Payment Terms Box */}
                 <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200 text-xs space-y-2.5">
                   <div>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Amount in Words:</span>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">
+                      Amount in Words:
+                    </span>
                     <p className="font-bold text-slate-800 italic leading-relaxed">
                       {numberToIndianWords(viewingQuotationDoc.grand_total || viewingQuotationDoc.grandTotal)}
                     </p>
                   </div>
-                  <div className="border-t border-slate-200/80 pt-2 flex justify-between items-center">
-                    <div>
-                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Payment Terms:</span>
-                      <p className="font-bold text-slate-800">{viewingQuotationDoc.payment_terms || 'Due on Receipt'}</p>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase block">Grand Total</span>
-                      <span className="text-lg font-black text-[#38b34a]">₹{Number(viewingQuotationDoc.grand_total || 0).toLocaleString('en-IN')}</span>
-                    </div>
+                  <div className="border-t border-slate-200/80 pt-2">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">
+                      Payment Terms:
+                    </span>
+                    <p className="font-bold text-slate-800 leading-relaxed">
+                      {viewingQuotationDoc.payment_terms || 'Due on Receipt'}
+                    </p>
                   </div>
                 </div>
 
-                {/* Signatory */}
-                <div className="quotation-terms-signature flex justify-between items-end pt-4 border-t border-slate-200 text-xs">
-                  <div className="text-slate-500 text-[10px] space-y-1">
-                    <p className="font-bold text-slate-700">Terms & Conditions:</p>
-                    <p>1. Quotation valid for 30 days. 2. GST calculated per regulation.</p>
-                  </div>
-                  <div className="quotation-signature-block text-right">
-                    <span className="text-[10px] font-bold text-slate-400 block">For AIM Digitalise Pvt. Ltd.</span>
-                    <img
-                      src="https://api.nexgn.in/public/signature_1.png"
-                      alt="Boss Signature"
-                      className="h-12 w-auto object-contain ml-auto my-1"
-                      onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/signature_1.png' }}
+                {/* Annexure Details (Positioned fixed above Terms & Conditions) */}
+                {(viewingQuotationDoc.anexture === 'YES' || viewingQuotationDoc.anexture_content) && viewingQuotationDoc.anexture_content && (
+                  <div className="quotation-annexure-block p-4 bg-slate-50/80 rounded-2xl border border-slate-200 text-xs space-y-2 mb-4" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                    <div className="flex items-center gap-1.5 border-b border-slate-200 pb-1.5">
+                      <span className="text-sm">📑</span>
+                      <h4 className="font-black text-slate-800 uppercase tracking-wider text-xs">
+                        ANNEXURE / TECHNICAL SPECIFICATIONS:
+                      </h4>
+                    </div>
+                    <div
+                      className="prose prose-slate max-w-none text-xs text-slate-700 font-medium leading-relaxed [&_h2]:text-sm [&_h2]:font-bold [&_h2]:text-slate-900 [&_h2]:mt-2 [&_h2]:mb-1 [&_h3]:text-xs [&_h3]:font-bold [&_h3]:text-slate-800 [&_h3]:mt-1.5 [&_h3]:mb-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1 [&_p]:my-1"
+                      dangerouslySetInnerHTML={{ __html: viewingQuotationDoc.anexture_content }}
                     />
-                    <span className="font-black text-slate-800 text-xs block border-t border-slate-300 pt-1">Authorized Signatory</span>
+                  </div>
+                )}
+
+                {/* 5. Terms & Signature */}
+                <div className="quotation-terms-signature grid grid-cols-1 sm:grid-cols-3 gap-5 pt-3 border-t border-slate-200 text-xs" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                  <div className="sm:col-span-2 space-y-1 text-slate-500 text-[10px]">
+                    <span className="font-black text-slate-700 uppercase tracking-wider block">Terms & Conditions:</span>
+                    <ol className="list-decimal pl-4 space-y-0.5">
+                      <li>This quotation is valid for 30 days from the date of issuance.</li>
+                      <li>Work commences immediately upon receipt of initial confirmation or advance.</li>
+                      <li>GST/Taxes are calculated based on registered business jurisdiction.</li>
+                      <li>For any inquiries regarding this quotation, contact <strong>support@aimdigitalise.com</strong>.</li>
+                    </ol>
+                  </div>
+
+                  <div className="quotation-signature-block text-center sm:text-right space-y-1 pt-1" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
+                      For AIM Digitalise Pvt. Ltd.
+                    </span>
+                    <div className="inline-block text-center space-y-1">
+                      <img
+                        src="https://api.nexgn.in/public/signature_1.png"
+                        alt="Boss Signature"
+                        className="h-14 w-auto object-contain mx-auto my-1"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          if (target.src.includes('https://api.nexgn.in/public/signature_1.png')) {
+                            target.src = 'https://api.nexgn.in/signature_1.png';
+                          } else if (target.src.includes('https://api.nexgn.in/signature_1.png')) {
+                            target.src = 'http://localhost:8000/signature_1.png';
+                          } else if (target.src.includes('http://localhost:8000/signature_1.png')) {
+                            target.src = '/signature_1.png';
+                          } else {
+                            target.onerror = null;
+                          }
+                        }}
+                      />
+                      <div className="border-t border-slate-400 pt-1 min-w-[140px]">
+                        <span className="font-black text-slate-800 text-xs block">Authorized Signatory</span>
+                        <span className="text-[9px] text-slate-400 block font-medium">Digital Signature & Stamp</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3 shrink-0 print:hidden">
+              <span className="text-xs text-slate-500 font-medium">
+                Official document format for AIM Digitalise clients & accounting audits.
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowQuotationDocModal(false)}
+                  className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs transition-all shadow-sm cursor-pointer"
+                >
+                  Close Document
+                </button>
+
+                {/* WhatsApp Action Icon */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const clientPhone = (viewingQuotationDoc.client?.contact_number || viewingQuotationDoc.client?.client_phone || '').replace(/\D/g, '')
+                    const payUrl = viewingQuotationDoc.payment_url || `${window.location.origin}/general-quotation-pay.html?uuid=${viewingQuotationDoc.uuid || ('quotation-' + viewingQuotationDoc.id)}`
+                    const text = encodeURIComponent(
+                      `Hello ${viewingQuotationDoc.client?.client_name || 'Valued Client'},\n\nPlease find your Official Quotation (${viewingQuotationDoc.quotation_number || 'AIM Quotation'}) from AIM Digitalise Pvt. Ltd.\n\nTotal Amount: ₹${Number(viewingQuotationDoc.grand_total || 0).toLocaleString('en-IN')}\nView & Pay Online: ${payUrl}\n\nThank you!`
+                    )
+                    const waLink = clientPhone ? `https://wa.me/${clientPhone.length === 10 ? '91' + clientPhone : clientPhone}?text=${text}` : `https://wa.me/?text=${text}`
+                    window.open(waLink, '_blank')
+                  }}
+                  title="Share Quotation via WhatsApp"
+                  aria-label="Share Quotation via WhatsApp"
+                  className="w-8 h-8 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white transition-all shadow-sm flex items-center justify-center cursor-pointer active:scale-95"
+                >
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                  </svg>
+                </button>
+
+                {/* Email Action Icon */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const clientEmail = viewingQuotationDoc.client?.email || ''
+                    const payUrl = viewingQuotationDoc.payment_url || `${window.location.origin}/general-quotation-pay.html?uuid=${viewingQuotationDoc.uuid || ('quotation-' + viewingQuotationDoc.id)}`
+                    const subject = encodeURIComponent(`Official Quotation: ${viewingQuotationDoc.quotation_number || 'AIM Digitalise'}`)
+                    const body = encodeURIComponent(
+                      `Dear ${viewingQuotationDoc.client?.client_name || 'Client'},\n\nPlease find the details for your quotation ${viewingQuotationDoc.quotation_number || ''}.\n\nTotal Amount: ₹${Number(viewingQuotationDoc.grand_total || 0).toLocaleString('en-IN')}\nPayment Terms: ${viewingQuotationDoc.payment_terms || 'Due on Receipt'}\n\nYou can review and pay securely online at:\n${payUrl}\n\nWarm regards,\nAIM Digitalise Pvt. Ltd.\nsupport@aimdigitalise.com`
+                    )
+                    window.location.href = `mailto:${clientEmail}?subject=${subject}&body=${body}`
+                  }}
+                  title="Send Quotation via Email"
+                  aria-label="Send Quotation via Email"
+                  className="w-8 h-8 rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-sm flex items-center justify-center cursor-pointer active:scale-95"
+                >
+                  <svg className="w-4 h-4 fill-none stroke-current" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="20" height="16" x="2" y="4" rx="2"/>
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
