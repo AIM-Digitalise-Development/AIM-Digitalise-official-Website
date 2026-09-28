@@ -339,6 +339,9 @@ export const updatePartnerGeneralService = (id, data) =>
 export const deletePartnerGeneralService = (id) =>
   partnerFetch('DELETE', `/partner/general-services/${id}`)
 
+export const getPartnerClientQuotations = (clientId) =>
+  partnerFetch('GET', `/partner/general-clients/${clientId}/quotations`)
+
 export const createPartnerQuotation = (clientId, data) =>
   partnerFetch('POST', `/partner/general-clients/${clientId}/quotation`, data)
 

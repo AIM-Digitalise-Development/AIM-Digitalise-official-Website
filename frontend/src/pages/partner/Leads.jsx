@@ -20,9 +20,17 @@ import {
   createPartnerGeneralClient,
   updatePartnerGeneralClient,
   getPartnerGeneralClients,
-  getPartnerGeneralServices
+  getPartnerGeneralServices,
+  getPartnerGeneralClientById,
+  createPartnerQuotation,
+  updatePartnerQuotation,
+  sendPartnerQuotationEmail,
+  getPartnerClientQuotations,
+  recordPartnerQuotationPayment
 } from '../../api/partner'
 import { normalizeService } from '../employee/GeneralClients'
+import companyLogo from '../../assets/images/logo.png'
+import payQrCode from '../../assets/images/payqr.png'
 import { usePartnerAuthStore } from '../../store/partnerAuthStore'
 
 export const LEAD_STATUS_OPTIONS = [
@@ -143,6 +151,29 @@ export const renderPartnerMasterPartnerCell = (lead, currentPartnerUser = null) 
   )
 }
 
+
+const numberToIndianWords = (num) => {
+  if (!num || isNaN(num)) return 'Rupees Zero Only'
+  const n = Math.round(Number(num))
+  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen']
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
+  const inWords = (count) => {
+    if (count < 20) return a[count]
+    return b[Math.floor(count / 10)] + (count % 10 !== 0 ? ' ' + a[count % 10] : '')
+  }
+  let str = ''
+  let crore = Math.floor(n / 10000000)
+  let lakh = Math.floor((n % 10000000) / 100000)
+  let thousand = Math.floor((n % 100000) / 1000)
+  let hundred = Math.floor((n % 1000) / 100)
+  let rest = n % 100
+  if (crore > 0) str += inWords(crore) + ' Crore '
+  if (lakh > 0) str += inWords(lakh) + ' Lakh '
+  if (thousand > 0) str += inWords(thousand) + ' Thousand '
+  if (hundred > 0) str += inWords(hundred) + ' Hundred '
+  if (rest > 0) str += (str !== '' ? 'and ' : '') + inWords(rest) + ' '
+  return 'Rupees ' + (str.trim() || 'Zero') + ' Only'
+}
 export const isGeneralClientLead = (lead) => {
   if (!lead) return false
   if (lead.is_general_client) return true
@@ -219,6 +250,46 @@ export default function PartnerLeads() {
   const [generalServices, setGeneralServices] = useState([])
   const [loadingGeneralServices, setLoadingGeneralServices] = useState(false)
   const [serviceSearchTerm, setServiceSearchTerm] = useState('')
+
+  // Quotations List & Document Viewer State
+  const [showQuotationsListModal, setShowQuotationsListModal] = useState(false)
+  const [selectedClientQuotations, setSelectedClientQuotations] = useState([])
+  const [showQuotationDocModal, setShowQuotationDocModal] = useState(false)
+  const [viewingQuotationDoc, setViewingQuotationDoc] = useState(null)
+  const [copiedPayLink, setCopiedPayLink] = useState(false)
+  const [loadingQuotations, setLoadingQuotations] = useState(false)
+
+  // Payment Recording Modal State
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentQuotation, setPaymentQuotation] = useState(null)
+  const [paymentForm, setPaymentForm] = useState({
+    payment_amount: '',
+    payment_date: new Date().toISOString().substring(0, 10),
+    payment_mode: 'Bank Transfer',
+    transaction_reference: '',
+    notes: 'Offline payment recorded via Partner Portal'
+  })
+  const [recordingPayment, setRecordingPayment] = useState(false)
+
+  // Quotation Builder State
+  const [showQuotationBuilder, setShowQuotationBuilder] = useState(false)
+  const [editingQuotationId, setEditingQuotationId] = useState(null)
+  const [savingQuotation, setSavingQuotation] = useState(false)
+  const [selectedGenClient, setSelectedGenClient] = useState(null)
+
+  const [quotationForm, setQuotationForm] = useState({
+    quotation_number: '',
+    quotation_date: new Date().toISOString().split('T')[0],
+    po_number: '',
+    po_date: '',
+    gst_type: 'Intra-State',
+    gstin: '',
+    payment_terms: 'Full payments in Advanced',
+    discount_description: 'Corporate Consideration',
+    anexture: 'NO',
+    anexture_content: '',
+  })
+  const [quotationItems, setQuotationItems] = useState([])
 
   // Assign Demo Slot states
   const [showAssignModal, setShowAssignModal] = useState(false)
@@ -825,6 +896,418 @@ export default function PartnerLeads() {
       setError(err?.response?.data?.message || 'Could not load leads from server.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Helper to ensure General Client record
+  const ensureGenClient = async (lead) => {
+    const existingGenId = lead.rawId || lead.converted_to_client_id || lead.general_client_id
+    if (existingGenId) {
+      try {
+        const directRes = await getPartnerGeneralClientById(existingGenId)
+        if (directRes?.data?.data) {
+          const directMatch = directRes.data.data
+          lead.rawId = directMatch.id
+          lead.client_id = directMatch.client_id
+          lead.is_general_client = true
+          return directMatch
+        }
+      } catch (_) {}
+    }
+
+    const cleanLeadPhone = (lead.client_phone || '').replace(/\D/g, '').slice(-10)
+    const leadEmailLower = (lead.client_email || '').toLowerCase().trim()
+
+    try {
+      const allClientsRes = await getPartnerGeneralClients()
+      const allClients = allClientsRes?.data?.data || allClientsRes?.data?.clients || (Array.isArray(allClientsRes?.data) ? allClientsRes.data : [])
+      const match = allClients.find(c => {
+        const cPhone = (c.contact_number || '').replace(/\D/g, '').slice(-10)
+        const cEmail = (c.email || '').toLowerCase().trim()
+        if (existingGenId && Number(c.id) === Number(existingGenId)) return true
+        if (lead.client_id && c.client_id && c.client_id === lead.client_id) return true
+        if (cleanLeadPhone && cPhone && cPhone === cleanLeadPhone) return true
+        if (leadEmailLower && cEmail && cEmail === leadEmailLower) return true
+        return false
+      })
+      if (match) {
+        lead.rawId = match.id
+        lead.client_id = match.client_id
+        lead.is_general_client = true
+        return match
+      }
+    } catch (_) {}
+
+    try {
+      const res = await createPartnerGeneralClient({
+        client_name: lead.client_name,
+        company_name: lead.company_name || lead.client_name,
+        contact_number: lead.client_phone,
+        alt_contact_number: lead.client_alternate_phone || null,
+        email: lead.client_email || '',
+        country_code: lead.country_code || 'IN',
+        address: lead.address || '',
+        city: lead.city || '',
+        state: lead.state || '',
+        pin_code: lead.pin_code || '',
+        software_requirements: lead.software_requirements || lead.product_name || 'General Client Services',
+      })
+      if (res?.data?.data) {
+        lead.rawId = res.data.data.id
+        lead.client_id = res.data.data.client_id
+        lead.is_general_client = true
+        return res.data.data
+      }
+    } catch (_) {}
+    return lead
+  }
+
+  // Open Quotation Builder for a lead
+  const handleOpenQuotationBuilder = async (lead) => {
+    const clientObj = await ensureGenClient(lead)
+    setSelectedGenClient(clientObj)
+    setEditingQuotationId(null)
+    setShowQuotationBuilder(true)
+
+    const qDate = new Date().toISOString().substring(0, 10)
+    const randomSuffix = Math.floor(100 + Math.random() * 900)
+    const formattedDate = qDate.replace(/-/g, '')
+    const autoQuotationNum = `AIM-${formattedDate}-${randomSuffix}`
+
+    setQuotationForm({
+      quotation_date: qDate,
+      quotation_number: autoQuotationNum,
+      po_number: '',
+      po_date: '',
+      discount_description: 'Corporate Consideration',
+      payment_terms: '',
+      gst_type: clientObj.gst_type || 'Intra-State',
+      gstin: clientObj.gstin || '',
+      anexture: 'NO',
+      anexture_content: '',
+    })
+
+    const prefilledItems = []
+    const rawRequirements = clientObj.software_requirements
+      ? clientObj.software_requirements.split(',').map((s) => s.trim()).filter(Boolean)
+      : []
+
+    rawRequirements.forEach((reqName, idx) => {
+      const matchedSrv = generalServices.find((s) => (s.name || s.service_name || '').toLowerCase() === reqName.toLowerCase())
+      if (matchedSrv) {
+        prefilledItems.push({
+          id: Date.now() + idx,
+          product_name: matchedSrv.name || matchedSrv.service_name,
+          hsn: matchedSrv.hsn || '998314',
+          qty: 1,
+          unit: matchedSrv.unit || 'Unit',
+          selling_price: Number(matchedSrv.selling_price || 0),
+          discount_percentage: 0,
+          description: matchedSrv.description || matchedSrv.name || reqName,
+        })
+      } else {
+        prefilledItems.push({
+          id: Date.now() + idx,
+          product_name: reqName,
+          hsn: '998314',
+          qty: 1,
+          unit: 'Unit',
+          selling_price: 15000,
+          discount_percentage: 0,
+          description: `Custom deliverable for ${reqName}`,
+        })
+      }
+    })
+
+    if (prefilledItems.length === 0) {
+      prefilledItems.push({
+        id: Date.now(),
+        product_name: 'General Client Services',
+        hsn: '998314',
+        qty: 1,
+        unit: 'Unit',
+        selling_price: 15000,
+        discount_percentage: 0,
+        description: 'Scope & specifications for General Client Services',
+      })
+    }
+
+    setQuotationItems(prefilledItems)
+  }
+
+  // View Client Quotations list
+  const handleViewClientQuotations = async (lead) => {
+    const clientObj = await ensureGenClient(lead)
+    setSelectedGenClient(clientObj)
+    setShowQuotationsListModal(true)
+    setLoadingQuotations(true)
+    try {
+      const res = await getPartnerClientQuotations(clientObj.rawId || clientObj.id)
+      const qList = res.data?.data?.quotations || res.data?.data || res.data?.quotations || (Array.isArray(res.data) ? res.data : [])
+      setSelectedClientQuotations(Array.isArray(qList) ? qList : [])
+    } catch (err) {
+      console.error('Failed to load client quotations:', err)
+      setSelectedClientQuotations([])
+    } finally {
+      setLoadingQuotations(false)
+    }
+  }
+
+  // Edit Quotation
+  const handleEditQuotation = (quotation, client = null) => {
+    const targetClient = client || quotation.client || selectedGenClient
+    if (targetClient) {
+      setSelectedGenClient(targetClient)
+    }
+    setEditingQuotationId(quotation.id)
+    setShowQuotationDocModal(false)
+    setShowQuotationsListModal(false)
+    setShowQuotationBuilder(true)
+
+    setQuotationForm({
+      quotation_date: quotation.quotation_date ? String(quotation.quotation_date).substring(0, 10) : new Date().toISOString().substring(0, 10),
+      quotation_number: quotation.quotation_number || '',
+      po_number: quotation.po_number || '',
+      po_date: quotation.po_date ? String(quotation.po_date).substring(0, 10) : '',
+      discount_description: quotation.discount_description || 'Corporate Consideration',
+      payment_terms: quotation.payment_terms || '',
+      gst_type: quotation.gst_type || (targetClient?.gst_type || 'Intra-State'),
+      gstin: quotation.gstin || (targetClient?.gstin || ''),
+      anexture: quotation.anexture || 'NO',
+      anexture_content: quotation.anexture_content || '',
+    })
+
+    const existingItems = (quotation.items || []).map((it, idx) => ({
+      id: it.id || (Date.now() + idx),
+      product_name: it.product_name || it.name || 'Service Item',
+      hsn: it.hsn || it.hsn_code || '998314',
+      unit: it.unit || 'Unit',
+      qty: Number(it.qty || it.quantity || 1),
+      selling_price: Number(it.selling_price || it.price || 0),
+      discount_percentage: Number(it.discount_percentage || it.discount || 0),
+      description: it.description || '',
+    }))
+
+    setQuotationItems(existingItems.length > 0 ? existingItems : [{
+      id: Date.now(),
+      product_name: 'Service Item',
+      hsn: '998314',
+      unit: 'Unit',
+      qty: 1,
+      selling_price: 0,
+      discount_percentage: 0,
+      description: ''
+    }])
+  }
+
+  // Open Proforma Invoice Document Viewer
+  const handleOpenQuotationDoc = (quotation, clientObj = null) => {
+    setViewingQuotationDoc({
+      ...quotation,
+      client: clientObj || quotation.client || selectedGenClient || {}
+    })
+    setShowQuotationDocModal(true)
+  }
+
+  // Quotation Item modifications
+  const handleAddQuotationItemFromCatalog = (service) => {
+    const newItem = {
+      id: Date.now(),
+      product_id: service.id,
+      product_name: service.name || service.service_name || 'Service Item',
+      hsn: service.hsn || '998314',
+      qty: 1,
+      unit: service.unit || 'Unit',
+      selling_price: Number(service.selling_price || 0),
+      discount_percentage: 0,
+      description: service.description || service.name || '',
+    }
+    setQuotationItems((prev) => [...prev, newItem])
+  }
+
+  const handleAddCustomQuotationItem = () => {
+    const newItem = {
+      id: Date.now(),
+      product_id: null,
+      product_name: 'Custom Service / Deliverable',
+      hsn: '998314',
+      qty: 1,
+      unit: 'Unit',
+      selling_price: 5000,
+      discount_percentage: 0,
+      description: '',
+    }
+    setQuotationItems((prev) => [...prev, newItem])
+  }
+
+  const handleUpdateQuotationItem = (index, field, value) => {
+    setQuotationItems((prev) => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], [field]: value }
+      return updated
+    })
+  }
+
+  const handleRemoveQuotationItem = (index) => {
+    setQuotationItems((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  // Quotation Totals Calculation
+  const computeQuotationTotals = () => {
+    const subtotal = quotationItems.reduce((sum, item) => {
+      const qty = Number(item.qty || 1)
+      const price = Number(item.selling_price || 0)
+      const disc = Number(item.discount_percentage || 0)
+      const lineTotal = qty * price * (1 - disc / 100)
+      return sum + lineTotal
+    }, 0)
+
+    const roundedSubtotal = Math.round(subtotal * 100) / 100
+    const isIndia = (selectedGenClient?.country_code || 'IN') === 'IN'
+    const isIntra = quotationForm.gst_type === 'Intra-State'
+
+    let cgst = 0, sgst = 0, igst = 0, taxTotal = 0
+    if (isIndia) {
+      if (isIntra) {
+        cgst = Math.round(roundedSubtotal * 0.09 * 100) / 100
+        sgst = Math.round(roundedSubtotal * 0.09 * 100) / 100
+        taxTotal = Math.round((cgst + sgst) * 100) / 100
+      } else {
+        igst = Math.round(roundedSubtotal * 0.18 * 100) / 100
+        taxTotal = igst
+      }
+    } else {
+      taxTotal = Math.round(roundedSubtotal * 0.18 * 100) / 100
+    }
+
+    const grandTotal = Math.round((roundedSubtotal + taxTotal) * 100) / 100
+    return { subtotal: roundedSubtotal, cgst, sgst, igst, taxTotal, grandTotal }
+  }
+
+  // Save Quotation Handler
+  const handleSaveQuotation = async (shouldSendEmail = false) => {
+    if (!selectedGenClient?.id && !selectedGenClient?.rawId) {
+      alert('Error: Missing General Client reference ID')
+      return
+    }
+    const clientId = selectedGenClient.rawId || selectedGenClient.id
+    const totals = computeQuotationTotals()
+
+    const payload = {
+      quotation_number: quotationForm.quotation_number || undefined,
+      quotation_date: quotationForm.quotation_date,
+      po_number: quotationForm.po_number || null,
+      po_date: quotationForm.po_date || null,
+      gst_type: quotationForm.gst_type,
+      gstin: quotationForm.gstin || null,
+      payment_terms: quotationForm.payment_terms,
+      discount_description: quotationForm.discount_description || null,
+      anexture: quotationForm.anexture === 'YES' ? 'YES' : 'NO',
+      anexture_content: quotationForm.anexture === 'YES' ? quotationForm.anexture_content : '',
+      subtotal: totals.subtotal,
+      cgst_amount: totals.cgst,
+      sgst_amount: totals.sgst,
+      igst_amount: totals.igst,
+      tax_amount: totals.taxTotal,
+      total_amount: totals.grandTotal,
+      currency: selectedGenClient?.country_code === 'IN' ? 'INR' : 'USD',
+      country_code: selectedGenClient?.country_code || 'IN',
+      items: quotationItems.map((it) => ({
+        product_name: it.product_name,
+        hsn: it.hsn,
+        unit: it.unit,
+        qty: Number(it.qty || 1),
+        selling_price: Number(it.selling_price || 0),
+        discount_percentage: Number(it.discount_percentage || 0),
+        description: it.description || '',
+      })),
+    }
+
+    try {
+      setSavingQuotation(true)
+      let res
+      if (editingQuotationId) {
+        res = await updatePartnerQuotation(editingQuotationId, payload)
+      } else {
+        res = await createPartnerQuotation(clientId, payload)
+      }
+
+      if (res.data?.success || res.data?.id || res.data?.quotation) {
+        const quoData = res.data?.data || res.data?.quotation || res.data || {}
+        if (shouldSendEmail && quoData.id) {
+          try {
+            await sendPartnerQuotationEmail(quoData.id)
+          } catch (_) {}
+        }
+
+        handleOpenQuotationDoc({
+          ...quoData,
+          items: quotationItems,
+          subtotal: totals.subtotal,
+          tax_total: totals.taxTotal,
+          cgst: totals.cgst,
+          sgst: totals.sgst,
+          igst: totals.igst,
+          grand_total: totals.grandTotal
+        }, selectedGenClient)
+
+        setShowQuotationBuilder(false)
+        setEditingQuotationId(null)
+        loadLeads()
+      }
+    } catch (err) {
+      console.error('Error saving quotation:', err)
+      alert(err.response?.data?.message || 'Failed to save quotation')
+    } finally {
+      setSavingQuotation(false)
+    }
+  }
+
+  // Print Quotation Document
+  const handlePrintQuotation = () => {
+    window.print()
+  }
+
+  // Open Payment Modal
+  const handleOpenPaymentModal = (quotation) => {
+    setPaymentQuotation(quotation)
+    setPaymentForm({
+      payment_amount: quotation.total_amount || quotation.grand_total || '',
+      payment_date: new Date().toISOString().substring(0, 10),
+      payment_mode: 'Bank Transfer',
+      transaction_reference: '',
+      notes: 'Offline payment recorded via Partner Portal'
+    })
+    setShowPaymentModal(true)
+  }
+
+  // Handle Record Manual Payment Submit
+  const handleRecordPaymentSubmit = async (e) => {
+    e.preventDefault()
+    if (!paymentQuotation?.id) return
+
+    try {
+      setRecordingPayment(true)
+      const res = await recordPartnerQuotationPayment(paymentQuotation.id, {
+        amount: paymentForm.payment_amount,
+        payment_method: paymentForm.payment_mode,
+        transaction_id: paymentForm.transaction_reference,
+        paid_at: paymentForm.payment_date,
+        notes: paymentForm.notes
+      })
+
+      if (res.data?.success) {
+        alert('🎉 Payment recorded successfully! Client order closed & moved to General Clients directory.')
+        setShowPaymentModal(false)
+        setShowQuotationDocModal(false)
+        setShowQuotationsListModal(false)
+        loadLeads()
+      }
+    } catch (err) {
+      console.error('Failed to record payment:', err)
+      alert(err.response?.data?.message || 'Failed to record payment')
+    } finally {
+      setRecordingPayment(false)
     }
   }
 
