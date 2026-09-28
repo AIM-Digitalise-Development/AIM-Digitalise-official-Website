@@ -737,7 +737,7 @@ export default function PartnerLeads() {
 
       // Also fetch Partner General Clients so they appear in Leads panel!
       try {
-        const gcRes = await getPartnerGeneralClients()
+        const gcRes = await getPartnerGeneralClients({ only_unpaid: 1 })
         const gcList = gcRes.data?.success && Array.isArray(gcRes.data.data)
           ? gcRes.data.data
           : Array.isArray(gcRes.data) ? gcRes.data : []
@@ -2264,6 +2264,27 @@ export default function PartnerLeads() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination Footer */}
+        <div className="px-6 py-4 flex items-center justify-between text-xs font-bold text-gray-400" style={{ background: '#13151f', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <span>Page {page}</span>
+          <div className="flex gap-2">
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+              className="px-3.5 py-2 border border-gray-700 rounded-xl bg-gray-800 text-gray-200 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition"
+            >
+              Previous
+            </button>
+            <button
+              disabled={leads.length < 20}
+              onClick={() => setPage(prev => prev + 1)}
+              className="px-3.5 py-2 border border-gray-700 rounded-xl bg-gray-800 text-gray-200 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
 

@@ -224,7 +224,7 @@ export default function EmployeeLeads() {
 
       // Also fetch General Clients so they appear in Leads panel!
       try {
-        const gcRes = await getEmployeeGeneralClients()
+        const gcRes = await getEmployeeGeneralClients({ only_unpaid: 1 })
         const gcList = gcRes.data?.success && Array.isArray(gcRes.data.data)
           ? gcRes.data.data
           : Array.isArray(gcRes.data) ? gcRes.data : []

@@ -307,8 +307,10 @@ export const bulkAssignLeads = (data) => {
 }
 
 // ─── Partner General Clients & Services (Non-Subscription Customized Clients) ───
-export const getPartnerGeneralClients = () =>
-  partnerFetch('GET', '/partner/general-clients')
+export const getPartnerGeneralClients = (params) => {
+  const queryStr = params ? '?' + new URLSearchParams(params).toString() : ''
+  return partnerFetch('GET', `/partner/general-clients${queryStr}`)
+}
 
 export const getPartnerGeneralClientById = (id) =>
   partnerFetch('GET', `/partner/general-clients/${id}`)

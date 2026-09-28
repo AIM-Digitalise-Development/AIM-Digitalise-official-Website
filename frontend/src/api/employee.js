@@ -43,8 +43,8 @@ export const deleteEmployeeGeneralService = (id) =>
   client.delete(`/employee/general-services/${id}`)
 
 // Employee General Clients - GET /employee/general-clients
-export const getEmployeeGeneralClients = () =>
-  client.get('/employee/general-clients')
+export const getEmployeeGeneralClients = (params) =>
+  client.get('/employee/general-clients', { params })
 
 // Employee General Client Details - GET /employee/general-clients/:id
 export const getEmployeeGeneralClientById = (id) =>
