@@ -79,7 +79,7 @@ export const renderLeadOwnerCell = (lead, partnerMap = null) => {
     const pId = pObj?.partner_id || (code.match(/PIDIN\d+/i)?.[0]) || code
     return (
       <div className="flex items-center gap-1 flex-wrap">
-        <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-300 shadow-xs">
+        <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-300 shadow-xs leading-tight whitespace-normal break-words inline-block max-w-[160px]">
           🤝 {pName} ({pId})
         </span>
       </div>
@@ -91,7 +91,7 @@ export const renderLeadOwnerCell = (lead, partnerMap = null) => {
     const empId = lead?.employee?.employee_id || code
     return (
       <div className="flex items-center gap-1 flex-wrap">
-        <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-300 shadow-xs">
+        <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-300 shadow-xs leading-tight whitespace-normal break-words inline-block max-w-[160px]">
           👔 {empName} ({empId})
         </span>
       </div>
@@ -100,7 +100,7 @@ export const renderLeadOwnerCell = (lead, partnerMap = null) => {
 
   return (
     <div className="flex items-center gap-1 flex-wrap">
-      <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-xs">
+      <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-xs whitespace-nowrap inline-block">
         🏢 Admin (ADMIN)
       </span>
     </div>
@@ -137,7 +137,7 @@ export const renderMasterPartnerCell = (lead, partnerMap = null) => {
 
   return (
     <div className="flex items-center gap-1 flex-wrap">
-      <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 shadow-xs">
+      <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 shadow-xs leading-tight whitespace-normal break-words inline-block max-w-[160px]">
         👑 {masterName} - {masterId}
       </span>
     </div>
@@ -2295,10 +2295,10 @@ export default function AdminLeads() {
             {/* MAIN LEADS DATA TABLE */}
             <div className="bg-white rounded-3xl border border-slate-200/85 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[1100px]">
+                <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                      <th className="px-4 py-4 w-12 text-center">
+                      <th className="px-3 py-3 w-10 text-center">
                         <input
                           type="checkbox"
                           checked={leads.length > 0 && selectedLeadIds.length === leads.length}
@@ -2306,15 +2306,15 @@ export default function AdminLeads() {
                           className="w-4 h-4 rounded text-[#38b34a] border-slate-300 focus:ring-[#38b34a]"
                         />
                       </th>
-                      <th className="px-5 py-4 min-w-[200px]">Client Name</th>
-                      <th className="px-4 py-4 min-w-[190px] whitespace-nowrap">Contact Person & Number</th>
-                      <th className="px-4 py-4 min-w-[160px] whitespace-nowrap">Lead Owner</th>
-                      <th className="px-4 py-4 min-w-[170px] whitespace-nowrap">Master Partner</th>
-                      <th className="px-4 py-4 min-w-[140px] whitespace-nowrap">Generate Date</th>
-                      <th className="px-4 py-4 min-w-[140px] whitespace-nowrap">Status & Priority</th>
-                      <th className="px-5 py-4 min-w-[200px]">Product Category</th>
-                      <th className="px-4 py-4 min-w-[160px] max-w-xs">Last Logged Remarks</th>
-                      <th className="px-4 py-4 text-center whitespace-nowrap min-w-[220px] w-56 sticky right-0 bg-slate-50 z-10 shadow-[-6px_0_12px_rgba(0,0,0,0.06)]">Actions</th>
+                      <th className="px-3 py-3 max-w-[180px]">Client Name</th>
+                      <th className="px-3 py-3 max-w-[160px]">Contact Person & Number</th>
+                      <th className="px-3 py-3 max-w-[150px]">Sold By</th>
+                      <th className="px-3 py-3 max-w-[160px]">Master Partner</th>
+                      <th className="px-3 py-3 whitespace-nowrap">Generate Date</th>
+                      <th className="px-3 py-3 max-w-[140px]">Status & Priority</th>
+                      <th className="px-3 py-3 max-w-[170px]">Product Category</th>
+                      <th className="px-3 py-3 max-w-[180px]">Last Logged Remarks</th>
+                      <th className="px-3 py-3 text-center max-w-[220px] sticky right-0 bg-slate-50 z-10 shadow-[-6px_0_12px_rgba(0,0,0,0.06)]">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
@@ -2341,7 +2341,7 @@ export default function AdminLeads() {
                             key={lead.id}
                             className={`group hover:bg-slate-50/70 transition-colors ${isSelected ? 'bg-slate-50/90' : 'bg-white'}`}
                           >
-                            <td className="px-4 py-4 text-center w-12">
+                            <td className="px-3 py-3 text-center w-10">
                               <input
                                 type="checkbox"
                                 checked={isSelected}
@@ -2349,73 +2349,72 @@ export default function AdminLeads() {
                                 className="w-4 h-4 rounded text-[#38b34a] border-slate-300 focus:ring-[#38b34a]"
                               />
                             </td>
-                            <td className="px-5 py-4 min-w-[200px]">
-                              <div>
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span
-                                    onClick={() => setSelectedDrawerLead(lead)}
-                                    className="font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer block text-sm transition-colors"
-                                  >
-                                    {lead.company_name || lead.client_name}
+                            <td className="px-3 py-3 max-w-[180px]">
+                              <div className="flex flex-col items-start gap-1">
+                                <span
+                                  onClick={() => setSelectedDrawerLead(lead)}
+                                  className="font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer block text-xs leading-snug break-words"
+                                >
+                                  {lead.company_name || lead.client_name}
+                                </span>
+                                {isGeneralClientLead(lead) && (
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-blue-800 border border-blue-200 whitespace-nowrap">
+                                    💼 General Client
                                   </span>
-                                  {isGeneralClientLead(lead) && (
-                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-blue-800 border border-blue-200">
-                                      💼 General Client
-                                    </span>
-                                  )}
-                                </div>
+                                )}
                               </div>
                             </td>
-                            <td className="px-4 py-4 min-w-[190px] whitespace-nowrap">
-                              <div>
-                                <span className="font-bold text-slate-700 flex items-center gap-1">
-                                  <span>👤</span> {lead.client_name || 'N/A'}
+                            <td className="px-3 py-3 max-w-[160px]">
+                              <div className="space-y-0.5">
+                                <span className="font-bold text-slate-700 flex items-start gap-1 leading-snug text-xs break-words">
+                                  <span className="shrink-0">👤</span>
+                                  <span className="break-words">{lead.client_name || 'N/A'}</span>
                                 </span>
-                                <span className="text-slate-500 font-medium block mt-0.5 text-[11px]">
+                                <span className="text-slate-500 font-medium block text-[11px] whitespace-nowrap">
                                   📞 {lead.client_phone || 'N/A'}
                                 </span>
                                 {lead.client_alternate_phone && (
-                                  <span className="text-slate-400 font-medium block text-[10px]">
+                                  <span className="text-slate-400 font-medium block text-[10px] whitespace-nowrap">
                                     📱 Alt: {lead.client_alternate_phone}
                                   </span>
                                 )}
                               </div>
                             </td>
-                            <td className="px-4 py-4 min-w-[160px] whitespace-nowrap">
+                            <td className="px-3 py-3 max-w-[150px]">
                               {renderLeadOwnerCell(lead, partnerMap)}
                             </td>
-                            <td className="px-4 py-4 min-w-[170px] whitespace-nowrap">
+                            <td className="px-3 py-3 max-w-[160px]">
                               {renderMasterPartnerCell(lead, partnerMap)}
                             </td>
-                            <td className="px-4 py-4 min-w-[140px] whitespace-nowrap">
+                            <td className="px-3 py-3 whitespace-nowrap">
                               <span className="text-slate-600 font-semibold text-[11px] flex items-center gap-1">
                                 <span>📅</span> {formatFollowUpDisplay(lead.created_at || lead.createdAt)}
                               </span>
                             </td>
-                            <td className="px-4 py-4 min-w-[140px] whitespace-nowrap">
-                              <div className="flex flex-wrap gap-1.5">
+                            <td className="px-3 py-3 max-w-[140px]">
+                              <div className="flex flex-wrap gap-1">
                                 {getStatusBadge(lead.lead_status)}
                                 {getPriorityBadge(lead.lead_priority)}
                               </div>
                             </td>
-                            <td className="px-5 py-4 min-w-[200px]">
+                            <td className="px-3 py-3 max-w-[170px]">
                               <div>
-                                <span className="font-bold text-slate-700 block">
+                                <span className="font-bold text-slate-700 block leading-snug break-words text-xs">
                                   {getLeadProductDisplay(lead)}
                                 </span>
                                 {lead.follow_up_date && (
-                                  <span className="text-[10px] text-amber-500 font-bold mt-0.5 block">
+                                  <span className="text-[10px] text-amber-500 font-bold mt-0.5 block whitespace-nowrap">
                                     📅 Next F/Up: {formatFollowUpDisplay(lead.follow_up_date)}
                                   </span>
                                 )}
                               </div>
                             </td>
-                            <td className="px-4 py-4 min-w-[160px] max-w-xs">
-                              <p className="truncate text-slate-400 font-medium" title={getLatestRemark(lead)}>
+                            <td className="px-3 py-3 max-w-[180px]">
+                              <p className="line-clamp-3 text-slate-500 text-xs font-medium break-words leading-tight" title={getLatestRemark(lead)}>
                                 {getLatestRemark(lead)}
                               </p>
                             </td>
-                            <td className={`px-4 py-4 text-center whitespace-nowrap min-w-[260px] sticky right-0 transition-colors shadow-[-6px_0_12px_rgba(0,0,0,0.06)] ${isSelected ? 'bg-slate-50' : 'bg-white group-hover:bg-slate-50'}`}>
+                            <td className={`px-3 py-3 text-center sticky right-0 transition-colors shadow-[-6px_0_12px_rgba(0,0,0,0.06)] max-w-[220px] ${isSelected ? 'bg-slate-50' : 'bg-white group-hover:bg-slate-50'}`}>
                               <div className="flex items-center justify-center gap-1.5 flex-wrap">
                                 {isGeneralClientLead(lead) && (
                                   <>
@@ -3121,15 +3120,15 @@ export default function AdminLeads() {
             {/* Follow-up Leads List Table */}
             <div className="bg-white rounded-3xl border border-slate-200/85 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[1050px]">
+                <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                      <th className="px-5 py-4 min-w-[200px]">Client / Institution</th>
-                      <th className="px-4 py-4 min-w-[140px] whitespace-nowrap">Quick Contact</th>
-                      <th className="px-4 py-4 min-w-[140px] whitespace-nowrap">Scheduled Date</th>
-                      <th className="px-4 py-4 min-w-[130px] whitespace-nowrap">Status & Priority</th>
-                      <th className="px-4 py-4 min-w-[160px] max-w-xs">Discussion / Remarks</th>
-                      <th className="px-4 py-4 text-center whitespace-nowrap min-w-[220px] w-56 sticky right-0 bg-slate-50 z-10 shadow-[-6px_0_12px_rgba(0,0,0,0.06)]">Follow-up Actions</th>
+                      <th className="px-3 py-3 max-w-[180px]">Client / Institution</th>
+                      <th className="px-3 py-3 max-w-[140px]">Quick Contact</th>
+                      <th className="px-3 py-3 whitespace-nowrap">Scheduled Date</th>
+                      <th className="px-3 py-3 max-w-[140px]">Status & Priority</th>
+                      <th className="px-3 py-3 max-w-[200px]">Discussion / Remarks</th>
+                      <th className="px-3 py-3 text-center max-w-[220px] sticky right-0 bg-slate-50 z-10 shadow-[-6px_0_12px_rgba(0,0,0,0.06)]">Follow-up Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
@@ -3166,15 +3165,15 @@ export default function AdminLeads() {
                         return (
                           <tr key={lead.id} className="group hover:bg-slate-50/70 transition-colors">
                             {/* Client & Organization */}
-                            <td className="px-5 py-4 min-w-[200px]">
+                            <td className="px-3 py-3 max-w-[180px]">
                               <div>
                                 <span
                                   onClick={() => setSelectedDrawerLead(lead)}
-                                  className="font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer block text-sm transition-colors"
+                                  className="font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer block text-xs leading-snug break-words transition-colors"
                                 >
                                   {lead.company_name || lead.client_name}
                                 </span>
-                                <span className="text-slate-400 font-medium block mt-0.5">
+                                <span className="text-slate-400 font-medium block mt-0.5 text-[11px] break-words">
                                   {lead.client_name && lead.company_name && lead.client_name !== lead.company_name ? `👤 ${lead.client_name} · ` : ''}
                                   {lead.city ? `${lead.city}, ` : ''}{lead.state || 'India'}
                                 </span>
@@ -3182,7 +3181,7 @@ export default function AdminLeads() {
                             </td>
 
                             {/* Quick Contact buttons */}
-                            <td className="px-4 py-4 min-w-[140px] whitespace-nowrap">
+                            <td className="px-3 py-3 max-w-[140px]">
                               <div className="flex items-center gap-1.5">
                                 {rawPhone ? (
                                   <>
@@ -3210,7 +3209,7 @@ export default function AdminLeads() {
                             </td>
 
                             {/* Scheduled Date */}
-                            <td className="px-4 py-4 min-w-[140px] whitespace-nowrap">
+                            <td className="px-3 py-3 whitespace-nowrap">
                               <div>
                                 <span className="font-bold text-slate-800 block">
                                   {formatFollowUpDisplay(fDate)}
@@ -3225,7 +3224,7 @@ export default function AdminLeads() {
                             </td>
 
                             {/* Status & Priority */}
-                            <td className="px-4 py-4 min-w-[130px] whitespace-nowrap">
+                            <td className="px-3 py-3 max-w-[140px]">
                               <div className="space-y-1">
                                 <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-slate-100 text-slate-700 border border-slate-200 inline-block uppercase">
                                   {lead.status || 'New'}
@@ -3245,14 +3244,14 @@ export default function AdminLeads() {
                             </td>
 
                             {/* Discussion / Remarks */}
-                            <td className="px-4 py-4 min-w-[160px] max-w-xs">
-                              <p className="text-slate-600 text-xs line-clamp-2 italic bg-slate-50 p-2 rounded-xl border border-slate-100">
+                            <td className="px-3 py-3 max-w-[200px]">
+                              <p className="text-slate-600 text-xs line-clamp-3 italic bg-slate-50 p-2 rounded-xl border border-slate-100 break-words leading-tight">
                                 "{lead.follow_up_remark || lead.remarks || lead.notes || 'No remarks recorded yet.'}"
                               </p>
                             </td>
 
                             {/* Actions */}
-                            <td className="px-4 py-4 text-center whitespace-nowrap min-w-[220px] w-56 sticky right-0 bg-white group-hover:bg-slate-50/70 z-10 shadow-[-6px_0_12px_rgba(0,0,0,0.06)]">
+                            <td className="px-3 py-3 text-center sticky right-0 bg-white group-hover:bg-slate-50/70 z-10 shadow-[-6px_0_12px_rgba(0,0,0,0.06)] max-w-[220px]">
                               <div className="flex items-center justify-center gap-1.5">
                                 <button
                                   onClick={() => openFollowUpModal(lead)}
