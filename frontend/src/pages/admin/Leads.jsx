@@ -858,7 +858,7 @@ export default function AdminLeads() {
 
   // High Fidelity Print
   const handlePrintQuotation = () => {
-    const printElement = document.getElementById('quotation-document-paper-leads')
+    const printElement = document.getElementById('quotation-document-paper') || document.getElementById('quotation-document-paper-leads')
     if (!printElement) {
       window.print()
       return
@@ -875,6 +875,8 @@ export default function AdminLeads() {
     document.body.appendChild(iframe)
 
     const doc = iframe.contentWindow.document
+    
+    // Copy all style sheets and stylesheets from the main document to ensure exact Tailwind rendering
     const headElements = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
       .map(node => node.outerHTML)
       .join('\n')
@@ -886,17 +888,64 @@ export default function AdminLeads() {
         <head>
           <meta charset="utf-8" />
           <title></title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           ${headElements}
           <style>
-            @page { size: A4 portrait; margin: 0 !important; }
-            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; box-sizing: border-box; }
-            html, body { margin: 0 !important; padding: 0 !important; background: #ffffff !important; font-family: 'Inter', sans-serif !important; color: #0f172a !important; width: 100% !important; }
-            #quotation-document-paper-leads { box-shadow: none !important; border: none !important; padding: 6mm 10mm !important; margin: 0 auto !important; width: 100% !important; max-width: 100% !important; }
-            .quotation-terms-signature, .quotation-signature-block { page-break-inside: avoid !important; break-inside: avoid !important; }
-            table { border-collapse: collapse !important; width: 100% !important; }
+            @page {
+              size: A4 portrait;
+              margin: 0 !important;
+            }
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
+              box-sizing: border-box;
+            }
+            html, body {
+              margin: 0 !important;
+              padding: 0 !important;
+              background-color: #ffffff !important;
+              background: #ffffff !important;
+              font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+              color: #0f172a !important;
+              width: 100% !important;
+            }
+            #quotation-document-paper, #quotation-document-paper-leads {
+              box-shadow: none !important;
+              border: none !important;
+              padding: 6mm 10mm !important;
+              margin: 0 auto !important;
+              width: 100% !important;
+              max-width: 100% !important;
+            }
+            /* Responsive spacing override for print so single-page quotation fits on 1 page */
+            #quotation-document-paper.space-y-5 > * + *,
+            #quotation-document-paper.space-y-6 > * + *,
+            #quotation-document-paper.space-y-7 > * + *,
+            #quotation-document-paper > div + div,
+            #quotation-document-paper-leads > div + div {
+              margin-top: 12px !important;
+            }
+            .quotation-terms-signature,
+            .quotation-signature-block,
+            .quotation-financials-block {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            table {
+              border-collapse: collapse !important;
+              width: 100% !important;
+            }
+            tr {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            th, td {
+              border-color: #cbd5e1 !important;
+            }
           </style>
         </head>
-        <body>
+        <body class="bg-white">
           ${printElement.outerHTML}
         </body>
       </html>
@@ -908,19 +957,24 @@ export default function AdminLeads() {
         iframe.contentWindow.focus()
         iframe.contentWindow.print()
       } catch (err) {
-        console.error('Print trigger error:', err)
+        console.error('Print error:', err)
       } finally {
         setTimeout(() => {
-          if (document.body.contains(iframe)) {
-            document.body.removeChild(iframe)
+          try {
+            if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe)
+            }
+          } catch (e) {
+            // ignore
           }
-        }, 2000)
+        }, 1500)
       }
     }
 
-    const images = iframe.contentWindow.document.querySelectorAll('img')
+    const images = iframe.contentWindow.document.images
     let loaded = 0
-    const total = images.length
+    const total = images ? images.length : 0
+
     if (total === 0) {
       setTimeout(triggerPrint, 200)
     } else {
@@ -933,10 +987,19 @@ export default function AdminLeads() {
         }
       }
       for (let i = 0; i < total; i++) {
-        if (images[i].complete) onImgDone()
-        else { images[i].onload = onImgDone; images[i].onerror = onImgDone; }
+        if (images[i].complete) {
+          onImgDone()
+        } else {
+          images[i].onload = onImgDone
+          images[i].onerror = onImgDone
+        }
       }
-      setTimeout(() => { if (!triggered) { triggered = true; triggerPrint() } }, 1000)
+      setTimeout(() => {
+        if (!triggered) {
+          triggered = true
+          triggerPrint()
+        }
+      }, 1000)
     }
   }
 
