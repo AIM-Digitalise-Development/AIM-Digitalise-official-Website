@@ -249,17 +249,39 @@ const AdminSaasClients = () => {
     const matchesStatus = statusFilter === 'All' || 
       itemStatus.toLowerCase() === statusFilter.toLowerCase();
 
-    const q = clientSearch.toLowerCase()
+    const q = clientSearch.trim().toLowerCase()
+    const name = c.client_name || ''
+    const comp = c.company_name || c.school_name || ''
+    const contact = c.contact_person || ''
+    const phone = c.contact_number || c.phone || ''
+    const email = c.email || ''
+    const cid = String(c.client_id || c.id || '')
+    const prod = c.product_name || ''
+    const partner = c.partner_name || c.sold_by || c.sold_by_name || ''
+    const city = c.city || c.district || ''
+    const state = c.state || ''
+
     const matchesSearch =
-      (c.client_name || '').toLowerCase().includes(q) ||
-      (c.company_name || '').toLowerCase().includes(q) ||
-      (c.email || '').toLowerCase().includes(q) ||
-      (c.client_id || '').toString().includes(q) ||
-      (c.product_name || '').toLowerCase().includes(q) ||
-      (c.partner_name || '').toLowerCase().includes(q)
+      !q ||
+      name.toLowerCase().includes(q) ||
+      comp.toLowerCase().includes(q) ||
+      contact.toLowerCase().includes(q) ||
+      phone.toLowerCase().includes(q) ||
+      email.toLowerCase().includes(q) ||
+      cid.toLowerCase().includes(q) ||
+      prod.toLowerCase().includes(q) ||
+      partner.toLowerCase().includes(q) ||
+      city.toLowerCase().includes(q) ||
+      state.toLowerCase().includes(q)
 
     return matchesProduct && matchesStatus && matchesSearch
   })
+
+  const hasActiveFilters = Boolean(
+    clientSearch.trim() ||
+    (productFilter && productFilter !== 'All') ||
+    (statusFilter && statusFilter !== 'All')
+  )
 
   // ── RENEWAL & CYCLE PRICING CALCULATOR ──────────────────────────────
   const [renewalSelectedCycles, setRenewalSelectedCycles] = useState({})
@@ -812,15 +834,43 @@ const AdminSaasClients = () => {
               {/* Stats */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-md flex items-center justify-between">
-                  <div><span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total SaaS Clients</span><span className="text-3xl font-black text-blue-500 mt-1.5 block">{clientsLoading ? '...' : (summary?.total_clients ?? 0)}</span></div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                        {hasActiveFilters ? 'Filtered SaaS Clients' : 'Total SaaS Clients'}
+                      </span>
+                      {hasActiveFilters && (
+                        <span className="text-[9px] font-extrabold text-blue-600 bg-blue-50 border border-blue-200 px-1.5 py-0.2 rounded-full">
+                          Filtered
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-3xl font-black text-blue-500 mt-1.5 block">
+                      {clientsLoading ? '...' : (hasActiveFilters ? filteredClients.length : (summary?.total_clients ?? clients.length))}
+                    </span>
+                  </div>
                   <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center border border-blue-100">👥</div>
                 </div>
                 <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-md flex items-center justify-between">
-                  <div><span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Active Subscriptions</span><span className="text-3xl font-black text-emerald-500 mt-1.5 block">{clientsLoading ? '...' : (summary?.active_clients ?? 0)}</span></div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                      {hasActiveFilters ? 'Filtered Active' : 'Active Subscriptions'}
+                    </span>
+                    <span className="text-3xl font-black text-emerald-500 mt-1.5 block">
+                      {clientsLoading ? '...' : (hasActiveFilters ? filteredClients.filter(c => c.is_active || (c.status && c.status.toLowerCase() === 'active')).length : (summary?.active_clients ?? 0))}
+                    </span>
+                  </div>
                   <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center border border-emerald-100">✅</div>
                 </div>
                 <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-md flex items-center justify-between">
-                  <div><span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total Revenue</span><span className="text-3xl font-black text-amber-600 mt-1.5 block">{clientsLoading ? '...' : `₹${(summary?.total_revenue ?? 0).toLocaleString('en-IN')}`}</span></div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                      {hasActiveFilters ? 'Filtered Revenue' : 'Total Revenue'}
+                    </span>
+                    <span className="text-3xl font-black text-amber-600 mt-1.5 block">
+                      {clientsLoading ? '...' : `₹${(hasActiveFilters ? filteredClients.reduce((acc, c) => acc + (Number(c.processing_fee) || 0), 0) : (summary?.total_revenue ?? 0)).toLocaleString('en-IN')}`}
+                    </span>
+                  </div>
                   <div className="w-12 h-12 rounded-xl bg-yellow-50 flex items-center justify-center border border-yellow-100">₹</div>
                 </div>
               </div>

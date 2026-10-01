@@ -1493,6 +1493,12 @@ const AdminUsers = () => {
     })
   }, [generalClients, genClientSearch, statusFilter])
 
+  const hasActiveGenClientFilters = Boolean(
+    genClientSearch.trim() ||
+    (statusFilter && statusFilter !== 'All') ||
+    (soldByFilter && soldByFilter !== 'all')
+  )
+
   // Paginated general clients slice
   const totalClientsCount = filteredGeneralClients.length
   const totalPages = Math.max(1, Math.ceil(totalClientsCount / pageSize))
@@ -1704,9 +1710,18 @@ const AdminUsers = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                     <div className="bg-gradient-to-br from-blue-50 to-slate-50 rounded-2xl p-4 border border-blue-100 shadow-sm flex items-center justify-between">
                       <div>
-                        <span className="text-[10px] font-black text-blue-600 uppercase tracking-wider block">Total Clients</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-black text-blue-600 uppercase tracking-wider block">
+                            {hasActiveGenClientFilters ? 'Filtered Clients' : 'Total Clients'}
+                          </span>
+                          {hasActiveGenClientFilters && (
+                            <span className="text-[9px] font-extrabold text-blue-600 bg-blue-100/80 border border-blue-200 px-1.5 py-0.2 rounded-full">
+                              Filtered
+                            </span>
+                          )}
+                        </div>
                         <span className="text-2xl font-black text-slate-800 mt-1 block">
-                          {loadingGenClients ? '...' : generalClients.length}
+                          {loadingGenClients ? '...' : (hasActiveGenClientFilters ? filteredGeneralClients.length : generalClients.length)}
                         </span>
                       </div>
                       <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg">
@@ -1730,7 +1745,7 @@ const AdminUsers = () => {
                       <div>
                         <span className="text-[10px] font-black text-amber-600 uppercase tracking-wider block">Quotations Built</span>
                         <span className="text-2xl font-black text-amber-700 mt-1 block">
-                          {generalClients.reduce((acc, c) => acc + (c.quotations_count || c.quotations?.length || 0), 0)}
+                          {(hasActiveGenClientFilters ? filteredGeneralClients : generalClients).reduce((acc, c) => acc + (c.quotations_count || c.quotations?.length || 0), 0)}
                         </span>
                       </div>
                       <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-lg">
@@ -1742,7 +1757,7 @@ const AdminUsers = () => {
                       <div>
                         <span className="text-[10px] font-black text-emerald-600 uppercase tracking-wider block">Closed Orders</span>
                         <span className="text-2xl font-black text-emerald-700 mt-1 block">
-                          {generalClients.filter((c) => c.status === 'Order Closed').length} Closed
+                          {(hasActiveGenClientFilters ? filteredGeneralClients : generalClients).filter((c) => c.status === 'Order Closed').length} Closed
                         </span>
                       </div>
                       <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-lg">

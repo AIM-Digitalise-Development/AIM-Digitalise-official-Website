@@ -250,21 +250,39 @@ const AdminSubscribedClients = () => {
     const matchesStatus = statusFilter === 'All' || (statusFilter === 'ACTIVE' ? sub.is_active : !sub.is_active)
 
     const name = sub.client_name || ''
+    const comp = sub.company_name || sub.school_name || ''
+    const contact = sub.contact_person || ''
+    const phone = sub.contact_number || sub.phone || ''
     const email = sub.email || ''
-    const cid = sub.client_id || ''
+    const cid = sub.client_id || String(sub.id || '')
     const prod = sub.product_name || ''
-    const partner = sub.partner_name || ''
-    const searchLower = clientSearch.toLowerCase()
+    const partner = sub.partner_name || sub.sold_by || sub.sold_by_name || ''
+    const city = sub.city || sub.district || ''
+    const state = sub.state || ''
+
+    const searchLower = clientSearch.trim().toLowerCase()
 
     const matchesSearch =
+      !searchLower ||
       name.toLowerCase().includes(searchLower) ||
+      comp.toLowerCase().includes(searchLower) ||
+      contact.toLowerCase().includes(searchLower) ||
+      phone.toLowerCase().includes(searchLower) ||
       email.toLowerCase().includes(searchLower) ||
-      cid.toString().toLowerCase().includes(searchLower) ||
+      cid.toLowerCase().includes(searchLower) ||
       prod.toLowerCase().includes(searchLower) ||
-      partner.toLowerCase().includes(searchLower)
+      partner.toLowerCase().includes(searchLower) ||
+      city.toLowerCase().includes(searchLower) ||
+      state.toLowerCase().includes(searchLower)
 
     return matchesProduct && matchesStatus && matchesSearch
   })
+
+  const hasActiveFilters = Boolean(
+    clientSearch.trim() ||
+    (productFilter && productFilter !== 'All') ||
+    (statusFilter && statusFilter !== 'All')
+  )
 
   return (
     <>
@@ -378,15 +396,26 @@ const AdminSubscribedClients = () => {
                 <div className="group bg-gradient-to-br from-white to-indigo-50/20 rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-300 flex items-center justify-between overflow-hidden relative animate-slide-up [animation-delay:100ms]">
                   <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-indigo-500/5 rounded-full blur-xl group-hover:scale-125 transition-all duration-500"></div>
                   <div>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-sans">Total Subscribed Clients</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-sans">
+                        {hasActiveFilters ? 'Filtered Subscribed Clients' : 'Total Subscribed Clients'}
+                      </span>
+                      {hasActiveFilters && (
+                        <span className="text-[9px] font-extrabold text-indigo-600 bg-indigo-50 border border-indigo-200 px-1.5 py-0.2 rounded-full">
+                          Filtered
+                        </span>
+                      )}
+                    </div>
                     <span className="text-3xl font-black text-slate-800 mt-1.5 block tracking-tight">
                       {loading ? (
                         <span className="inline-block animate-pulse">...</span>
                       ) : (
-                        summary.total_clients
+                        hasActiveFilters ? filteredSubs.length : summary.total_clients
                       )}
                     </span>
-                    <span className="text-[10px] font-bold text-indigo-500 mt-1 block">Custom portfolios</span>
+                    <span className="text-[10px] font-bold text-indigo-500 mt-1 block">
+                      {hasActiveFilters ? `${filteredSubs.length} matching result${filteredSubs.length === 1 ? '' : 's'}` : 'Custom portfolios'}
+                    </span>
                   </div>
                   <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-500 flex items-center justify-center text-xl font-bold border border-indigo-100 group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white transition-all duration-300 shadow-sm">
                     👥
@@ -397,16 +426,22 @@ const AdminSubscribedClients = () => {
                 <div className="group bg-gradient-to-br from-white to-emerald-50/20 rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all duration-300 flex items-center justify-between overflow-hidden relative animate-slide-up [animation-delay:200ms]">
                   <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-emerald-500/5 rounded-full blur-xl group-hover:scale-125 transition-all duration-500"></div>
                   <div>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-sans">Active Subscriptions</span>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-sans">
+                      {hasActiveFilters ? 'Filtered Active' : 'Active Subscriptions'}
+                    </span>
                     <span className="text-3xl font-black text-emerald-600 mt-1.5 block tracking-tight">
                       {loading ? (
                         <span className="inline-block animate-pulse">...</span>
                       ) : (
-                        summary.active_subscriptions
+                        hasActiveFilters ? filteredSubs.filter(c => c.is_active).length : summary.active_subscriptions
                       )}
                     </span>
                     <span className="text-[10px] font-bold text-emerald-500 mt-1 block">
-                      {loading ? '...' : `${((summary.active_subscriptions / (summary.total_clients || 1)) * 100).toFixed(0)}% retention rate`}
+                      {loading ? '...' : (
+                        hasActiveFilters
+                          ? `${filteredSubs.filter(c => c.is_active).length} of ${filteredSubs.length} active`
+                          : `${((summary.active_subscriptions / (summary.total_clients || 1)) * 100).toFixed(0)}% retention rate`
+                      )}
                     </span>
                   </div>
                   <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center text-xl font-bold border border-emerald-100 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300 shadow-sm">
@@ -418,12 +453,14 @@ const AdminSubscribedClients = () => {
                 <div className="group bg-gradient-to-br from-white to-amber-50/20 rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md hover:border-amber-200 transition-all duration-300 flex items-center justify-between overflow-hidden relative animate-slide-up [animation-delay:300ms]">
                   <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-amber-500/5 rounded-full blur-xl group-hover:scale-125 transition-all duration-500"></div>
                   <div>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-sans">Total Revenue</span>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-sans">
+                      {hasActiveFilters ? 'Filtered Revenue' : 'Total Revenue'}
+                    </span>
                     <span className="text-3xl font-black text-aim-gold mt-1.5 block tracking-tight">
                       {loading ? (
                         <span className="inline-block animate-pulse">...</span>
                       ) : (
-                        `₹${summary.total_revenue.toLocaleString('en-IN')}`
+                        `₹${(hasActiveFilters ? filteredSubs.reduce((acc, c) => acc + (Number(c.processing_fee) || 0), 0) : summary.total_revenue).toLocaleString('en-IN')}`
                       )}
                     </span>
                     <span className="text-[10px] font-bold text-aim-gold mt-1 block">Recurring fees collected</span>

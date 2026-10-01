@@ -1994,9 +1994,59 @@ export default function AdminLeads() {
     }
   }
 
+  // Real-time client-side filtered leads for instant UI search & card updates
+  const displayedLeads = useMemo(() => {
+    if (!searchInput.trim()) return leads
+    const q = searchInput.trim().toLowerCase()
+    return leads.filter(lead => {
+      const name = (lead.client_name || '').toLowerCase()
+      const comp = (lead.company_name || '').toLowerCase()
+      const phone = (lead.client_phone || '').toLowerCase()
+      const email = (lead.client_email || '').toLowerCase()
+      const id = (lead.lead_id || String(lead.id) || '').toLowerCase()
+      const sold = (lead.sold_by || lead.employee?.full_name || '').toLowerCase()
+      const prod = (lead.product_name || lead.software_requirements || '').toLowerCase()
+      return name.includes(q) || comp.includes(q) || phone.includes(q) || email.includes(q) || id.includes(q) || sold.includes(q) || prod.includes(q)
+    })
+  }, [leads, searchInput])
+
+  const hasActiveFilters = Boolean(
+    searchInput.trim() ||
+    statusFilter ||
+    priorityFilter ||
+    (broughtByFilter && broughtByFilter !== 'all') ||
+    followUpToday ||
+    pendingFollowUp ||
+    todayDemo
+  )
+
+  const filteredActiveCount = useMemo(() => {
+    return displayedLeads.filter(l => {
+      const st = (l.lead_status || l.raw_status || '').toLowerCase()
+      return st !== 'converted' && st !== 'lost' && st !== 'order closed' && st !== 'not interested'
+    }).length
+  }, [displayedLeads])
+
+  const filteredFollowUpTodayCount = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0]
+    return displayedLeads.filter(l => {
+      if (!l.follow_up_date) return false
+      return String(l.follow_up_date).startsWith(todayStr)
+    }).length
+  }, [displayedLeads])
+
+  const filteredTodayDemoCount = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0]
+    return displayedLeads.filter(l => {
+      if (!l.demo_date && !l.booking_date) return false
+      const d = l.demo_date || l.booking_date
+      return String(d).startsWith(todayStr)
+    }).length
+  }, [displayedLeads])
+
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedLeadIds(leads.map(l => l.id))
+      setSelectedLeadIds(displayedLeads.map(l => l.id))
     } else {
       setSelectedLeadIds([])
     }
@@ -2233,15 +2283,42 @@ export default function AdminLeads() {
             {/* METRICS STATS CARDS */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { label: 'Total Leads', value: statsLoading ? '...' : (stats?.total || 0), icon: '📋', color: 'indigo' },
-                { label: 'Active Leads', value: statsLoading ? '...' : (stats?.active || 0), icon: '⚡', color: 'amber' },
-                { label: 'Today Follow-up', value: statsLoading ? '...' : (stats?.follow_up_today || 0), icon: '📅', color: 'blue' },
-                { label: 'Today Demo', value: statsLoading ? '...' : (stats?.today_demo || 0), icon: '🖥️', color: 'emerald' }
+                {
+                  label: hasActiveFilters ? 'Filtered Leads' : 'Total Leads',
+                  value: statsLoading ? '...' : (hasActiveFilters ? displayedLeads.length : (stats?.total ?? leads.length)),
+                  icon: '📋',
+                  color: 'indigo'
+                },
+                {
+                  label: hasActiveFilters ? 'Filtered Active' : 'Active Leads',
+                  value: statsLoading ? '...' : (hasActiveFilters ? filteredActiveCount : (stats?.active ?? 0)),
+                  icon: '⚡',
+                  color: 'amber'
+                },
+                {
+                  label: 'Today Follow-up',
+                  value: statsLoading ? '...' : (hasActiveFilters ? filteredFollowUpTodayCount : (stats?.follow_up_today ?? 0)),
+                  icon: '📅',
+                  color: 'blue'
+                },
+                {
+                  label: 'Today Demo',
+                  value: statsLoading ? '...' : (hasActiveFilters ? filteredTodayDemoCount : (stats?.today_demo ?? 0)),
+                  icon: '🖥️',
+                  color: 'emerald'
+                }
               ].map((item, idx) => (
                 <div key={idx} className="bg-white p-5 rounded-3xl border border-slate-200/85 shadow-sm flex items-center gap-4">
                   <span className="text-3xl shrink-0">{item.icon}</span>
                   <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">{item.label}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">{item.label}</span>
+                      {hasActiveFilters && (idx === 0 || idx === 1) && (
+                        <span className="text-[9px] font-extrabold text-indigo-600 bg-indigo-50 border border-indigo-200 px-1.5 py-0.2 rounded-full">
+                          Filtered
+                        </span>
+                      )}
+                    </div>
                     <span className="text-xl font-black text-slate-800 mt-0.5 block">{item.value}</span>
                   </div>
                 </div>
@@ -2364,7 +2441,7 @@ export default function AdminLeads() {
                       <th className="px-3 py-3 w-10 text-center">
                         <input
                           type="checkbox"
-                          checked={leads.length > 0 && selectedLeadIds.length === leads.length}
+                          checked={displayedLeads.length > 0 && selectedLeadIds.length === displayedLeads.length}
                           onChange={handleSelectAll}
                           className="w-4 h-4 rounded text-[#38b34a] border-slate-300 focus:ring-[#38b34a]"
                         />
@@ -2390,14 +2467,14 @@ export default function AdminLeads() {
                           </div>
                         </td>
                       </tr>
-                    ) : leads.length === 0 ? (
+                    ) : displayedLeads.length === 0 ? (
                       <tr>
                         <td colSpan="10" className="px-6 py-12 text-center text-slate-400 font-bold">
                           No matching leads found.
                         </td>
                       </tr>
                     ) : (
-                      leads.map(lead => {
+                      displayedLeads.map(lead => {
                         const isSelected = selectedLeadIds.includes(lead.id)
                         return (
                           <tr
