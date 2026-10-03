@@ -159,32 +159,25 @@ export const isGeneralClientLead = (lead) => {
 
 export const getLeadProductDisplay = (lead) => {
   if (!lead) return 'Generic Inquiry'
-  if (lead.is_general_client) {
-    const srv = lead.software_requirements || lead.product_name || lead.product_interest || 'Services'
-    return `General Client (${srv})`
-  }
-  if (lead.product_name && lead.product_name.trim() !== '') {
-    return lead.product_name
-  }
-  if (lead.software_requirements && lead.software_requirements.trim() !== '') {
-    return `General Client (${lead.software_requirements})`
-  }
-  if (lead.product_interest && lead.product_interest.trim() !== '') {
-    return lead.product_interest
-  }
-  if (lead.notes && typeof lead.notes === 'string' && lead.notes.toLowerCase().includes('general client:')) {
+  let srv = lead.software_requirements || lead.product_name || lead.product_interest
+  if (!srv && lead.notes && typeof lead.notes === 'string' && lead.notes.toLowerCase().includes('general client:')) {
     const parts = lead.notes.split(/general client:/i)
     if (parts.length > 1) {
-      const extracted = parts[1].split('.')[0].trim()
-      if (extracted) {
-        return `General Client (${extracted})`
-      }
+      srv = parts[1].split('.')[0].trim()
     }
   }
-  if (lead.category_name === 'General Client' || lead.category_id === 'general_client') {
-    return 'General Client Services'
+  if (!srv) {
+    if (lead.category_name && lead.category_name !== 'General Client') {
+      srv = lead.category_name
+    } else {
+      srv = 'General Services'
+    }
   }
-  return 'Generic Inquiry'
+  srv = String(srv).replace(/^General Client\s*\((.*)\)$/i, '$1').trim()
+  if (srv.toLowerCase() === 'general client services' || srv.toLowerCase() === 'general client') {
+    srv = 'General Services'
+  }
+  return srv || 'Generic Inquiry'
 }
 
 const formatForDateTimeInput = (dateStr) => {
@@ -379,6 +372,7 @@ export default function AdminLeads() {
   const [activityLead, setActivityLead] = useState(null)
   const [isBulkAssignOpen, setIsBulkAssignOpen] = useState(false)
   const [selectedDrawerLead, setSelectedDrawerLead] = useState(null) // Slide-over detail drawer
+  const [leadDrawerTab, setLeadDrawerTab] = useState('edit')
 
   // Follow-up Modal State
   const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false)
@@ -1155,7 +1149,6 @@ export default function AdminLeads() {
       setError('')
       const params = {
         page,
-        search: search || undefined,
         status: statusFilter || undefined,
         priority: priorityFilter || undefined,
         brought_by: broughtByFilter !== 'all' ? broughtByFilter : undefined,
@@ -1167,7 +1160,6 @@ export default function AdminLeads() {
       const gcParams = {
         sold_by: broughtByFilter !== 'all' ? broughtByFilter : undefined,
         sort_dir: sortDir || undefined,
-        search: search || undefined,
         only_unpaid: 1,
       }
 
@@ -1239,6 +1231,8 @@ export default function AdminLeads() {
         notes: `General Client: ${gc.software_requirements || 'Deliverables'}`,
         sold_by: gc.sold_by || gc.sold_by_name || 'Admin',
         employee: { full_name: gc.sold_by || gc.sold_by_name || 'Admin' },
+        quotations_count: gc.quotations_count || (Array.isArray(gc.quotations) ? gc.quotations.length : 0),
+        quotations: gc.quotations || [],
         activities: []
       }))
 
@@ -2002,13 +1996,44 @@ export default function AdminLeads() {
       const name = (lead.client_name || '').toLowerCase()
       const comp = (lead.company_name || '').toLowerCase()
       const phone = (lead.client_phone || '').toLowerCase()
+      const altPhone = (lead.client_alternate_phone || '').toLowerCase()
       const email = (lead.client_email || '').toLowerCase()
       const id = (lead.lead_id || String(lead.id) || '').toLowerCase()
-      const sold = (lead.sold_by || lead.employee?.full_name || '').toLowerCase()
+      const sold = String(lead.sold_by || lead.employee?.full_name || lead.sold_by_name || '').toLowerCase()
       const prod = (lead.product_name || lead.software_requirements || '').toLowerCase()
-      return name.includes(q) || comp.includes(q) || phone.includes(q) || email.includes(q) || id.includes(q) || sold.includes(q) || prod.includes(q)
+
+      let partnerName = (lead.partner?.partner_name || '').toLowerCase()
+      let partnerOrg = (lead.partner?.organization_name || '').toLowerCase()
+      let partnerId = (lead.partner?.partner_id || '').toLowerCase()
+
+      if (partnerMap) {
+        const rawCode = String(lead.sold_by || lead.employee_id || '').trim()
+        const pidMatch = rawCode.match(/PIDIN\d+/i) || rawCode.match(/PID\d+/i)
+        const codeKey = pidMatch ? pidMatch[0].toUpperCase() : rawCode.toLowerCase()
+        
+        const pObj = partnerMap.get(codeKey) || partnerMap.get(rawCode.toLowerCase()) || partnerMap.get(rawCode)
+        if (pObj) {
+          if (!partnerName) partnerName = (pObj.partner_name || '').toLowerCase()
+          if (!partnerOrg) partnerOrg = (pObj.organization_name || '').toLowerCase()
+          if (!partnerId) partnerId = (pObj.partner_id || '').toLowerCase()
+        }
+      }
+
+      return (
+        name.includes(q) ||
+        comp.includes(q) ||
+        phone.includes(q) ||
+        altPhone.includes(q) ||
+        email.includes(q) ||
+        id.includes(q) ||
+        sold.includes(q) ||
+        prod.includes(q) ||
+        partnerName.includes(q) ||
+        partnerOrg.includes(q) ||
+        partnerId.includes(q)
+      )
     })
-  }, [leads, searchInput])
+  }, [leads, searchInput, partnerMap])
 
   const hasActiveFilters = Boolean(
     searchInput.trim() ||
@@ -2332,7 +2357,7 @@ export default function AdminLeads() {
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="Search name, phone, company..."
+                    placeholder="Search client name, phone, generated by..."
                     value={searchInput}
                     onChange={e => setSearchInput(e.target.value)}
                     className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a] pr-8"
@@ -2446,21 +2471,18 @@ export default function AdminLeads() {
                           className="w-4 h-4 rounded text-[#38b34a] border-slate-300 focus:ring-[#38b34a]"
                         />
                       </th>
-                      <th className="px-3 py-3 max-w-[180px]">Client Name</th>
+                      <th className="px-3 py-3 max-w-[200px]">Client Name</th>
                       <th className="px-3 py-3 max-w-[160px]">Contact Person & Number</th>
-                      <th className="px-3 py-3 max-w-[150px]">Sold By</th>
-                      <th className="px-3 py-3 max-w-[160px]">Master Partner</th>
-                      <th className="px-3 py-3 whitespace-nowrap">Generate Date</th>
+                      <th className="px-3 py-3 max-w-[150px]">Generated By</th>
                       <th className="px-3 py-3 max-w-[140px]">Status & Priority</th>
-                      <th className="px-3 py-3 max-w-[170px]">Product Category</th>
-                      <th className="px-3 py-3 max-w-[180px]">Last Logged Remarks</th>
+                      <th className="px-3 py-3 max-w-[170px]">Product/Service</th>
                       <th className="px-3 py-3 text-center max-w-[220px] sticky right-0 bg-slate-50 z-10 shadow-[-6px_0_12px_rgba(0,0,0,0.06)]">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
                     {loading ? (
                       <tr>
-                        <td colSpan="10" className="px-6 py-12 text-center text-slate-400 font-bold">
+                        <td colSpan="7" className="px-6 py-12 text-center text-slate-400 font-bold">
                           <div className="flex flex-col items-center justify-center gap-2">
                             <div className="w-8 h-8 rounded-full border-4 border-slate-100 border-t-[#38b34a] animate-spin" />
                             <span>Loading leads database...</span>
@@ -2469,13 +2491,16 @@ export default function AdminLeads() {
                       </tr>
                     ) : displayedLeads.length === 0 ? (
                       <tr>
-                        <td colSpan="10" className="px-6 py-12 text-center text-slate-400 font-bold">
+                        <td colSpan="7" className="px-6 py-12 text-center text-slate-400 font-bold">
                           No matching leads found.
                         </td>
                       </tr>
                     ) : (
                       displayedLeads.map(lead => {
                         const isSelected = selectedLeadIds.includes(lead.id)
+                        const rawClientName = lead.company_name || lead.client_name || 'N/A'
+                        const truncatedClientName = rawClientName.length > 30 ? rawClientName.slice(0, 30) + '..........' : rawClientName
+
                         return (
                           <tr
                             key={lead.id}
@@ -2489,19 +2514,23 @@ export default function AdminLeads() {
                                 className="w-4 h-4 rounded text-[#38b34a] border-slate-300 focus:ring-[#38b34a]"
                               />
                             </td>
-                            <td className="px-3 py-3 max-w-[180px]">
+                            <td className="px-3 py-3 max-w-[200px]">
                               <div className="flex flex-col items-start gap-1">
                                 <span
                                   onClick={() => setSelectedDrawerLead(lead)}
-                                  className="font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer block text-xs leading-snug break-words"
+                                  title={rawClientName}
+                                  className="font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer block text-xs leading-snug whitespace-nowrap overflow-hidden text-ellipsis max-w-full"
                                 >
-                                  {lead.company_name || lead.client_name}
+                                  {truncatedClientName}
                                 </span>
                                 {isGeneralClientLead(lead) && (
                                   <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-blue-800 border border-blue-200 whitespace-nowrap">
                                     💼 General Client
                                   </span>
                                 )}
+                                <span className="text-[10px] font-semibold text-slate-500 flex items-center gap-1 whitespace-nowrap">
+                                  📅 {formatFollowUpDisplay(lead.created_at || lead.createdAt)}
+                                </span>
                               </div>
                             </td>
                             <td className="px-3 py-3 max-w-[160px]">
@@ -2523,14 +2552,6 @@ export default function AdminLeads() {
                             <td className="px-3 py-3 max-w-[150px]">
                               {renderLeadOwnerCell(lead, partnerMap)}
                             </td>
-                            <td className="px-3 py-3 max-w-[160px]">
-                              {renderMasterPartnerCell(lead, partnerMap)}
-                            </td>
-                            <td className="px-3 py-3 whitespace-nowrap">
-                              <span className="text-slate-600 font-semibold text-[11px] flex items-center gap-1">
-                                <span>📅</span> {formatFollowUpDisplay(lead.created_at || lead.createdAt)}
-                              </span>
-                            </td>
                             <td className="px-3 py-3 max-w-[140px]">
                               <div className="flex flex-wrap gap-1">
                                 {getStatusBadge(lead.lead_status)}
@@ -2549,81 +2570,63 @@ export default function AdminLeads() {
                                 )}
                               </div>
                             </td>
-                            <td className="px-3 py-3 max-w-[180px]">
-                              <p className="line-clamp-3 text-slate-500 text-xs font-medium break-words leading-tight" title={getLatestRemark(lead)}>
-                                {getLatestRemark(lead)}
-                              </p>
-                            </td>
                             <td className={`px-3 py-3 text-center sticky right-0 transition-colors shadow-[-6px_0_12px_rgba(0,0,0,0.06)] max-w-[220px] ${isSelected ? 'bg-slate-50' : 'bg-white group-hover:bg-slate-50'}`}>
-                              <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                                {isGeneralClientLead(lead) && (
-                                  <>
+                              <div className="flex flex-col items-center justify-center gap-1.5">
+                                <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                                  <button
+                                    onClick={() => setSelectedDrawerLead(lead)}
+                                    title="View Details"
+                                    className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition cursor-pointer"
+                                  >
+                                    👁️
+                                  </button>
+                                  <button
+                                    onClick={() => openFollowUpModal(lead)}
+                                    title="Schedule Follow-up"
+                                    className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition cursor-pointer"
+                                  >
+                                    📅
+                                  </button>
+                                  {isGeneralClientLead(lead) && (
                                     <button
                                       type="button"
                                       onClick={() => handleOpenQuotationBuilder(lead)}
                                       title="Create Quotation"
-                                      className="text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-1 rounded-md flex items-center gap-1 cursor-pointer transition shadow-xs"
+                                      className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition cursor-pointer"
                                     >
-                                      <span>📝</span>
-                                      <span>+ Quotation</span>
+                                      📝
                                     </button>
+                                  )}
+                                  <button
+                                    onClick={() => {
+                                      setSelectedLeadForAssign(lead)
+                                      setShowAssignModal(true)
+                                      setSelectedDate('')
+                                    }}
+                                    title="Book Demo Slot"
+                                    className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition cursor-pointer"
+                                  >
+                                    🖥️
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteLead(lead.id)}
+                                    title="Delete Lead"
+                                    className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition cursor-pointer"
+                                  >
+                                    🗑️
+                                  </button>
+                                </div>
+                                {isGeneralClientLead(lead) && (
+                                  <div className="mt-0.5">
                                     <button
                                       type="button"
                                       onClick={() => handleViewClientQuotations(lead)}
-                                      title="View Client Quotations"
-                                      className="text-[10px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2 py-1 rounded-md flex items-center gap-1 cursor-pointer transition shadow-xs"
+                                      className="text-[10px] text-slate-500 hover:text-blue-600 font-bold hover:underline inline-flex items-center gap-1 cursor-pointer"
                                     >
-                                      <span>📋</span>
-                                      <span>Quotes</span>
+                                      <span>📋 {lead.quotations_count || lead.quotations?.length || 0} Quotation(s) Built</span>
                                     </button>
-                                  </>
+                                  </div>
                                 )}
-                                <button
-                                  onClick={() => openFollowUpModal(lead)}
-                                  title="Schedule Follow-up"
-                                  className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition cursor-pointer"
-                                >
-                                  📅
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setSelectedLeadForAssign(lead)
-                                    setShowAssignModal(true)
-                                    setSelectedDate('')
-                                  }}
-                                  title="Book Demo Slot"
-                                  className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition cursor-pointer"
-                                >
-                                  🖥️
-                                </button>
-                                <button
-                                  onClick={() => openMailModal(lead)}
-                                  title="Send Demo Email"
-                                  className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition cursor-pointer"
-                                >
-                                  ✉️
-                                </button>
-                                <button
-                                  onClick={() => openEditModal(lead)}
-                                  title="Edit Lead"
-                                  className="p-1.5 text-slate-500 hover:text-[#38b34a] hover:bg-green-50 rounded-xl transition cursor-pointer"
-                                >
-                                  ✏️
-                                </button>
-                                <button
-                                  onClick={() => openStatusModal(lead)}
-                                  title="Change Status"
-                                  className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition cursor-pointer"
-                                >
-                                  🛡️
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteLead(lead.id)}
-                                  title="Delete Lead"
-                                  className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition cursor-pointer"
-                                >
-                                  🗑️
-                                </button>
                               </div>
                             </td>
                           </tr>
@@ -4228,13 +4231,14 @@ export default function AdminLeads() {
                   animate={{ x: 0 }}
                   exit={{ x: '100%' }}
                   transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-                  className="pointer-events-auto w-screen max-w-md"
+                  className="pointer-events-auto w-screen max-w-lg sm:max-w-xl"
                 >
                   <div className="flex h-full flex-col overflow-y-auto bg-white shadow-2xl border-l border-slate-200 text-slate-800 text-xs">
                     {/* Header */}
                     <div className="p-6 border-b border-slate-100">
                       <div className="flex items-start justify-between">
                         <div>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block font-sans">LEAD DOSSIER</span>
                           <h2 className="text-base font-black text-slate-850 uppercase">{selectedDrawerLead.company_name || selectedDrawerLead.client_name}</h2>
                           {selectedDrawerLead.client_name && selectedDrawerLead.company_name && selectedDrawerLead.client_name !== selectedDrawerLead.company_name && (
                             <span className="text-slate-450 block mt-0.5 font-medium">👤 Contact: {selectedDrawerLead.client_name}</span>
@@ -4242,7 +4246,7 @@ export default function AdminLeads() {
                         </div>
                         <button
                           onClick={() => setSelectedDrawerLead(null)}
-                          className="rounded-md text-slate-400 hover:text-slate-650 cursor-pointer"
+                          className="rounded-md text-slate-400 hover:text-slate-650 cursor-pointer p-1"
                         >
                           ✕
                         </button>
@@ -4253,109 +4257,298 @@ export default function AdminLeads() {
                       </div>
                     </div>
 
-                    {/* Content Body */}
-                    <div className="flex-1 py-6 px-6 space-y-6">
-                      {/* Client Details Section */}
-                      <div className="space-y-3.5">
-                        <h3 className="text-[10px] font-black uppercase text-slate-450 tracking-widest border-b border-slate-100 pb-1.5">Contact & Package Details</h3>
-                        <div className="grid grid-cols-2 gap-y-3.5 gap-x-2 text-xs">
-                          <div>
-                            <span className="text-[10px] font-bold text-slate-400 block uppercase">Phone</span>
-                            <span className="font-semibold text-slate-700 block mt-0.5">{selectedDrawerLead.client_phone}</span>
-                          </div>
-                          <div>
-                            <span className="text-[10px] font-bold text-slate-400 block uppercase">Email</span>
-                            <span className="font-semibold text-slate-700 block mt-0.5 break-all">{selectedDrawerLead.client_email || '--'}</span>
-                          </div>
-                          <div>
-                            <span className="text-[10px] font-bold text-slate-400 block uppercase">Budget</span>
-                            <span className="font-semibold text-slate-700 block mt-0.5">{selectedDrawerLead.budget || '--'}</span>
-                          </div>
-                          <div>
-                            <span className="text-[10px] font-bold text-slate-400 block uppercase">Source</span>
-                            <span className="font-semibold text-slate-700 block mt-0.5">{selectedDrawerLead.lead_source || 'Website'}</span>
-                          </div>
-                          <div className="col-span-2">
-                            <span className="text-[10px] font-bold text-slate-400 block uppercase">Product Package</span>
-                            <span className="font-semibold text-slate-700 block mt-0.5">{selectedDrawerLead.product_name || 'Generic Inquiry'}</span>
-                          </div>
-                          {selectedDrawerLead.address && (
-                            <div className="col-span-2">
-                              <span className="text-[10px] font-bold text-slate-400 block uppercase">Address</span>
-                              <span className="font-semibold text-slate-600 block mt-0.5 leading-normal">
-                                {selectedDrawerLead.address}, {selectedDrawerLead.city}, {selectedDrawerLead.state} - {selectedDrawerLead.pin_code}
-                              </span>
-                            </div>
-                          )}
-                          {selectedDrawerLead.notes && (
-                            <div className="col-span-2">
-                              <span className="text-[10px] font-bold text-slate-400 block uppercase">Notes Summary</span>
-                              <p className="font-semibold text-slate-500 block mt-0.5 leading-relaxed bg-slate-50 p-2.5 rounded-2xl border border-slate-100">
-                                {selectedDrawerLead.notes}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                    {/* Dossier Navigation Tabs (Matching Users.jsx Dossier Tabs) */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 bg-slate-50 border-b border-slate-200 px-4 py-3 z-10 shrink-0">
+                      {[
+                        { id: 'edit', label: 'Edit Lead', icon: '✏️' },
+                        { id: 'followup', label: 'Schedule Followup', icon: '📅' },
+                        { id: 'quotations', label: 'View Quotations', icon: '📋' },
+                        { id: 'demo', label: 'Book Demo Slot', icon: '🖥️' },
+                      ].map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => {
+                            setLeadDrawerTab(t.id)
+                            if (t.id === 'quotations') {
+                              handleViewClientQuotations(selectedDrawerLead)
+                            }
+                          }}
+                          className={`flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer border ${
+                            leadDrawerTab === t.id
+                              ? 'bg-[#1e3e6b] text-white border-[#1e3e6b] shadow-sm'
+                              : 'bg-white hover:bg-slate-50 text-slate-500 border-slate-200'
+                          }`}
+                        >
+                          <span>{t.icon}</span>
+                          <span className="truncate">{t.label}</span>
+                        </button>
+                      ))}
+                    </div>
 
-                      {/* Demo slot details if booked */}
-                      {selectedDrawerLead.demo_slot && (
-                        <div className="space-y-3 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800">
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-600">🖥️ Demo Session Booked</h4>
-                          <div className="text-xs space-y-1 font-semibold">
-                            <p>Slot ID: {selectedDrawerLead.demo_slot_id}</p>
-                            <p>Schedule: {selectedDrawerLead.demo_slot}</p>
-                            {selectedDrawerLead.demo_notes && <p className="text-[11px] mt-1 text-emerald-700 font-medium">Notes: {selectedDrawerLead.demo_notes}</p>}
+                    {/* Content Body based on selected tab */}
+                    <div className="flex-1 py-6 px-6 space-y-6 overflow-y-auto">
+                      {/* TAB 1: EDIT LEAD */}
+                      {leadDrawerTab === 'edit' && (
+                        <div className="space-y-6 animate-fade-in">
+                          <div className="flex justify-between items-center bg-blue-50/70 border border-blue-100 p-3.5 rounded-2xl">
+                            <div>
+                              <span className="text-xs font-bold text-slate-800 block">Lead Details & Contact Info</span>
+                              <span className="text-[10px] text-slate-500">Edit parameters or update lead profile</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(selectedDrawerLead)}
+                              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition shadow-xs cursor-pointer flex items-center gap-1"
+                            >
+                              <span>✏️</span>
+                              <span>Open Edit Form</span>
+                            </button>
                           </div>
-                          <button
-                            onClick={() => handleCancelBooking(selectedDrawerLead.booking_id)}
-                            className="mt-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-[10px] uppercase cursor-pointer transition active:scale-95 shadow-sm"
-                          >
-                            Cancel Booking
-                          </button>
+
+                          {/* Client Details Section */}
+                          <div className="space-y-3.5">
+                            <h3 className="text-[10px] font-black uppercase text-slate-450 tracking-widest border-b border-slate-100 pb-1.5">Contact & Package Details</h3>
+                            <div className="grid grid-cols-2 gap-y-3.5 gap-x-2 text-xs">
+                              <div>
+                                <span className="text-[10px] font-bold text-slate-400 block uppercase">Phone</span>
+                                <span className="font-semibold text-slate-700 block mt-0.5">{selectedDrawerLead.client_phone}</span>
+                              </div>
+                              <div>
+                                <span className="text-[10px] font-bold text-slate-400 block uppercase">Email</span>
+                                <span className="font-semibold text-slate-700 block mt-0.5 break-all">{selectedDrawerLead.client_email || '--'}</span>
+                              </div>
+                              <div>
+                                <span className="text-[10px] font-bold text-slate-400 block uppercase">Budget</span>
+                                <span className="font-semibold text-slate-700 block mt-0.5">{selectedDrawerLead.budget || '--'}</span>
+                              </div>
+                              <div>
+                                <span className="text-[10px] font-bold text-slate-400 block uppercase">Source</span>
+                                <span className="font-semibold text-slate-700 block mt-0.5">{selectedDrawerLead.lead_source || 'Website'}</span>
+                              </div>
+                              <div className="col-span-2">
+                                <span className="text-[10px] font-bold text-slate-400 block uppercase">Product/Service</span>
+                                <span className="font-semibold text-slate-700 block mt-0.5">{getLeadProductDisplay(selectedDrawerLead)}</span>
+                              </div>
+                              {selectedDrawerLead.address && (
+                                <div className="col-span-2">
+                                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Address</span>
+                                  <span className="font-semibold text-slate-600 block mt-0.5 leading-normal">
+                                    {selectedDrawerLead.address}, {selectedDrawerLead.city}, {selectedDrawerLead.state} - {selectedDrawerLead.pin_code}
+                                  </span>
+                                </div>
+                              )}
+                              {selectedDrawerLead.notes && (
+                                <div className="col-span-2">
+                                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Notes Summary</span>
+                                  <p className="font-semibold text-slate-500 block mt-0.5 leading-relaxed bg-slate-50 p-2.5 rounded-2xl border border-slate-100">
+                                    {selectedDrawerLead.notes}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Action Timeline/History logs */}
+                          <div className="space-y-4">
+                            <div className="flex justify-between items-center border-b border-slate-100 pb-1.5">
+                              <h3 className="text-[10px] font-black uppercase text-slate-450 tracking-widest">Activity Timeline</h3>
+                              <button
+                                onClick={() => openActivityModal(selectedDrawerLead)}
+                                className="text-[10px] font-bold text-[#38b34a] hover:underline cursor-pointer"
+                              >
+                                + Log Activity
+                              </button>
+                            </div>
+
+                            {selectedDrawerLead.activities && selectedDrawerLead.activities.length > 0 ? (
+                              <div className="relative pl-4 border-l border-slate-150 space-y-4 text-xs">
+                                {selectedDrawerLead.activities.map((act, aIdx) => (
+                                  <div key={act.id || aIdx} className="relative">
+                                    <span className="absolute -left-[21px] top-0.5 bg-white border border-slate-300 w-2.5 h-2.5 rounded-full flex items-center justify-center text-[7px]" />
+                                    <div>
+                                      <div className="flex items-center gap-1 font-semibold text-slate-800">
+                                        <span>{getActivityIcon(act.activity_type)}</span>
+                                        <span className="capitalize">{act.activity_type.replace('_', ' ')}</span>
+                                        <span className="text-[10px] text-slate-400 font-medium ml-auto">
+                                          {act.created_at ? act.created_at.split('T')[0] : ''}
+                                        </span>
+                                      </div>
+                                      <p className="text-slate-500 font-bold mt-1 text-[11px]">{act.description}</p>
+                                      {act.notes && (
+                                        <p className="text-slate-400 font-medium mt-0.5 text-[10px] leading-relaxed">
+                                          {act.notes}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-slate-400 font-bold text-center py-4">No logged activity logs available.</p>
+                            )}
+                          </div>
                         </div>
                       )}
 
-                      {/* Action Timeline/History logs */}
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-center border-b border-slate-100 pb-1.5">
-                          <h3 className="text-[10px] font-black uppercase text-slate-450 tracking-widest">Activity Timeline</h3>
-                          <button
-                            onClick={() => openActivityModal(selectedDrawerLead)}
-                            className="text-[10px] font-bold text-[#38b34a] hover:underline"
-                          >
-                            + Log Activity
-                          </button>
-                        </div>
+                      {/* TAB 2: SCHEDULE FOLLOWUP */}
+                      {leadDrawerTab === 'followup' && (
+                        <div className="space-y-6 animate-fade-in">
+                          <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl space-y-3">
+                            <h4 className="text-xs font-black text-amber-900 uppercase flex items-center gap-1.5">
+                              <span>📅 Schedule Next Follow-up</span>
+                            </h4>
+                            <p className="text-[11px] text-amber-800">
+                              Current Follow-up: <strong>{selectedDrawerLead.follow_up_date ? formatFollowUpDisplay(selectedDrawerLead.follow_up_date) : 'Not Scheduled'}</strong>
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => openFollowUpModal(selectedDrawerLead)}
+                              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-sm cursor-pointer transition active:scale-95 flex items-center gap-1.5"
+                            >
+                              <span>📅</span>
+                              <span>Set Follow-up Date & Remark</span>
+                            </button>
+                          </div>
 
-                        {selectedDrawerLead.activities && selectedDrawerLead.activities.length > 0 ? (
-                          <div className="relative pl-4 border-l border-slate-150 space-y-4 text-xs">
-                            {selectedDrawerLead.activities.map((act, aIdx) => (
-                              <div key={act.id || aIdx} className="relative">
-                                {/* Bullet indicator */}
-                                <span className="absolute -left-[21px] top-0.5 bg-white border border-slate-300 w-2.5 h-2.5 rounded-full flex items-center justify-center text-[7px]" />
-                                <div>
-                                  <div className="flex items-center gap-1 font-semibold text-slate-800">
-                                    <span>{getActivityIcon(act.activity_type)}</span>
-                                    <span className="capitalize">{act.activity_type.replace('_', ' ')}</span>
-                                    <span className="text-[10px] text-slate-400 font-medium ml-auto">
-                                      {act.created_at ? act.created_at.split('T')[0] : ''}
+                          <div className="space-y-3">
+                            <h3 className="text-[10px] font-black uppercase text-slate-450 tracking-widest border-b border-slate-100 pb-1.5">Follow-up & Activity History</h3>
+                            {selectedDrawerLead.activities && selectedDrawerLead.activities.length > 0 ? (
+                              <div className="space-y-2.5">
+                                {selectedDrawerLead.activities.map((act, idx) => (
+                                  <div key={idx} className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-1">
+                                    <div className="flex justify-between items-center text-[11px]">
+                                      <span className="font-bold text-slate-800 capitalize">{act.activity_type || 'Follow-up Note'}</span>
+                                      <span className="text-slate-400 text-[10px]">{act.created_at?.split('T')[0]}</span>
+                                    </div>
+                                    <p className="text-xs text-slate-600 font-medium">{act.description || act.notes}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-slate-400 text-center py-4 font-medium">No follow-up activity logs recorded yet.</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* TAB 3: VIEW QUOTATIONS */}
+                      {leadDrawerTab === 'quotations' && (
+                        <div className="space-y-6 animate-fade-in">
+                          <div className="flex justify-between items-center bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl">
+                            <div>
+                              <span className="text-xs font-bold text-emerald-900 block">Client Quotations & Proposals</span>
+                              <span className="text-[10px] text-emerald-700">Build, inspect or manage official GST quotations</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleOpenQuotationBuilder(selectedDrawerLead)
+                                setSelectedDrawerLead(null)
+                              }}
+                              className="px-3.5 py-1.5 bg-[#38b34a] hover:bg-[#2d963b] text-white font-bold text-xs rounded-xl transition shadow-xs cursor-pointer flex items-center gap-1"
+                            >
+                              <span>📝</span>
+                              <span>+ Create Quote</span>
+                            </button>
+                          </div>
+
+                          {loadingQuotationsList ? (
+                            <div className="p-6 text-center text-slate-400 font-bold">Loading quotations list...</div>
+                          ) : selectedClientQuotations && selectedClientQuotations.length > 0 ? (
+                            <div className="space-y-3">
+                              {selectedClientQuotations.map((quo) => (
+                                <div key={quo.id} className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-2.5">
+                                  <div className="flex justify-between items-start">
+                                    <div>
+                                      <span className="font-mono font-bold text-xs text-blue-700 block">{quo.quotation_number || `QUO-${quo.id}`}</span>
+                                      <span className="text-[10px] text-slate-500 font-medium">Date: {formatDateDisplay(quo.quotation_date)}</span>
+                                    </div>
+                                    <span className="text-sm font-black text-emerald-700">
+                                      ₹{Number(quo.total_amount || quo.grand_total || 0).toLocaleString('en-IN')}
                                     </span>
                                   </div>
-                                  <p className="text-slate-500 font-bold mt-1 text-[11px]">{act.description}</p>
-                                  {act.notes && (
-                                    <p className="text-slate-400 font-medium mt-0.5 text-[10px] leading-relaxed">
-                                      {act.notes}
-                                    </p>
-                                  )}
+                                  <div className="flex items-center gap-2 pt-1 border-t border-slate-200/80">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenQuotationDoc(quo, selectedDrawerLead)}
+                                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-900 text-white font-bold text-[10px] rounded-lg transition"
+                                    >
+                                      👁️ View Doc
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEditQuotation(quo, selectedDrawerLead)}
+                                      className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 font-bold text-[10px] rounded-lg transition"
+                                    >
+                                      ✏️ Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenRecordPayment(quo, selectedDrawerLead)}
+                                      className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-[10px] rounded-lg transition ml-auto"
+                                    >
+                                      💳 Mark Paid
+                                    </button>
+                                  </div>
                                 </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="p-6 text-center text-slate-400 font-bold bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                              <p>No official quotations created for this client yet.</p>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleOpenQuotationBuilder(selectedDrawerLead)
+                                  setSelectedDrawerLead(null)
+                                }}
+                                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm cursor-pointer"
+                              >
+                                + Build First Quotation
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* TAB 4: BOOK DEMO SLOT */}
+                      {leadDrawerTab === 'demo' && (
+                        <div className="space-y-6 animate-fade-in">
+                          <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-2xl space-y-3">
+                            <h4 className="text-xs font-black text-indigo-900 uppercase flex items-center gap-1.5">
+                              <span>🖥️ Product Software Demo Session</span>
+                            </h4>
+                            {selectedDrawerLead.demo_slot ? (
+                              <div className="text-xs space-y-1 text-indigo-950 font-semibold bg-white p-3 rounded-xl border border-indigo-200">
+                                <p>Scheduled: {selectedDrawerLead.demo_slot}</p>
+                                {selectedDrawerLead.demo_notes && <p className="text-[11px] text-indigo-700">Notes: {selectedDrawerLead.demo_notes}</p>}
+                                <button
+                                  type="button"
+                                  onClick={() => handleCancelBooking(selectedDrawerLead.booking_id)}
+                                  className="mt-2 bg-rose-600 hover:bg-rose-700 text-white font-bold px-3 py-1.5 rounded-lg text-[10px] uppercase cursor-pointer"
+                                >
+                                  Cancel Booking
+                                </button>
                               </div>
-                            ))}
+                            ) : (
+                              <p className="text-xs text-indigo-800">No active demo session booked for this lead.</p>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedLeadForAssign(selectedDrawerLead)
+                                setShowAssignModal(true)
+                                setSelectedDate('')
+                              }}
+                              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-sm cursor-pointer transition active:scale-95 flex items-center gap-1.5"
+                            >
+                              <span>🖥️</span>
+                              <span>Open Calendar & Assign Demo Slot</span>
+                            </button>
                           </div>
-                        ) : (
-                          <p className="text-slate-400 font-bold text-center py-4">No logged activity logs available.</p>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </motion.div>
