@@ -1233,7 +1233,7 @@ export default function AdminLeads() {
         employee: { full_name: gc.sold_by || gc.sold_by_name || 'Admin' },
         quotations_count: gc.quotations_count || (Array.isArray(gc.quotations) ? gc.quotations.length : 0),
         quotations: gc.quotations || [],
-        activities: []
+        activities: gc.activities || []
       }))
 
       let filteredGc = formattedGenClients
@@ -3980,11 +3980,18 @@ export default function AdminLeads() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md p-6 text-left text-slate-800"
+              className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-xl sm:max-w-2xl p-6 text-left text-slate-800 max-h-[90vh] overflow-y-auto"
             >
               <div className="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
-                <h3 className="text-base font-black uppercase text-slate-800">Schedule Follow-up</h3>
-                <button onClick={() => setIsFollowUpModalOpen(false)} className="text-slate-400 hover:text-slate-600 font-bold cursor-pointer">✕</button>
+                <div>
+                  <h3 className="text-base font-black uppercase text-slate-800">Schedule Follow-up</h3>
+                  {followUpLead && (
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">
+                      Client: <strong className="text-slate-800">{followUpLead.client_name}</strong> {followUpLead.client_phone && `(${followUpLead.client_phone})`}
+                    </p>
+                  )}
+                </div>
+                <button onClick={() => setIsFollowUpModalOpen(false)} className="text-slate-400 hover:text-slate-600 font-bold cursor-pointer text-lg">✕</button>
               </div>
               <form onSubmit={handleFollowUpSubmit} className="space-y-4">
                 <div className="space-y-1">
@@ -4026,6 +4033,58 @@ export default function AdminLeads() {
                 <div className="flex justify-end gap-2.5 pt-4 border-t border-slate-100">
                   <button type="button" onClick={() => setIsFollowUpModalOpen(false)} className="px-4 py-2 border border-slate-200 rounded-full text-xs font-bold text-slate-500 hover:bg-slate-50 cursor-pointer">Cancel</button>
                   <button type="submit" disabled={saving} className="px-5 py-2 bg-[#38b34a] hover:bg-[#2d963b] text-white font-bold text-xs rounded-full cursor-pointer shadow-sm transition">{saving ? 'Scheduling...' : 'Save Follow-up'}</button>
+                </div>
+
+                {/* ACTIVITY & FOLLOW-UP HISTORY TABLE */}
+                <div className="space-y-3 text-left pt-5 border-t border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">📜</span>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">Activity & Follow-up History</h4>
+                  </div>
+                  <div className="border border-slate-200 rounded-2xl overflow-hidden max-h-[220px] overflow-y-auto bg-slate-50/50">
+                    <table className="w-full border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-100 text-slate-600 font-bold border-b border-slate-200 text-[9px] uppercase tracking-wider">
+                          <th className="p-2.5 text-center w-14 border-r border-slate-200">SL NO</th>
+                          <th className="p-2.5 text-left border-r border-slate-200">DATE</th>
+                          <th className="p-2.5 text-left border-r border-slate-200">NEXT FOLLOW-UP DATE</th>
+                          <th className="p-2.5 text-left border-r border-slate-200">ACTION DETAILS</th>
+                          <th className="p-2.5 text-left">NOTES / REMARKS</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 bg-white">
+                        {(() => {
+                          const sortedActivities = (followUpLead?.activities || [])
+                            .slice()
+                            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                          
+                          if (sortedActivities.length === 0) {
+                            return (
+                              <tr>
+                                <td colSpan="5" className="p-6 text-center text-slate-400 italic font-semibold text-xs">
+                                  No follow-up history logged yet.
+                                </td>
+                              </tr>
+                            )
+                          }
+
+                          return sortedActivities.map((act, index) => {
+                            const dateStr = formatFollowUpDisplay(act.created_at)
+                            const nextDateStr = act.scheduled_date ? formatFollowUpDisplay(act.scheduled_date) : '—'
+                            return (
+                              <tr key={act.id || index} className="hover:bg-slate-50 transition-colors">
+                                <td className="p-2.5 text-center font-mono border-r border-slate-200 text-slate-500 font-bold">{index + 1}</td>
+                                <td className="p-2.5 border-r border-slate-200 text-slate-800 font-semibold whitespace-nowrap">{dateStr}</td>
+                                <td className="p-2.5 border-r border-slate-200 text-amber-700 font-semibold whitespace-nowrap">{nextDateStr}</td>
+                                <td className="p-2.5 border-r border-slate-200 text-blue-700 font-bold capitalize">{act.description || act.activity_type}</td>
+                                <td className="p-2.5 text-slate-700 leading-normal max-w-xs truncate" title={act.notes}>{act.notes || '—'}</td>
+                              </tr>
+                            )
+                          })
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </form>
             </motion.div>
