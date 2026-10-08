@@ -5178,7 +5178,7 @@ const AdminUsers = () => {
               </div>
             </div>
 
-            {/* Modal Footers */}
+            {/* Modal Footerss */}
             <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
               <span className="text-xs text-slate-500 font-medium">
                 General Client Follow-up Records & Status Timeline
