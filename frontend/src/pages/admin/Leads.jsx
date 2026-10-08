@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router-dom'
 import AdminProposals from './Proposals'
 import {
   getAdminLeads as getLeads,
+  getAdminLeadDetails,
   getAdminLeadStats as getLeadStats,
   createAdminLead as createLead,
   updateAdminLead as updateLead,
@@ -209,6 +210,18 @@ const formatFollowUpDisplay = (dateStr) => {
     minute: '2-digit',
     hour12: true
   })
+}
+
+const getActivityIcon = (type) => {
+  const icons = {
+    call: '📞',
+    email: '✉️',
+    meeting: '🤝',
+    follow_up: '📅',
+    followup_scheduled: '📅',
+    note: '📝'
+  }
+  return icons[type] || '📝'
 }
 
 const normalizeService = (srv) => {
@@ -1436,8 +1449,10 @@ export default function AdminLeads() {
   }
 
   const fetchAllSlotDataForMonth = async () => {
+    if (!currentMonth || !(currentMonth instanceof Date) || isNaN(currentMonth.getTime())) return
     const startDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
-    const endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth + 1, 0)
+    const endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0)
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return
     const startDateStr = startDate.toISOString().split('T')[0]
     const endDateStr = endDate.toISOString().split('T')[0]
 
@@ -4042,7 +4057,7 @@ export default function AdminLeads() {
                   <h3 className="text-base font-black uppercase text-slate-800">Schedule Follow-up</h3>
                   {followUpLead && (
                     <p className="text-xs text-slate-500 font-medium mt-0.5">
-                      Client: <strong className="text-slate-800">{followUpLead.client_name}</strong> {followUpLead.client_phone && `(${followUpLead.client_phone})`}
+                      Client: <strong className="text-slate-800">{followUpLead.company_name || followUpLead.client_name}</strong> {followUpLead.client_phone && `(${followUpLead.client_phone})`}
                     </p>
                   )}
                 </div>
