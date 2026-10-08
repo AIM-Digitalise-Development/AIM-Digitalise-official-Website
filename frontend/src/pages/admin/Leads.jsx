@@ -35,7 +35,9 @@ import {
   sendQuotation,
   getClientQuotations,
   recordQuotationPayment,
-  getAdminInvoiceDownloadUrl
+  getAdminInvoiceDownloadUrl,
+  recordGeneralClientFollowup,
+  getGeneralClientFollowups,
 } from '../../api/admin/generalClients'
 import { getAdminPartners } from '../../api/admin/partners'
 import { RichAnnexureEditor, numberToIndianWords } from './Users'
@@ -1911,20 +1913,42 @@ export default function AdminLeads() {
   const openFollowUpModal = async (lead) => {
     setFollowUpLead(lead)
     setFollowUpForm({
-      next_date: formatForDateTimeInput(lead.follow_up_date || lead.expected_close_date),
-      status: lead.lead_status || 'new',
+      next_date: formatForDateTimeInput(lead.follow_up_date || lead.expected_close_date || new Date().toISOString().substring(0, 10)),
+      status: lead.lead_status || lead.raw_status || 'new',
       remark: ''
     })
     setIsFollowUpModalOpen(true)
     setLoadingFollowUpHistory(true)
 
     try {
-      const res = await getAdminLeadDetails(lead.id)
-      const acts = res?.data?.data?.activities || res?.data?.activities || res?.data?.data?.history || res?.data?.history || []
-      setFollowUpLead(prev => prev ? {
-        ...prev,
-        activities: acts
-      } : null)
+      if (lead.is_general_client || (typeof lead.id === 'string' && lead.id.startsWith('gc-'))) {
+        const rawId = lead.rawId || lead.id.replace('gc-', '')
+        const res = await getGeneralClientFollowups(rawId)
+        const historyData = res.data?.data || []
+        const formattedActivities = historyData.map(h => ({
+          id: h.id,
+          created_at: h.created_at,
+          scheduled_date: h.next_followup_date,
+          activity_type: 'follow_up',
+          description: `Follow-up status: ${h.status || 'Updated'}`,
+          notes: h.remarks || 'No remarks logged',
+          created_by: h.created_by || 'Admin'
+        }))
+        setFollowUpLead(prev => prev ? {
+          ...prev,
+          activities: formattedActivities
+        } : null)
+      } else {
+        const leadId = lead.rawId || (typeof lead.id === 'string' ? lead.id.replace(/\D/g, '') : lead.id)
+        if (leadId) {
+          const res = await getAdminLeadDetails(leadId)
+          const acts = res?.data?.data?.activities || res?.data?.activities || res?.data?.data?.history || res?.data?.history || []
+          setFollowUpLead(prev => prev ? {
+            ...prev,
+            activities: acts
+          } : null)
+        }
+      }
     } catch (err) {
       console.warn('Could not fetch lead activities:', err)
     } finally {
@@ -1943,15 +1967,29 @@ export default function AdminLeads() {
     try {
       const payload = {
         next_date: followUpForm.next_date,
+        follow_up_date: followUpForm.next_date,
         status: followUpForm.status,
         remark: followUpForm.remark,
-        lost_reason: followUpForm.status === 'lost' ? followUpForm.remark : undefined
+        notes: followUpForm.remark,
+        lost_reason: followUpForm.status === 'lost' || followUpForm.status === 'Not Interested' ? followUpForm.remark : undefined
       }
       
-      const res = await scheduleFollowUp(followUpLead.id, payload)
+      let res;
+      if (followUpLead.is_general_client || (typeof followUpLead.id === 'string' && followUpLead.id.startsWith('gc-'))) {
+        const rawId = followUpLead.rawId || followUpLead.id.replace('gc-', '')
+        res = await recordGeneralClientFollowup(rawId, {
+          next_followup_date: followUpForm.next_date,
+          status: followUpForm.status,
+          remarks: followUpForm.remark
+        })
+      } else {
+        const leadId = followUpLead.rawId || (typeof followUpLead.id === 'string' ? followUpLead.id.replace(/\D/g, '') : followUpLead.id)
+        res = await scheduleFollowUp(leadId || followUpLead.id, payload)
+      }
+
       if (res.data?.success) {
         triggerSuccess('Follow-up scheduled and updated successfully.')
-        const newAct = res.data.data?.activity || res.data?.activity
+        const newAct = res.data.data?.activity || res.data?.activity || res.data.data?.followup || res.data?.followup
         const newHistory = res.data.data?.history || res.data.data?.activities || res.data?.history || res.data?.activities
         if (followUpLead) {
           setFollowUpLead(prev => prev ? {
