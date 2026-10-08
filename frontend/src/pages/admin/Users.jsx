@@ -1985,7 +1985,7 @@ const AdminUsers = () => {
                                     </div>
                                     <p className="font-bold text-slate-800 text-[12px] flex items-center gap-1">
                                       <span>👤</span>
-                                      <span>{c.sold_by_name || c.sold_by || 'Admin Sales Team'}</span>
+                                      <span>{(c.sold_by_name || c.sold_by || 'Admin Sales Team').replace(/\s*\((admin|employee|partner)\)/gi, '').trim()}</span>
                                     </p>
                                     <p className="text-[10px] text-slate-500 font-medium mt-1 flex items-center gap-1">
                                       <span>🏛️</span>
