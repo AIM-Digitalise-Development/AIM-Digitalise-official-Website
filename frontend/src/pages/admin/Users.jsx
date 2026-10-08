@@ -21,6 +21,8 @@ import {
   setCountryPrice,
   getPublicProductsForCountry,
   getSubscriptionClients,
+  recordGeneralClientFollowup,
+  getGeneralClientFollowups,
 } from '../../api/admin/generalClients'
 import { createAdminLead } from '../../api/admin/leads'
 import companyLogo from '../../assets/images/logo.png'
@@ -434,6 +436,19 @@ const AdminUsers = () => {
   const [viewingQuotationDoc, setViewingQuotationDoc] = useState(null)
   const [copiedPayLink, setCopiedPayLink] = useState(false)
 
+  // Follow-up Modal State for General Clients
+  const [showFollowupModal, setShowFollowupModal] = useState(false)
+  const [followupClient, setFollowupClient] = useState(null)
+  const [followupForm, setFollowupForm] = useState({
+    next_followup_date: '',
+    status: 'Attended',
+    remarks: '',
+  })
+  const [clientFollowupHistory, setClientFollowupHistory] = useState([])
+  const [loadingFollowupHistory, setLoadingFollowupHistory] = useState(false)
+  const [savingFollowup, setSavingFollowup] = useState(false)
+
+
   // ============================================================
   // 3. QUOTATION BUILDER STATE
   // ============================================================
@@ -784,6 +799,87 @@ const AdminUsers = () => {
       }
     } catch (err) {
       setErrorMsg('Failed to update status: ' + (err.response?.data?.message || err.message))
+    }
+  }
+
+  // Open Follow-up Modal Handler
+  const handleOpenFollowupModal = async (client) => {
+    setFollowupClient(client)
+    setFollowupForm({
+      next_followup_date: client.next_followup_date || new Date().toISOString().substring(0, 10),
+      status: client.status || 'Attended',
+      remarks: '',
+    })
+    setShowFollowupModal(true)
+    setLoadingFollowupHistory(true)
+    try {
+      const res = await getGeneralClientFollowups(client.id)
+      if (res.data?.success) {
+        setClientFollowupHistory(res.data.data || [])
+      } else {
+        setClientFollowupHistory([])
+      }
+    } catch (err) {
+      console.error('Error fetching general client follow-up history:', err)
+      setClientFollowupHistory([])
+    } finally {
+      setLoadingFollowupHistory(false)
+    }
+  }
+
+  // Save Follow-up Handler
+  const handleSaveFollowup = async (e) => {
+    e.preventDefault()
+    if (!followupForm.next_followup_date) {
+      setErrorMsg('Next follow-up date is required.')
+      return
+    }
+    setSavingFollowup(true)
+    setErrorMsg(null)
+    try {
+      const res = await recordGeneralClientFollowup(followupClient.id, followupForm)
+      if (res.data?.success) {
+        setMessage(`✅ Follow-up recorded for "${followupClient.client_name}"!`)
+
+        // Update client in local state immediately
+        setGeneralClients((prev) =>
+          prev.map((c) =>
+            c.id === followupClient.id
+              ? {
+                  ...c,
+                  next_followup_date: followupForm.next_followup_date,
+                  status: followupForm.status,
+                }
+              : c
+          )
+        )
+        // Update active followupClient object
+        setFollowupClient((prev) =>
+          prev
+            ? {
+                ...prev,
+                next_followup_date: followupForm.next_followup_date,
+                status: followupForm.status,
+              }
+            : null
+        )
+
+        // Refresh history table
+        const historyRes = await getGeneralClientFollowups(followupClient.id)
+        if (historyRes.data?.success) {
+          setClientFollowupHistory(historyRes.data.data || [])
+        }
+
+        // Reset remarks
+        setFollowupForm((prev) => ({ ...prev, remarks: '' }))
+      } else {
+        setErrorMsg(res.data?.message || 'Failed to record follow-up.')
+      }
+    } catch (err) {
+      console.error(err)
+      setErrorMsg('Failed to save follow-up: ' + (err.response?.data?.message || err.message))
+    } finally {
+      setSavingFollowup(false)
     }
   }
 
@@ -2017,21 +2113,35 @@ const AdminUsers = () => {
                                     </div>
                                   </td>
 
-                                  {/* Column 6: Next Follow-up Date */}
+                                  {/* Column 6: Next Follow-up Schedule Badge (Clickable) */}
                                   <td className="px-5 py-4 align-top text-center">
-                                    {c.next_followup_date ? (
-                                      <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-bold inline-flex items-center gap-1 shadow-sm">
-                                        <span>📅</span>
-                                        <span>{formatDateDisplay(c.next_followup_date)}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenFollowupModal(c)}
+                                      title="Click to Schedule / View Follow-up History"
+                                      className="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 border border-blue-200 hover:border-blue-400 text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                                    >
+                                      <span className="text-sm transition-transform group-hover:scale-110">🗓️</span>
+                                      <span>
+                                        {c.next_followup_date ? formatDateDisplay(c.next_followup_date) : 'Schedule Follow-up'}
                                       </span>
-                                    ) : (
-                                      <span className="text-slate-400 text-[10px] italic">Not scheduled</span>
-                                    )}
+                                    </button>
                                   </td>
 
                                   {/* Column 7: Dedicated Action Icon Buttons */}
                                   <td className="px-5 py-4 align-top text-center">
                                     <div className="flex items-center justify-center gap-1.5">
+                                      {/* 0. Follow-up Icon Button */}
+                                      <button
+                                        onClick={() => handleOpenFollowupModal(c)}
+                                        title="Follow-up & Activity Log"
+                                        className="p-2 rounded-xl border border-blue-200 bg-blue-50/70 text-blue-600 hover:bg-blue-600 hover:text-white transition-all font-bold cursor-pointer flex items-center justify-center shadow-sm"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 002-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                      </button>
+
                                       {/* 1. View Client Icon Button */}
                                       <button
                                         onClick={() => handleOpenViewClientModal(c)}
@@ -4867,6 +4977,219 @@ const AdminUsers = () => {
                   </svg>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* GENERAL CLIENT FOLLOW-UP MODAL */}
+      {/* ============================================================ */}
+      {showFollowupModal && followupClient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-400 border border-blue-400/30 flex items-center justify-center text-lg font-bold">
+                  📅
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-black text-white">
+                      General Client Follow-Up
+                    </h3>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30">
+                      {followupClient.client_id}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 font-medium">
+                    {followupClient.client_name} {followupClient.company_name ? `• ${followupClient.company_name}` : ''} ({followupClient.contact_number || followupClient.email || 'No Contact Info'})
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFollowupModal(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center text-lg font-bold transition-all cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Content Body */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-white">
+              {/* Top Section: Log New Follow-up Form */}
+              <form onSubmit={handleSaveFollowup} className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-4 shadow-sm">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">📝</span>
+                    <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">
+                      Schedule Next Follow-up & Update Status
+                    </h4>
+                  </div>
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    Updates will sync to client record & history log
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Next Followup Date */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Next Follow-up Date <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={followupForm.next_followup_date}
+                      onChange={(e) => setFollowupForm({ ...followupForm, next_followup_date: e.target.value })}
+                      className="w-full px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                    />
+                  </div>
+
+                  {/* Update Status */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Update Client Status
+                    </label>
+                    <select
+                      value={followupForm.status}
+                      onChange={(e) => setFollowupForm({ ...followupForm, status: e.target.value })}
+                      className="w-full px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer"
+                    >
+                      {STATUS_OPTIONS.map((st) => (
+                        <option key={st} value={st}>
+                          {STATUS_ICONS[st]} {st}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Remarks / Notes */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Follow-up Remarks / Notes
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Enter details of conversation, client response, requirement updates, or next action items..."
+                    value={followupForm.remarks}
+                    onChange={(e) => setFollowupForm({ ...followupForm, remarks: e.target.value })}
+                    className="w-full px-3.5 py-2 rounded-xl text-xs border border-slate-300 bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                  />
+                </div>
+
+                {/* Submit Row */}
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    type="submit"
+                    disabled={savingFollowup}
+                    className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50 flex items-center gap-2 active:scale-95"
+                  >
+                    {savingFollowup ? (
+                      <>
+                        <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span>Saving Follow-up...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>💾 Save Follow-up Record</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+
+              {/* Bottom Section: Follow-up History Table */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">📜</span>
+                    <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">
+                      Follow-up History & Activity Logs
+                    </h4>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
+                      {clientFollowupHistory.length} Record{clientFollowupHistory.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                </div>
+
+                {loadingFollowupHistory ? (
+                  <div className="py-8 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
+                    <span className="w-4 h-4 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin" />
+                    <span>Fetching follow-up history from database...</span>
+                  </div>
+                ) : clientFollowupHistory.length === 0 ? (
+                  <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-300">
+                    <span className="text-2xl block mb-1">📭</span>
+                    <p className="text-xs font-bold text-slate-700">No past follow-up records found</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Use the form above to log the first follow-up record for this client.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <table className="w-full text-left border-collapse min-w-[650px]">
+                      <thead>
+                        <tr className="bg-slate-100 text-slate-700 text-[11px] uppercase tracking-wider font-extrabold border-b border-slate-200">
+                          <th className="px-4 py-3 text-center w-12">#</th>
+                          <th className="px-4 py-3">Logged Date & Time</th>
+                          <th className="px-4 py-3">Scheduled Follow-up</th>
+                          <th className="px-4 py-3 text-center">Status</th>
+                          <th className="px-4 py-3">Remarks / Notes</th>
+                          <th className="px-4 py-3 text-center">Logged By</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 text-xs">
+                        {clientFollowupHistory.map((h, idx) => (
+                          <tr key={h.id || idx} className="hover:bg-slate-50 transition-colors">
+                            <td className="px-4 py-3 text-center font-bold text-slate-400">
+                              {idx + 1}
+                            </td>
+                            <td className="px-4 py-3 font-semibold text-slate-700 whitespace-nowrap">
+                              {h.created_at ? new Date(h.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
+                            </td>
+                            <td className="px-4 py-3 font-bold text-blue-600 whitespace-nowrap">
+                              {h.next_followup_date ? (
+                                <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-[11px] inline-flex items-center gap-1">
+                                  📅 {formatDateDisplay(h.next_followup_date)}
+                                </span>
+                              ) : '—'}
+                            </td>
+                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${STATUS_STYLES[h.status] || STATUS_STYLES['Attended']}`}>
+                                {STATUS_ICONS[h.status] || '👋'} {h.status || 'Attended'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-slate-600 max-w-xs leading-relaxed">
+                              {h.remarks ? h.remarks : <span className="text-slate-400 italic">No remarks recorded</span>}
+                            </td>
+                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-300">
+                                👤 {h.created_by || 'Admin'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+              <span className="text-xs text-slate-500 font-medium">
+                General Client Follow-up Records & Status Timeline
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowFollowupModal(false)}
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs transition-all shadow-sm cursor-pointer"
+              >
+                Close Window
+              </button>
             </div>
           </div>
         </div>

@@ -27,6 +27,13 @@ export const updateGeneralClientStatus = (id, status) =>
 export const deleteGeneralClient = (id) =>
   client.delete(`/admin/general-clients/${id}`)
 
+export const recordGeneralClientFollowup = (clientId, data) =>
+  client.post(`/admin/general-clients/${clientId}/follow-up`, data)
+
+export const getGeneralClientFollowups = (clientId) =>
+  client.get(`/admin/general-clients/${clientId}/follow-ups`)
+
+
 // General Services Catalog API endpoints (/admin/general-services)
 export const getGeneralServices = () =>
   client.get('/admin/general-services')
