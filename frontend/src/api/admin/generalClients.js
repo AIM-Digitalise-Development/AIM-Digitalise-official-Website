@@ -1,6 +1,6 @@
 import client from '../client'
 
-// General Clients API endpoints
+// General Clients API endpoint
 export const getGeneralClients = (params = {}) => {
   const query = new URLSearchParams()
   Object.entries(params).forEach(([k, v]) => {
