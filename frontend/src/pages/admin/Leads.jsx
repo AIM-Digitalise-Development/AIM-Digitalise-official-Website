@@ -1906,7 +1906,9 @@ export default function AdminLeads() {
     return lead.notes || 'No remarks logged'
   }
 
-  const openFollowUpModal = (lead) => {
+  const [loadingFollowUpHistory, setLoadingFollowUpHistory] = useState(false)
+
+  const openFollowUpModal = async (lead) => {
     setFollowUpLead(lead)
     setFollowUpForm({
       next_date: formatForDateTimeInput(lead.follow_up_date || lead.expected_close_date),
@@ -1914,6 +1916,20 @@ export default function AdminLeads() {
       remark: ''
     })
     setIsFollowUpModalOpen(true)
+    setLoadingFollowUpHistory(true)
+
+    try {
+      const res = await getAdminLeadDetails(lead.id)
+      const acts = res?.data?.data?.activities || res?.data?.activities || res?.data?.data?.history || res?.data?.history || []
+      setFollowUpLead(prev => prev ? {
+        ...prev,
+        activities: acts
+      } : null)
+    } catch (err) {
+      console.warn('Could not fetch lead activities:', err)
+    } finally {
+      setLoadingFollowUpHistory(false)
+    }
   }
 
   const handleFollowUpSubmit = async (e) => {
@@ -1935,13 +1951,14 @@ export default function AdminLeads() {
       const res = await scheduleFollowUp(followUpLead.id, payload)
       if (res.data?.success) {
         triggerSuccess('Follow-up scheduled and updated successfully.')
-        const newAct = res.data.data?.activity
-        if (newAct) {
+        const newAct = res.data.data?.activity || res.data?.activity
+        const newHistory = res.data.data?.history || res.data.data?.activities || res.data?.history || res.data?.activities
+        if (followUpLead) {
           setFollowUpLead(prev => prev ? {
             ...prev,
             follow_up_date: followUpForm.next_date,
             lead_status: followUpForm.status,
-            activities: [newAct, ...(prev.activities || [])]
+            activities: newHistory || (newAct ? [newAct, ...(prev.activities || [])] : prev.activities)
           } : null)
         }
         setIsFollowUpModalOpen(false)
@@ -4039,7 +4056,7 @@ export default function AdminLeads() {
                 <div className="space-y-3 text-left pt-5 border-t border-slate-200">
                   <div className="flex items-center gap-2">
                     <span className="text-base">📜</span>
-                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">Activity & Follow-up History</h4>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">Follow-up History</h4>
                   </div>
                   <div className="border border-slate-200 rounded-2xl overflow-hidden max-h-[220px] overflow-y-auto bg-slate-50/50">
                     <table className="w-full border-collapse text-xs">
@@ -4054,11 +4071,44 @@ export default function AdminLeads() {
                       </thead>
                       <tbody className="divide-y divide-slate-200 bg-white">
                         {(() => {
-                          const sortedActivities = (followUpLead?.activities || [])
-                            .slice()
-                            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                          if (loadingFollowUpHistory) {
+                            return (
+                              <tr>
+                                <td colSpan="5" className="p-6 text-center text-slate-500 font-semibold text-xs">
+                                  <span className="inline-block animate-spin mr-2">⏳</span> Loading follow-up history...
+                                </td>
+                              </tr>
+                            )
+                          }
+
+                          const allActivities = followUpLead?.activities || []
+                          const followUpActivities = allActivities.filter(act => {
+                            if (!act) return false
+                            const type = (act.activity_type || '').toLowerCase()
+                            const desc = (act.description || '').toLowerCase()
+                            const notes = (act.notes || '').toLowerCase()
+
+                            // Exclude automated system logs
+                            if (desc.includes('automated welcome') || desc.includes('welcome email') || desc.includes('lead created') || notes.includes('welcome email')) {
+                              return false
+                            }
+
+                            // Include if type is follow_up, call, or meeting
+                            if (type === 'follow_up' || type === 'call' || type === 'meeting') return true
+
+                            // Include if description indicates follow-up or status change
+                            if (desc.includes('follow-up') || desc.includes('status changed') || desc.includes('status updated')) return true
+
+                            // Include if scheduled_date is present
+                            if (act.scheduled_date) return true
+
+                            // Fallback: if there are any notes/remarks, show them as follow-up history
+                            if (act.notes || act.description) return true
+
+                            return false
+                          }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
                           
-                          if (sortedActivities.length === 0) {
+                          if (followUpActivities.length === 0) {
                             return (
                               <tr>
                                 <td colSpan="5" className="p-6 text-center text-slate-400 italic font-semibold text-xs">
@@ -4068,7 +4118,7 @@ export default function AdminLeads() {
                             )
                           }
 
-                          return sortedActivities.map((act, index) => {
+                          return followUpActivities.map((act, index) => {
                             const dateStr = formatFollowUpDisplay(act.created_at)
                             const nextDateStr = act.scheduled_date ? formatFollowUpDisplay(act.scheduled_date) : '—'
                             return (
@@ -4472,21 +4522,38 @@ export default function AdminLeads() {
 
                           <div className="space-y-3">
                             <h3 className="text-[10px] font-black uppercase text-slate-450 tracking-widest border-b border-slate-100 pb-1.5">Follow-up & Activity History</h3>
-                            {selectedDrawerLead.activities && selectedDrawerLead.activities.length > 0 ? (
-                              <div className="space-y-2.5">
-                                {selectedDrawerLead.activities.map((act, idx) => (
-                                  <div key={idx} className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-1">
-                                    <div className="flex justify-between items-center text-[11px]">
-                                      <span className="font-bold text-slate-800 capitalize">{act.activity_type || 'Follow-up Note'}</span>
-                                      <span className="text-slate-400 text-[10px]">{act.created_at?.split('T')[0]}</span>
+                            {(() => {
+                              const drawerFollowUps = (selectedDrawerLead.activities || []).filter(act => {
+                                if (!act) return false
+                                const type = (act.activity_type || '').toLowerCase()
+                                const desc = (act.description || '').toLowerCase()
+                                const notes = (act.notes || '').toLowerCase()
+
+                                if (desc.includes('automated welcome') || desc.includes('welcome email') || desc.includes('lead created') || notes.includes('welcome email')) {
+                                  return false
+                                }
+
+                                return type === 'follow_up' || type === 'call' || type === 'meeting' || desc.includes('follow-up') || desc.includes('status changed') || act.scheduled_date
+                              })
+
+                              if (drawerFollowUps.length === 0) {
+                                return <p className="text-slate-400 text-center py-4 font-medium">No follow-up activity logs recorded yet.</p>
+                              }
+
+                              return (
+                                <div className="space-y-2.5">
+                                  {drawerFollowUps.map((act, idx) => (
+                                    <div key={idx} className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-1">
+                                      <div className="flex justify-between items-center text-[11px]">
+                                        <span className="font-bold text-slate-800 capitalize">{act.activity_type || 'Follow-up Note'}</span>
+                                        <span className="text-slate-400 text-[10px]">{act.created_at?.split('T')[0]}</span>
+                                      </div>
+                                      <p className="text-xs text-slate-600 font-medium">{act.description || act.notes}</p>
                                     </div>
-                                    <p className="text-xs text-slate-600 font-medium">{act.description || act.notes}</p>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-slate-400 text-center py-4 font-medium">No follow-up activity logs recorded yet.</p>
-                            )}
+                                  ))}
+                                </div>
+                              )
+                            })()}
                           </div>
                         </div>
                       )}
@@ -5087,7 +5154,7 @@ export default function AdminLeads() {
             <div className="flex-1 overflow-y-auto p-3 sm:p-5 bg-slate-100/60 print:p-0 print:bg-white print:overflow-visible font-sans">
               <div
                 id="quotation-document-paper"
-                className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 sm:p-6 md:p-7 space-y-3 sm:space-y-4 print:border-none print:shadow-none print:p-0 max-w-3xl mx-auto"
+                className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 sm:p-6 md:p-7 space-y-3 sm:space-y-4 print:border-none print:shadow-none print:p-0 max-w-4xl mx-auto"
               >
                 {/* 1. Proforma Invoice Title at Top Most Position */}
                 <div className="text-center -mt-1 sm:-mt-2 pt-0 pb-0.5">
@@ -5204,12 +5271,12 @@ export default function AdminLeads() {
                       <thead>
                         <tr className="bg-slate-900 text-white font-bold text-[10px] uppercase tracking-wider">
                           <th className="px-3.5 py-2.5 text-center w-10">#</th>
-                          <th className="px-4 py-2.5">Service Description & Technical Scope</th>
-                          <th className="px-3 py-2.5 text-center w-20">HSN/SAC</th>
-                          <th className="px-3 py-2.5 text-center w-16">Qty</th>
-                          <th className="px-3 py-2.5 text-right w-24">Rate (₹)</th>
-                          <th className="px-3 py-2.5 text-center w-16">Disc</th>
-                          <th className="px-4 py-2.5 text-right w-28">Amount (₹)</th>
+                          <th className="px-4 py-2.5 min-w-[280px]">Service Title & Description</th>
+                          <th className="px-2.5 py-2.5 text-center w-16">HSN/SAC</th>
+                          <th className="px-2 py-2.5 text-center w-12">Qty</th>
+                          <th className="px-3 py-2.5 text-right w-20">Rate (₹)</th>
+                          <th className="px-2 py-2.5 text-center w-12">Disc</th>
+                          <th className="px-3.5 py-2.5 text-right w-24">Amount (₹)</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 text-slate-800">

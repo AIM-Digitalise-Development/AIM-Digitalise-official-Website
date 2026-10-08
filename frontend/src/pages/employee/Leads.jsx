@@ -3002,7 +3002,7 @@ export default function EmployeeLeads() {
                 <div className="space-y-3 text-left pt-4 border-t border-white/5">
                   <div className="flex items-center gap-2">
                     <span className="text-base">📜</span>
-                    <h4 className="text-xs font-black uppercase tracking-wider text-cyan-400">Activity & Follow-up History</h4>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-cyan-400">Follow-up History</h4>
                   </div>
                   <div className="border border-white/5 rounded-2xl overflow-hidden max-h-[200px] overflow-y-auto bg-white/[0.01]">
                     <table className="w-full border-collapse text-xs">

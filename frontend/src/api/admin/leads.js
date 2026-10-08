@@ -36,7 +36,7 @@ const adminFetch = async (method, path, body = null) => {
     const data = await response.json().catch(() => ({ message: `HTTP ${response.status}` }))
 
     if (!response.ok) {
-      if (response.status >= 500 || response.status === 404) {
+      if (method === 'GET' && (response.status >= 500 || response.status === 404)) {
         const mockData = getMockResponse(path, method, body)
         if (mockData) {
           console.warn(`[Admin Fetch Fallback] Live request failed for ${path} (Status ${response.status}). Using mock data.`)
@@ -49,10 +49,13 @@ const adminFetch = async (method, path, body = null) => {
     }
     return { data }
   } catch (err) {
-    const mockData = getMockResponse(path, method, body)
-    if (mockData) {
-      console.warn(`[Admin Fetch Fallback] Request error for ${path}. Using mock data.`)
-      return { data: mockData }
+    if (err.response) throw err;
+    if (method === 'GET') {
+      const mockData = getMockResponse(path, method, body)
+      if (mockData) {
+        console.warn(`[Admin Fetch Fallback] Request error for ${path}. Using mock data.`)
+        return { data: mockData }
+      }
     }
     throw err
   }

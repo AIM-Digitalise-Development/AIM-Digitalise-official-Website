@@ -3295,7 +3295,7 @@ export default function PartnerGeneralClients() {
               <div className="flex-1 overflow-y-auto p-3 sm:p-5 bg-slate-100/60 print:p-0 print:bg-white print:overflow-visible font-sans">
                 <div
                   id="quotation-document-paper"
-                  className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 sm:p-6 md:p-7 space-y-3 sm:space-y-4 print:border-none print:shadow-none print:p-0 max-w-3xl mx-auto"
+                  className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 sm:p-6 md:p-7 space-y-3 sm:space-y-4 print:border-none print:shadow-none print:p-0 max-w-4xl mx-auto"
                 >
                   {/* 1. Proforma Invoice Title at Top Most Position */}
                   <div className="text-center -mt-1 sm:-mt-2 pt-0 pb-0.5">
@@ -3412,12 +3412,12 @@ export default function PartnerGeneralClients() {
                         <thead>
                           <tr className="bg-slate-900 text-white font-bold text-[10px] uppercase tracking-wider">
                             <th className="px-3.5 py-2.5 text-center w-10">#</th>
-                            <th className="px-4 py-2.5">Service Description & Technical Scope</th>
-                            <th className="px-3 py-2.5 text-center w-20">HSN/SAC</th>
-                            <th className="px-3 py-2.5 text-center w-16">Qty</th>
-                            <th className="px-3 py-2.5 text-right w-24">Rate (₹)</th>
-                            <th className="px-3 py-2.5 text-center w-16">Disc</th>
-                            <th className="px-4 py-2.5 text-right w-28">Amount (₹)</th>
+                            <th className="px-4 py-2.5 min-w-[280px]">Service Title & Description</th>
+                            <th className="px-2.5 py-2.5 text-center w-16">HSN/SAC</th>
+                            <th className="px-2 py-2.5 text-center w-12">Qty</th>
+                            <th className="px-3 py-2.5 text-right w-20">Rate (₹)</th>
+                            <th className="px-2 py-2.5 text-center w-12">Disc</th>
+                            <th className="px-3.5 py-2.5 text-right w-24">Amount (₹)</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 text-slate-800">
