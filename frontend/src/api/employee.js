@@ -105,3 +105,16 @@ export const getPublicProductsForCountry = (countryCode = 'IN') =>
   client.get(`/public/products?country=${countryCode}`)
 export const getSubscriptionClients = () => client.get('/employee/subscription-clients')
 
+// Employee Attendance & Punch In/Out
+export const getEmployeePunchStatus = () =>
+  client.get('/employee/punch-status')
+
+export const employeePunchIn = (data) =>
+  client.post('/employee/punch-in', data)
+
+export const employeePunchOut = (data) =>
+  client.post('/employee/punch-out', data)
+
+export const getEmployeePunchHistory = () =>
+  client.get('/employee/punch-history')
+

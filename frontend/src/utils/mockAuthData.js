@@ -235,6 +235,159 @@ export const getMockResponse = (url, method, data = null) => {
     }
   }
 
+  // ── Employee Attendance & Punch Mocks ─────────────
+  if (lowercaseUrl.includes('/employee/punch-status') && method === 'GET') {
+    const now = new Date()
+    const isSunday = now.getDay() === 0
+    const todayStr = now.toISOString().split('T')[0]
+    let storedLogs = []
+    try {
+      const raw = localStorage.getItem('aim-employee-punch-log-data')
+      if (raw) storedLogs = JSON.parse(raw)
+    } catch (_) {}
+    
+    const todayLog = storedLogs.find(l => l.date === now.toLocaleDateString('en-IN') || l.attendance_date === todayStr)
+    let currentStatus = 'not_punched_in'
+    if (todayLog) {
+      if (todayLog.inTime && !todayLog.outTime) {
+        currentStatus = 'punched_in'
+      } else if (todayLog.outTime) {
+        currentStatus = 'punched_out'
+      }
+    }
+    return {
+      success: true,
+      data: {
+        is_sunday: isSunday,
+        office_hours: '10:00 AM - 07:00 PM (Monday - Saturday)',
+        server_date: todayStr,
+        server_time: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
+        current_status: currentStatus,
+        attendance: todayLog || null,
+      }
+    }
+  }
+
+  if (lowercaseUrl.includes('/employee/punch-in') && method === 'POST') {
+    const now = new Date()
+    if (now.getDay() === 0) {
+      return { success: false, message: 'Office is closed on Sundays. Punching in or out is not permitted on Sundays.' }
+    }
+    const hours = now.getHours()
+    const minutes = now.getMinutes()
+    const totalMinutes = hours * 60 + minutes
+
+    let status = 'present'
+    let statusLabel = 'Present / On Time'
+    if (totalMinutes <= 615) {
+      status = 'present'
+      statusLabel = 'Present / On Time'
+    } else if (totalMinutes <= 660) {
+      status = 'late'
+      statusLabel = 'Late'
+    } else if (totalMinutes <= 840) {
+      status = 'half_day'
+      statusLabel = 'Half Day'
+    } else {
+      status = 'absent'
+      statusLabel = 'Full Day Absent'
+    }
+
+    const todayDate = now.toLocaleDateString('en-IN')
+    const timeFormatted = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+    const entry = {
+      id: Date.now(),
+      attendance_date: now.toISOString().split('T')[0],
+      date: todayDate,
+      punch_in_date: todayDate,
+      punch_in_time: timeFormatted,
+      punch_in_address: data?.address || 'Current Location',
+      punch_in_accuracy: data?.accuracy || '±15m',
+      punch_in_latitude: data?.latitude || null,
+      punch_in_longitude: data?.longitude || null,
+      inTime: timeFormatted,
+      inAddress: data?.address || 'Current Location',
+      inAccuracy: data?.accuracy || '±15m',
+      punch_out_date: null,
+      punch_out_time: null,
+      punch_out_address: null,
+      outTime: null,
+      outAddress: null,
+      status: status,
+      status_label: statusLabel,
+      work_hours: null,
+    }
+
+    let storedLogs = []
+    try {
+      const raw = localStorage.getItem('aim-employee-punch-log-data')
+      if (raw) storedLogs = JSON.parse(raw)
+    } catch (_) {}
+
+    const updated = [entry, ...storedLogs.filter(l => l.date !== todayDate)]
+    try {
+      localStorage.setItem('aim-employee-punch-log-data', JSON.stringify(updated))
+    } catch (_) {}
+
+    return {
+      success: true,
+      message: `Punched in successfully! Marked as: ${statusLabel}`,
+      data: { ...entry, current_status: 'punched_in' }
+    }
+  }
+
+  if (lowercaseUrl.includes('/employee/punch-out') && method === 'POST') {
+    const now = new Date()
+    if (now.getDay() === 0) {
+      return { success: false, message: 'Office is closed on Sundays. Punching in or out is not permitted on Sundays.' }
+    }
+    const todayDate = now.toLocaleDateString('en-IN')
+    const timeFormatted = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+
+    let storedLogs = []
+    try {
+      const raw = localStorage.getItem('aim-employee-punch-log-data')
+      if (raw) storedLogs = JSON.parse(raw)
+    } catch (_) {}
+
+    if (storedLogs.length === 0 || storedLogs[0].outTime) {
+      return { success: false, message: 'No active punch-in found for today. Please punch in first.' }
+    }
+
+    const first = storedLogs[0]
+    first.punch_out_date = todayDate
+    first.punch_out_time = timeFormatted
+    first.punch_out_address = data?.address || 'Current Location'
+    first.punch_out_accuracy = data?.accuracy || '±15m'
+    first.punch_out_latitude = data?.latitude || null
+    first.punch_out_longitude = data?.longitude || null
+    first.outTime = timeFormatted
+    first.outAddress = data?.address || 'Current Location'
+    first.outAccuracy = data?.accuracy || '±15m'
+
+    try {
+      localStorage.setItem('aim-employee-punch-log-data', JSON.stringify(storedLogs))
+    } catch (_) {}
+
+    return {
+      success: true,
+      message: 'Punched out successfully!',
+      data: { ...first, current_status: 'punched_out' }
+    }
+  }
+
+  if (lowercaseUrl.includes('/employee/punch-history') && method === 'GET') {
+    let storedLogs = []
+    try {
+      const raw = localStorage.getItem('aim-employee-punch-log-data')
+      if (raw) storedLogs = JSON.parse(raw)
+    } catch (_) {}
+    return {
+      success: true,
+      data: storedLogs
+    }
+  }
+
   // ── Proposal API Mocks ───────────────────────────
   // POST /api/public/proposals/send-otp
   if (lowercaseUrl.includes('/proposals/send-otp') && method === 'POST') {
