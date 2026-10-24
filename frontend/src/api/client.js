@@ -25,6 +25,11 @@ client.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
 
+    // Do not use mock fallback for punch or attendance endpoints - all operations must be strictly real-time with backend
+    if (originalRequest?.url && (originalRequest.url.includes('/employee/punch') || originalRequest.url.includes('/admin/attendances'))) {
+      return Promise.reject(error)
+    }
+
     // If network fails (no response) or server error/route not found (5xx, 404), try mock fallback
     if (originalRequest && (!error.response || error.response.status >= 500 || error.response.status === 404)) {
       try {

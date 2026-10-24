@@ -6,7 +6,7 @@ const ADMIN_API = import.meta.env.VITE_API_BASE_URL || 'https://api.nexgn.in/api
 
 // Helper: admin fetch with Bearer token from localStorage
 const adminFetch = async (method, path, body = null) => {
-  const token = localStorage.getItem('access_token')
+  const token = localStorage.getItem('access_token') || localStorage.getItem('admin_token')
   const headers = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -96,3 +96,18 @@ export const updateEmployee = (id, payload) =>
 // DELETE /api/admin/employees/{id}
 export const deleteEmployee = (id) =>
   adminFetch('DELETE', `/admin/employees/${id}`)
+
+// ─── Attendance Management ───────────────────────────────────────────────────
+// GET /api/admin/attendances?search=&from_date=&to_date=&month=&status=&page=&per_page=
+export const fetchAdminAttendances = (filters = {}) => {
+  const params = new URLSearchParams()
+  Object.entries(filters).forEach(([key, val]) => {
+    if (val !== undefined && val !== null && val !== '') params.append(key, val)
+  })
+  const qs = params.toString()
+  return adminFetch('GET', `/admin/attendances${qs ? `?${qs}` : ''}`)
+}
+
+// POST /api/admin/attendances/{id}/consider-full-day
+export const considerAttendanceFullDay = (id) =>
+  adminFetch('POST', `/admin/attendances/${id}/consider-full-day`)

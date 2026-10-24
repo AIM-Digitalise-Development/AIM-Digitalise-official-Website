@@ -115,6 +115,6 @@ export const employeePunchIn = (data) =>
 export const employeePunchOut = (data) =>
   client.post('/employee/punch-out', data)
 
-export const getEmployeePunchHistory = () =>
-  client.get('/employee/punch-history')
+export const getEmployeePunchHistory = (params = {}) =>
+  client.get('/employee/punch-history', { params })
 

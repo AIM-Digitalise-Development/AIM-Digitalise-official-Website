@@ -7,7 +7,7 @@ import {
   getEmployeePunchHistory,
 } from '../../api/employee'
 
-// Helper to determine status based strictly on hour and minute (no seconds)
+// Helper to determine punch-in status based strictly on hour and minute (no seconds)
 export const evaluateAttendanceRule = (dateObj = new Date()) => {
   const hours = dateObj.getHours()
   const minutes = dateObj.getMinutes()
@@ -51,6 +51,80 @@ export const evaluateAttendanceRule = (dateObj = new Date()) => {
       description: 'Marked Absent (After 2:01 PM)',
     }
   }
+}
+
+// Helper to determine punch-out status and duration based on hours and minutes
+export const evaluatePunchOutRule = (inTimeStr, outDateObj = new Date(), initialStatus = 'present') => {
+  const outHours = outDateObj.getHours()
+  const outMinutes = outDateObj.getMinutes()
+  const outTotalMinutes = outHours * 60 + outMinutes
+
+  // Calculate work duration if inTimeStr exists
+  let diffMinutes = 0
+  if (inTimeStr) {
+    const match = String(inTimeStr).match(/(\d+):(\d+)(?::\d+)?\s*(AM|PM)?/i)
+    if (match) {
+      let [_, h, m, meridiem] = match
+      h = parseInt(h, 10)
+      m = parseInt(m, 10)
+      if (meridiem) {
+        if (meridiem.toUpperCase() === 'PM' && h < 12) h += 12
+        if (meridiem.toUpperCase() === 'AM' && h === 12) h = 0
+      }
+      const inTotalMinutes = h * 60 + m
+      diffMinutes = Math.max(0, outTotalMinutes - inTotalMinutes)
+    }
+  }
+
+  // Office punch-out rules:
+  // 2:00 PM = 14:00 = 840 mins.
+  // 8 hours shift = 480 mins.
+  if (outTotalMinutes < 840) {
+    // If punches out strictly before 2:00 PM -> marked as full day absent
+    return {
+      status: 'absent',
+      label: 'Full Day Absent',
+      reason: 'Punched out before 2:00 PM (Marked Full Day Absent)',
+      diffMinutes,
+    }
+  } else if (outTotalMinutes === 840 || diffMinutes < 480) {
+    // If punches out at 2:00 PM or before 8 hrs is over -> marked as half day
+    if (initialStatus === 'absent') {
+      return {
+        status: 'absent',
+        label: 'Full Day Absent',
+        reason: 'Punched in after 2:01 PM (Full Day Absent)',
+        diffMinutes,
+      }
+    }
+    return {
+      status: 'half_day',
+      label: 'Half Day',
+      reason: outTotalMinutes === 840 ? 'Punched out at 2:00 PM (Marked Half Day)' : 'Left before completing 8 hours of work (Marked Half Day)',
+      diffMinutes,
+    }
+  } else {
+    // Punched out after 2:00 PM and worked 8+ hours -> retains punch-in status
+    const statusMap = {
+      present: 'Present / On Time',
+      late: 'Late',
+      half_day: 'Half Day',
+      absent: 'Full Day Absent',
+    }
+    return {
+      status: initialStatus,
+      label: statusMap[initialStatus] || initialStatus,
+      reason: 'Shift completed with 8+ hours of work',
+      diffMinutes,
+    }
+  }
+}
+
+export const formatWorkDuration = (diffMinutes) => {
+  if (!diffMinutes || diffMinutes <= 0) return '0 hrs 0 mins'
+  const hours = Math.floor(diffMinutes / 60)
+  const mins = diffMinutes % 60
+  return `${hours} hrs ${mins} mins`
 }
 
 const formatStringVal = (val, fallback = '') => {
@@ -121,6 +195,8 @@ const EmployeePunchIn = () => {
   const [locLoading, setLocLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
   const [punchLog, setPunchLog] = useState([])
+  const [historyPage, setHistoryPage] = useState(1)
+  const [historyPerPage, setHistoryPerPage] = useState(5)
   const [currentStatus, setCurrentStatus] = useState('not_punched_in') // 'not_punched_in' | 'punched_in' | 'punched_out'
   const [todayRecord, setTodayRecord] = useState(null)
   const [now, setNow] = useState(new Date())
@@ -189,57 +265,36 @@ const EmployeePunchIn = () => {
     )
   }
 
-  // Load initial status and history
+  // Load initial status and history directly from live backend
   const loadPunchData = async () => {
-    // 1. Try from localStorage first for immediate rendering
-    let localLogs = []
     try {
-      const storedLogs = localStorage.getItem('aim-employee-punch-log-data')
-      if (storedLogs) {
-        localLogs = JSON.parse(storedLogs)
-        setPunchLog(localLogs)
-        if (localLogs.length > 0) {
-          const latest = localLogs[0]
-          const todayDateStr = new Date().toLocaleDateString('en-IN')
-          if (latest.date === todayDateStr || latest.attendance_date === new Date().toISOString().split('T')[0]) {
-            setTodayRecord(latest)
-            if (latest.outTime || latest.punch_out_time) {
-              setCurrentStatus('punched_out')
-            } else if (latest.inTime || latest.punch_in_time) {
-              setCurrentStatus('punched_in')
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to parse local punch logs:', e)
-    }
-
-    // 2. Fetch live status from backend API
-    try {
+      // 1. Fetch live status from backend API
       const statusRes = await getEmployeePunchStatus()
       if (statusRes?.data?.data) {
         const { attendance, current_status } = statusRes.data.data
-        if (current_status) {
-          setCurrentStatus(current_status)
-        }
-        if (attendance) {
-          setTodayRecord(attendance)
-        }
+        setCurrentStatus(current_status || 'not_punched_in')
+        setTodayRecord(attendance || null)
+      } else {
+        setCurrentStatus('not_punched_in')
+        setTodayRecord(null)
       }
-    } catch (_) {
-      // Backend table might not be migrated yet or offline; fallback persists safely
+    } catch (err) {
+      console.error('Failed to fetch live punch status:', err)
+      setCurrentStatus('not_punched_in')
+      setTodayRecord(null)
     }
 
-    // 3. Fetch history from backend API
     try {
+      // 2. Fetch history directly from backend API
       const histRes = await getEmployeePunchHistory()
-      if (histRes?.data?.data && Array.isArray(histRes.data.data) && histRes.data.data.length > 0) {
+      if (histRes?.data?.data && Array.isArray(histRes.data.data)) {
         setPunchLog(histRes.data.data)
-        localStorage.setItem('aim-employee-punch-log-data', JSON.stringify(histRes.data.data))
+      } else {
+        setPunchLog([])
       }
-    } catch (_) {
-      // Keep local logs
+    } catch (err) {
+      console.error('Failed to fetch live punch history:', err)
+      setPunchLog([])
     }
   }
 
@@ -270,7 +325,6 @@ const EmployeePunchIn = () => {
     setShowSuccess('')
 
     const timeFormatted = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
-    const rule = evaluateAttendanceRule(now)
 
     const payload = {
       address: location.address,
@@ -281,69 +335,23 @@ const EmployeePunchIn = () => {
       time: timeFormatted,
     }
 
-    // Create entry locally for instant update
-    const entry = {
-      id: Date.now(),
-      empId,
-      empName,
-      dept: empDept,
-      date: todayOnlyDate,
-      attendance_date: now.toISOString().split('T')[0],
-      punch_in_date: todayOnlyDate,
-      punch_in_time: timeFormatted,
-      punch_in_address: location.address,
-      punch_in_accuracy: `±${location.accuracy}m`,
-      punch_in_latitude: location.lat,
-      punch_in_longitude: location.lng,
-      inTime: timeFormatted,
-      inAddress: location.address,
-      inAccuracy: location.accuracy,
-      punch_out_date: null,
-      punch_out_time: null,
-      punch_out_address: null,
-      punch_out_accuracy: null,
-      outTime: null,
-      outAddress: null,
-      outAccuracy: null,
-      status: rule.status,
-      status_label: rule.label,
-      work_hours: null,
-    }
-
     try {
       const res = await employeePunchIn(payload)
-      const data = res?.data?.data || entry
-      const updatedEntry = {
-        ...entry,
-        ...data,
-        punch_in_date: data.punch_in_date || todayOnlyDate,
-        punch_in_time: data.punch_in_time || timeFormatted,
-        status: data.status || rule.status,
-        status_label: data.status_label || rule.label,
+      if (res?.data?.success === false) {
+        throw new Error(res.data.message || 'Failed to punch in on server.')
       }
 
+      const data = res?.data?.data
       setCurrentStatus('punched_in')
-      setTodayRecord(updatedEntry)
+      setTodayRecord(data)
+      setShowSuccess(res?.data?.message || `Punched in successfully at ${timeFormatted}! Marked as: ${data?.status_label || data?.status}`)
 
-      const updatedLogs = [updatedEntry, ...punchLog.filter((p) => p.date !== todayOnlyDate && p.attendance_date !== updatedEntry.attendance_date)]
-      setPunchLog(updatedLogs)
-      localStorage.setItem('aim-employee-punch-log-data', JSON.stringify(updatedLogs))
-
-      setShowSuccess(`Punched in successfully at ${timeFormatted}! Marked as: ${updatedEntry.status_label}`)
+      // Reload live records from database
+      await loadPunchData()
     } catch (err) {
-      // If error from backend (like already punched in or validation)
-      const msg = err.response?.data?.message || err.message
-      if (err.response?.status === 422) {
-        setShowError(msg || 'Unable to punch in. Please check status.')
-      } else {
-        // Fallback local persistence if backend DB table is pending migration
-        setCurrentStatus('punched_in')
-        setTodayRecord(entry)
-        const updatedLogs = [entry, ...punchLog.filter((p) => p.date !== todayOnlyDate)]
-        setPunchLog(updatedLogs)
-        localStorage.setItem('aim-employee-punch-log-data', JSON.stringify(updatedLogs))
-        setShowSuccess(`Punched in successfully at ${timeFormatted}! Marked as: ${rule.label}`)
-      }
+      console.error('Punch in failed:', err)
+      const msg = err.response?.data?.message || err.response?.data?.error || err.message || 'Server error while punching in. Record was not saved.'
+      setShowError(msg)
     } finally {
       setActionLoading(false)
       setTimeout(() => setShowSuccess(''), 6000)
@@ -384,65 +392,21 @@ const EmployeePunchIn = () => {
 
     try {
       const res = await employeePunchOut(payload)
-      const updatedData = res?.data?.data
-
-      setCurrentStatus('punched_out')
-
-      const updatedLogs = punchLog.map((log, index) => {
-        if (index === 0 || log.date === todayOnlyDate || log.attendance_date === now.toISOString().split('T')[0]) {
-          const merged = {
-            ...log,
-            punch_out_date: todayOnlyDate,
-            punch_out_time: timeFormatted,
-            punch_out_address: location.address,
-            punch_out_accuracy: `±${location.accuracy}m`,
-            punch_out_latitude: location.lat,
-            punch_out_longitude: location.lng,
-            outTime: timeFormatted,
-            outAddress: location.address,
-            outAccuracy: location.accuracy,
-            work_hours: updatedData?.work_hours || log.work_hours || 'Shift Completed',
-          }
-          setTodayRecord(merged)
-          return merged
-        }
-        return log
-      })
-
-      setPunchLog(updatedLogs)
-      localStorage.setItem('aim-employee-punch-log-data', JSON.stringify(updatedLogs))
-      setShowSuccess(`Punched out successfully at ${timeFormatted}! Work duration logged.`)
-    } catch (err) {
-      const msg = err.response?.data?.message || err.message
-      if (err.response?.status === 422) {
-        setShowError(msg || 'Unable to punch out.')
-      } else {
-        // Fallback local update
-        setCurrentStatus('punched_out')
-        const updatedLogs = punchLog.map((log, index) => {
-          if (index === 0) {
-            const merged = {
-              ...log,
-              punch_out_date: todayOnlyDate,
-              punch_out_time: timeFormatted,
-              punch_out_address: location.address,
-              punch_out_accuracy: `±${location.accuracy}m`,
-              punch_out_latitude: location.lat,
-              punch_out_longitude: location.lng,
-              outTime: timeFormatted,
-              outAddress: location.address,
-              outAccuracy: location.accuracy,
-              work_hours: 'Shift Completed',
-            }
-            setTodayRecord(merged)
-            return merged
-          }
-          return log
-        })
-        setPunchLog(updatedLogs)
-        localStorage.setItem('aim-employee-punch-log-data', JSON.stringify(updatedLogs))
-        setShowSuccess(`Punched out successfully at ${timeFormatted}!`)
+      if (res?.data?.success === false) {
+        throw new Error(res.data.message || 'Failed to punch out on server.')
       }
+
+      const data = res?.data?.data
+      setCurrentStatus('punched_out')
+      setTodayRecord(data)
+      setShowSuccess(res?.data?.message || `Punched out successfully at ${timeFormatted}! Marked as: ${data?.status_label || data?.status} (${data?.work_hours || ''})`)
+
+      // Reload live records from database
+      await loadPunchData()
+    } catch (err) {
+      console.error('Punch out failed:', err)
+      const msg = err.response?.data?.message || err.response?.data?.error || err.message || 'Server error while punching out. Record was not saved.'
+      setShowError(msg)
     } finally {
       setActionLoading(false)
       setTimeout(() => setShowSuccess(''), 6000)
@@ -537,69 +501,109 @@ const EmployeePunchIn = () => {
         className="rounded-2xl p-5 text-left relative overflow-hidden"
         style={{ background: 'linear-gradient(135deg, #161926 0%, #1c2136 100%)', border: '1px solid rgba(255,255,255,0.07)' }}
       >
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-amber-400 text-sm">⏱️</span>
-              <h3 className="text-[12px] font-black uppercase tracking-wider text-gray-300">Office Attendance & Grace Timing Policy</h3>
-              <span className="text-[10px] text-gray-500 font-mono">(Hours & Minutes only)</span>
+        <div className="space-y-4">
+          {/* Section 1: Arrival & Punch-In Policy */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[#38b34a] text-sm">📥</span>
+                <h3 className="text-[12px] font-black uppercase tracking-wider text-gray-300">Punch-In Rules (Morning Arrival)</h3>
+                <span className="text-[10px] text-gray-500 font-mono">(Hours &amp; Minutes only)</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-2">
+                {/* Rule 1: Grace / On Time */}
+                <div className="p-3 rounded-xl bg-white/3 border border-white/5">
+                  <div className="flex items-center gap-1.5 text-[#38b34a] font-bold text-[11px]">
+                    <span className="w-2 h-2 rounded-full bg-[#38b34a]" />
+                    Present / On Time
+                  </div>
+                  <p className="text-[13px] font-black text-white mt-1">Up to 10:15 AM</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">Grace period included</p>
+                </div>
+
+                {/* Rule 2: Late */}
+                <div className="p-3 rounded-xl bg-white/3 border border-white/5">
+                  <div className="flex items-center gap-1.5 text-amber-400 font-bold text-[11px]">
+                    <span className="w-2 h-2 rounded-full bg-amber-400" />
+                    Late Marked
+                  </div>
+                  <p className="text-[13px] font-black text-white mt-1">10:16 AM – 11:00 AM</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">Marked as Late Present</p>
+                </div>
+
+                {/* Rule 3: Half Day */}
+                <div className="p-3 rounded-xl bg-white/3 border border-white/5">
+                  <div className="flex items-center gap-1.5 text-blue-400 font-bold text-[11px]">
+                    <span className="w-2 h-2 rounded-full bg-blue-400" />
+                    Half Day
+                  </div>
+                  <p className="text-[13px] font-black text-white mt-1">11:01 AM – 2:00 PM</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">Marked as Half Day</p>
+                </div>
+
+                {/* Rule 4: Absent */}
+                <div className="p-3 rounded-xl bg-white/3 border border-white/5">
+                  <div className="flex items-center gap-1.5 text-red-400 font-bold text-[11px]">
+                    <span className="w-2 h-2 rounded-full bg-red-400" />
+                    Full Day Absent
+                  </div>
+                  <p className="text-[13px] font-black text-white mt-1">After 2:01 PM</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">Marked as Full Day Absent</p>
+                </div>
+              </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-3">
-              {/* Rule 1: Grace / On Time */}
-              <div className="p-3 rounded-xl bg-white/3 border border-white/5">
-                <div className="flex items-center gap-1.5 text-[#38b34a] font-bold text-[11px]">
-                  <span className="w-2 h-2 rounded-full bg-[#38b34a]" />
-                  Present / On Time
-                </div>
-                <p className="text-[13px] font-black text-white mt-1">Up to 10:15 AM</p>
-                <p className="text-[10px] text-gray-500 mt-0.5">Grace period included</p>
-              </div>
 
-              {/* Rule 2: Late */}
-              <div className="p-3 rounded-xl bg-white/3 border border-white/5">
-                <div className="flex items-center gap-1.5 text-amber-400 font-bold text-[11px]">
-                  <span className="w-2 h-2 rounded-full bg-amber-400" />
-                  Late Marked
-                </div>
-                <p className="text-[13px] font-black text-white mt-1">10:16 AM – 11:00 AM</p>
-                <p className="text-[10px] text-gray-500 mt-0.5">Marked as Late Present</p>
+            {/* Live Punch Evaluation Indicator */}
+            {!isSunday && currentStatus !== 'punched_in' && currentStatus !== 'punched_out' && (
+              <div
+                className="lg:w-64 p-4 rounded-xl border flex flex-col justify-center shrink-0 self-stretch"
+                style={{ background: liveRule.badgeBg, borderColor: `${liveRule.badgeColor}40` }}
+              >
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Current Punch-In Status</span>
+                <p className="text-[15px] font-black mt-1" style={{ color: liveRule.badgeColor }}>
+                  {liveRule.label}
+                </p>
+                <span className="text-[10px] text-gray-400 mt-1">{liveRule.description}</span>
               </div>
+            )}
+          </div>
 
-              {/* Rule 3: Half Day */}
-              <div className="p-3 rounded-xl bg-white/3 border border-white/5">
-                <div className="flex items-center gap-1.5 text-blue-400 font-bold text-[11px]">
-                  <span className="w-2 h-2 rounded-full bg-blue-400" />
-                  Half Day
-                </div>
-                <p className="text-[13px] font-black text-white mt-1">11:01 AM – 2:00 PM</p>
-                <p className="text-[10px] text-gray-500 mt-0.5">Marked as Half Day</p>
-              </div>
-
-              {/* Rule 4: Absent */}
+          {/* Section 2: Departure & Punch-Out Policy */}
+          <div className="pt-3.5 border-t border-white/5">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-red-400 text-sm">📤</span>
+              <h3 className="text-[12px] font-black uppercase tracking-wider text-gray-300">Punch-Out Rules (Departure &amp; Shift Completion)</h3>
+              <span className="text-[10px] text-gray-500 font-mono">(Hours &amp; Minutes only)</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <div className="p-3 rounded-xl bg-white/3 border border-white/5">
                 <div className="flex items-center gap-1.5 text-red-400 font-bold text-[11px]">
                   <span className="w-2 h-2 rounded-full bg-red-400" />
                   Full Day Absent
                 </div>
-                <p className="text-[13px] font-black text-white mt-1">After 2:01 PM</p>
-                <p className="text-[10px] text-gray-500 mt-0.5">Marked as Full Day Absent</p>
+                <p className="text-[13px] font-black text-white mt-1">Punches Out Before 2:00 PM</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">Leaving before 2:00 PM marks record as Full Day Absent</p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-white/3 border border-white/5">
+                <div className="flex items-center gap-1.5 text-blue-400 font-bold text-[11px]">
+                  <span className="w-2 h-2 rounded-full bg-blue-400" />
+                  Half Day Marked
+                </div>
+                <p className="text-[13px] font-black text-white mt-1">At 2:00 PM or &lt; 8 Hours Worked</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">Punch out at 2:00 PM or under 8 hrs shift marks Half Day</p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-white/3 border border-white/5">
+                <div className="flex items-center gap-1.5 text-[#38b34a] font-bold text-[11px]">
+                  <span className="w-2 h-2 rounded-full bg-[#38b34a]" />
+                  Full Day Retained
+                </div>
+                <p className="text-[13px] font-black text-white mt-1">After 2:00 PM &amp; &ge; 8 Hours Worked</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">Completed 8+ hours of work retains initial presence status</p>
               </div>
             </div>
           </div>
-
-          {/* Live Punch Evaluation Indicator */}
-          {!isSunday && currentStatus !== 'punched_in' && currentStatus !== 'punched_out' && (
-            <div
-              className="lg:w-64 p-4 rounded-xl border flex flex-col justify-center shrink-0"
-              style={{ background: liveRule.badgeBg, borderColor: `${liveRule.badgeColor}40` }}
-            >
-              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Current Punch Status</span>
-              <p className="text-[15px] font-black mt-1" style={{ color: liveRule.badgeColor }}>
-                {liveRule.label}
-              </p>
-              <span className="text-[10px] text-gray-400 mt-1">{liveRule.description}</span>
-            </div>
-          )}
         </div>
       </div>
 
@@ -871,106 +875,169 @@ const EmployeePunchIn = () => {
       </div>
 
       {/* ── Attendance History Log Table ────────────────────────── */}
-      {punchLog.length > 0 && (
-        <div className="rounded-2xl p-6 text-left animate-fade-in" style={{ background: '#1a1d2b', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[11px] font-black text-white uppercase tracking-widest flex items-center gap-2">
-              <svg className="w-4.5 h-4.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-              Attendance History ({punchLog.length} Records)
-            </h3>
-            <span className="text-[10px] text-gray-500 font-medium">Logged with Date, Time &amp; Location</span>
-          </div>
+      {punchLog.length > 0 && (() => {
+        const totalHistoryPages = Math.ceil(punchLog.length / historyPerPage) || 1
+        const safeCurrentPage = Math.min(historyPage, totalHistoryPages)
+        const startIndex = (safeCurrentPage - 1) * historyPerPage
+        const endIndex = Math.min(punchLog.length, startIndex + historyPerPage)
+        const displayedLogs = punchLog.slice(startIndex, endIndex)
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-[11px] border-collapse">
-              <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  {['Date', 'Punch In Details', 'Punch Out Details', 'Status', 'Duration'].map((h) => (
-                    <th key={h} className="px-3 py-2.5 font-black text-gray-500 uppercase tracking-wider whitespace-nowrap text-[9px]">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {punchLog.map((r, index) => {
-                  const pInTime = formatStringVal(r.punch_in_time || r.inTime)
-                  const pInDate = formatStringVal(r.punch_in_date || r.date || r.attendance_date)
-                  const pInAddr = formatStringVal(r.punch_in_address || r.inAddress)
-                  const pInAcc = formatStringVal(r.punch_in_accuracy || (r.inAccuracy ? `±${r.inAccuracy}m` : null))
+        return (
+          <div className="rounded-2xl p-6 text-left animate-fade-in" style={{ background: '#1a1d2b', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <h3 className="text-[11px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+                <svg className="w-4.5 h-4.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Attendance History ({punchLog.length} Records)
+              </h3>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-gray-400 font-medium">Rows per page:</span>
+                <select
+                  value={historyPerPage}
+                  onChange={(e) => {
+                    setHistoryPerPage(Number(e.target.value))
+                    setHistoryPage(1)
+                  }}
+                  className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none cursor-pointer"
+                >
+                  <option value={5} className="bg-[#1a1d2b]">5</option>
+                  <option value={10} className="bg-[#1a1d2b]">10</option>
+                  <option value={20} className="bg-[#1a1d2b]">20</option>
+                </select>
+              </div>
+            </div>
 
-                  const pOutTime = formatStringVal(r.punch_out_time || r.outTime)
-                  const pOutDate = formatStringVal(r.punch_out_date || (pOutTime ? (r.date || r.attendance_date) : null))
-                  const pOutAddr = formatStringVal(r.punch_out_address || r.outAddress)
-                  const pOutAcc = formatStringVal(r.punch_out_accuracy || (r.outAccuracy ? `±${r.outAccuracy}m` : null))
-                  const rDate = formatStringVal(r.date || r.attendance_date, 'Today')
-                  const rDuration = formatStringVal(r.work_hours || (pOutTime ? 'Logged' : 'In Progress'), 'In Progress')
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-[11px] border-collapse">
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    {['Date', 'Punch In Details', 'Punch Out Details', 'Status', 'Duration'].map((h) => (
+                      <th key={h} className="px-3 py-2.5 font-black text-gray-500 uppercase tracking-wider whitespace-nowrap text-[9px]">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {displayedLogs.map((r, index) => {
+                    const pInTime = formatStringVal(r.punch_in_time || r.inTime)
+                    const pInDate = formatStringVal(r.punch_in_date || r.date || r.attendance_date)
+                    const pInAddr = formatStringVal(r.punch_in_address || r.inAddress)
+                    const pInAcc = formatStringVal(r.punch_in_accuracy || (r.inAccuracy ? `±${r.inAccuracy}m` : null))
 
-                  return (
-                    <tr key={r.id || r.attendance_date || index} className="hover:bg-white/3 transition-colors">
-                      {/* Date */}
-                      <td className="px-3 py-3.5 whitespace-nowrap text-gray-300 font-bold">
-                        {rDate}
-                      </td>
+                    const pOutTime = formatStringVal(r.punch_out_time || r.outTime)
+                    const pOutDate = formatStringVal(r.punch_out_date || (pOutTime ? (r.date || r.attendance_date) : null))
+                    const pOutAddr = formatStringVal(r.punch_out_address || r.outAddress)
+                    const pOutAcc = formatStringVal(r.punch_out_accuracy || (r.outAccuracy ? `±${r.outAccuracy}m` : null))
+                    const rDate = formatStringVal(r.date || r.attendance_date, 'Today')
+                    const rDuration = formatStringVal(r.work_hours || (pOutTime ? 'Logged' : 'In Progress'), 'In Progress')
 
-                      {/* Punch In */}
-                      <td className="px-3 py-3.5 max-w-xs">
-                        <div className="flex flex-col text-left">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[#38b34a] font-bold font-mono text-[12px]">{pInTime}</span>
-                            {pInDate && <span className="text-[9px] text-gray-500 font-medium">({pInDate})</span>}
-                          </div>
-                          {pInAddr && (
-                            <span className="text-[10px] text-gray-400 truncate max-w-xs mt-0.5" title={pInAddr}>
-                              📍 {pInAddr}
-                            </span>
-                          )}
-                          {pInAcc && <span className="text-[9px] text-gray-600 mt-0.5">Accuracy: {pInAcc}</span>}
-                        </div>
-                      </td>
+                    return (
+                      <tr key={r.id || r.attendance_date || index} className="hover:bg-white/3 transition-colors">
+                        {/* Date */}
+                        <td className="px-3 py-3.5 whitespace-nowrap text-gray-300 font-bold">
+                          {rDate}
+                        </td>
 
-                      {/* Punch Out */}
-                      <td className="px-3 py-3.5 max-w-xs">
-                        {pOutTime ? (
+                        {/* Punch In */}
+                        <td className="px-3 py-3.5 max-w-xs">
                           <div className="flex flex-col text-left">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-red-400 font-bold font-mono text-[12px]">{pOutTime}</span>
-                              {pOutDate && <span className="text-[9px] text-gray-500 font-medium">({pOutDate})</span>}
+                              <span className="text-[#38b34a] font-bold font-mono text-[12px]">{pInTime}</span>
+                              {pInDate && <span className="text-[9px] text-gray-500 font-medium">({pInDate})</span>}
                             </div>
-                            {pOutAddr && (
-                              <span className="text-[10px] text-gray-400 truncate max-w-xs mt-0.5" title={pOutAddr}>
-                                📍 {pOutAddr}
+                            {pInAddr && (
+                              <span className="text-[10px] text-gray-400 truncate max-w-xs mt-0.5" title={pInAddr}>
+                                📍 {pInAddr}
                               </span>
                             )}
-                            {pOutAcc && <span className="text-[9px] text-gray-600 mt-0.5">Accuracy: {pOutAcc}</span>}
+                            {pInAcc && <span className="text-[9px] text-gray-600 mt-0.5">Accuracy: {pInAcc}</span>}
                           </div>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-400/10 text-emerald-400 select-none">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                            Shift In Progress
-                          </span>
-                        )}
-                      </td>
+                        </td>
 
-                      {/* Status */}
-                      <td className="px-3 py-3.5 whitespace-nowrap">
-                        <AttendanceStatusBadge status={r.status} customLabel={r.status_label} />
-                      </td>
+                        {/* Punch Out */}
+                        <td className="px-3 py-3.5 max-w-xs">
+                          {pOutTime ? (
+                            <div className="flex flex-col text-left">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-red-400 font-bold font-mono text-[12px]">{pOutTime}</span>
+                                {pOutDate && <span className="text-[9px] text-gray-500 font-medium">({pOutDate})</span>}
+                              </div>
+                              {pOutAddr && (
+                                <span className="text-[10px] text-gray-400 truncate max-w-xs mt-0.5" title={pOutAddr}>
+                                  📍 {pOutAddr}
+                                </span>
+                              )}
+                              {pOutAcc && <span className="text-[9px] text-gray-600 mt-0.5">Accuracy: {pOutAcc}</span>}
+                            </div>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-400/10 text-emerald-400 select-none">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                              Shift In Progress
+                            </span>
+                          )}
+                        </td>
 
-                      {/* Duration */}
-                      <td className="px-3 py-3.5 whitespace-nowrap text-gray-300 font-mono font-medium">
-                        {rDuration}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                        {/* Status */}
+                        <td className="px-3 py-3.5 whitespace-nowrap">
+                          <AttendanceStatusBadge status={r.status} customLabel={r.status_label} />
+                        </td>
+
+                        {/* Duration */}
+                        <td className="px-3 py-3.5 whitespace-nowrap text-gray-300 font-mono font-medium">
+                          {rDuration}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Controls */}
+            {totalHistoryPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-white/5 mt-4 text-xs">
+                <span className="text-gray-400 font-medium">
+                  Showing <strong className="text-white">{startIndex + 1}</strong> to <strong className="text-white">{endIndex}</strong> of <strong className="text-white">{punchLog.length}</strong> records
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                    disabled={safeCurrentPage === 1}
+                    className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold cursor-pointer transition-all"
+                  >
+                    &larr; Prev
+                  </button>
+                  {Array.from({ length: totalHistoryPages }).map((_, idx) => {
+                    const pNum = idx + 1
+                    return (
+                      <button
+                        key={pNum}
+                        onClick={() => setHistoryPage(pNum)}
+                        className={`w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          safeCurrentPage === pNum
+                            ? 'bg-[#38b34a] text-white shadow-md'
+                            : 'bg-white/5 hover:bg-white/10 text-gray-300'
+                        }`}
+                      >
+                        {pNum}
+                      </button>
+                    )
+                  })}
+                  <button
+                    onClick={() => setHistoryPage((p) => Math.min(totalHistoryPages, p + 1))}
+                    disabled={safeCurrentPage >= totalHistoryPages}
+                    className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold cursor-pointer transition-all"
+                  >
+                    Next &rarr;
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        )
+      })()}
     </div>
   )
 }

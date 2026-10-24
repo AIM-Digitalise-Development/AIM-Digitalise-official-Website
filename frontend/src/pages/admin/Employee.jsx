@@ -16,14 +16,6 @@ const DUMMY_LEAVES = [
   { id: 203, emp_id: 'EMP-2026-004', name: 'Neha Sharma', type: 'Earned Leave', dates: '22 Jun 2026 to 25 Jun 2026', days: 4, reason: 'Personal holiday trip', status: 'Pending' },
 ]
 
-const DUMMY_ATTENDANCE = [
-  { emp_id: 'EMP-2026-001', name: 'Rohan Verma', date: '2026-06-09', clock_in: '09:15 AM', clock_out: '06:30 PM', status: 'Present', hours: 9.25 },
-  { emp_id: 'EMP-2026-002', name: 'Priya Singh', date: '2026-06-09', clock_in: '09:05 AM', clock_out: '06:00 PM', status: 'Present', hours: 8.92 },
-  { emp_id: 'EMP-2026-003', name: 'Aman Gupta', date: '2026-06-09', clock_in: '09:45 AM', clock_out: '06:15 PM', status: 'Late', hours: 8.5 },
-  { emp_id: 'EMP-2026-004', name: 'Neha Sharma', date: '2026-06-09', clock_in: '—', clock_out: '—', status: 'Absent', hours: 0 },
-  { emp_id: 'EMP-2026-005', name: 'Vikram Malhotra', date: '2026-06-09', clock_in: '—', clock_out: '—', status: 'On Leave', hours: 0 },
-]
-
 const DUMMY_EMPLOYEES_FOR_PAYSLIP = [
   { id: 1, emp_id: 'EMP-2026-001', name: 'Rohan Verma', department: 'IT / Development', role: 'Software Engineer', joining_date: '2024-03-15', salary: 45000 },
   { id: 2, emp_id: 'EMP-2026-002', name: 'Priya Singh', department: 'HR & Operations', role: 'Senior HR Specialist', joining_date: '2023-08-10', salary: 38000 },
@@ -31,6 +23,109 @@ const DUMMY_EMPLOYEES_FOR_PAYSLIP = [
   { id: 4, emp_id: 'EMP-2026-004', name: 'Neha Sharma', department: 'UI/UX Design', role: 'Creative Director', joining_date: '2024-11-20', salary: 42000 },
   { id: 5, emp_id: 'EMP-2026-005', name: 'Vikram Malhotra', department: 'Finance & Accounts', role: 'Accounts Manager', joining_date: '2022-05-12', salary: 50000 },
 ]
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAP LOCATION MODAL FOR ADMIN ATTENDANCE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const MapLocationModal = ({ data, onClose }) => {
+  if (!data) return null
+
+  const lat = data.latitude || '22.5186'
+  const lng = data.longitude || '88.3932'
+  const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white rounded-3xl max-w-md w-full border border-slate-200 shadow-2xl overflow-hidden animate-scale-up">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-lg border border-emerald-100">
+              📍
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-slate-800">{data.type}</h3>
+              <p className="text-[11px] font-bold text-slate-400">
+                {data.employee_name} • <span className="font-mono text-slate-600 font-extrabold">{data.employee_id}</span>
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold flex items-center justify-center text-sm cursor-pointer transition-all"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-4">
+          {/* Visual Map Representation */}
+          <div className="rounded-2xl overflow-hidden relative h-40 flex flex-col items-center justify-center text-center p-4 border border-slate-200/80 bg-slate-900 text-white shadow-inner">
+            <div
+              className="absolute inset-0 opacity-20"
+              style={{
+                backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
+                backgroundSize: '20px 20px',
+              }}
+            />
+            <div className="w-10 h-10 rounded-full bg-emerald-500/30 flex items-center justify-center animate-ping absolute" />
+            <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center relative z-10 shadow-lg text-white font-black text-sm">
+              📍
+            </div>
+            <p className="text-xs font-bold text-white z-10 mt-3 max-w-xs truncate">
+              {data.address || 'Address logged with coordinates'}
+            </p>
+            <span className="text-[10px] font-mono font-bold text-emerald-300 z-10 mt-1">
+              GPS: {lat}, {lng}
+            </span>
+          </div>
+
+          {/* Details Grid */}
+          <div className="space-y-2 text-xs">
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/60">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Recorded Address</span>
+              <p className="font-bold text-slate-800 leading-relaxed text-[11px]">{data.address || 'Kasba Industrial Estate, Phase II, Kolkata'}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/60">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Time Logged</span>
+                <p className="font-mono font-bold text-slate-800 text-xs">{data.time || '—'} <span className="text-[10px] text-slate-400">({data.date || 'Today'})</span></p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/60">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Accuracy</span>
+                <p className="font-mono font-bold text-emerald-600 text-xs">{data.accuracy || '±12m'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="pt-2 flex items-center gap-3">
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 py-2.5 px-4 rounded-xl bg-[#38b34a] hover:bg-[#2e9e3e] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all"
+            >
+              <span>View on Google Maps</span>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
+            <button
+              onClick={onClose}
+              className="py-2.5 px-5 rounded-xl border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition-all"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -67,7 +162,33 @@ const AdminEmployee = () => {
 
   // Demo data states (preserved)
   const [leaves, setLeaves] = useState(DUMMY_LEAVES)
-  const [attendance, setAttendance] = useState(DUMMY_ATTENDANCE)
+
+  // Attendance Roster states
+  const [attendanceRecords, setAttendanceRecords] = useState([])
+  const [attendanceStats, setAttendanceStats] = useState({
+    total_records: 0,
+    present_count: 0,
+    late_count: 0,
+    half_day_count: 0,
+    absent_count: 0,
+  })
+  const [attendanceFilters, setAttendanceFilters] = useState({
+    search: '',
+    from_date: '',
+    to_date: '',
+    month: '2026-10',
+    status: '',
+  })
+  const [attendancePage, setAttendancePage] = useState(1)
+  const [attendancePerPage, setAttendancePerPage] = useState(10)
+  const [attendancePagination, setAttendancePagination] = useState({
+    total: 0,
+    current_page: 1,
+    per_page: 10,
+    last_page: 1,
+  })
+  const [attendanceLoading, setAttendanceLoading] = useState(false)
+  const [mapModalData, setMapModalData] = useState(null)
 
   // Payslip states (preserved)
   const [selectedEmpId, setSelectedEmpId] = useState(DUMMY_EMPLOYEES_FOR_PAYSLIP[0]?.emp_id || '')
@@ -284,13 +405,110 @@ const AdminEmployee = () => {
     setLeaves(leaves.map(req => req.id === id ? { ...req, status: newStatus } : req))
   }
 
-  const handleAttendanceChange = (empId, newStatus) => {
-    let clockIn = '—'
-    let clockOut = '—'
-    let hours = 0
-    if (newStatus === 'Present') { clockIn = '09:00 AM'; clockOut = '06:00 PM'; hours = 9.0 }
-    else if (newStatus === 'Late') { clockIn = '09:45 AM'; clockOut = '06:00 PM'; hours = 8.25 }
-    setAttendance(attendance.map(a => a.emp_id === empId ? { ...a, status: newStatus, clock_in: clockIn, clock_out: clockOut, hours } : a))
+  const [attendanceError, setAttendanceError] = useState('')
+
+  const loadAttendances = useCallback(async () => {
+    setAttendanceLoading(true)
+    setAttendanceError('')
+    try {
+      const res = await employeeApi.fetchAdminAttendances({
+        search: attendanceFilters.search,
+        from_date: attendanceFilters.from_date,
+        to_date: attendanceFilters.to_date,
+        month: attendanceFilters.month,
+        status: attendanceFilters.status,
+        page: attendancePage,
+        per_page: attendancePerPage,
+      })
+
+      if (res && res.success) {
+        setAttendanceRecords(Array.isArray(res.data) ? res.data : [])
+        if (res.pagination) {
+          setAttendancePagination(res.pagination)
+        } else {
+          setAttendancePagination({
+            total: Array.isArray(res.data) ? res.data.length : 0,
+            current_page: 1,
+            per_page: attendancePerPage,
+            last_page: 1,
+          })
+        }
+        if (res.stats) {
+          setAttendanceStats(res.stats)
+        } else {
+          const list = Array.isArray(res.data) ? res.data : []
+          setAttendanceStats({
+            total_records: list.length,
+            present_count: list.filter(r => r.status === 'present').length,
+            late_count: list.filter(r => r.status === 'late').length,
+            half_day_count: list.filter(r => r.status === 'half_day').length,
+            absent_count: list.filter(r => r.status === 'absent').length,
+          })
+        }
+      } else {
+        setAttendanceRecords([])
+        setAttendanceStats({
+          total_records: 0,
+          present_count: 0,
+          late_count: 0,
+          half_day_count: 0,
+          absent_count: 0,
+        })
+      }
+    } catch (err) {
+      console.error('API attendances load failed:', err)
+      const msg = err.response?.data?.message || err.message || 'Failed to fetch attendance records from server.'
+      setAttendanceError(msg)
+      setAttendanceRecords([])
+      setAttendanceStats({
+        total_records: 0,
+        present_count: 0,
+        late_count: 0,
+        half_day_count: 0,
+        absent_count: 0,
+      })
+    } finally {
+      setAttendanceLoading(false)
+    }
+  }, [attendanceFilters, attendancePage, attendancePerPage])
+
+  // Reload attendances when tab is active or filters/page change
+  useEffect(() => {
+    if (activePageTab === 'employee_attendance') {
+      loadAttendances()
+    }
+  }, [activePageTab, loadAttendances])
+
+  const handleConsiderFullDay = async (record) => {
+    try {
+      const res = await employeeApi.considerAttendanceFullDay(record.id)
+      if (res && res.success === false) {
+        throw new Error(res.message || 'Failed to update record on server.')
+      }
+      setSuccess(`Record for ${record.employee_name} (${record.employee_id}) considered as Full Day Present in database!`)
+      // Refresh real records from database
+      await loadAttendances()
+    } catch (err) {
+      console.error('Failed to consider full day:', err)
+      const msg = err.response?.data?.message || err.message || 'Server error: could not update record to Full Day.'
+      setError(msg)
+    }
+  }
+
+  const openMapModal = (type, record) => {
+    const isPunchIn = type === 'punch_in'
+    setMapModalData({
+      type: isPunchIn ? 'Punch In Location' : 'Punch Out Location',
+      employee_name: record.employee_name,
+      employee_id: record.employee_id,
+      department: record.department,
+      time: isPunchIn ? record.punch_in_time : record.punch_out_time,
+      date: isPunchIn ? record.punch_in_date : (record.punch_out_date || record.attendance_date),
+      address: isPunchIn ? record.punch_in_address : record.punch_out_address,
+      latitude: isPunchIn ? record.punch_in_latitude : record.punch_out_latitude,
+      longitude: isPunchIn ? record.punch_in_longitude : record.punch_out_longitude,
+      accuracy: isPunchIn ? record.punch_in_accuracy : record.punch_out_accuracy,
+    })
   }
 
   const handleGeneratePayslip = () => {
@@ -914,74 +1132,468 @@ const AdminEmployee = () => {
             </div>
           )}
 
-          {/* ═══════════ TAB: Attendance Roster (Demo Data — Preserved) ═══════════ */}
+          {/* ═══════════ TAB: Attendance Roster (Admin Attendance View) ═══════════ */}
           {activePageTab === 'employee_attendance' && (
             <div className="space-y-6">
-              <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+              {/* Header Bar */}
+              <div className="border-b border-slate-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-base font-bold text-slate-800">Attendance Register</h3>
-                  <p className="text-xs text-slate-400 font-medium mt-1">Review clock logs and adjust daily active presence codes</p>
+                  <h3 className="text-base font-extrabold text-[#1e3e6b] flex items-center gap-2">
+                    <span>📋</span>
+                    <span>Employee Attendance Register</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 font-medium mt-0.5">
+                    Live clock-in / out audits, GPS coordinates, monthly attendance analytics, and override presence controls.
+                  </p>
                 </div>
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-400 bg-slate-50 border rounded-lg px-3 py-1.5 shadow-sm">
-                  📅 Today: {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={loadAttendances}
+                    disabled={attendanceLoading}
+                    className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 font-bold rounded-lg text-xs cursor-pointer transition-all flex items-center gap-1.5 shadow-sm"
+                  >
+                    <span className={attendanceLoading ? 'animate-spin' : ''}>🔄</span>
+                    <span>Refresh</span>
+                  </button>
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 bg-slate-50 border rounded-lg px-3 py-1.5 shadow-sm">
+                    📅 {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
+                  </div>
                 </div>
               </div>
 
+              {/* Monthly Stats Summary Cards Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+                {/* 1. Total Records */}
+                <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Days</span>
+                    <span className="text-2xl font-black text-slate-800 mt-1 block">
+                      {attendanceStats.total_records}
+                    </span>
+                    <span className="text-[9px] text-slate-400 font-semibold mt-0.5 block">Filtered logs</span>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 text-base border border-slate-200/60 font-bold">
+                    📊
+                  </div>
+                </div>
+
+                {/* 2. Present Days Count */}
+                <div className="bg-white rounded-2xl p-4 border border-emerald-100 shadow-sm flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">Full Day Present</span>
+                    <span className="text-2xl font-black text-emerald-600 mt-1 block">
+                      {attendanceStats.present_count}
+                    </span>
+                    <span className="text-[9px] text-emerald-600/70 font-semibold mt-0.5 block">On time / approved</span>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 text-base border border-emerald-200 font-bold">
+                    ✅
+                  </div>
+                </div>
+
+                {/* 3. Late Days Count */}
+                <div className="bg-white rounded-2xl p-4 border border-amber-100 shadow-sm flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider block">Late Days</span>
+                    <span className="text-2xl font-black text-amber-500 mt-1 block">
+                      {attendanceStats.late_count}
+                    </span>
+                    <span className="text-[9px] text-amber-600/70 font-semibold mt-0.5 block">10:16 AM – 11:00 AM</span>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-500 text-base border border-amber-200 font-bold">
+                    ⏱️
+                  </div>
+                </div>
+
+                {/* 4. Half Day Days Count */}
+                <div className="bg-white rounded-2xl p-4 border border-blue-100 shadow-sm flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">Half Day Days</span>
+                    <span className="text-2xl font-black text-blue-500 mt-1 block">
+                      {attendanceStats.half_day_count}
+                    </span>
+                    <span className="text-[9px] text-blue-600/70 font-semibold mt-0.5 block">11:01 AM – 2:00 PM or &lt;8h</span>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500 text-base border border-blue-200 font-bold">
+                    ⏳
+                  </div>
+                </div>
+
+                {/* 5. Absent Days Count */}
+                <div className="bg-white rounded-2xl p-4 border border-rose-100 shadow-sm flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider block">Absent Days</span>
+                    <span className="text-2xl font-black text-rose-500 mt-1 block">
+                      {attendanceStats.absent_count}
+                    </span>
+                    <span className="text-[9px] text-rose-600/70 font-semibold mt-0.5 block">After 2:01 PM / left early</span>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-rose-500 text-base border border-rose-200 font-bold">
+                    ❌
+                  </div>
+                </div>
+              </div>
+
+              {/* Filters Bar: Search by name/ID, Month Dropdown, Date Range, Status */}
+              <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-center">
+                  {/* Search Input */}
+                  <div className="relative lg:col-span-2">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </span>
+                    <input
+                      type="text"
+                      value={attendanceFilters.search}
+                      onChange={(e) => {
+                        setAttendanceFilters(prev => ({ ...prev, search: e.target.value }))
+                        setAttendancePage(1)
+                      }}
+                      placeholder="Search by employee name or ID (e.g. AIM260004)..."
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 transition-all font-sans"
+                    />
+                  </div>
+
+                  {/* Month Selector Dropdown */}
+                  <div>
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                      Filter by Month
+                    </label>
+                    <select
+                      value={attendanceFilters.month}
+                      onChange={(e) => {
+                        setAttendanceFilters(prev => ({ ...prev, month: e.target.value }))
+                        setAttendancePage(1)
+                      }}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:border-[#38b34a] cursor-pointer"
+                    >
+                      <option value="2026-10">October 2026 (Current)</option>
+                      <option value="2026-09">September 2026</option>
+                      <option value="2026-08">August 2026</option>
+                      <option value="2026-07">July 2026</option>
+                      <option value="2026-06">June 2026</option>
+                      <option value="">All Months (All Time)</option>
+                    </select>
+                  </div>
+
+                  {/* From Date */}
+                  <div>
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                      From Date
+                    </label>
+                    <input
+                      type="date"
+                      value={attendanceFilters.from_date}
+                      onChange={(e) => {
+                        setAttendanceFilters(prev => ({ ...prev, from_date: e.target.value }))
+                        setAttendancePage(1)
+                      }}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-[#38b34a]"
+                    />
+                  </div>
+
+                  {/* To Date */}
+                  <div>
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                      To Date
+                    </label>
+                    <input
+                      type="date"
+                      value={attendanceFilters.to_date}
+                      onChange={(e) => {
+                        setAttendanceFilters(prev => ({ ...prev, to_date: e.target.value }))
+                        setAttendancePage(1)
+                      }}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-[#38b34a]"
+                    />
+                  </div>
+                </div>
+
+                {/* Sub-row: Status Filter & Reset */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status:</span>
+                    {['', 'present', 'late', 'half_day', 'absent'].map(st => (
+                      <button
+                        key={st}
+                        onClick={() => {
+                          setAttendanceFilters(prev => ({ ...prev, status: st }))
+                          setAttendancePage(1)
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                          attendanceFilters.status === st
+                            ? 'bg-[#1e3e6b] text-white shadow-sm'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                        }`}
+                      >
+                        {st === '' ? 'All Statuses' : st.replace('_', ' ')}
+                      </button>
+                    ))}
+                  </div>
+
+                  {(attendanceFilters.search || attendanceFilters.from_date || attendanceFilters.to_date || attendanceFilters.status || attendanceFilters.month !== '2026-10') && (
+                    <button
+                      onClick={() => {
+                        setAttendanceFilters({
+                          search: '',
+                          from_date: '',
+                          to_date: '',
+                          month: '2026-10',
+                          status: '',
+                        })
+                        setAttendancePage(1)
+                      }}
+                      className="text-rose-500 hover:text-rose-700 font-bold text-xs flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>✕</span>
+                      <span>Reset Filters</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Real Server / Database Error Banner */}
+              {attendanceError && (
+                <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 text-xs font-semibold text-rose-700 flex items-start gap-3">
+                  <span className="text-base shrink-0">⚠️</span>
+                  <div>
+                    <p className="font-bold">Database / Server Error</p>
+                    <p className="text-[11px] text-rose-600 mt-0.5">{attendanceError}</p>
+                    <p className="text-[11px] text-slate-500 mt-1">If the database table `employee_attendances` has not been migrated yet, run your database migration to create the table.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Attendance Table */}
               <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
-                      <tr className="border-b border-slate-200 bg-slate-50 text-slate-400 font-bold uppercase tracking-wider">
-                        <th className="px-6 py-4">Emp ID</th>
-                        <th className="px-6 py-4">Employee Name</th>
-                        <th className="px-6 py-4">Clock In</th>
-                        <th className="px-6 py-4">Clock Out</th>
-                        <th className="px-6 py-4 text-center">Hours Worked</th>
-                        <th className="px-6 py-4 text-center">Status</th>
-                        <th className="px-6 py-4 text-center">Set Status</th>
+                      <tr className="border-b border-slate-200 bg-slate-50 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                        <th className="px-5 py-3.5">Employee</th>
+                        <th className="px-4 py-3.5">Date</th>
+                        <th className="px-5 py-3.5">Punch In Details</th>
+                        <th className="px-5 py-3.5">Punch Out Details</th>
+                        <th className="px-4 py-3.5 text-center">Hours Worked</th>
+                        <th className="px-4 py-3.5 text-center">Status</th>
+                        <th className="px-5 py-3.5 text-center">Admin Approval</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700 font-semibold">
-                      {attendance.map((record) => (
-                        <tr key={record.emp_id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-6 py-4 font-mono font-bold text-slate-500">{record.emp_id}</td>
-                          <td className="px-6 py-4 text-sm font-bold text-slate-800">{record.name}</td>
-                          <td className="px-6 py-4 font-mono text-slate-500 font-medium">{record.clock_in}</td>
-                          <td className="px-6 py-4 font-mono text-slate-500 font-medium">{record.clock_out}</td>
-                          <td className="px-6 py-4 text-center font-black text-slate-800">
-                            {record.hours > 0 ? `${record.hours} hrs` : '—'}
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                              record.status === 'Present' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
-                              record.status === 'Late' ? 'bg-amber-100 text-amber-800 border-amber-200' :
-                              record.status === 'Absent' ? 'bg-rose-100 text-rose-800 border-rose-200' :
-                              'bg-blue-100 text-blue-800 border-blue-200'
-                            }`}>
-                              {record.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <div className="inline-flex rounded-md shadow-sm border border-slate-200 p-0.5 bg-slate-50">
-                              {['Present', 'Late', 'Absent', 'On Leave'].map(st => (
-                                <button
-                                  key={st}
-                                  onClick={() => handleAttendanceChange(record.emp_id, st)}
-                                  className={`px-2 py-1 text-[9px] font-black rounded cursor-pointer transition-all ${
-                                    record.status === st
-                                      ? 'bg-[#1e3e6b] text-white shadow-sm'
-                                      : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'
-                                  }`}
-                                >
-                                  {st}
-                                </button>
-                              ))}
-                            </div>
+                      {attendanceRecords.length > 0 ? (
+                        attendanceRecords.map((record) => {
+                          const canConsider = ['late', 'half_day', 'absent'].includes(record.status) || record.can_consider_full_day
+
+                          return (
+                            <tr key={record.id} className="hover:bg-slate-50/60 transition-colors">
+                              {/* Employee Profile */}
+                              <td className="px-5 py-3.5">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-sm">
+                                    {(record.employee_name || 'E').charAt(0).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-slate-800 text-xs">{record.employee_name}</p>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      <span className="font-mono font-extrabold text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
+                                        {record.employee_id}
+                                      </span>
+                                      <span className="text-[10px] text-slate-400 font-medium">
+                                        {record.department || 'Operations'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Date */}
+                              <td className="px-4 py-3.5 whitespace-nowrap">
+                                <span className="font-bold text-slate-700 text-xs block">
+                                  {record.attendance_date ? new Date(record.attendance_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-medium">
+                                  {record.attendance_date ? new Date(record.attendance_date).toLocaleDateString('en-IN', { weekday: 'short' }) : ''}
+                                </span>
+                              </td>
+
+                              {/* Punch In */}
+                              <td className="px-5 py-3.5 max-w-xs">
+                                <div className="flex flex-col">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-mono font-bold text-xs text-emerald-600">
+                                      {record.punch_in_time || '—'}
+                                    </span>
+                                    {record.punch_in_latitude && (
+                                      <button
+                                        onClick={() => openMapModal('punch_in', record)}
+                                        className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-md border border-blue-100 cursor-pointer transition-all"
+                                        title="View punch in GPS location on Map"
+                                      >
+                                        <span>📍</span>
+                                        <span>Map</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                  {record.punch_in_address && (
+                                    <span className="text-[10px] text-slate-400 truncate max-w-xs mt-1" title={record.punch_in_address}>
+                                      {record.punch_in_address}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+
+                              {/* Punch Out */}
+                              <td className="px-5 py-3.5 max-w-xs">
+                                {record.punch_out_time ? (
+                                  <div className="flex flex-col">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-mono font-bold text-xs text-rose-500">
+                                        {record.punch_out_time}
+                                      </span>
+                                      {record.punch_out_latitude && (
+                                        <button
+                                          onClick={() => openMapModal('punch_out', record)}
+                                          className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-md border border-blue-100 cursor-pointer transition-all"
+                                          title="View punch out GPS location on Map"
+                                        >
+                                          <span>📍</span>
+                                          <span>Map</span>
+                                        </button>
+                                      )}
+                                    </div>
+                                    {record.punch_out_address && (
+                                      <span className="text-[10px] text-slate-400 truncate max-w-xs mt-1" title={record.punch_out_address}>
+                                        {record.punch_out_address}
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                                    Shift Active
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Hours Worked */}
+                              <td className="px-4 py-3.5 text-center font-mono font-bold text-slate-700">
+                                {record.work_hours || (record.punch_out_time ? 'Logged' : 'In Progress')}
+                              </td>
+
+                              {/* Status Badge */}
+                              <td className="px-4 py-3.5 text-center">
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border whitespace-nowrap ${
+                                  record.status === 'present'
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                    : record.status === 'late'
+                                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                    : record.status === 'half_day'
+                                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                    : 'bg-rose-50 text-rose-700 border-rose-200'
+                                }`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${
+                                    record.status === 'present' ? 'bg-emerald-500' :
+                                    record.status === 'late' ? 'bg-amber-500' :
+                                    record.status === 'half_day' ? 'bg-blue-500' : 'bg-rose-500'
+                                  }`} />
+                                  {record.status_label || record.status}
+                                </span>
+                              </td>
+
+                              {/* Action: Consider as Full Day */}
+                              <td className="px-5 py-3.5 text-center">
+                                {canConsider ? (
+                                  <button
+                                    onClick={() => handleConsiderFullDay(record)}
+                                    className="px-3 py-1.5 bg-[#38b34a] hover:bg-[#2e9e3e] text-white font-bold rounded-lg text-[10px] uppercase tracking-wider shadow-sm cursor-pointer transition-all flex items-center justify-center gap-1 mx-auto"
+                                    title="Override and mark this attendance as Full Day Present"
+                                  >
+                                    <span>⚡</span>
+                                    <span>Consider as Full Day</span>
+                                  </button>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Full Day Approved
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan="7" className="text-center py-12 text-slate-400">
+                            <span className="text-4xl block">📋</span>
+                            <p className="font-bold mt-2">No attendance records found matching filters.</p>
+                            <p className="text-xs text-slate-400 mt-1">Try selecting a different month or clearing your search.</p>
                           </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
+                </div>
+
+                {/* Proper Pagination Controls */}
+                <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-3">
+                    <span className="text-slate-500 font-medium">
+                      Showing <strong className="text-slate-800">{attendancePagination.total > 0 ? ((attendancePagination.current_page - 1) * attendancePagination.per_page) + 1 : 0}</strong> to <strong className="text-slate-800">{Math.min(attendancePagination.total, attendancePagination.current_page * attendancePagination.per_page)}</strong> of <strong className="text-slate-800">{attendancePagination.total}</strong> records
+                    </span>
+                    <div className="flex items-center gap-1.5 ml-2">
+                      <span className="text-slate-400 font-bold text-[10px] uppercase">Per page:</span>
+                      <select
+                        value={attendancePerPage}
+                        onChange={(e) => {
+                          setAttendancePerPage(Number(e.target.value))
+                          setAttendancePage(1)
+                        }}
+                        className="bg-white border border-slate-200 rounded-lg px-2 py-0.5 text-xs text-slate-700 font-bold focus:outline-none cursor-pointer"
+                      >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setAttendancePage(p => Math.max(1, p - 1))}
+                      disabled={attendancePagination.current_page <= 1}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 font-bold cursor-pointer transition-all"
+                    >
+                      &larr; Prev
+                    </button>
+                    {Array.from({ length: attendancePagination.last_page || 1 }).map((_, idx) => {
+                      const pNum = idx + 1
+                      return (
+                        <button
+                          key={pNum}
+                          onClick={() => setAttendancePage(pNum)}
+                          className={`w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            attendancePagination.current_page === pNum
+                              ? 'bg-[#38b34a] text-white shadow-sm'
+                              : 'bg-white border border-slate-200 hover:bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          {pNum}
+                        </button>
+                      )
+                    })}
+                    <button
+                      onClick={() => setAttendancePage(p => Math.min(attendancePagination.last_page || 1, p + 1))}
+                      disabled={attendancePagination.current_page >= (attendancePagination.last_page || 1)}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 font-bold cursor-pointer transition-all"
+                    >
+                      Next &rarr;
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1225,6 +1837,14 @@ const AdminEmployee = () => {
         <EmployeeDetailsDrawer
           employee={viewingEmp}
           onClose={() => setViewingEmp(null)}
+        />
+      )}
+
+      {/* Map Location Modal */}
+      {mapModalData && (
+        <MapLocationModal
+          data={mapModalData}
+          onClose={() => setMapModalData(null)}
         />
       )}
     </>
