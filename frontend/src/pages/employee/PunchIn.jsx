@@ -53,6 +53,16 @@ export const evaluateAttendanceRule = (dateObj = new Date()) => {
   }
 }
 
+const formatStringVal = (val, fallback = '') => {
+  if (!val) return fallback
+  if (typeof val === 'string') return val
+  if (typeof val === 'number') return String(val)
+  if (typeof val === 'object') {
+    return val.name || val.title || val.code || val.label || fallback
+  }
+  return fallback
+}
+
 const AttendanceStatusBadge = ({ status, customLabel }) => {
   const map = {
     present: { label: 'Present / On Time', color: '#38b34a' },
@@ -60,8 +70,9 @@ const AttendanceStatusBadge = ({ status, customLabel }) => {
     half_day: { label: 'Half Day', color: '#3b82f6' },
     absent: { label: 'Full Day Absent', color: '#ef4444' },
   }
-  const s = map[status] || { label: customLabel || status, color: '#94a3b8' }
-  const label = customLabel || s.label
+  const statusStr = typeof status === 'string' ? status : ''
+  const label = formatStringVal(customLabel, map[statusStr]?.label || statusStr || 'Unknown')
+  const s = map[statusStr] || { label, color: '#94a3b8' }
 
   return (
     <span
@@ -80,13 +91,14 @@ const ShiftStatusBadge = ({ status }) => {
     punched_out: { label: 'Punched Out (Shift Ended)', color: '#ef4444' },
     not_punched_in: { label: 'Not Punched In', color: '#94a3b8' },
   }
-  const s = map[status] || map.not_punched_in
+  const statusStr = typeof status === 'string' ? status : 'not_punched_in'
+  const s = map[statusStr] || map.not_punched_in
   return (
     <span
       className="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1 rounded-full"
       style={{ background: s.color + '18', color: s.color, border: `1px solid ${s.color}35` }}
     >
-      <span className={`w-2 h-2 rounded-full ${status === 'punched_in' ? 'animate-ping' : ''}`} style={{ background: s.color }} />
+      <span className={`w-2 h-2 rounded-full ${statusStr === 'punched_in' ? 'animate-ping' : ''}`} style={{ background: s.color }} />
       {s.label}
     </span>
   )
@@ -95,10 +107,13 @@ const ShiftStatusBadge = ({ status }) => {
 const EmployeePunchIn = () => {
   const { user } = useAuth()
 
-  const empName = user?.full_name || user?.name || `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || 'Employee'
-  const empId = user?.employee_id || 'AIM260001'
-  const empDept = user?.department || 'Operations'
-  const empRole = user?.designation || 'Specialist'
+  const empName = formatStringVal(
+    user?.full_name || user?.name || (user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : null),
+    'Employee'
+  )
+  const empId = formatStringVal(user?.employee_id || user?.id, 'AIM260001')
+  const empDept = formatStringVal(user?.department, 'Operations')
+  const empRole = formatStringVal(user?.designation, 'Specialist')
   const avatar = (empName.charAt(0) || 'E').toUpperCase()
 
   const [location, setLocation] = useState(null)
@@ -631,7 +646,7 @@ const EmployeePunchIn = () => {
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="text-gray-400 font-semibold">Today's Punch In:</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-[#38b34a] font-mono font-bold">{todayRecord.punch_in_time || todayRecord.inTime}</span>
+                    <span className="text-[#38b34a] font-mono font-bold">{formatStringVal(todayRecord.punch_in_time || todayRecord.inTime)}</span>
                     <AttendanceStatusBadge status={todayRecord.status} customLabel={todayRecord.status_label} />
                   </div>
                 </div>
@@ -639,9 +654,9 @@ const EmployeePunchIn = () => {
                   <div className="flex items-center justify-between text-[11px]">
                     <span className="text-gray-400 font-semibold">Today's Punch Out:</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-red-400 font-mono font-bold">{todayRecord.punch_out_time || todayRecord.outTime}</span>
+                      <span className="text-red-400 font-mono font-bold">{formatStringVal(todayRecord.punch_out_time || todayRecord.outTime)}</span>
                       {todayRecord.work_hours && (
-                        <span className="text-[10px] text-gray-400 font-mono">({todayRecord.work_hours})</span>
+                        <span className="text-[10px] text-gray-400 font-mono">({formatStringVal(todayRecord.work_hours)})</span>
                       )}
                     </div>
                   </div>
@@ -880,22 +895,24 @@ const EmployeePunchIn = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {punchLog.map((r) => {
-                  const pInTime = r.punch_in_time || r.inTime
-                  const pInDate = r.punch_in_date || r.date || r.attendance_date
-                  const pInAddr = r.punch_in_address || r.inAddress
-                  const pInAcc = r.punch_in_accuracy || (r.inAccuracy ? `±${r.inAccuracy}m` : null)
+                {punchLog.map((r, index) => {
+                  const pInTime = formatStringVal(r.punch_in_time || r.inTime)
+                  const pInDate = formatStringVal(r.punch_in_date || r.date || r.attendance_date)
+                  const pInAddr = formatStringVal(r.punch_in_address || r.inAddress)
+                  const pInAcc = formatStringVal(r.punch_in_accuracy || (r.inAccuracy ? `±${r.inAccuracy}m` : null))
 
-                  const pOutTime = r.punch_out_time || r.outTime
-                  const pOutDate = r.punch_out_date || (pOutTime ? (r.date || r.attendance_date) : null)
-                  const pOutAddr = r.punch_out_address || r.outAddress
-                  const pOutAcc = r.punch_out_accuracy || (r.outAccuracy ? `±${r.outAccuracy}m` : null)
+                  const pOutTime = formatStringVal(r.punch_out_time || r.outTime)
+                  const pOutDate = formatStringVal(r.punch_out_date || (pOutTime ? (r.date || r.attendance_date) : null))
+                  const pOutAddr = formatStringVal(r.punch_out_address || r.outAddress)
+                  const pOutAcc = formatStringVal(r.punch_out_accuracy || (r.outAccuracy ? `±${r.outAccuracy}m` : null))
+                  const rDate = formatStringVal(r.date || r.attendance_date, 'Today')
+                  const rDuration = formatStringVal(r.work_hours || (pOutTime ? 'Logged' : 'In Progress'), 'In Progress')
 
                   return (
-                    <tr key={r.id || r.attendance_date} className="hover:bg-white/3 transition-colors">
+                    <tr key={r.id || r.attendance_date || index} className="hover:bg-white/3 transition-colors">
                       {/* Date */}
                       <td className="px-3 py-3.5 whitespace-nowrap text-gray-300 font-bold">
-                        {r.date || r.attendance_date}
+                        {rDate}
                       </td>
 
                       {/* Punch In */}
@@ -903,7 +920,7 @@ const EmployeePunchIn = () => {
                         <div className="flex flex-col text-left">
                           <div className="flex items-center gap-1.5">
                             <span className="text-[#38b34a] font-bold font-mono text-[12px]">{pInTime}</span>
-                            <span className="text-[9px] text-gray-500 font-medium">({pInDate})</span>
+                            {pInDate && <span className="text-[9px] text-gray-500 font-medium">({pInDate})</span>}
                           </div>
                           {pInAddr && (
                             <span className="text-[10px] text-gray-400 truncate max-w-xs mt-0.5" title={pInAddr}>
@@ -920,7 +937,7 @@ const EmployeePunchIn = () => {
                           <div className="flex flex-col text-left">
                             <div className="flex items-center gap-1.5">
                               <span className="text-red-400 font-bold font-mono text-[12px]">{pOutTime}</span>
-                              <span className="text-[9px] text-gray-500 font-medium">({pOutDate})</span>
+                              {pOutDate && <span className="text-[9px] text-gray-500 font-medium">({pOutDate})</span>}
                             </div>
                             {pOutAddr && (
                               <span className="text-[10px] text-gray-400 truncate max-w-xs mt-0.5" title={pOutAddr}>
@@ -944,7 +961,7 @@ const EmployeePunchIn = () => {
 
                       {/* Duration */}
                       <td className="px-3 py-3.5 whitespace-nowrap text-gray-300 font-mono font-medium">
-                        {r.work_hours || (pOutTime ? 'Logged' : 'In Progress')}
+                        {rDuration}
                       </td>
                     </tr>
                   )
