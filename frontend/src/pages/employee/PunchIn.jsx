@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
+import LeaveApplyTab from '../../components/employee/LeaveApplyTab'
+import PayslipTab from '../../components/employee/PayslipTab'
 import {
   getEmployeePunchStatus,
   employeePunchIn,
@@ -202,6 +204,7 @@ const EmployeePunchIn = () => {
   const [now, setNow] = useState(new Date())
   const [showSuccess, setShowSuccess] = useState('')
   const [showError, setShowError] = useState('')
+  const [activeSubTab, setActiveSubTab] = useState('attendance') // 'attendance' | 'leave_apply' | 'payslip'
 
   const isSunday = now.getDay() === 0
   const liveRule = evaluateAttendanceRule(now)
@@ -452,6 +455,52 @@ const EmployeePunchIn = () => {
           <p className="text-[11px] text-gray-400 font-semibold mt-0.5">{dateStr}</p>
         </div>
       </div>
+
+      {/* ── 3 Subtabs Navigation: Attendance | Leave Apply | Payslip ── */}
+      <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-[#161926] border border-white/10 shadow-lg">
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('attendance')}
+          className={`flex-1 py-3 px-4 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            activeSubTab === 'attendance'
+              ? 'bg-[#38b34a] text-white shadow-lg shadow-[#38b34a]/25'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <span>🕒</span>
+          <span>Attendance Register</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('leave_apply')}
+          className={`flex-1 py-3 px-4 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            activeSubTab === 'leave_apply'
+              ? 'bg-[#38b34a] text-white shadow-lg shadow-[#38b34a]/25'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <span>🏖️</span>
+          <span>Leave Apply &amp; Balances</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('payslip')}
+          className={`flex-1 py-3 px-4 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            activeSubTab === 'payslip'
+              ? 'bg-[#38b34a] text-white shadow-lg shadow-[#38b34a]/25'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <span>📄</span>
+          <span>My Payslip</span>
+        </button>
+      </div>
+
+      {/* ── Subtab 1: Attendance Register ──────────────────────── */}
+      {activeSubTab === 'attendance' && (
+        <div className="space-y-6">
 
       {/* ── Sunday Warning Notice ────────────────────────── */}
       {isSunday && (
@@ -1038,6 +1087,14 @@ const EmployeePunchIn = () => {
           </div>
         )
       })()}
+        </div>
+      )}
+
+      {/* ── Subtab 2: Leave Apply ── */}
+      {activeSubTab === 'leave_apply' && <LeaveApplyTab user={user} />}
+
+      {/* ── Subtab 3: Payslip ── */}
+      {activeSubTab === 'payslip' && <PayslipTab user={user} />}
     </div>
   )
 }

@@ -118,3 +118,18 @@ export const employeePunchOut = (data) =>
 export const getEmployeePunchHistory = (params = {}) =>
   client.get('/employee/punch-history', { params })
 
+// Employee Leaves Management
+export const getEmployeeLeaves = () =>
+  client.get('/employee/leaves')
+
+export const applyEmployeeLeave = (formData) =>
+  client.post('/employee/leaves', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+
+// Employee Payslips
+export const getEmployeePayslip = (params = {}) =>
+  client.get('/employee/payslips', { params })
+

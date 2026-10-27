@@ -25,8 +25,13 @@ client.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
 
-    // Do not use mock fallback for punch or attendance endpoints - all operations must be strictly real-time with backend
-    if (originalRequest?.url && (originalRequest.url.includes('/employee/punch') || originalRequest.url.includes('/admin/attendances'))) {
+    // Do not use mock fallback for punch, attendance, leaves, or payslips endpoints - all operations must be strictly real-time with backend
+    if (originalRequest?.url && (
+      originalRequest.url.includes('/employee/punch') ||
+      originalRequest.url.includes('/employee/leaves') ||
+      originalRequest.url.includes('/employee/payslips') ||
+      originalRequest.url.includes('/admin/attendances')
+    )) {
       return Promise.reject(error)
     }
 
