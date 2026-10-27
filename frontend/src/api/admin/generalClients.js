@@ -59,6 +59,9 @@ export const updateQuotation = (quotationId, data) =>
 export const getClientQuotations = (clientId) =>
   client.get(`/admin/general-clients/${clientId}/quotations`)
 
+export const generateQuotationInvoice = (quotationId, data = {}) =>
+  client.post(`/admin/quotations/${quotationId}/generate-invoice`, data)
+
 export const recordQuotationPayment = (quotationId, data) =>
   client.post(`/admin/quotations/${quotationId}/record-payment`, data)
 

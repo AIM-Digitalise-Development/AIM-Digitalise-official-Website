@@ -14,6 +14,9 @@ import {
   deleteGeneralService,
   createQuotation,
   updateQuotation,
+  getClientQuotations,
+  generateQuotationInvoice,
+  recordQuotationPayment,
   sendQuotation,
   getAdminInvoiceDownloadUrl,
   getCountryTaxes,
@@ -284,6 +287,17 @@ export const numberToIndianWords = (num) => {
   return 'INR ' + res.trim() + ' Only'
 }
 
+export const formatDateDisplay = (dateStr) => {
+  if (!dateStr) return 'N/A'
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return String(dateStr).split('T')[0]
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  } catch (_) {
+    return String(dateStr).split('T')[0]
+  }
+}
+
 const countryFlags = {
   IN: '🇮🇳',
   NP: '🇳🇵',
@@ -444,6 +458,29 @@ const AdminUsers = () => {
   const [showQuotationDocModal, setShowQuotationDocModal] = useState(false)
   const [viewingQuotationDoc, setViewingQuotationDoc] = useState(null)
   const [copiedPayLink, setCopiedPayLink] = useState(false)
+
+  // Generate Tax Invoice Modal State
+  const [showGenerateInvoiceModal, setShowGenerateInvoiceModal] = useState(false)
+  const [invoiceTargetQuotation, setInvoiceTargetQuotation] = useState(null)
+  const [invoiceFormStatus, setInvoiceFormStatus] = useState('Order Closed')
+  const [generatingInvoice, setGeneratingInvoice] = useState(false)
+
+  // Tax Invoice Document Viewer Modal State
+  const [showInvoiceDocModal, setShowInvoiceDocModal] = useState(false)
+  const [viewingInvoiceDoc, setViewingInvoiceDoc] = useState(null)
+
+  // Record Manual Payment Modal State
+  const [showRecordPaymentModal, setShowRecordPaymentModal] = useState(false)
+  const [paymentQuotation, setPaymentQuotation] = useState(null)
+  const [recordingPayment, setRecordingPayment] = useState(false)
+  const [paymentForm, setPaymentForm] = useState({
+    amount: '',
+    payment_method: 'Direct Bank Transfer',
+    transaction_id: '',
+    reference_number: '',
+    paid_at: new Date().toISOString().substring(0, 10),
+    notes: 'Payment recorded by Admin against Invoice'
+  })
 
   // Follow-up Modal State for General Clients
   const [showFollowupModal, setShowFollowupModal] = useState(false)
@@ -1501,6 +1538,195 @@ const AdminUsers = () => {
       }
     } catch (err) {
       console.error('Error fetching client quotations:', err)
+    }
+  }
+
+  // Generate Tax Invoice Handlers
+  const handleOpenGenerateInvoiceModal = (quotation, clientObj = null) => {
+    if (clientObj) setSelectedGenClient(clientObj)
+    setInvoiceTargetQuotation(quotation)
+    setInvoiceFormStatus('Order Closed')
+    setShowGenerateInvoiceModal(true)
+  }
+
+  const handleGenerateInvoiceSubmit = async (e) => {
+    e.preventDefault()
+    if (!invoiceTargetQuotation?.id) return
+    setGeneratingInvoice(true)
+    setErrorMsg(null)
+    setMessage(null)
+    try {
+      const res = await generateQuotationInvoice(invoiceTargetQuotation.id, {
+        status: invoiceFormStatus || 'Order Closed'
+      })
+      if (res?.data?.success) {
+        setMessage(`🎉 Official Tax Invoice (${res.data.invoice_number || 'AIM-...'}) generated! Status set to Order Closed.`)
+        setShowGenerateInvoiceModal(false)
+        const targetId = selectedGenClient?.id || selectedGenClient?.rawId
+        if (targetId) {
+          try {
+            const listRes = await getClientQuotations(targetId)
+            if (listRes?.data?.success && Array.isArray(listRes.data.data)) {
+              setSelectedClientQuotations(listRes.data.data)
+            }
+          } catch (_) {}
+        }
+        fetchGeneralClientsList()
+      } else {
+        setErrorMsg(res?.data?.message || 'Failed to generate invoice')
+      }
+    } catch (err) {
+      console.error('Error generating invoice:', err)
+      setErrorMsg(err.response?.data?.message || 'Error generating invoice')
+    } finally {
+      setGeneratingInvoice(false)
+    }
+  }
+
+  // Open Invoice Document Viewer Modal
+  const handleOpenInvoiceDoc = (quotation, clientObj = null) => {
+    if (clientObj) setSelectedGenClient(clientObj)
+    setViewingInvoiceDoc({
+      ...quotation,
+      client: clientObj || quotation.client || selectedGenClient
+    })
+    setShowInvoiceDocModal(true)
+  }
+
+  // Print Invoice Document Function
+  const handlePrintInvoice = () => {
+    const printElement = document.getElementById('users-invoice-document-paper')
+    if (!printElement) {
+      window.print()
+      return
+    }
+
+    const iframe = document.createElement('iframe')
+    iframe.style.position = 'fixed'
+    iframe.style.right = '0'
+    iframe.style.bottom = '0'
+    iframe.style.width = '0'
+    iframe.style.height = '0'
+    iframe.style.border = '0'
+    document.body.appendChild(iframe)
+
+    const doc = iframe.contentWindow.document
+    doc.open()
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Tax Invoice - ${viewingInvoiceDoc?.invoice_number || viewingInvoiceDoc?.quotation_number || 'Invoice'}</title>
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+          <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 10mm 12mm 10mm 12mm;
+            }
+            body {
+              font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+              background-color: #ffffff !important;
+              color: #0f172a !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+            #users-invoice-document-paper {
+              box-shadow: none !important;
+              border: none !important;
+              padding: 0 !important;
+              margin: 0 auto !important;
+              width: 100% !important;
+              max-width: 100% !important;
+            }
+            table {
+              border-collapse: collapse !important;
+              width: 100% !important;
+            }
+            tr {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+          </style>
+        </head>
+        <body class="bg-white">
+          ${printElement.outerHTML}
+        </body>
+      </html>
+    `)
+    doc.close()
+
+    setTimeout(() => {
+      try {
+        iframe.contentWindow.focus()
+        iframe.contentWindow.print()
+      } catch (err) {
+        console.error('Print error:', err)
+      } finally {
+        setTimeout(() => {
+          try {
+            if (document.body.contains(iframe)) document.body.removeChild(iframe)
+          } catch (_) {}
+        }, 1500)
+      }
+    }, 500)
+  }
+
+  // Record Manual Payment Handlers (with Partial Payment Support)
+  const handleOpenRecordPayment = (quotation, clientObj = null) => {
+    if (clientObj) setSelectedGenClient(clientObj)
+    setPaymentQuotation(quotation)
+
+    // Calculate total amount & sum of previous payments
+    const totalAmt = Number(quotation.total_amount || quotation.grand_total || quotation.amount || 0)
+    const paymentsList = Array.isArray(quotation.payments) ? quotation.payments : []
+    const totalPaid = paymentsList.reduce((sum, p) => sum + Number(p.amount || 0), 0)
+    const dueAmount = Math.max(0, totalAmt - totalPaid)
+
+    setPaymentForm({
+      amount: dueAmount > 0 ? dueAmount : '',
+      payment_method: 'Direct Bank Transfer',
+      transaction_id: '',
+      reference_number: '',
+      paid_at: new Date().toISOString().substring(0, 10),
+      notes: 'Payment recorded by Admin against Invoice'
+    })
+    setShowRecordPaymentModal(true)
+  }
+
+  const handleRecordPaymentSubmit = async (e) => {
+    e.preventDefault()
+    if (!paymentQuotation?.id) return
+    setRecordingPayment(true)
+    setErrorMsg(null)
+    setMessage(null)
+    try {
+      const res = await recordQuotationPayment(paymentQuotation.id, paymentForm)
+      if (res?.data?.success) {
+        setMessage('🎉 Payment recorded successfully against invoice!')
+        setShowRecordPaymentModal(false)
+        const targetId = selectedGenClient?.id || selectedGenClient?.rawId
+        if (targetId) {
+          try {
+            const listRes = await getClientQuotations(targetId)
+            if (listRes?.data?.success && Array.isArray(listRes.data.data)) {
+              setSelectedClientQuotations(listRes.data.data)
+            }
+          } catch (_) {}
+        }
+        fetchGeneralClientsList()
+      } else {
+        setErrorMsg(res?.data?.message || 'Failed to record payment')
+      }
+    } catch (err) {
+      console.error('Error recording payment:', err)
+      setErrorMsg(err.response?.data?.message || 'Error recording payment')
+    } finally {
+      setRecordingPayment(false)
     }
   }
 
@@ -4369,12 +4595,12 @@ const AdminUsers = () => {
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50 text-slate-400 font-bold uppercase tracking-wider sticky top-0 z-10 shadow-xs">
-                        <th className="px-4 py-3 bg-slate-50">Quotation No.</th>
-                        <th className="px-4 py-3 bg-slate-50">Date</th>
-                        <th className="px-4 py-3 bg-slate-50">Status</th>
-                        <th className="px-4 py-3 bg-slate-50">Payment Terms</th>
-                        <th className="px-4 py-3 text-right bg-slate-50">Grand Total</th>
-                        <th className="px-4 py-3 text-center bg-slate-50">Actions & Invoice</th>
+                        <th className="px-4 py-3 bg-slate-50">QUOTATION NO.</th>
+                        <th className="px-4 py-3 bg-slate-50">DATE</th>
+                        <th className="px-4 py-3 bg-slate-50">STATUS</th>
+                        <th className="px-4 py-3 bg-slate-50">PAYMENT TERMS</th>
+                        <th className="px-4 py-3 text-right bg-slate-50">GRAND TOTAL</th>
+                        <th className="px-4 py-3 text-center bg-slate-50">ACTIONS & INVOICE</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700 bg-white">
@@ -4399,26 +4625,44 @@ const AdminUsers = () => {
                         }
 
                         const totalAmt = calcTotal()
-                        const isPaid = q.status === 'paid' || q.is_paid === true
+                        const paymentsList = Array.isArray(q.payments) ? q.payments : []
+                        const totalPaid = paymentsList.reduce((sum, p) => sum + Number(p.amount || 0), 0)
+                        const dueAmount = Math.max(0, totalAmt - totalPaid)
+                        const isPaid = q.status === 'paid' || q.is_paid === true || (totalAmt > 0 && dueAmount <= 0.01 && totalPaid > 0)
+                        const isOrderClosed = q.status === 'Order Closed' || q.status === 'order closed' || isPaid || Boolean(q.invoice_number)
+                        const hasInvoice = Boolean(q.invoice_number) || isOrderClosed
+                        const isPartial = !isPaid && totalPaid > 0
 
                         return (
-                          <tr key={q.id}>
-                            <td className="px-4 py-3 font-mono font-bold text-blue-600">{q.quotation_number || `QUO-${q.id}`}</td>
+                          <tr key={q.id} className="hover:bg-slate-50/70 transition-colors">
+                            <td className="px-4 py-3 font-mono font-bold text-blue-600">
+                              <div>{q.quotation_number || `QUO-${q.id}`}</div>
+                              {q.invoice_number && (
+                                <div className="text-[10px] text-purple-700 font-mono font-extrabold flex items-center gap-1 mt-0.5">
+                                  <span>🧾</span>
+                                  <span>{q.invoice_number}</span>
+                                </div>
+                              )}
+                            </td>
                             <td className="px-4 py-3 text-slate-500">
                               {q.quotation_date ? String(q.quotation_date).split('T')[0] : 'N/A'}
                             </td>
                             <td className="px-4 py-3">
                               {isPaid ? (
-                                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                  ✅ Paid
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs inline-flex items-center gap-1">
+                                  ✅ FULLY PAID
                                 </span>
-                              ) : q.status === 'sent' ? (
-                                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-blue-50 text-blue-700 border border-blue-200">
-                                  📨 Sent
+                              ) : isPartial ? (
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-amber-50 text-amber-700 border border-amber-200 shadow-xs inline-flex items-center gap-1">
+                                  ⏳ PARTIALLY PAID (Due: ₹{dueAmount.toLocaleString('en-IN')})
+                                </span>
+                              ) : isOrderClosed ? (
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-purple-50 text-purple-700 border border-purple-200 shadow-xs inline-flex items-center gap-1">
+                                  💼 ORDER CLOSED
                                 </span>
                               ) : (
-                                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-slate-100 text-slate-600 border border-slate-200">
-                                  📝 {q.status || 'Draft'}
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-sky-50 text-sky-700 border border-sky-200 shadow-xs inline-flex items-center gap-1">
+                                  🎯 PURSUING
                                 </span>
                               )}
                             </td>
@@ -4427,70 +4671,88 @@ const AdminUsers = () => {
                               ₹{totalAmt.toLocaleString('en-IN')}
                             </td>
                             <td className="px-4 py-3 text-center">
-                              <div className="flex items-center justify-center gap-2">
-                                {/* Direct View Quotation Document */}
+                              <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                                {/* 1. View Quotation Document */}
                                 <button
                                   type="button"
+                                  title="View Quotation Document"
                                   onClick={() => {
                                     setShowQuotationsListModal(false)
                                     handleOpenQuotationDoc(q, selectedGenClient)
                                   }}
-                                  className="px-3 py-1.5 bg-[#1e3e6b] hover:bg-[#152e50] text-white rounded-lg text-[11px] font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
+                                  className="px-2.5 py-1.5 bg-[#1e3e6b] hover:bg-[#152e50] text-white rounded-lg text-[11px] font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer active:scale-95"
                                 >
                                   <span>👁️</span>
-                                  <span>View Document</span>
+                                  <span>View Quotation</span>
                                 </button>
 
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setShowQuotationsListModal(false)
-                                    handleEditQuotation(q, selectedGenClient)
-                                  }}
-                                  className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-[11px] font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer active:scale-95"
-                                >
-                                  <span>✏️</span>
-                                  <span>Edit</span>
-                                </button>
-
-                                {isPaid && (
-                                  <a
-                                    href={getAdminInvoiceDownloadUrl(q.id)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-bold inline-flex items-center gap-1 shadow-sm transition-all"
+                                {/* 2. Generate Invoice or View Invoice Button */}
+                                {!hasInvoice ? (
+                                  <button
+                                    type="button"
+                                    title="Generate Official Tax Invoice & Close Order"
+                                    onClick={() => handleOpenGenerateInvoiceModal(q, selectedGenClient)}
+                                    className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer active:scale-95"
                                   >
-                                    📥 Tax Invoice PDF
-                                  </a>
+                                    <span>⚡</span>
+                                    <span>Generate Invoice</span>
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    title="View Official Tax Invoice"
+                                    onClick={() => {
+                                      setShowQuotationsListModal(false)
+                                      handleOpenInvoiceDoc(q, selectedGenClient)
+                                    }}
+                                    className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[11px] font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer active:scale-95"
+                                  >
+                                    <span>📄</span>
+                                    <span>View Invoice</span>
+                                  </button>
                                 )}
 
-                                <button
-                                  type="button"
-                                  title="Copy Payment Link"
-                                  onClick={async () => {
-                                    let payUrl = q.payment_url || q.pay_url
-                                    if (!payUrl && q.id) {
-                                      try {
-                                        const sendRes = await sendQuotation(q.id)
-                                        if (sendRes?.data?.payment_url) {
-                                          payUrl = sendRes.data.payment_url
-                                          q.payment_url = payUrl
-                                        }
-                                      } catch (_) { }
-                                    }
-                                    if (!payUrl) {
-                                      const targetUuid = q.uuid || `quotation-uuid-${q.id}`
-                                      payUrl = `${window.location.origin}/general-quotation-pay.html?uuid=${targetUuid}`
-                                    }
-                                    if (navigator.clipboard && navigator.clipboard.writeText) {
-                                      await navigator.clipboard.writeText(payUrl)
-                                      alert(`📋 Payment Link copied to clipboard:\n\n${payUrl}`)
-                                    }
-                                  }}
-                                  className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                                >
-                                  🔗
-                                </button>
+                                {/* 3. Record Payment Button (ONLY VISIBLE WHEN ORDER CLOSED!) */}
+                                {isOrderClosed && (
+                                  <button
+                                    type="button"
+                                    title="Record Payment against Invoice (Cash or Direct Bank Transfer)"
+                                    onClick={() => {
+                                      setShowQuotationsListModal(false)
+                                      handleOpenRecordPayment(q, selectedGenClient)
+                                    }}
+                                    className="px-2.5 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-[11px] font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer active:scale-95"
+                                  >
+                                    <span>💳</span>
+                                    <span>Record Payment</span>
+                                  </button>
+                                )}
+
+                                {/* 4. Edit Quotation Button (LOCKED / DISABLED WHEN ORDER CLOSED) */}
+                                {!isOrderClosed ? (
+                                  <button
+                                    type="button"
+                                    title="Edit Quotation"
+                                    onClick={() => {
+                                      setShowQuotationsListModal(false)
+                                      handleEditQuotation(q, selectedGenClient)
+                                    }}
+                                    className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-[11px] font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer active:scale-95"
+                                  >
+                                    <span>✏️</span>
+                                    <span>Edit</span>
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    disabled
+                                    title="Quotation cannot be edited once order is closed & invoice generated"
+                                    className="px-2.5 py-1.5 bg-slate-100 border border-slate-200 text-slate-400 rounded-lg text-[11px] font-bold flex items-center gap-1 cursor-not-allowed opacity-60"
+                                  >
+                                    <span>🔒</span>
+                                    <span>Edit</span>
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -4514,6 +4776,672 @@ const AdminUsers = () => {
           </div>
         </div>
       )}
+
+      {/* ============================================================ */}
+      {/* MODAL: GENERATE TAX INVOICE MODAL */}
+      {/* ============================================================ */}
+      {showGenerateInvoiceModal && invoiceTargetQuotation && (
+        <div className="fixed inset-0 z-[145] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md p-6 text-slate-800 space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-base font-black text-[#1e3e6b] flex items-center gap-1.5">
+                  <span>⚡</span>
+                  <span>Generate Tax Invoice</span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Against Quotation: <strong className="text-slate-700">{invoiceTargetQuotation.quotation_number || `QUO-${invoiceTargetQuotation.id}`}</strong>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowGenerateInvoiceModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold flex items-center justify-center transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleGenerateInvoiceSubmit} className="space-y-4 text-xs">
+              {/* Quotation Details Card */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2.5">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-500 font-medium">Client:</span>
+                  <span className="font-bold text-slate-800">
+                    {selectedGenClient?.client_name || selectedGenClient?.company_name || 'General Client'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-500 font-medium">Quotation Date:</span>
+                  <span className="font-mono text-slate-700">
+                    {invoiceTargetQuotation.quotation_date ? String(invoiceTargetQuotation.quotation_date).split('T')[0] : 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center border-t border-slate-200 pt-2 text-sm">
+                  <span className="font-extrabold text-slate-700">Total Invoice Amount:</span>
+                  <span className="font-black text-emerald-700 text-base">
+                    ₹{Number(invoiceTargetQuotation.total_amount || invoiceTargetQuotation.grand_total || 0).toLocaleString('en-IN')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Status of this Quotation */}
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                  Change Status of this Quotation:
+                </label>
+                <select
+                  value={invoiceFormStatus}
+                  onChange={(e) => setInvoiceFormStatus(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="Order Closed">Order Closed (Convert to Client)</option>
+                  <option value="Pursuing">Pursuing</option>
+                </select>
+                <p className="text-[10px] text-slate-500 mt-1.5 leading-relaxed bg-blue-50/70 p-2.5 rounded-xl border border-blue-100">
+                  ℹ️ When set to <strong>Order Closed</strong>, an official Tax Invoice serial number (e.g. <code>AIM-26102026-I0003</code>) will be generated.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowGenerateInvoiceModal(false)}
+                  className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={generatingInvoice}
+                  className="px-5 py-2 bg-gradient-to-r from-emerald-600 to-[#38b34a] hover:from-emerald-700 hover:to-[#329f42] text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-md cursor-pointer flex items-center gap-1.5 active:scale-95"
+                >
+                  <span>{generatingInvoice ? '⏳' : '⚡'}</span>
+                  <span>{generatingInvoice ? 'Generating Invoice...' : 'Generate Invoice'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* MODAL: TAX INVOICE DOCUMENT VIEWER MODAL */}
+      {/* ============================================================ */}
+      {showInvoiceDocModal && viewingInvoiceDoc && (
+        <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/75 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto animate-fade-in print:p-0 print:bg-white">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col text-slate-800 overflow-hidden print:max-h-none print:shadow-none print:border-none print:rounded-none">
+            {/* Modal Controls Top Bar (Hidden on Print) */}
+            <div className="px-6 py-3.5 bg-slate-900 text-white flex items-center justify-between gap-3 shrink-0 print:hidden">
+              <div className="flex items-center gap-2.5">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                  Official Tax Invoice
+                </span>
+                <span className="font-mono text-xs font-bold text-slate-300">
+                  {viewingInvoiceDoc.invoice_number || `INV-${viewingInvoiceDoc.id}`}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handlePrintInvoice}
+                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
+                >
+                  <span>🖨️</span>
+                  <span>Print / Save PDF</span>
+                </button>
+
+                <a
+                  href={getAdminInvoiceDownloadUrl(viewingInvoiceDoc.id)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 active:scale-95"
+                >
+                  <span>📥</span>
+                  <span>Download PDF</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => setShowInvoiceDocModal(false)}
+                  className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center transition-colors ml-2 cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Document Body (A4 Style Paper) */}
+            <div className="flex-1 overflow-y-auto p-3 sm:p-5 bg-slate-100/60 print:p-0 print:bg-white print:overflow-visible font-sans">
+              <div
+                id="users-invoice-document-paper"
+                className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 sm:p-6 md:p-7 space-y-3 sm:space-y-4 print:border-none print:shadow-none print:p-0 max-w-4xl mx-auto"
+              >
+                {/* 1. Tax Invoice Title at Top Most Position */}
+                <div className="text-center -mt-1 sm:-mt-2 pt-0 pb-0.5">
+                  <h1 className="text-xs sm:text-sm font-black text-[#1e3e6b] tracking-[0.25em] uppercase font-sans">
+                    TAX INVOICE
+                  </h1>
+                </div>
+
+                {/* 2. Letterhead & Brand Header with Company Logo */}
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-3 sm:pb-4 border-b-2 border-slate-800">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3.5">
+                      <img
+                        src={companyLogo}
+                        alt="AIM Digitalise Logo"
+                        className="h-13 sm:h-15 w-auto object-contain shrink-0"
+                      />
+                      <div>
+                        <h2 className="text-lg sm:text-xl font-black text-[#1e3e6b] tracking-tight uppercase leading-tight">
+                          AIM Digitalise Pvt. Ltd.
+                        </h2>
+                        <p className="text-[11px] font-bold text-slate-500">
+                          Digital Nation तो Developed Nation
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-[10px] text-slate-500 leading-relaxed pt-1">
+                      <p>Corporate Office: #139, 3rd Floor, Rajdanga Main Road, Kolkata - 700107, India</p>
+                      <p>GSTIN: <strong>19ABCCA9672L1Z0</strong> | CIN: <strong>U62013WB2025PTC279684</strong></p>
+                      <p>Email: <span className="text-blue-600">support@aimdigitalise.com</span> | Web: <strong>www.aimdigitalise.com</strong></p>
+                    </div>
+                  </div>
+
+                  <div className="text-left sm:text-right space-y-1.5 bg-slate-50 sm:bg-transparent p-4 sm:p-0 rounded-2xl border sm:border-none border-slate-200 w-full sm:w-auto shrink-0">
+                    <div className="text-xs pt-1 space-y-1">
+                      <div>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block font-sans">
+                          INVOICE NO.
+                        </span>
+                        <p className="font-mono font-black text-[#1e3e6b] text-base">
+                          {viewingInvoiceDoc.invoice_number || `INV-${viewingInvoiceDoc.id}`}
+                        </p>
+                      </div>
+                      <p className="text-slate-500 font-medium">
+                        Invoice Date: <strong className="text-slate-800">{formatDateDisplay(viewingInvoiceDoc.invoice_date || viewingInvoiceDoc.quotation_date)}</strong>
+                      </p>
+                      {viewingInvoiceDoc.quotation_number && (
+                        <p className="text-slate-400 text-[10px]">
+                          Quotation Ref: <strong className="text-slate-600 font-mono">{viewingInvoiceDoc.quotation_number}</strong>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Client / Billing Information */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50/80 rounded-2xl p-4 sm:p-5 border border-slate-200/80 text-xs">
+                  <div className="space-y-1">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block font-sans">
+                      BILLED TO:
+                    </span>
+                    <h3 className="font-extrabold text-slate-900 text-sm">
+                      {viewingInvoiceDoc.client?.company_name || viewingInvoiceDoc.client?.client_name || 'Valued Client'}
+                    </h3>
+                    {viewingInvoiceDoc.client?.contact_person && (
+                      <p className="text-slate-600 font-medium">
+                        Attn: <strong>{viewingInvoiceDoc.client.contact_person}</strong>
+                      </p>
+                    )}
+                    <p className="text-slate-600">{viewingInvoiceDoc.client?.email || '—'}</p>
+                    <p className="text-slate-600">{viewingInvoiceDoc.client?.contact_number || viewingInvoiceDoc.client?.client_phone || '—'}</p>
+                    {viewingInvoiceDoc.client?.address && (
+                      <p className="text-slate-500 pt-0.5 leading-snug">
+                        {viewingInvoiceDoc.client.address}
+                        {viewingInvoiceDoc.client.district ? `, ${viewingInvoiceDoc.client.district}` : ''}
+                        {viewingInvoiceDoc.client.state ? `, ${viewingInvoiceDoc.client.state}` : ''}
+                        {viewingInvoiceDoc.client.pin_code ? ` - ${viewingInvoiceDoc.client.pin_code}` : ''}
+                      </p>
+                    )}
+                    {viewingInvoiceDoc.client?.gstin && (
+                      <p className="font-mono text-slate-700 font-bold pt-1">
+                        GSTIN: {viewingInvoiceDoc.client.gstin}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1 sm:border-l sm:border-slate-200 sm:pl-6">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block font-sans">
+                      TAX & METADATA:
+                    </span>
+                    <p className="text-slate-700">
+                      Sold / Prepared By: <strong>{viewingInvoiceDoc.client?.sold_by_name || 'Admin Sales Team'}</strong>
+                    </p>
+                    <p className="text-slate-700">
+                      Branch: <strong>{viewingInvoiceDoc.client?.branch_name || 'Head Office (Kolkata)'}</strong>
+                    </p>
+                    <p className="text-slate-700">
+                      Tax Regime: <strong>{viewingInvoiceDoc.gst_type || viewingInvoiceDoc.client?.gst_type || 'Intra-State'}</strong>
+                    </p>
+                    <p className="text-slate-700">
+                      Country: <strong>{countryFlags[viewingInvoiceDoc.client?.country_code] || '🇮🇳'} {viewingInvoiceDoc.client?.country_code || 'IN'}</strong>
+                    </p>
+                    {viewingInvoiceDoc.po_number && (
+                      <p className="text-slate-700">
+                        PO Number: <strong>{viewingInvoiceDoc.po_number}</strong> ({viewingInvoiceDoc.po_date || 'N/A'})
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Scope & Itemized Breakdown Table */}
+                <div className="space-y-2">
+                  <span className="text-[10px] font-black text-slate-700 uppercase tracking-wider block">
+                    Scope of Services & Line Items:
+                  </span>
+
+                  <div className="border border-slate-300 rounded-xl overflow-hidden shadow-xs">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-900 text-white font-bold text-[10px] uppercase tracking-wider">
+                          <th className="px-3.5 py-2.5 text-center w-10">#</th>
+                          <th className="px-4 py-2.5 min-w-[280px]">Service Title & Description</th>
+                          <th className="px-2.5 py-2.5 text-center w-16">HSN/SAC</th>
+                          <th className="px-2 py-2.5 text-center w-12">Qty</th>
+                          <th className="px-3 py-2.5 text-right w-20">Rate (₹)</th>
+                          <th className="px-2 py-2.5 text-center w-12">Disc</th>
+                          <th className="px-3.5 py-2.5 text-right w-24">Amount (₹)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 text-slate-800">
+                        {(viewingInvoiceDoc.items || []).map((item, idx) => {
+                          const qty = Number(item.qty || item.quantity || 1)
+                          const price = Number(item.selling_price || item.price || 0)
+                          const disc = Number(item.discount_percentage || item.discount || 0)
+                          const lineTotal = Math.round(qty * price * (1 - disc / 100) * 100) / 100
+
+                          return (
+                            <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                              <td className="px-3.5 py-3 text-center text-slate-400 font-bold">{idx + 1}</td>
+                              <td className="px-4 py-3">
+                                <p className="font-extrabold text-slate-900 leading-snug">
+                                  {item.product_name || item.name || item.service_name || 'Service Item'}
+                                </p>
+                                {item.description && (
+                                  <p className="text-[11px] text-slate-500 font-medium leading-relaxed mt-0.5 whitespace-pre-line">
+                                    {item.description}
+                                  </p>
+                                )}
+                              </td>
+                              <td className="px-2.5 py-3 text-center font-mono text-slate-600">{item.hsn_sac || '998313'}</td>
+                              <td className="px-2 py-3 text-center font-bold text-slate-700">{qty}</td>
+                              <td className="px-3 py-3 text-right font-mono text-slate-700">₹{price.toLocaleString('en-IN')}</td>
+                              <td className="px-2 py-3 text-center text-slate-500">{disc > 0 ? `${disc}%` : '—'}</td>
+                              <td className="px-3.5 py-3 text-right font-mono font-bold text-slate-900">₹{lineTotal.toLocaleString('en-IN')}</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* 4. Financial Calculations & Totals */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+                  <div className="space-y-3">
+                    <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-1.5 text-xs">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">
+                        Payment & Account Settlement:
+                      </span>
+                      <p className="text-slate-600">
+                        Method: <strong>Cash / Direct Bank Transfer</strong>
+                      </p>
+                      <p className="text-slate-600">
+                        Terms: <strong>{viewingInvoiceDoc.payment_terms || 'Due on Receipt'}</strong>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200 space-y-2 text-xs">
+                    <div className="flex justify-between text-slate-600 font-medium">
+                      <span>Subtotal:</span>
+                      <span className="font-bold text-slate-800">
+                        ₹{Number(viewingInvoiceDoc.subtotal || 0).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+
+                    {(viewingInvoiceDoc.client?.country_code || 'IN') === 'IN' ? (
+                      (viewingInvoiceDoc.gst_type || 'Intra-State') === 'Intra-State' ? (
+                        <>
+                          <div className="flex justify-between text-slate-500 text-[11px]">
+                            <span>CGST (9%):</span>
+                            <span>₹{Number(viewingInvoiceDoc.cgst || (viewingInvoiceDoc.tax_total / 2) || 0).toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="flex justify-between text-slate-500 text-[11px]">
+                            <span>SGST (9%):</span>
+                            <span>₹{Number(viewingInvoiceDoc.sgst || (viewingInvoiceDoc.tax_total / 2) || 0).toLocaleString('en-IN')}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex justify-between text-slate-500 text-[11px]">
+                          <span>IGST (18%):</span>
+                          <span>₹{Number(viewingInvoiceDoc.igst || viewingInvoiceDoc.tax_total || 0).toLocaleString('en-IN')}</span>
+                        </div>
+                      )
+                    ) : (
+                      <div className="flex justify-between text-slate-500 text-[11px]">
+                        <span>Export Tax (18%):</span>
+                        <span>₹{Number(viewingInvoiceDoc.tax_total || 0).toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between text-slate-700 font-bold border-t border-slate-200 pt-2">
+                      <span>Total Tax:</span>
+                      <span>₹{Number(viewingInvoiceDoc.tax_total || 0).toLocaleString('en-IN')}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center border-t-2 border-slate-800 pt-2.5 text-base font-black text-slate-900">
+                      <span>Invoice Total:</span>
+                      <span className="text-xl text-[#38b34a]">
+                        ₹{Number(viewingInvoiceDoc.grand_total || viewingInvoiceDoc.total_amount || 0).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Amount in Words */}
+                <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200 text-xs space-y-1">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">
+                    Amount in Words:
+                  </span>
+                  <p className="font-bold text-slate-800 italic leading-relaxed">
+                    {numberToIndianWords(viewingInvoiceDoc.grand_total || viewingInvoiceDoc.total_amount)}
+                  </p>
+                </div>
+
+                {/* Terms & Signature */}
+                <div className="quotation-terms-signature grid grid-cols-1 sm:grid-cols-3 gap-5 pt-3 border-t border-slate-200 text-xs" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                  <div className="sm:col-span-2 space-y-1 text-slate-500 text-[10px]">
+                    <span className="font-black text-slate-700 uppercase tracking-wider block">Terms & Conditions:</span>
+                    <ol className="list-decimal pl-4 space-y-0.5">
+                      <li>Payment is due according to the agreed terms mentioned on this invoice.</li>
+                      <li>All cheques / transfers should be drawn in favour of AIM Digitalise Pvt. Ltd.</li>
+                      <li>For any billing inquiries, contact <strong>accounts@aimdigitalise.com</strong>.</li>
+                    </ol>
+                  </div>
+
+                  <div className="quotation-signature-block text-center sm:text-right space-y-1 pt-1" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
+                      For AIM Digitalise Pvt. Ltd.
+                    </span>
+                    <div className="inline-block text-center space-y-1">
+                      <img
+                        src="https://api.nexgn.in/public/signature_1.png"
+                        alt="Boss Signature"
+                        className="h-14 w-auto object-contain mx-auto my-1"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          if (target.src.includes('https://api.nexgn.in/public/signature_1.png')) {
+                            target.src = 'https://api.nexgn.in/signature_1.png';
+                          } else if (target.src.includes('https://api.nexgn.in/signature_1.png')) {
+                            target.src = 'http://localhost:8000/signature_1.png';
+                          } else if (target.src.includes('http://localhost:8000/signature_1.png')) {
+                            target.src = '/signature_1.png';
+                          } else {
+                            target.onerror = null;
+                          }
+                        }}
+                      />
+                      <div className="border-t border-slate-400 pt-1 min-w-[140px]">
+                        <span className="font-black text-slate-800 text-xs block">Authorized Signatory</span>
+                        <span className="text-[9px] text-slate-400 block font-medium">Digital Signature & Stamp</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3 shrink-0 print:hidden">
+              <span className="text-xs text-slate-500 font-medium">
+                Tax Invoice generated by AIM Digitalise system.
+              </span>
+              <button
+                onClick={() => setShowInvoiceDocModal(false)}
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs transition-all shadow-sm cursor-pointer"
+              >
+                Close Invoice
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* MODAL: ENHANCED RECORD MANUAL / PARTIAL PAYMENT MODAL */}
+      {/* ============================================================ */}
+      {showRecordPaymentModal && paymentQuotation && (() => {
+        const totalQuotationAmount = Number(paymentQuotation.total_amount || paymentQuotation.grand_total || paymentQuotation.amount || 0)
+        const recordedPayments = Array.isArray(paymentQuotation.payments) ? paymentQuotation.payments : []
+        const totalAmountReceived = recordedPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0)
+        const currentDueAmount = Math.max(0, totalQuotationAmount - totalAmountReceived)
+        const isFullyPaid = totalQuotationAmount > 0 && currentDueAmount <= 0.01
+
+        return (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto animate-fade-in">
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col text-slate-800 overflow-hidden my-auto">
+              {/* Header */}
+              <div className="flex justify-between items-center border-b border-slate-100 px-6 py-4 shrink-0 bg-white">
+                <div>
+                  <h3 className="text-base font-black text-[#1e3e6b] flex items-center gap-1.5">
+                    <span>💳</span>
+                    <span>Record Payment against Invoice</span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Invoice: <strong className="font-mono text-purple-700">{paymentQuotation.invoice_number || paymentQuotation.quotation_number || `INV-${paymentQuotation.id}`}</strong>
+                    {' '} | Client: <strong className="text-slate-700">{selectedGenClient?.client_name || selectedGenClient?.company_name}</strong>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowRecordPaymentModal(false)}
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-5 text-xs">
+                {/* 3-Card Financial Summary */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-center">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Total Invoice</span>
+                    <p className="text-sm font-black text-slate-800 mt-1">₹{totalQuotationAmount.toLocaleString('en-IN')}</p>
+                  </div>
+                  <div className="p-3 bg-emerald-50/60 border border-emerald-200 rounded-2xl text-center">
+                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-wider block">Total Received</span>
+                    <p className="text-sm font-black text-emerald-700 mt-1">₹{totalAmountReceived.toLocaleString('en-IN')}</p>
+                  </div>
+                  <div className={`p-3 rounded-2xl text-center border ${currentDueAmount > 0 ? 'bg-amber-50/70 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
+                    <span className={`text-[10px] font-black uppercase tracking-wider block ${currentDueAmount > 0 ? 'text-amber-700' : 'text-slate-400'}`}>Remaining Due</span>
+                    <p className={`text-sm font-black mt-1 ${currentDueAmount > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
+                      ₹{currentDueAmount.toLocaleString('en-IN')}
+                    </p>
+                  </div>
+                </div>
+
+                {/* If Fully Paid Notice */}
+                {isFullyPaid && (
+                  <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 flex items-center gap-2 font-bold text-xs">
+                    <span className="text-lg">🎉</span>
+                    <span>This invoice is fully paid! Total ₹{totalQuotationAmount.toLocaleString('en-IN')} has been received with ₹0 remaining due.</span>
+                  </div>
+                )}
+
+                {/* Payment Entry Form */}
+                {currentDueAmount > 0 && (
+                  <form onSubmit={handleRecordPaymentSubmit} className="space-y-3.5 bg-slate-50/80 p-4 rounded-2xl border border-slate-200">
+                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider border-b border-slate-200 pb-1.5 flex items-center justify-between">
+                      <span>Record New Installment / Payment:</span>
+                      <span className="text-[10px] font-normal text-slate-500 font-mono">
+                        Formula: Due = Total (₹{totalQuotationAmount}) - Received (₹{totalAmountReceived})
+                      </span>
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-600 block mb-1">
+                          Received Amount (₹) <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          max={currentDueAmount}
+                          required
+                          value={paymentForm.amount}
+                          onChange={(e) => setPaymentForm(f => ({ ...f, amount: e.target.value }))}
+                          placeholder={`Max: ₹${currentDueAmount}`}
+                          className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-black text-sm text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                        <span className="text-[9px] text-slate-400 block mt-0.5">
+                          Remaining due: ₹{currentDueAmount.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-600 block mb-1">
+                          Payment Mode <span className="text-rose-500">*</span>
+                        </label>
+                        <select
+                          value={paymentForm.payment_method}
+                          onChange={(e) => setPaymentForm(f => ({ ...f, payment_method: e.target.value }))}
+                          className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="Direct Bank Transfer">Direct Bank Transfer (NEFT / RTGS / IMPS)</option>
+                          <option value="Cash">Cash</option>
+                          <option value="UPI Direct to Bank">UPI Direct to Bank (GPay / PhonePe / Paytm)</option>
+                          <option value="Cheque">Cheque</option>
+                          <option value="Other">Other Direct Pay</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-600 block mb-1">
+                          Reference / UTR / Transaction No.
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. UTR20261027001 or Cash Receipt No"
+                          value={paymentForm.reference_number}
+                          onChange={(e) => setPaymentForm(f => ({ ...f, reference_number: e.target.value }))}
+                          className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-600 block mb-1">
+                          Date & Time of Payment <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          required
+                          value={paymentForm.paid_at}
+                          onChange={(e) => setPaymentForm(f => ({ ...f, paid_at: e.target.value }))}
+                          className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-600 block mb-1">Payment Notes / Remarks</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 50% advance received via HDFC bank transfer"
+                        value={paymentForm.notes}
+                        onChange={(e) => setPaymentForm(f => ({ ...f, notes: e.target.value }))}
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div className="flex justify-end pt-1">
+                      <button
+                        type="submit"
+                        disabled={recordingPayment}
+                        className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-[#38b34a] hover:from-emerald-700 hover:to-[#329f42] text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-md cursor-pointer flex items-center gap-1.5 active:scale-95"
+                      >
+                        <span>{recordingPayment ? '⏳' : '💾'}</span>
+                        <span>{recordingPayment ? 'Recording...' : 'Record Payment'}</span>
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* Payment Recorded History List */}
+                <div className="space-y-2 pt-1">
+                  <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>📋</span>
+                    <span>Payment Recorded History:</span>
+                  </h4>
+
+                  {recordedPayments.length === 0 ? (
+                    <div className="p-4 bg-slate-50 border border-dashed border-slate-300 rounded-2xl text-center text-slate-400 text-xs">
+                      No payments recorded yet for this invoice.
+                    </div>
+                  ) : (
+                    <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-100 text-slate-600 font-bold uppercase tracking-wider text-[10px]">
+                            <th className="px-3 py-2 text-center w-8">#</th>
+                            <th className="px-3 py-2">Date & Time</th>
+                            <th className="px-3 py-2 text-right">Amount</th>
+                            <th className="px-3 py-2">Mode</th>
+                            <th className="px-3 py-2">Reference / Notes</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                          {recordedPayments.map((p, pIdx) => {
+                            let noteDetails = p.notes || ''
+                            try {
+                              const parsed = JSON.parse(p.notes)
+                              noteDetails = parsed.notes || parsed.reference_number || p.notes
+                            } catch (_) {}
+
+                            return (
+                              <tr key={p.id || pIdx} className="hover:bg-slate-50">
+                                <td className="px-3 py-2 text-center font-bold text-slate-400">{pIdx + 1}</td>
+                                <td className="px-3 py-2 text-slate-600 font-medium">
+                                  {p.created_at ? new Date(p.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : (p.paid_at || 'Recorded')}
+                                </td>
+                                <td className="px-3 py-2 text-right font-black text-emerald-700">
+                                  ₹{Number(p.amount || 0).toLocaleString('en-IN')}
+                                </td>
+                                <td className="px-3 py-2 font-bold text-slate-700">
+                                  {p.payment_method || 'Bank Transfer'}
+                                </td>
+                                <td className="px-3 py-2 text-slate-500 font-mono text-[11px]">
+                                  {p.razorpay_payment_id || noteDetails || '—'}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex justify-end shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowRecordPaymentModal(false)}
+                  className="px-5 py-2 border border-slate-300 text-slate-600 font-bold rounded-xl text-xs hover:bg-slate-100 cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ============================================================ */}
       {/* MODAL 6: OFFICIAL QUOTATION DOCUMENT VIEWER (Print Ready) */}
