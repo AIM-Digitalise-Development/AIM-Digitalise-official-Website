@@ -1596,7 +1596,7 @@ const AdminUsers = () => {
     setShowInvoiceDocModal(true)
   }
 
-  // Print Invoice Document Function
+  // Print Invoice Document Function (High Fidelity matching Proforma Invoice, no browser header/footer)
   const handlePrintInvoice = () => {
     const printElement = document.getElementById('users-invoice-document-paper')
     if (!printElement) {
@@ -1608,43 +1608,66 @@ const AdminUsers = () => {
     iframe.style.position = 'fixed'
     iframe.style.right = '0'
     iframe.style.bottom = '0'
-    iframe.style.width = '0'
-    iframe.style.height = '0'
-    iframe.style.border = '0'
+    iframe.style.width = '0px'
+    iframe.style.height = '0px'
+    iframe.style.border = '0px'
+    iframe.setAttribute('title', 'Tax Invoice Print Preview')
     document.body.appendChild(iframe)
 
     const doc = iframe.contentWindow.document
+    
+    // Copy all style sheets and stylesheets from the main document to ensure exact Tailwind rendering
+    const headElements = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+      .map(node => node.outerHTML)
+      .join('\n')
+
     doc.open()
     doc.write(`
       <!DOCTYPE html>
-      <html>
+      <html lang="en">
         <head>
-          <title>Tax Invoice - ${viewingInvoiceDoc?.invoice_number || viewingInvoiceDoc?.quotation_number || 'Invoice'}</title>
-          <link rel="preconnect" href="https://fonts.googleapis.com">
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-          <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-          <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+          <meta charset="utf-8" />
+          <title></title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          ${headElements}
           <style>
             @page {
               size: A4 portrait;
-              margin: 10mm 12mm 10mm 12mm;
+              margin: 0 !important;
             }
-            body {
-              font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
-              background-color: #ffffff !important;
-              color: #0f172a !important;
+            * {
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
+              color-adjust: exact !important;
+              box-sizing: border-box;
+            }
+            html, body {
               margin: 0 !important;
               padding: 0 !important;
+              background-color: #ffffff !important;
+              background: #ffffff !important;
+              font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+              color: #0f172a !important;
+              width: 100% !important;
             }
             #users-invoice-document-paper {
               box-shadow: none !important;
               border: none !important;
-              padding: 0 !important;
+              padding: 6mm 10mm !important;
               margin: 0 auto !important;
               width: 100% !important;
               max-width: 100% !important;
+            }
+            #users-invoice-document-paper.space-y-3 > * + *,
+            #users-invoice-document-paper.space-y-4 > * + *,
+            #users-invoice-document-paper > div + div {
+              margin-top: 12px !important;
+            }
+            .invoice-terms-signature,
+            .invoice-signature-block,
+            .invoice-financials-block {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             }
             table {
               border-collapse: collapse !important;
@@ -1656,7 +1679,7 @@ const AdminUsers = () => {
             }
           </style>
         </head>
-        <body class="bg-white">
+        <body>
           ${printElement.outerHTML}
         </body>
       </html>
@@ -5019,16 +5042,6 @@ const AdminUsers = () => {
                   <span>Print / Save PDF</span>
                 </button>
 
-                <a
-                  href={getAdminInvoiceDownloadUrl(viewingInvoiceDoc.id)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 active:scale-95"
-                >
-                  <span>📥</span>
-                  <span>Download PDF</span>
-                </a>
-
                 <button
                   type="button"
                   onClick={() => setShowInvoiceDocModal(false)}
@@ -5206,19 +5219,32 @@ const AdminUsers = () => {
                   </div>
                 </div>
 
-                {/* 4. Financial Calculations & Totals */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
-                  <div className="space-y-3">
-                    <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-1.5 text-xs">
-                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">
-                        Payment & Account Settlement:
+                {/* 4. Financial Calculations & Bank Details (Ditto as Proforma Invoice) */}
+                <div className="invoice-financials-block grid grid-cols-1 sm:grid-cols-2 gap-5 pt-1" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                  <div className="space-y-4">
+                    <div className="p-3.5 sm:p-4 bg-blue-50/70 rounded-2xl border border-blue-100 text-xs space-y-2">
+                      <span className="text-[10px] font-black text-blue-700 uppercase tracking-widest block">
+                        Bank Transfer &amp; UPI Details:
                       </span>
-                      <p className="text-slate-600">
-                        Method: <strong>Cash / Direct Bank Transfer</strong>
-                      </p>
-                      <p className="text-slate-600">
-                        Terms: <strong>{viewingInvoiceDoc.payment_terms || 'Due on Receipt'}</strong>
-                      </p>
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <div className="text-[11px] text-slate-700 space-y-1 flex-1">
+                          <p>Bank: <strong>State Bank of India</strong></p>
+                          <p>Branch: <strong>SPECIALISED TEA BRANCH</strong></p>
+                          <p>A/C Name: <strong>AIM DIGITALISE PVT LTD</strong></p>
+                          <p>A/C No: <strong>41541042687</strong> | IFSC: <strong>SBIN0015197</strong></p>
+                          <p className="pt-0.5">UPI ID: <strong className="text-blue-700 font-bold">91106425507@ybl</strong></p>
+                        </div>
+                        <div className="flex flex-col items-center p-1.5 bg-white rounded-xl border border-blue-200/80 shadow-xs shrink-0">
+                          <img
+                            src={payQrCode}
+                            alt="UPI Barcode"
+                            className="w-20 h-20 sm:w-24 sm:h-24 object-contain rounded-lg"
+                          />
+                          <span className="text-[8px] font-black text-slate-600 mt-0.5 uppercase tracking-wider text-center">
+                            Scan to Pay (UPI)
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -5269,14 +5295,24 @@ const AdminUsers = () => {
                   </div>
                 </div>
 
-                {/* Amount in Words */}
-                <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200 text-xs space-y-1">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">
-                    Amount in Words:
-                  </span>
-                  <p className="font-bold text-slate-800 italic leading-relaxed">
-                    {numberToIndianWords(viewingInvoiceDoc.grand_total || viewingInvoiceDoc.total_amount)}
-                  </p>
+                {/* Combined Amount in Words & Payment Terms Box (Ditto as Proforma Invoice) */}
+                <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200 text-xs space-y-2.5">
+                  <div>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">
+                      Amount in Words:
+                    </span>
+                    <p className="font-bold text-slate-800 italic leading-relaxed">
+                      {numberToIndianWords(viewingInvoiceDoc.grand_total || viewingInvoiceDoc.total_amount)}
+                    </p>
+                  </div>
+                  <div className="border-t border-slate-200/80 pt-2">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">
+                      Payment Terms:
+                    </span>
+                    <p className="font-bold text-slate-800 leading-relaxed">
+                      {viewingInvoiceDoc.payment_terms || 'Due on Receipt'}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Terms & Signature */}
@@ -5715,14 +5751,22 @@ const AdminUsers = () => {
               </div>
 
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleEditQuotation(viewingQuotationDoc, viewingQuotationDoc.client)}
-                  className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
-                >
-                  <span>✏️</span>
-                  <span>Edit Quotation</span>
-                </button>
+                {!(
+                  viewingQuotationDoc.status === 'Order Closed' ||
+                  viewingQuotationDoc.status === 'order closed' ||
+                  viewingQuotationDoc.status === 'paid' ||
+                  viewingQuotationDoc.is_paid === true ||
+                  Boolean(viewingQuotationDoc.invoice_number)
+                ) && (
+                  <button
+                    type="button"
+                    onClick={() => handleEditQuotation(viewingQuotationDoc, viewingQuotationDoc.client)}
+                    className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
+                  >
+                    <span>✏️</span>
+                    <span>Edit Quotation</span>
+                  </button>
+                )}
 
                 <button
                   type="button"
@@ -5732,30 +5776,6 @@ const AdminUsers = () => {
                   <span>🖨️</span>
                   <span>Print / Save PDF</span>
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const payUrl = viewingQuotationDoc.payment_url || `${window.location.origin}/general-quotation-pay.html?uuid=${viewingQuotationDoc.uuid || ('quotation-' + viewingQuotationDoc.id)}`
-                    navigator.clipboard.writeText(payUrl)
-                    setCopiedPayLink(true)
-                    setTimeout(() => setCopiedPayLink(false), 2500)
-                  }}
-                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                >
-                  <span>{copiedPayLink ? '✅' : '🔗'}</span>
-                  <span>{copiedPayLink ? 'Link Copied!' : 'Copy Pay Link'}</span>
-                </button>
-
-                <a
-                  href={viewingQuotationDoc.payment_url || `${window.location.origin}/general-quotation-pay.html?uuid=${viewingQuotationDoc.uuid || ('quotation-' + viewingQuotationDoc.id)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
-                >
-                  <span>🌐</span>
-                  <span>Public View</span>
-                </a>
 
                 <button
                   type="button"
