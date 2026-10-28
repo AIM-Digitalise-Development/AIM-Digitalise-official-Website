@@ -475,12 +475,15 @@ const AdminUsers = () => {
   const [recordingPayment, setRecordingPayment] = useState(false)
   const [paymentForm, setPaymentForm] = useState({
     amount: '',
+    tds_amount: '',
+    tds_document: null,
     payment_method: 'Direct Bank Transfer',
     transaction_id: '',
     reference_number: '',
     paid_at: new Date().toISOString().substring(0, 10),
     notes: 'Payment recorded by Admin against Invoice'
   })
+  const [settlementTarget, setSettlementTarget] = useState(0)
 
   // Follow-up Modal State for General Clients
   const [showFollowupModal, setShowFollowupModal] = useState(false)
@@ -1676,36 +1679,160 @@ const AdminUsers = () => {
     }, 500)
   }
 
-  // Record Manual Payment Handlers (with Partial Payment Support)
+  // Record Manual Payment Handlers (with Partial Payment & Dynamic TDS Support)
+  const getPaymentTds = (p) => {
+    if (!p) return 0
+    if (p.tds_amount !== undefined && p.tds_amount !== null && Number(p.tds_amount) > 0) return Number(p.tds_amount)
+    if (p.computed_tds_amount !== undefined && p.computed_tds_amount !== null && Number(p.computed_tds_amount) > 0) return Number(p.computed_tds_amount)
+    if (p.notes) {
+      try {
+        const parsed = typeof p.notes === 'string' ? JSON.parse(p.notes) : p.notes
+        if (parsed && parsed.tds_amount !== undefined && parsed.tds_amount !== null && Number(parsed.tds_amount) > 0) {
+          return Number(parsed.tds_amount)
+        }
+      } catch (_) {}
+    }
+    return Number(p.tds_amount || 0)
+  }
+
+  const getPaymentTdsDoc = (p) => {
+    if (!p) return null
+    if (p.tds_document) return p.tds_document
+    if (p.computed_tds_document) return p.computed_tds_document
+    if (p.notes) {
+      try {
+        const parsed = typeof p.notes === 'string' ? JSON.parse(p.notes) : p.notes
+        if (parsed && parsed.tds_document) return parsed.tds_document
+      } catch (_) {}
+    }
+    return null
+  }
+
+  const getTdsDocUrl = (filePath) => {
+    if (!filePath) return ''
+    if (filePath.startsWith('http://') || filePath.startsWith('https://')) return filePath
+    const base = import.meta.env.VITE_API_BASE_URL || 'https://api.nexgn.in/api'
+    const host = base.replace(/\/api\/?$/, '')
+    return `${host}/${filePath.replace(/^\//, '')}`
+  }
+
+  const getPaymentRefNo = (p) => {
+    let ref = ''
+    if (p.notes && typeof p.notes === 'string') {
+      try {
+        const parsed = JSON.parse(p.notes)
+        ref = parsed.reference_number || ''
+      } catch (_) {}
+    }
+    if (!ref && p.reference_number) ref = p.reference_number
+    // Also check razorpay_payment_id — backend stores MANUAL-XXXXXXXX there when no ref is entered
+    if (!ref && p.razorpay_payment_id) ref = p.razorpay_payment_id
+    if (ref && (ref.startsWith('MANUAL-') || ref.startsWith('OFFLINE_') || ref === 'MANUAL_ENTRY')) {
+      return '—'
+    }
+    return ref || '—'
+  }
+
+  const getPaymentNotes = (p) => {
+    let note = ''
+    if (p.notes && typeof p.notes === 'string') {
+      try {
+        const parsed = JSON.parse(p.notes)
+        note = parsed.notes || ''
+      } catch (_) {
+        note = p.notes
+      }
+    } else if (p.notes) {
+      note = String(p.notes)
+    }
+    if (note === 'Payment recorded by Admin against Invoice' || note === 'Manual payment recorded by Admin') {
+      return '—'
+    }
+    return note || '—'
+  }
+
   const handleOpenRecordPayment = (quotation, clientObj = null) => {
     if (clientObj) setSelectedGenClient(clientObj)
     setPaymentQuotation(quotation)
 
-    // Calculate total amount & sum of previous payments
+    // Calculate total amount & sum of previous payments + TDS
     const totalAmt = Number(quotation.total_amount || quotation.grand_total || quotation.amount || 0)
     const paymentsList = Array.isArray(quotation.payments) ? quotation.payments : []
-    const totalPaid = paymentsList.reduce((sum, p) => sum + Number(p.amount || 0), 0)
-    const dueAmount = Math.max(0, totalAmt - totalPaid)
+    const totalSettled = paymentsList.reduce((sum, p) => sum + Number(p.amount || 0) + getPaymentTds(p), 0)
+    const dueAmount = Math.max(0, totalAmt - totalSettled)
 
     setPaymentForm({
-      amount: dueAmount > 0 ? dueAmount : '',
+      amount: '0',
+      tds_amount: '',
+      tds_document: null,
       payment_method: 'Direct Bank Transfer',
       transaction_id: '',
       reference_number: '',
       paid_at: new Date().toISOString().substring(0, 10),
       notes: 'Payment recorded by Admin against Invoice'
     })
+    setSettlementTarget(0)
     setShowRecordPaymentModal(true)
+  }
+
+  const handleReceivedAmountChange = (newReceivedStr) => {
+    const newReceived = parseFloat(newReceivedStr) || 0
+    const currentTds = parseFloat(paymentForm.tds_amount) || 0
+    const newTarget = newReceived + currentTds
+    setSettlementTarget(newTarget)
+    setPaymentForm(prev => ({
+      ...prev,
+      amount: newReceivedStr
+    }))
+  }
+
+  const handleTdsChange = (newTdsStr) => {
+    const newTds = parseFloat(newTdsStr) || 0
+    const currentReceived = parseFloat(paymentForm.amount) || 0
+    let target = settlementTarget
+    if (target <= 0 && currentReceived > 0) {
+      target = currentReceived + (parseFloat(paymentForm.tds_amount) || 0)
+    }
+    if (newTds > target) {
+      target = newTds
+      setSettlementTarget(target)
+    }
+    const newReceived = Math.max(0, target - newTds)
+    setPaymentForm(prev => ({
+      ...prev,
+      tds_amount: newTdsStr,
+      amount: newReceived > 0 ? Number(newReceived.toFixed(2)) : (newReceived === 0 && newTds > 0 ? 0 : '')
+    }))
   }
 
   const handleRecordPaymentSubmit = async (e) => {
     e.preventDefault()
     if (!paymentQuotation?.id) return
+
+    const recAmt = parseFloat(paymentForm.amount) || 0
+    const tdsAmt = parseFloat(paymentForm.tds_amount) || 0
+    if ((recAmt + tdsAmt) <= 0) {
+      setErrorMsg('Please enter a valid Received Amount or TDS Amount')
+      return
+    }
+
     setRecordingPayment(true)
     setErrorMsg(null)
     setMessage(null)
     try {
-      const res = await recordQuotationPayment(paymentQuotation.id, paymentForm)
+      const fd = new FormData()
+      fd.append('amount', recAmt)
+      fd.append('tds_amount', tdsAmt)
+      if (paymentForm.tds_document instanceof File) {
+        fd.append('tds_document', paymentForm.tds_document)
+      }
+      fd.append('payment_method', paymentForm.payment_method || 'Direct Bank Transfer')
+      fd.append('transaction_id', paymentForm.transaction_id || '')
+      fd.append('reference_number', paymentForm.reference_number || '')
+      fd.append('paid_at', paymentForm.paid_at || new Date().toISOString().substring(0, 10))
+      fd.append('notes', paymentForm.notes || 'Payment recorded by Admin against Invoice')
+
+      const res = await recordQuotationPayment(paymentQuotation.id, fd)
       if (res?.data?.success) {
         setMessage('🎉 Payment recorded successfully against invoice!')
         setShowRecordPaymentModal(false)
@@ -4569,7 +4696,7 @@ const AdminUsers = () => {
       {/* ============================================================ */}
       {showQuotationsListModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto animate-fade-in">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-4xl max-h-[85vh] sm:max-h-[90vh] flex flex-col text-slate-800 overflow-hidden my-auto">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-6xl max-h-[85vh] sm:max-h-[90vh] flex flex-col text-slate-800 overflow-hidden my-auto">
             <div className="flex justify-between items-center border-b border-slate-100 px-6 py-4 shrink-0 bg-white">
               <div>
                 <h3 className="text-lg font-black text-[#1e3e6b]">📋 Quotations History</h3>
@@ -4600,7 +4727,7 @@ const AdminUsers = () => {
                         <th className="px-4 py-3 bg-slate-50">STATUS</th>
                         <th className="px-4 py-3 bg-slate-50">PAYMENT TERMS</th>
                         <th className="px-4 py-3 text-right bg-slate-50">GRAND TOTAL</th>
-                        <th className="px-4 py-3 text-center bg-slate-50">ACTIONS & INVOICE</th>
+                        <th className="px-4 py-3 text-center bg-slate-50 min-w-[340px]">ACTIONS &amp; INVOICE</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700 bg-white">
@@ -4626,12 +4753,12 @@ const AdminUsers = () => {
 
                         const totalAmt = calcTotal()
                         const paymentsList = Array.isArray(q.payments) ? q.payments : []
-                        const totalPaid = paymentsList.reduce((sum, p) => sum + Number(p.amount || 0), 0)
-                        const dueAmount = Math.max(0, totalAmt - totalPaid)
-                        const isPaid = q.status === 'paid' || q.is_paid === true || (totalAmt > 0 && dueAmount <= 0.01 && totalPaid > 0)
+                        const totalSettled = paymentsList.reduce((sum, p) => sum + Number(p.amount || 0) + getPaymentTds(p), 0)
+                        const dueAmount = Math.max(0, totalAmt - totalSettled)
+                        const isPaid = q.status === 'paid' || q.is_paid === true || (totalAmt > 0 && dueAmount <= 0.01 && totalSettled > 0)
                         const isOrderClosed = q.status === 'Order Closed' || q.status === 'order closed' || isPaid || Boolean(q.invoice_number)
                         const hasInvoice = Boolean(q.invoice_number) || isOrderClosed
-                        const isPartial = !isPaid && totalPaid > 0
+                        const isPartial = !isPaid && totalSettled > 0 && dueAmount > 0.01
 
                         return (
                           <tr key={q.id} className="hover:bg-slate-50/70 transition-colors">
@@ -4670,8 +4797,8 @@ const AdminUsers = () => {
                             <td className="px-4 py-3 text-right font-black text-emerald-700 text-sm">
                               ₹{totalAmt.toLocaleString('en-IN')}
                             </td>
-                            <td className="px-4 py-3 text-center">
-                              <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                            <td className="px-4 py-3 text-center min-w-[340px]">
+                              <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
                                 {/* 1. View Quotation Document */}
                                 <button
                                   type="button"
@@ -5212,18 +5339,26 @@ const AdminUsers = () => {
       )}
 
       {/* ============================================================ */}
-      {/* MODAL: ENHANCED RECORD MANUAL / PARTIAL PAYMENT MODAL */}
+      {/* MODAL: ENHANCED RECORD MANUAL / PARTIAL PAYMENT MODAL WITH DYNAMIC TDS */}
       {/* ============================================================ */}
       {showRecordPaymentModal && paymentQuotation && (() => {
         const totalQuotationAmount = Number(paymentQuotation.total_amount || paymentQuotation.grand_total || paymentQuotation.amount || 0)
         const recordedPayments = Array.isArray(paymentQuotation.payments) ? paymentQuotation.payments : []
         const totalAmountReceived = recordedPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0)
-        const currentDueAmount = Math.max(0, totalQuotationAmount - totalAmountReceived)
+        const totalTdsRecorded = recordedPayments.reduce((sum, p) => sum + getPaymentTds(p), 0)
+        const totalPreviouslySettled = totalAmountReceived + totalTdsRecorded
+        const currentDueAmount = Math.max(0, totalQuotationAmount - totalPreviouslySettled)
         const isFullyPaid = totalQuotationAmount > 0 && currentDueAmount <= 0.01
+
+        // Current entry live values
+        const entryReceived = parseFloat(paymentForm.amount) || 0
+        const entryTds = parseFloat(paymentForm.tds_amount) || 0
+        const entryTotalSettled = entryReceived + entryTds
+        const liveOutstandingDue = Math.max(0, currentDueAmount - entryTotalSettled)
 
         return (
           <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto animate-fade-in">
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col text-slate-800 overflow-hidden my-auto">
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col text-slate-800 overflow-hidden my-auto">
               {/* Header */}
               <div className="flex justify-between items-center border-b border-slate-100 px-6 py-4 shrink-0 bg-white">
                 <div>
@@ -5245,22 +5380,34 @@ const AdminUsers = () => {
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 space-y-5 text-xs">
-                {/* 3-Card Financial Summary */}
-                <div className="grid grid-cols-3 gap-3">
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+                {/* 3-Card Financial Summary with Live Outstanding */}
+                <div className="grid grid-cols-3 gap-2.5">
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-center">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Total Invoice</span>
-                    <p className="text-sm font-black text-slate-800 mt-1">₹{totalQuotationAmount.toLocaleString('en-IN')}</p>
+                    <p className="text-sm font-black text-slate-800 mt-0.5">₹{totalQuotationAmount.toLocaleString('en-IN')}</p>
                   </div>
                   <div className="p-3 bg-emerald-50/60 border border-emerald-200 rounded-2xl text-center">
-                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-wider block">Total Received</span>
-                    <p className="text-sm font-black text-emerald-700 mt-1">₹{totalAmountReceived.toLocaleString('en-IN')}</p>
+                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-wider block">Total Amount</span>
+                    <p className="text-sm font-black text-emerald-700 mt-0.5">₹{totalPreviouslySettled.toLocaleString('en-IN')}</p>
+                    {totalTdsRecorded > 0 && (
+                      <span className="text-[8.5px] text-emerald-600 block mt-0.5 font-medium">
+                        Rec: ₹{totalAmountReceived.toLocaleString('en-IN')} | TDS: ₹{totalTdsRecorded.toLocaleString('en-IN')}
+                      </span>
+                    )}
                   </div>
-                  <div className={`p-3 rounded-2xl text-center border ${currentDueAmount > 0 ? 'bg-amber-50/70 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
-                    <span className={`text-[10px] font-black uppercase tracking-wider block ${currentDueAmount > 0 ? 'text-amber-700' : 'text-slate-400'}`}>Remaining Due</span>
-                    <p className={`text-sm font-black mt-1 ${currentDueAmount > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
-                      ₹{currentDueAmount.toLocaleString('en-IN')}
+                  <div className={`p-3 rounded-2xl text-center border ${liveOutstandingDue > 0 ? 'bg-amber-50/70 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                    <span className={`text-[10px] font-black uppercase tracking-wider block ${liveOutstandingDue > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                      {entryTotalSettled > 0 ? 'Outstanding (Live)' : 'Remaining Due'}
+                    </span>
+                    <p className={`text-sm font-black mt-0.5 ${liveOutstandingDue > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
+                      ₹{liveOutstandingDue.toLocaleString('en-IN')}
                     </p>
+                    {entryTotalSettled > 0 && (
+                      <span className="text-[8.5px] text-slate-500 block mt-0.5 font-mono">
+                        Before entry: ₹{currentDueAmount.toLocaleString('en-IN')}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -5268,40 +5415,113 @@ const AdminUsers = () => {
                 {isFullyPaid && (
                   <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 flex items-center gap-2 font-bold text-xs">
                     <span className="text-lg">🎉</span>
-                    <span>This invoice is fully paid! Total ₹{totalQuotationAmount.toLocaleString('en-IN')} has been received with ₹0 remaining due.</span>
+                    <span>This invoice is fully settled! Total ₹{totalQuotationAmount.toLocaleString('en-IN')} has been cleared (Received + TDS) with ₹0 remaining due.</span>
                   </div>
                 )}
 
                 {/* Payment Entry Form */}
                 {currentDueAmount > 0 && (
                   <form onSubmit={handleRecordPaymentSubmit} className="space-y-3.5 bg-slate-50/80 p-4 rounded-2xl border border-slate-200">
-                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider border-b border-slate-200 pb-1.5 flex items-center justify-between">
-                      <span>Record New Installment / Payment:</span>
-                      <span className="text-[10px] font-normal text-slate-500 font-mono">
-                        Formula: Due = Total (₹{totalQuotationAmount}) - Received (₹{totalAmountReceived})
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
+                      <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                        Record New Installment / Payment:
+                      </h4>
+                      <span className="text-[10px] font-medium text-slate-500 font-mono">
+                        Due: ₹{currentDueAmount.toLocaleString('en-IN')}
                       </span>
-                    </h4>
+                    </div>
 
+                    {/* Received Amount & TDS Amount Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[10px] font-bold text-slate-600 block mb-1">
-                          Received Amount (₹) <span className="text-rose-500">*</span>
+                        <label className="text-[10px] font-bold text-slate-700 flex items-center justify-between mb-1">
+                          <span>Received Amount (₹) <span className="text-rose-500">*</span></span>
+                          <span className="text-[9px] font-normal text-slate-400">Cash / Bank Received</span>
                         </label>
                         <input
                           type="number"
                           step="0.01"
+                          min="0"
                           max={currentDueAmount}
-                          required
                           value={paymentForm.amount}
-                          onChange={(e) => setPaymentForm(f => ({ ...f, amount: e.target.value }))}
-                          placeholder={`Max: ₹${currentDueAmount}`}
+                          onChange={(e) => handleReceivedAmountChange(e.target.value)}
+                          placeholder="0.00"
                           className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-black text-sm text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
-                        <span className="text-[9px] text-slate-400 block mt-0.5">
-                          Remaining due: ₹{currentDueAmount.toLocaleString('en-IN')}
-                        </span>
                       </div>
 
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-700 flex items-center justify-between mb-1">
+                          <span>TDS Deducted (₹)</span>
+                          <span className="text-[9px] font-normal text-purple-600">Optional</span>
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={paymentForm.tds_amount}
+                          onChange={(e) => handleTdsChange(e.target.value)}
+                          placeholder="e.g. 200 or 1000"
+                          className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-black text-sm text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Live Auto-Balance Badge */}
+                    <div className="p-2.5 bg-blue-50/70 border border-blue-200 rounded-xl flex items-center justify-between text-[11px] text-blue-900 font-medium">
+                      <span>
+                        Settlement: <strong className="text-emerald-700">₹{entryReceived.toLocaleString('en-IN')}</strong> (Rec) + <strong className="text-purple-700">₹{entryTds.toLocaleString('en-IN')}</strong> (TDS) = <strong className="text-blue-900 font-bold">₹{entryTotalSettled.toLocaleString('en-IN')}</strong>
+                      </span>
+                      <span>
+                        Live Outstanding: <strong className={liveOutstandingDue > 0 ? 'text-amber-700 font-bold' : 'text-emerald-700 font-bold'}>₹{liveOutstandingDue.toLocaleString('en-IN')}</strong>
+                      </span>
+                    </div>
+
+                    {/* Optional TDS Document Upload (Only shown when TDS > 0) */}
+                    {parseFloat(paymentForm.tds_amount) > 0 && (
+                      <div className="p-3 bg-purple-50/60 border border-purple-200 rounded-2xl animate-fade-in space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold text-purple-900 flex items-center gap-1.5">
+                            <span>📎</span>
+                            <span>Upload TDS Certificate / Document (Optional):</span>
+                          </label>
+                          <span className="text-[9px] text-purple-600 font-medium">PDF, JPG, PNG (Max 10MB)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="file"
+                            id="users-tds-doc-file-input"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0] || null
+                              setPaymentForm(f => ({ ...f, tds_document: file }))
+                            }}
+                            className="text-xs text-slate-600 file:mr-2.5 file:py-1 file:px-2.5 file:rounded-xl file:border-0 file:text-[10px] file:font-bold file:bg-purple-600 file:text-white hover:file:bg-purple-700 cursor-pointer"
+                          />
+                          {paymentForm.tds_document && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPaymentForm(f => ({ ...f, tds_document: null }))
+                                const fileInput = document.getElementById('users-tds-doc-file-input')
+                                if (fileInput) fileInput.value = ''
+                              }}
+                              className="text-rose-500 hover:text-rose-700 text-xs font-bold px-2 py-0.5 bg-white border border-rose-200 rounded-lg cursor-pointer"
+                              title="Remove selected document"
+                            >
+                              ✕ Remove
+                            </button>
+                          )}
+                        </div>
+                        {paymentForm.tds_document && (
+                          <p className="text-[10px] text-purple-700 font-medium truncate">
+                            Selected: <strong>{paymentForm.tds_document.name}</strong> ({Math.round(paymentForm.tds_document.size / 1024)} KB)
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="text-[10px] font-bold text-slate-600 block mb-1">
                           Payment Mode <span className="text-rose-500">*</span>
@@ -5318,9 +5538,7 @@ const AdminUsers = () => {
                           <option value="Other">Other Direct Pay</option>
                         </select>
                       </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="text-[10px] font-bold text-slate-600 block mb-1">
                           Reference / UTR / Transaction No.
@@ -5333,7 +5551,9 @@ const AdminUsers = () => {
                           className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
+                    </div>
 
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="text-[10px] font-bold text-slate-600 block mb-1">
                           Date & Time of Payment <span className="text-rose-500">*</span>
@@ -5346,17 +5566,17 @@ const AdminUsers = () => {
                           className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
-                    </div>
 
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-600 block mb-1">Payment Notes / Remarks</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. 50% advance received via HDFC bank transfer"
-                        value={paymentForm.notes}
-                        onChange={(e) => setPaymentForm(f => ({ ...f, notes: e.target.value }))}
-                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-600 block mb-1">Payment Notes / Remarks</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 50% advance received via HDFC bank transfer"
+                          value={paymentForm.notes}
+                          onChange={(e) => setPaymentForm(f => ({ ...f, notes: e.target.value }))}
+                          className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
                     </div>
 
                     <div className="flex justify-end pt-1">
@@ -5388,35 +5608,69 @@ const AdminUsers = () => {
                       <table className="w-full text-left border-collapse text-xs">
                         <thead>
                           <tr className="bg-slate-100 text-slate-600 font-bold uppercase tracking-wider text-[10px]">
-                            <th className="px-3 py-2 text-center w-8">#</th>
-                            <th className="px-3 py-2">Date & Time</th>
-                            <th className="px-3 py-2 text-right">Amount</th>
-                            <th className="px-3 py-2">Mode</th>
-                            <th className="px-3 py-2">Reference / Notes</th>
+                            <th className="px-2.5 py-2 text-center w-7">#</th>
+                            <th className="px-2.5 py-2">Date & Time</th>
+                            <th className="px-2.5 py-2 text-right">Received</th>
+                            <th className="px-2.5 py-2 text-right">TDS</th>
+                            <th className="px-2.5 py-2 text-right">Total Settled</th>
+                            <th className="px-2.5 py-2">Mode</th>
+                            <th className="px-2.5 py-2 text-center">TDS Doc</th>
+                            <th className="px-2.5 py-2">Reference / Transaction No.</th>
+                            <th className="px-2.5 py-2">Notes / Remarks</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-white">
                           {recordedPayments.map((p, pIdx) => {
-                            let noteDetails = p.notes || ''
-                            try {
-                              const parsed = JSON.parse(p.notes)
-                              noteDetails = parsed.notes || parsed.reference_number || p.notes
-                            } catch (_) {}
+                            const pTds = getPaymentTds(p)
+                            const pDoc = getPaymentTdsDoc(p)
+                            const pTotal = Number(p.amount || 0) + pTds
+                            const refNoDisplay = getPaymentRefNo(p)
+                            const notesDisplay = getPaymentNotes(p)
 
                             return (
                               <tr key={p.id || pIdx} className="hover:bg-slate-50">
-                                <td className="px-3 py-2 text-center font-bold text-slate-400">{pIdx + 1}</td>
-                                <td className="px-3 py-2 text-slate-600 font-medium">
-                                  {p.created_at ? new Date(p.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : (p.paid_at || 'Recorded')}
+                                <td className="px-2.5 py-2 text-center font-bold text-slate-400">{pIdx + 1}</td>
+                                <td className="px-2.5 py-2 text-slate-600 font-medium whitespace-nowrap">
+                                  <div>
+                                    {p.created_at ? new Date(p.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : (p.paid_at || 'Recorded')}
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                    {p.created_at ? new Date(p.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : ''}
+                                  </div>
                                 </td>
-                                <td className="px-3 py-2 text-right font-black text-emerald-700">
+                                <td className="px-2.5 py-2 text-right font-black text-emerald-700">
                                   ₹{Number(p.amount || 0).toLocaleString('en-IN')}
                                 </td>
-                                <td className="px-3 py-2 font-bold text-slate-700">
+                                <td className="px-2.5 py-2 text-right font-bold text-purple-700">
+                                  {pTds > 0 ? `₹${pTds.toLocaleString('en-IN')}` : '—'}
+                                </td>
+                                <td className="px-2.5 py-2 text-right font-black text-slate-800">
+                                  ₹{pTotal.toLocaleString('en-IN')}
+                                </td>
+                                <td className="px-2.5 py-2 font-bold text-slate-700">
                                   {p.payment_method || 'Bank Transfer'}
                                 </td>
-                                <td className="px-3 py-2 text-slate-500 font-mono text-[11px]">
-                                  {p.razorpay_payment_id || noteDetails || '—'}
+                                <td className="px-2.5 py-2 text-center">
+                                  {pDoc ? (
+                                    <a
+                                      href={getTdsDocUrl(pDoc)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-600 hover:text-purple-800 hover:underline px-2 py-0.5 bg-purple-50 rounded-lg border border-purple-200"
+                                      title="View / Download TDS Document"
+                                    >
+                                      <span>📄</span>
+                                      <span>View</span>
+                                    </a>
+                                  ) : (
+                                    <span className="text-slate-300 font-mono">—</span>
+                                  )}
+                                </td>
+                                <td className="px-2.5 py-2 font-mono text-[11px] text-slate-700">
+                                  {refNoDisplay}
+                                </td>
+                                <td className="px-2.5 py-2 text-slate-600 text-[11px] max-w-[180px] truncate" title={notesDisplay !== '—' ? notesDisplay : ''}>
+                                  {notesDisplay}
                                 </td>
                               </tr>
                             )

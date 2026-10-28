@@ -62,8 +62,14 @@ export const getClientQuotations = (clientId) =>
 export const generateQuotationInvoice = (quotationId, data = {}) =>
   client.post(`/admin/quotations/${quotationId}/generate-invoice`, data)
 
-export const recordQuotationPayment = (quotationId, data) =>
-  client.post(`/admin/quotations/${quotationId}/record-payment`, data)
+export const recordQuotationPayment = (quotationId, data) => {
+  if (data instanceof FormData) {
+    return client.post(`/admin/quotations/${quotationId}/record-payment`, data, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  }
+  return client.post(`/admin/quotations/${quotationId}/record-payment`, data)
+}
 
 export const sendQuotation = (quotationId) =>
   client.post(`/admin/quotations/${quotationId}/send`)
