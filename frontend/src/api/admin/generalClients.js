@@ -74,6 +74,10 @@ export const recordQuotationPayment = (quotationId, data) => {
 export const sendQuotation = (quotationId) =>
   client.post(`/admin/quotations/${quotationId}/send`)
 
+// TDS Invoices / Compliance API
+export const getTdsRecords = () =>
+  client.get('/admin/tds-invoices')
+
 // Admin Invoice Download Link Generator
 export const getAdminInvoiceDownloadUrl = (quotationId) => {
   const token = localStorage.getItem('admin_token') || localStorage.getItem('access_token') || ''
@@ -114,6 +118,16 @@ export const getSubscriptionClients = () =>
 
 export const getDuePayments = () =>
   client.get('/admin/due-payments')
+
+// Compliance & CA WhatsApp Dispatch APIs
+export const getCaWhatsappNumber = () =>
+  client.get('/admin/compliance/ca-whatsapp-number')
+
+export const updateCaWhatsappNumber = (phone) =>
+  client.post('/admin/compliance/ca-whatsapp-number', { phone })
+
+export const sendInvoiceToCa = (data) =>
+  client.post('/admin/compliance/send-invoice-ca', data)
 
 
 

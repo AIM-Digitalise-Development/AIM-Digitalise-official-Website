@@ -26,6 +26,7 @@ export const ROUTES = {
     SUPPORT: '/admin/support',
     EMPLOYEE: '/admin/employee',
     COMPLIANCE: '/admin/compliance',
+    PURCHASE: '/admin/purchase',
     IMPLEMENTATION: '/admin/implementation',
     ADDON_SERVICES: '/admin/addon-services',
     DEMO: '/admin/demo',

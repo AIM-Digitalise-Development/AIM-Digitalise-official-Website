@@ -43,6 +43,7 @@ import AdminPartners from './pages/admin/Partners'
 import AdminSupport from './pages/admin/Support'
 import AdminEmployee from './pages/admin/Employee'
 import AdminCompliance from './pages/admin/Compliance'
+import AdminPurchase from './pages/admin/Purchase'
 import AdminImplementation from './pages/admin/Implementation'
 import AdminAddonServices from './pages/admin/AddonServices'
 import AdminPgKyc from './pages/admin/PgKyc'
@@ -146,6 +147,7 @@ function App() {
             <Route path="support" element={<AdminSupport />} />
             <Route path="employee" element={<AdminEmployee />} />
             <Route path="compliance" element={<AdminCompliance />} />
+            <Route path="purchase" element={<AdminPurchase />} />
             <Route path="implementation" element={<AdminImplementation />} />
             <Route path="addon-services" element={<AdminAddonServices />} />
             <Route path="demo" element={<AdminDemoSlots />} />

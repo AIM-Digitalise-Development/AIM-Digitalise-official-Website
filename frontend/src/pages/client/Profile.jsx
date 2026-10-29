@@ -97,7 +97,7 @@ const ClientProfile = () => {
     total_students: displayUser?.total_students
   }
 
-  const isInstPro = rawProduct?.product_name === 'NEXGN Institute Pro' || rawProduct?.name === 'NEXGN Institute Pro'
+  const isInstPro = (rawProduct?.product_name || rawProduct?.name || '').toLowerCase().includes('institute')
   const totalStudentsNum = parseInt(displayUser?.total_students || rawProduct?.total_students, 10) || 0
   const finalSub = (isInstPro && (!rawProduct?.monthly_subscription || Number(rawProduct.monthly_subscription) === 0))
     ? 10 * totalStudentsNum

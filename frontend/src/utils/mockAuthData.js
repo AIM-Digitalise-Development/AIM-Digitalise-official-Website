@@ -4031,6 +4031,166 @@ export const getMockResponse = (url, method, data = null) => {
     };
   }
 
+  // Admin Vendors mock fallback
+  if (url.includes('/admin/vendors')) {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('__mock_vendors')
+      let vendors = stored ? JSON.parse(stored) : [
+        { id: 1, vendor_name: 'AWS Cloud Services', contact_person: 'John Cloud', gst_no: '27AABCU9603R1ZM', phone: '9876543210', email: 'billing@aws.amazon.com', created_at: '2026-06-01' },
+        { id: 2, vendor_name: 'Dell Technologies India', contact_person: 'Amit Sharma', gst_no: '07AAACD4999Q1ZY', phone: '9812345678', email: 'sales@dell.co.in', created_at: '2026-05-20' },
+        { id: 3, vendor_name: 'Reliable Office Supplies', contact_person: 'Suresh Kumar', gst_no: '19AAECR1029P1ZK', phone: '9748012345', email: 'suresh@reliableoffice.com', created_at: '2026-05-15' },
+      ]
+      if (method === 'post' || method === 'POST') {
+        const newV = {
+          id: Date.now(),
+          vendor_name: data?.vendor_name || 'New Vendor',
+          contact_person: data?.contact_person || '',
+          gst_no: data?.gst_no || '',
+          phone: data?.phone || '',
+          email: data?.email || '',
+          created_at: new Date().toISOString()
+        }
+        vendors.unshift(newV)
+        localStorage.setItem('__mock_vendors', JSON.stringify(vendors))
+        return { success: true, message: 'Vendor registered successfully', data: newV }
+      }
+      if (method === 'delete' || method === 'DELETE') {
+        const idMatch = url.match(/\/admin\/vendors\/(\d+)/)
+        if (idMatch) {
+          const delId = Number(idMatch[1])
+          vendors = vendors.filter(v => v.id !== delId)
+          localStorage.setItem('__mock_vendors', JSON.stringify(vendors))
+        }
+        return { success: true, message: 'Vendor deleted successfully' }
+      }
+      localStorage.setItem('__mock_vendors', JSON.stringify(vendors))
+      return { success: true, data: vendors }
+    }
+  }
+
+  // Admin Items mock fallback
+  if (url.includes('/admin/items')) {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('__mock_items')
+      let items = stored ? JSON.parse(stored) : [
+        { id: 1, item_name: 'Production Server EC2 Instance', hsn_code: '998313', description: 'Cloud compute server 8-core 32GB RAM', unit: 'month', created_at: '2026-06-01' },
+        { id: 2, item_name: 'Dell Latitude 5440 Laptop', hsn_code: '847130', description: 'Core i7, 16GB RAM, 512GB SSD', unit: 'piece', created_at: '2026-05-20' },
+        { id: 3, item_name: 'A4 Printing Paper Ream (500 sheets)', hsn_code: '4802', description: '75 GSM high-brightness paper', unit: 'box', created_at: '2026-05-15' },
+        { id: 4, item_name: 'Google Workspace Enterprise License', hsn_code: '998315', description: 'Email and collaboration license', unit: 'account', created_at: '2026-05-10' },
+        { id: 5, item_name: 'HDMI to Type-C Converter Hub', hsn_code: '854442', description: '4K 60Hz multi-port adapter', unit: 'unit', created_at: '2026-05-05' },
+      ]
+      if (method === 'post' || method === 'POST') {
+        const newI = {
+          id: Date.now(),
+          item_name: data?.item_name || 'New Item',
+          hsn_code: data?.hsn_code || '',
+          description: data?.description || '',
+          unit: data?.unit || 'unit',
+          created_at: new Date().toISOString()
+        }
+        items.unshift(newI)
+        localStorage.setItem('__mock_items', JSON.stringify(items))
+        return { success: true, message: 'Item added successfully', data: newI }
+      }
+      if (method === 'delete' || method === 'DELETE') {
+        const idMatch = url.match(/\/admin\/items\/(\d+)/)
+        if (idMatch) {
+          const delId = Number(idMatch[1])
+          items = items.filter(i => i.id !== delId)
+          localStorage.setItem('__mock_items', JSON.stringify(items))
+        }
+        return { success: true, message: 'Item deleted successfully' }
+      }
+      localStorage.setItem('__mock_items', JSON.stringify(items))
+      return { success: true, data: items }
+    }
+  }
+
+  // Admin Purchases mock fallback
+  if (url.includes('/admin/purchases')) {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('__mock_purchases')
+      let purchases = stored ? JSON.parse(stored) : [
+        {
+          id: 1,
+          purchase_no: 'PO-2026-081',
+          vendor_id: 1,
+          vendor: { id: 1, vendor_name: 'AWS Cloud Services', contact_person: 'John Cloud' },
+          invoice_no: 'INV-AWS-882194',
+          invoice_file: null,
+          invoice_file_url: null,
+          purchase_date: '2026-06-01',
+          total_amount: 45200,
+          notes: 'Monthly infrastructure payment',
+          items: [
+            { id: 101, item_name: 'Production Server EC2 Instance', hsn_code: '998313', unit: 'month', quantity: 2, rate: 22600, amount: 45200 }
+          ]
+        },
+        {
+          id: 2,
+          purchase_no: 'PO-2026-082',
+          vendor_id: 2,
+          vendor: { id: 2, vendor_name: 'Dell Technologies India', contact_person: 'Amit Sharma' },
+          invoice_no: 'INV-DELL-55219',
+          invoice_file: null,
+          invoice_file_url: null,
+          purchase_date: '2026-05-28',
+          total_amount: 258000,
+          notes: 'Developer laptops',
+          items: [
+            { id: 102, item_name: 'Dell Latitude 5440 Laptop', hsn_code: '847130', unit: 'piece', quantity: 3, rate: 86000, amount: 258000 }
+          ]
+        }
+      ]
+      if (method === 'post' || method === 'POST') {
+        let itemsList = []
+        if (data?.items) {
+          itemsList = typeof data.items === 'string' ? JSON.parse(data.items) : data.items
+        }
+        const totalAmount = itemsList.reduce((acc, i) => acc + (Number(i.quantity || 0) * Number(i.rate || 0)), 0)
+        const storedVendors = localStorage.getItem('__mock_vendors')
+        const vendors = storedVendors ? JSON.parse(storedVendors) : []
+        const vendor = vendors.find(v => String(v.id) === String(data?.vendor_id)) || { vendor_name: 'Vendor' }
+
+        const newP = {
+          id: Date.now(),
+          purchase_no: `PO-2026-${Math.floor(100 + Math.random() * 900)}`,
+          vendor_id: data?.vendor_id,
+          vendor: vendor,
+          invoice_no: data?.invoice_no || `INV-${Date.now()}`,
+          invoice_file: null,
+          invoice_file_url: null,
+          purchase_date: data?.purchase_date || new Date().toISOString().split('T')[0],
+          total_amount: totalAmount,
+          notes: data?.notes || '',
+          items: itemsList.map((itm, idx) => ({
+            id: Date.now() + idx,
+            item_name: itm.item_name || 'Item',
+            hsn_code: itm.hsn_code || '',
+            unit: itm.unit || 'unit',
+            quantity: Number(itm.quantity || 1),
+            rate: Number(itm.rate || 0),
+            amount: Number(itm.quantity || 1) * Number(itm.rate || 0)
+          }))
+        }
+        purchases.unshift(newP)
+        localStorage.setItem('__mock_purchases', JSON.stringify(purchases))
+        return { success: true, message: 'Purchase recorded successfully', data: newP }
+      }
+      if (method === 'delete' || method === 'DELETE') {
+        const idMatch = url.match(/\/admin\/purchases\/(\d+)/)
+        if (idMatch) {
+          const delId = Number(idMatch[1])
+          purchases = purchases.filter(p => p.id !== delId)
+          localStorage.setItem('__mock_purchases', JSON.stringify(purchases))
+        }
+        return { success: true, message: 'Purchase record deleted successfully' }
+      }
+      localStorage.setItem('__mock_purchases', JSON.stringify(purchases))
+      return { success: true, data: purchases }
+    }
+  }
+
   return null
 }
 

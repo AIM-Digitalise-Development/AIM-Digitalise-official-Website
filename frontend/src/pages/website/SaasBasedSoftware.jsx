@@ -191,6 +191,18 @@ const subscriptionPlans = [
     support: `Dedicated Relationship Manager will be Assigned`
   },
   {
+    id: 18,
+    category: 'nexgn',
+    categoryLabel: 'Based NEXGN SOFTWARE',
+    name: 'NEXGN Institute Plus',
+    securityDeposit: '₹1000/-',
+    monthlySubscription: '₹10/-/student/month',
+    description: `Our "NEXGN Institute Plus" is an all-in-one school, college, and training center management app with student databases, fee collection, class timetables, and exam scorecards.`,
+    customization: `Custom exam grading rubrics, parent portal access, digital library catalogue, dynamic ID card generation.`,
+    complimentary: `Get the Employee Self-Service (ESS) software absolutely free for one year.`,
+    support: `Dedicated Relationship Manager will be Assigned`
+  },
+  {
     id: 16,
     category: 'nexgn',
     categoryLabel: 'Based NEXGN SOFTWARE',
@@ -232,6 +244,9 @@ const emptyCheckout = (partnerId = '') => ({
   school_short_name: '',
   school_session: '',
   total_students: '',
+  institution_type: 'Multi-Disciplinary',
+  established_year: '',
+  website: '',
   partner_id: partnerId,
   district: '',
   state: '',
@@ -300,6 +315,7 @@ const SaasBasedSoftware = () => {
   const activePlan = products.find(plan => plan.id === activePlanId) || products[0]
   const filteredPlans = products.filter(plan => plan.category === activeCategory)
   const isInstitutePro = activePlan?.id === 15
+  const isInstitutePlus = activePlan?.id === 18 || (activePlan?.name && activePlan.name.toLowerCase().includes('institute plus'))
 
   // Fetch Subcategories and Products from backend
   useEffect(() => {
@@ -386,7 +402,7 @@ const SaasBasedSoftware = () => {
   useEffect(() => {
     if (activePlan) {
       setCustomProcessingFee(activePlan.processing_fee || 0)
-      setCustomMonthlySubscription(activePlan.id === 15 ? 0 : (activePlan.monthly_subscription || 0))
+      setCustomMonthlySubscription((activePlan.id === 15 || activePlan.id === 18) ? 0 : (activePlan.monthly_subscription || 0))
     }
   }, [activePlanId, activePlan])
 
@@ -448,7 +464,7 @@ const SaasBasedSoftware = () => {
   const handleCheckoutChange = (e) => {
     const { name, value } = e.target
     let val = value
-    if (name === 'contact_number' || name === 'pin_code' || name === 'total_students') {
+    if (name === 'contact_number' || name === 'pin_code' || name === 'total_students' || name === 'established_year') {
       val = value.replace(/\D/g, '')
     }
     setCheckoutData(prev => ({ ...prev, [name]: val }))
@@ -486,7 +502,16 @@ const SaasBasedSoftware = () => {
       payload.vat_pan_number = checkoutData.gstin || null
     }
 
-    if (isInstitutePro) {
+    if (isInstitutePlus) {
+      payload.school_name = checkoutData.school_name
+      payload.company_name = checkoutData.school_name
+      payload.school_short_name = checkoutData.school_short_name
+      payload.institution_type = checkoutData.institution_type || 'Multi-Disciplinary'
+      payload.established_year = checkoutData.established_year
+      payload.website = checkoutData.website || null
+      payload.school_session = checkoutData.established_year ? `${checkoutData.established_year}-${(parseInt(checkoutData.established_year, 10) + 1).toString().slice(-2)}` : '2026-27'
+      payload.total_students = 1
+    } else if (isInstitutePro) {
       payload.school_name = checkoutData.school_name
       payload.school_short_name = checkoutData.school_short_name
       payload.school_session = checkoutData.school_session
@@ -1073,10 +1098,12 @@ const SaasBasedSoftware = () => {
                         <form onSubmit={handleCheckoutSubmit} className="space-y-4">
 
                           <div className="grid md:grid-cols-2 gap-4 items-start">
-                            {/* Left Column: Billing Details */}
+                            {/* Left Column: Billing / Institution Identity Details */}
                             <div className="space-y-3">
                               <div>
-                                <h4 className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest mb-2.5">Billing Details</h4>
+                                <h4 className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest mb-2.5">
+                                  {isInstitutePlus ? 'Institution Identity & Contact' : 'Billing Details'}
+                                </h4>
                                 <div className="grid sm:grid-cols-2 gap-2.5">
                                   <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
@@ -1093,59 +1120,229 @@ const SaasBasedSoftware = () => {
                                       className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                     />
                                   </div>
-                                  <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                      Contact Number <span className="text-aim-gold">*</span>
-                                    </label>
-                                    <input
-                                      type="tel"
-                                      name="contact_number"
-                                      value={checkoutData.contact_number}
-                                      onChange={handleCheckoutChange}
-                                      onBlur={(e) => {
-                                        let val = e.target.value.replace(/\D/g, '')
-                                        if (val.length === 10) {
-                                          val = '91' + val
-                                        }
-                                        setCheckoutData(prev => ({ ...prev, contact_number: val }))
-                                      }}
-                                      placeholder="e.g. 91 98765 43210"
-                                      required
-                                      className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
-                                    />
-                                  </div>
-                                  <div className="space-y-1 sm:col-span-2">
-                                    <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                      Email Address <span className="text-aim-gold">*</span>
-                                    </label>
-                                    <input
-                                      type="email"
-                                      name="email"
-                                      value={checkoutData.email}
-                                      onChange={handleCheckoutChange}
-                                      placeholder="name@company.com"
-                                      required
-                                      className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
-                                    />
-                                  </div>
 
-                                  {/* Conditional fields for Institute Pro (id=15) vs others */}
-                                  {!isInstitutePro ? (
-                                    <div className="space-y-1 sm:col-span-2">
-                                      <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                        Company Name
-                                      </label>
-                                      <input
-                                        type="text"
-                                        name="company_name"
-                                        value={checkoutData.company_name}
-                                        onChange={handleCheckoutChange}
-                                        placeholder="Your organization"
-                                        className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
-                                      />
-                                    </div>
+                                  {isInstitutePlus ? (
+                                    <>
+                                      <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                          Official Contact Phone <span className="text-aim-gold">*</span>
+                                        </label>
+                                        <input
+                                          type="tel"
+                                          name="contact_number"
+                                          value={checkoutData.contact_number}
+                                          onChange={handleCheckoutChange}
+                                          onBlur={(e) => {
+                                            let val = e.target.value.replace(/\D/g, '')
+                                            if (val.length === 10) {
+                                              val = '91' + val
+                                            }
+                                            setCheckoutData(prev => ({ ...prev, contact_number: val }))
+                                          }}
+                                          placeholder="e.g. 08443972937"
+                                          required
+                                          className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                        />
+                                      </div>
+
+                                      <div className="space-y-1 sm:col-span-2">
+                                        <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                          Official Contact Email <span className="text-aim-gold">*</span>
+                                        </label>
+                                        <input
+                                          type="email"
+                                          name="email"
+                                          value={checkoutData.email}
+                                          onChange={handleCheckoutChange}
+                                          placeholder="e.g. tapan.redflame@gmail.com"
+                                          required
+                                          className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                        />
+                                      </div>
+
+                                      <div className="space-y-1 sm:col-span-2">
+                                        <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                          Institution Legal Name <span className="text-aim-gold">*</span>
+                                        </label>
+                                        <input
+                                          type="text"
+                                          name="school_name"
+                                          value={checkoutData.school_name}
+                                          onChange={handleCheckoutChange}
+                                          placeholder="e.g. NEXGN University & Institute of Technology"
+                                          required
+                                          className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                        />
+                                      </div>
+
+                                      <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                          Short Name / Code <span className="text-aim-gold">*</span>
+                                        </label>
+                                        <input
+                                          type="text"
+                                          name="school_short_name"
+                                          maxLength="50"
+                                          value={checkoutData.school_short_name}
+                                          onChange={handleCheckoutChange}
+                                          placeholder="e.g. NEXGN-UNIV"
+                                          required
+                                          className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                        />
+                                        {validationErrors.school_short_name && (
+                                          <p className="text-[10px] text-red-500 font-bold mt-1">
+                                            {Array.isArray(validationErrors.school_short_name)
+                                              ? validationErrors.school_short_name[0]
+                                              : validationErrors.school_short_name}
+                                          </p>
+                                        )}
+                                      </div>
+
+                                      <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                          Established Year <span className="text-aim-gold">*</span>
+                                        </label>
+                                        <input
+                                          type="text"
+                                          name="established_year"
+                                          maxLength="4"
+                                          value={checkoutData.established_year}
+                                          onChange={handleCheckoutChange}
+                                          placeholder="2024"
+                                          required
+                                          className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                        />
+                                      </div>
+
+                                      <div className="space-y-1 sm:col-span-2">
+                                        <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                          Institution Type <span className="text-aim-gold">*</span>
+                                        </label>
+                                        <div className="relative">
+                                          <select
+                                            name="institution_type"
+                                            value={checkoutData.institution_type}
+                                            onChange={handleCheckoutChange}
+                                            required
+                                            className="input-brand text-xs py-1.5 px-3 appearance-none cursor-pointer bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                          >
+                                            <option value="Multi-Disciplinary" className="bg-slate-900 text-white">Multi-Disciplinary</option>
+                                            <option value="University" className="bg-slate-900 text-white">University</option>
+                                            <option value="College" className="bg-slate-900 text-white">College</option>
+                                            <option value="Engineering College" className="bg-slate-900 text-white">Engineering College</option>
+                                            <option value="Medical College" className="bg-slate-900 text-white">Medical College</option>
+                                            <option value="Management Institute" className="bg-slate-900 text-white">Management Institute</option>
+                                            <option value="Polytechnic" className="bg-slate-900 text-white">Polytechnic</option>
+                                            <option value="Training Institute" className="bg-slate-900 text-white">Training Institute</option>
+                                          </select>
+                                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-aim-copy-muted">
+                                            <svg className="fill-current h-4 w-4" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      <div className="space-y-1 sm:col-span-2">
+                                        <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                          Official Website <span className="text-aim-copy-muted normal-case font-normal">(optional)</span>
+                                        </label>
+                                        <input
+                                          type="text"
+                                          name="website"
+                                          value={checkoutData.website}
+                                          onChange={handleCheckoutChange}
+                                          placeholder="https://yourinstitution.edu.in"
+                                          className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                        />
+                                      </div>
+                                    </>
+                                  ) : !isInstitutePro ? (
+                                    <>
+                                      <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                          Contact Number <span className="text-aim-gold">*</span>
+                                        </label>
+                                        <input
+                                          type="tel"
+                                          name="contact_number"
+                                          value={checkoutData.contact_number}
+                                          onChange={handleCheckoutChange}
+                                          onBlur={(e) => {
+                                            let val = e.target.value.replace(/\D/g, '')
+                                            if (val.length === 10) {
+                                              val = '91' + val
+                                            }
+                                            setCheckoutData(prev => ({ ...prev, contact_number: val }))
+                                          }}
+                                          placeholder="e.g. 91 98765 43210"
+                                          required
+                                          className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                        />
+                                      </div>
+                                      <div className="space-y-1 sm:col-span-2">
+                                        <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                          Email Address <span className="text-aim-gold">*</span>
+                                        </label>
+                                        <input
+                                          type="email"
+                                          name="email"
+                                          value={checkoutData.email}
+                                          onChange={handleCheckoutChange}
+                                          placeholder="name@company.com"
+                                          required
+                                          className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                        />
+                                      </div>
+                                      <div className="space-y-1 sm:col-span-2">
+                                        <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                          Company Name
+                                        </label>
+                                        <input
+                                          type="text"
+                                          name="company_name"
+                                          value={checkoutData.company_name}
+                                          onChange={handleCheckoutChange}
+                                          placeholder="Your organization"
+                                          className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                        />
+                                      </div>
+                                    </>
                                   ) : (
                                     <>
+                                      <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                          Contact Number <span className="text-aim-gold">*</span>
+                                        </label>
+                                        <input
+                                          type="tel"
+                                          name="contact_number"
+                                          value={checkoutData.contact_number}
+                                          onChange={handleCheckoutChange}
+                                          onBlur={(e) => {
+                                            let val = e.target.value.replace(/\D/g, '')
+                                            if (val.length === 10) {
+                                              val = '91' + val
+                                            }
+                                            setCheckoutData(prev => ({ ...prev, contact_number: val }))
+                                          }}
+                                          placeholder="e.g. 91 98765 43210"
+                                          required
+                                          className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                        />
+                                      </div>
+                                      <div className="space-y-1 sm:col-span-2">
+                                        <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                          Email Address <span className="text-aim-gold">*</span>
+                                        </label>
+                                        <input
+                                          type="email"
+                                          name="email"
+                                          value={checkoutData.email}
+                                          onChange={handleCheckoutChange}
+                                          placeholder="name@company.com"
+                                          required
+                                          className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                        />
+                                      </div>
                                       <div className="space-y-1 sm:col-span-2">
                                         <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
                                           School Name <span className="text-aim-gold">*</span>
@@ -1219,12 +1416,14 @@ const SaasBasedSoftware = () => {
                             {/* Right Column: Address details, RM, GST & Total Students */}
                             <div className="space-y-3">
                               <div>
-                                <h4 className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest mb-2.5">Address & RM Details</h4>
+                                <h4 className="text-[10px] font-black text-aim-copy-muted uppercase tracking-widest mb-2.5">
+                                  {isInstitutePlus ? 'Campus Address & RM' : 'Address & RM Details'}
+                                </h4>
                                 <div className="grid sm:grid-cols-2 gap-2.5">
-                                  {/* Full Address */}
+                                  {/* Campus Address Line 1 / Full Address */}
                                   <div className="space-y-1 sm:col-span-2">
                                     <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                      Full Address <span className="text-aim-gold">*</span>
+                                      {isInstitutePlus ? 'Campus Address Line 1' : 'Full Address'} <span className="text-aim-gold">*</span>
                                     </label>
                                     <textarea
                                       name="address"
@@ -1232,13 +1431,13 @@ const SaasBasedSoftware = () => {
                                       onChange={handleCheckoutChange}
                                       required
                                       rows="2"
-                                      placeholder="Street, building, locality…"
+                                      placeholder={isInstitutePlus ? "Address 144 premendrapally, Bailanthapur" : "Street, building, locality…"}
                                       className="input-brand text-xs py-1.5 px-3 transition resize-none bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                     />
                                   </div>
                                   <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                      District <span className="text-aim-gold">*</span>
+                                      {isInstitutePlus ? 'City' : 'District'} <span className="text-aim-gold">*</span>
                                     </label>
                                     <input
                                       type="text"
@@ -1275,30 +1474,42 @@ const SaasBasedSoftware = () => {
                                       value={checkoutData.pin_code}
                                       onChange={handleCheckoutChange}
                                       required
-                                      placeholder="700001"
+                                      placeholder="700100"
                                       className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                     />
                                   </div>
 
-                                  {/* Total Students & GSTIN conditional slots */}
-                                  {isInstitutePro ? (
-                                    <>
-                                      <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                          Total Students <span className="text-aim-gold">*</span>
-                                        </label>
-                                        <input
-                                          type="number"
-                                          name="total_students"
-                                          min="1"
-                                          value={checkoutData.total_students}
-                                          onChange={handleCheckoutChange}
-                                          required
-                                          placeholder="e.g. 450"
-                                          className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
-                                        />
-                                      </div>
-                                    </>
+                                  {/* GSTIN (for Institute Plus or other products) */}
+                                  {isInstitutePlus ? (
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                        {getTaxIdLabel()} <span className="text-aim-copy-muted normal-case font-normal">(optional)</span>
+                                      </label>
+                                      <input
+                                        type="text"
+                                        name="gstin"
+                                        value={checkoutData.gstin}
+                                        onChange={handleCheckoutChange}
+                                        placeholder={getTaxIdPlaceholder()}
+                                        className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                      />
+                                    </div>
+                                  ) : isInstitutePro ? (
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">
+                                        Total Students <span className="text-aim-gold">*</span>
+                                      </label>
+                                      <input
+                                        type="number"
+                                        name="total_students"
+                                        min="1"
+                                        value={checkoutData.total_students}
+                                        onChange={handleCheckoutChange}
+                                        required
+                                        placeholder="e.g. 450"
+                                        className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
+                                      />
+                                    </div>
                                   ) : (
                                     <div className="space-y-1">
                                       <label className="text-[10px] font-bold text-aim-copy-muted uppercase tracking-widest block">

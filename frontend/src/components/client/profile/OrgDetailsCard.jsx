@@ -1,7 +1,10 @@
 const OrgDetailsCard = ({ displayUser }) => {
   const rows = [
-    { label: 'Company / Organization', value: displayUser?.company_name || displayUser?.school_name || displayUser?.organization || displayUser?.company },
-    { label: 'School Short Name', value: displayUser?.school_short_name },
+    { label: 'Institution / Organization', value: displayUser?.school_name || displayUser?.company_name || displayUser?.organization || displayUser?.company },
+    { label: 'Short Name / Code', value: displayUser?.school_short_name },
+    ...(displayUser?.institution_type ? [{ label: 'Institution Type', value: displayUser.institution_type }] : []),
+    ...(displayUser?.established_year ? [{ label: 'Established Year', value: displayUser.established_year }] : []),
+    ...(displayUser?.website ? [{ label: 'Official Website', value: displayUser.website }] : []),
     { label: 'Academic Session', value: displayUser?.school_session || displayUser?.session },
   ]
 

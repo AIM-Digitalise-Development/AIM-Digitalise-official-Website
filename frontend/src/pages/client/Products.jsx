@@ -201,7 +201,7 @@ const ClientProducts = () => {
         }
         if (resolvedDiscount === 0) {
           const prodName = activeProd?.product_name || activeProd?.name || displayUser?.product_name || ''
-          const isInstPro = prodName ? (prodName.toLowerCase().includes('institute pro') || prodName.toLowerCase().includes('nexgn')) : false
+          const isInstPro = prodName ? (prodName.toLowerCase().includes('institute') || prodName.toLowerCase().includes('nexgn')) : false
           if (isInstPro || isSaasClient(displayUser) || isSaasClient(activeProd)) {
             if (stateKey === 'yearly') resolvedDiscount = 40
             if (stateKey === 'half-yearly') resolvedDiscount = 5
@@ -1271,7 +1271,7 @@ const ClientProducts = () => {
 
   const companyName = displayUser?.company_name || displayUser?.school_name || displayUser?.organization || ''
   const productName = activeProduct?.product_name || activeProduct?.name || displayUser?.product_name || ''
-  const isInstitutePro = productName ? (productName.toLowerCase().includes('institute pro') || productName.toLowerCase().includes('nexgn')) : false
+  const isInstitutePro = productName ? (productName.toLowerCase().includes('institute') || productName.toLowerCase().includes('nexgn')) : false
 
   const getOrderField = (obj, field) => {
     if (!obj || typeof obj !== 'object') return null;
@@ -1383,7 +1383,7 @@ const ClientProducts = () => {
     const localDisplayProducts = productData || []
     const localActiveProduct = localDisplayProducts[0] || {}
     const localProductName = localActiveProduct?.name || localActiveProduct?.product_name || localDisplayUser?.product_name || ''
-    const localIsInstitutePro = localProductName ? (localProductName.toLowerCase().includes('institute pro') || localProductName.toLowerCase().includes('nexgn')) : false
+    const localIsInstitutePro = localProductName ? (localProductName.toLowerCase().includes('institute') || localProductName.toLowerCase().includes('nexgn')) : false
     const localIsNexgnSaas = isSaasClient(localDisplayUser) || isSaasClient(localActiveProduct) || (localProductName && localProductName.toLowerCase().includes('nexgn'))
     const localSubscriptionPrice = localActiveProduct?.monthly_subscription ?? localDisplayUser?.monthly_subscription ?? 0
 
