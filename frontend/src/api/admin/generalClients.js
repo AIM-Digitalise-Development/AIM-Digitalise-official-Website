@@ -74,9 +74,11 @@ export const recordQuotationPayment = (quotationId, data) => {
 export const sendQuotation = (quotationId) =>
   client.post(`/admin/quotations/${quotationId}/send`)
 
-// TDS Invoices / Compliance API
-export const getTdsRecords = () =>
+// Invoices / Compliance API
+export const getInvoiceRecords = () =>
   client.get('/admin/tds-invoices')
+
+export const getTdsRecords = getInvoiceRecords
 
 // Admin Invoice Download Link Generator
 export const getAdminInvoiceDownloadUrl = (quotationId) => {

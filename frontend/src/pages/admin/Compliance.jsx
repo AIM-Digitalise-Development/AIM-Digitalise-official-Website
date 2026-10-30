@@ -77,7 +77,7 @@ const countryFlags = {
 }
 
 const AdminCompliance = () => {
-  const [activePageTab, setActivePageTab] = useState('tds_records')
+  const [activePageTab, setActivePageTab] = useState('invoice_records')
   const [audits] = useState(DUMMY_AUDITS)
   const [filings, setFilings] = useState(DUMMY_GST_FILINGS)
 
@@ -134,18 +134,24 @@ const AdminCompliance = () => {
     }
   }
 
-  // Fetch TDS Records from backend
+  // Fetch TDS / Invoice Records from backend
   const fetchTdsRecords = async () => {
     setLoadingTds(true)
     try {
       const res = await getTdsRecords()
       if (res?.data?.success && Array.isArray(res.data.data)) {
-        setTdsRecords(res.data.data)
+        // Only for compliance: for general client invoice records, show records which are on or after 1 Jan 2026. Hide the ones before that.
+        const post2026Records = res.data.data.filter(r => {
+          if (r.record_type === 'purchase') return true
+          const dateStr = String(r.invoice_date || r.quotation_date || r.created_at || '').slice(0, 10)
+          return !dateStr || dateStr >= '2026-01-01'
+        })
+        setTdsRecords(post2026Records)
       } else {
         setTdsRecords([])
       }
     } catch (err) {
-      console.error('Error fetching TDS records:', err)
+      console.error('Error fetching invoice records:', err)
       setTdsRecords([])
     } finally {
       setLoadingTds(false)
@@ -362,9 +368,15 @@ const AdminCompliance = () => {
     return note || '—'
   }
 
-  // Filter TDS Records
+  // Filter TDS / Invoice Records
   const filteredTdsRecords = useMemo(() => {
     return tdsRecords.filter(r => {
+      // 0. Only show general client invoice records from 1 Jan 2026 onwards
+      if (r.record_type !== 'purchase') {
+        const d = String(r.invoice_date || r.quotation_date || r.created_at || '').slice(0, 10)
+        if (d && d < '2026-01-01') return false
+      }
+
       // 1. Record Type filter (Sales Invoice vs Purchase)
       if (recordTypeFilter !== 'all') {
         if ((r.record_type || 'client_invoice') !== recordTypeFilter) return false
@@ -405,6 +417,22 @@ const AdminCompliance = () => {
   const totalFilteredTds = filteredTdsRecords.reduce((sum, r) => sum + Number(r.total_tds || 0), 0)
   const totalFilteredReceived = filteredTdsRecords.reduce((sum, r) => sum + Number(r.total_received || 0), 0)
 
+  // Pagination for Invoice Records
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, statusFilter, recordTypeFilter, dateFrom, dateTo])
+
+  const totalPages = Math.max(1, Math.ceil(totalFilteredCount / (pageSize === 'all' ? (totalFilteredCount || 1) : pageSize)))
+
+  const paginatedRecords = useMemo(() => {
+    if (pageSize === 'all') return filteredTdsRecords
+    const startIdx = (currentPage - 1) * pageSize
+    return filteredTdsRecords.slice(startIdx, startIdx + pageSize)
+  }, [filteredTdsRecords, currentPage, pageSize])
+
   const hasActiveFilters = Boolean(searchTerm || dateFrom || dateTo || statusFilter !== 'all')
 
   const handleResetFilters = () => {
@@ -413,6 +441,7 @@ const AdminCompliance = () => {
     setDateTo('')
     setStatusFilter('all')
     setRecordTypeFilter('all')
+    setCurrentPage(1)
   }
 
   // Modal Opener Handlers
@@ -782,7 +811,7 @@ const AdminCompliance = () => {
         <div className="relative flex flex-col md:flex-row md:items-center justify-between pb-3 gap-3 min-h-[48px]">
           <div>
             <h1 className="text-3xl font-black text-[#1e3e6b] tracking-tight">Compliance & Audits</h1>
-            <p className="text-xs text-slate-400 font-bold mt-1">Review TDS invoice registries, internal audit logs, and file monthly/quarterly GST returns</p>
+            <p className="text-xs text-slate-400 font-bold mt-1">Review invoice registries, internal audit logs, and file monthly/quarterly GST returns</p>
           </div>
 
           <div className="text-center md:absolute md:left-1/2 md:-translate-x-1/2 mt-1 md:mt-0">
@@ -803,7 +832,7 @@ const AdminCompliance = () => {
           {/* Tabs Navigation Row */}
           <div className="flex flex-wrap items-center gap-1 border-b border-slate-200/60 pb-3 mb-6">
             {[
-              { id: 'tds_records', label: 'TDS Records', count: tdsRecords.length },
+              { id: 'invoice_records', label: 'Invoice Records', count: tdsRecords.length },
               { id: 'gst_report', label: 'GST Filings & Returns' },
               { id: 'audit_report', label: 'Corporate Audit Reports' },
             ].map(tab => (
@@ -811,7 +840,7 @@ const AdminCompliance = () => {
                 key={tab.id}
                 onClick={() => setActivePageTab(tab.id)}
                 className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 flex items-center gap-2 ${
-                  activePageTab === tab.id
+                  (activePageTab === tab.id || (tab.id === 'invoice_records' && activePageTab === 'tds_records'))
                     ? 'bg-white border-[#38b34a] text-[#38b34a] -mb-[13px] z-10'
                     : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
                 }`}
@@ -819,7 +848,7 @@ const AdminCompliance = () => {
                 <span>{tab.label}</span>
                 {tab.count !== undefined && (
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                    activePageTab === tab.id ? 'bg-[#38b34a]/15 text-[#38b34a]' : 'bg-slate-200 text-slate-600'
+                    (activePageTab === tab.id || (tab.id === 'invoice_records' && activePageTab === 'tds_records')) ? 'bg-[#38b34a]/15 text-[#38b34a]' : 'bg-slate-200 text-slate-600'
                   }`}>
                     {tab.count}
                   </span>
@@ -829,16 +858,16 @@ const AdminCompliance = () => {
           </div>
 
           {/* ============================================================ */}
-          {/* TAB 1: TDS RECORDS (Only Invoices With TDS Deducted) */}
+          {/* TAB 1: INVOICE RECORDS (General Client Invoices & Purchase Records) */}
           {/* ============================================================ */}
-          {activePageTab === 'tds_records' && (
+          {(activePageTab === 'invoice_records' || activePageTab === 'tds_records') && (
             <div className="space-y-6">
               
               {/* 4 Summary Stats Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-xs">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Total TDS Invoices</span>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Total Invoices</span>
                     <span className="text-base">📑</span>
                   </div>
                   <p className="text-2xl font-black text-slate-900 mt-1">{totalFilteredCount}</p>
@@ -917,7 +946,7 @@ const AdminCompliance = () => {
                     >
                       <option value="all">All Records (Sales &amp; Purchases)</option>
                       <option value="client_invoice">🟢 Sales Invoices Only (Green)</option>
-                      <option value="purchase">🔵 Purchase TDS Only (Blue)</option>
+                      <option value="purchase">🔵 Purchase Invoices Only (Blue)</option>
                     </select>
 
                     <select
@@ -945,7 +974,7 @@ const AdminCompliance = () => {
                       type="button"
                       onClick={fetchTdsRecords}
                       className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
-                      title="Refresh TDS Records"
+                      title="Refresh Invoice Records"
                     >
                       <span>🔄</span>
                     </button>
@@ -995,7 +1024,7 @@ const AdminCompliance = () => {
                           <td colSpan={12} className="py-12 text-center text-slate-400">
                             <div className="flex items-center justify-center gap-2">
                               <span className="w-4 h-4 border-2 border-purple-600/30 border-t-purple-600 rounded-full animate-spin" />
-                              <span>Loading TDS records from database...</span>
+                              <span>Loading invoice records from database...</span>
                             </div>
                           </td>
                         </tr>
@@ -1003,16 +1032,17 @@ const AdminCompliance = () => {
                         <tr>
                           <td colSpan={12} className="py-12 text-center text-slate-400">
                             <span className="text-3xl block mb-2">📭</span>
-                            <p className="font-bold text-slate-600">No Invoices with TDS Found</p>
+                            <p className="font-bold text-slate-600">No Invoice Records Found</p>
                             <p className="text-[11px] text-slate-400 mt-1">
-                              {hasActiveFilters ? 'No records match your search/date filters. Try resetting the filters.' : 'Only invoices with recorded TDS deductions will appear here.'}
+                              {hasActiveFilters ? 'No records match your search/date filters. Try resetting the filters.' : 'General client invoices (with generated invoices / closed orders) and purchase records will appear here.'}
                             </p>
                           </td>
                         </tr>
                       ) : (
-                        filteredTdsRecords.map((r, idx) => {
+                        paginatedRecords.map((r, idx) => {
                           const isPurchase = r.record_type === 'purchase'
                           const isFullyPaid = r.is_paid || r.due_amount <= 0.01
+                          const globalIdx = pageSize === 'all' ? idx + 1 : (currentPage - 1) * pageSize + idx + 1
 
                           return (
                             <tr
@@ -1024,7 +1054,7 @@ const AdminCompliance = () => {
                                   : 'border-b border-emerald-200 transition-colors border-l-4 !border-l-emerald-500 hover:brightness-95'
                               }
                             >
-                              <td className="px-3 py-3 text-center font-bold text-slate-400">{idx + 1}</td>
+                              <td className="px-3 py-3 text-center font-bold text-slate-400">{globalIdx}</td>
 
                               {/* Clickable Invoice No. */}
                               <td className="px-4 py-3 font-mono font-bold">
@@ -1228,6 +1258,105 @@ const AdminCompliance = () => {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Pagination Controls */}
+                {totalFilteredCount > 0 && (
+                  <div className="px-4 py-3 bg-slate-50 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-2 text-slate-600 font-semibold">
+                      <span>
+                        Showing{' '}
+                        <strong className="text-slate-900 font-black">
+                          {pageSize === 'all'
+                            ? `1 - ${totalFilteredCount}`
+                            : `${(currentPage - 1) * pageSize + 1} - ${Math.min(currentPage * pageSize, totalFilteredCount)}`}
+                        </strong>{' '}
+                        of <strong className="text-slate-900 font-black">{totalFilteredCount}</strong> invoices
+                      </span>
+                      <span className="text-slate-300">|</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] text-slate-400 uppercase font-bold">Rows:</span>
+                        <select
+                          value={pageSize}
+                          onChange={(e) => {
+                            const val = e.target.value === 'all' ? 'all' : Number(e.target.value)
+                            setPageSize(val)
+                            setCurrentPage(1)
+                          }}
+                          className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:border-[#38b34a] cursor-pointer"
+                        >
+                          <option value={25}>25</option>
+                          <option value={50}>50</option>
+                          <option value={100}>100</option>
+                          <option value={250}>250</option>
+                          <option value="all">All</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {pageSize !== 'all' && totalPages > 1 && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPage(1)}
+                          disabled={currentPage === 1}
+                          className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-600 transition-all cursor-pointer"
+                          title="First Page"
+                        >
+                          «
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                          className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-600 transition-all cursor-pointer"
+                        >
+                          ‹ Prev
+                        </button>
+
+                        <div className="flex items-center gap-1 px-1">
+                          {Array.from({ length: totalPages }, (_, i) => i + 1)
+                            .filter((p) => p === 1 || p === totalPages || (p >= currentPage - 2 && p <= currentPage + 2))
+                            .map((p, pIdx, arr) => (
+                              <React.Fragment key={p}>
+                                {pIdx > 0 && arr[pIdx - 1] !== p - 1 && (
+                                  <span className="px-1 text-slate-400 font-bold">...</span>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => setCurrentPage(p)}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                    currentPage === p
+                                      ? 'bg-[#38b34a] text-white shadow-xs'
+                                      : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                                  }`}
+                                >
+                                  {p}
+                                </button>
+                              </React.Fragment>
+                            ))}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                          className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-600 transition-all cursor-pointer"
+                        >
+                          Next ›
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPage(totalPages)}
+                          disabled={currentPage === totalPages}
+                          className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-600 transition-all cursor-pointer"
+                          title="Last Page"
+                        >
+                          »
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
