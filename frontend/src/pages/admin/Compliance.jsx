@@ -464,8 +464,8 @@ const AdminCompliance = () => {
   const handleSendInvoiceToCa = async () => {
     if (!selectedInvoiceForCa) return
     const isPurchase = selectedInvoiceForCa.record_type === 'purchase'
-    const quotationId = selectedInvoiceForCa.raw_quotation?.id || selectedInvoiceForCa.id
-    const purchaseId = selectedInvoiceForCa.purchase_id || selectedInvoiceForCa.raw_purchase?.id
+    const quotationId = selectedInvoiceForCa.raw_quotation?.id || (!isPurchase ? selectedInvoiceForCa.id : null)
+    const purchaseId = selectedInvoiceForCa.purchase_id || selectedInvoiceForCa.raw_purchase?.id || (typeof selectedInvoiceForCa.id === 'string' && selectedInvoiceForCa.id.startsWith('PUR-') ? Number(selectedInvoiceForCa.id.replace('PUR-', '')) : (isPurchase ? selectedInvoiceForCa.id : null))
 
     if (!isPurchase && !quotationId) {
       alert('Quotation ID not found.')
@@ -1015,23 +1015,21 @@ const AdminCompliance = () => {
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
                         <th className="px-3 py-3 text-center w-8">#</th>
-                        <th className="px-4 py-3">Invoice No.</th>
-                        <th className="px-4 py-3">Quotation No.</th>
-                        <th className="px-4 py-3">Client Name & ID</th>
-                        <th className="px-3 py-3">Invoice Date</th>
-                        <th className="px-3 py-3 text-right">Invoice Amount</th>
-                        <th className="px-3 py-3 text-right">TDS Deducted</th>
-                        <th className="px-3 py-3 text-right">Received Amount</th>
-                        <th className="px-3 py-3 text-center">Status</th>
-                        <th className="px-3 py-3 text-center">ATTACHED DOC</th>
-                        <th className="px-3 py-3 text-center">TAX INVOICE</th>
-                        <th className="px-4 py-3 text-center min-w-[260px]">Actions</th>
+                        <th className="px-4 py-3 whitespace-nowrap">Invoice No.</th>
+                        <th className="px-4 py-3 whitespace-nowrap">Quotation No.</th>
+                        <th className="px-4 py-3 whitespace-nowrap">Client Name & ID</th>
+                        <th className="px-3 py-3 text-right whitespace-nowrap">Invoice Amount</th>
+                        <th className="px-3 py-3 text-right whitespace-nowrap">TDS Deducted</th>
+                        <th className="px-3 py-3 text-right whitespace-nowrap">Received Amount</th>
+                        <th className="px-3 py-3 text-center whitespace-nowrap">Status</th>
+                        <th className="px-3 py-3 text-center whitespace-nowrap">TAX INVOICE</th>
+                        <th className="px-4 py-3 text-center min-w-[260px] whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
                       {loadingTds ? (
                         <tr>
-                          <td colSpan={12} className="py-12 text-center text-slate-400">
+                          <td colSpan={10} className="py-12 text-center text-slate-400">
                             <div className="flex items-center justify-center gap-2">
                               <span className="w-4 h-4 border-2 border-purple-600/30 border-t-purple-600 rounded-full animate-spin" />
                               <span>Loading invoice records from database...</span>
@@ -1040,7 +1038,7 @@ const AdminCompliance = () => {
                         </tr>
                       ) : filteredTdsRecords.length === 0 ? (
                         <tr>
-                          <td colSpan={12} className="py-12 text-center text-slate-400">
+                          <td colSpan={10} className="py-12 text-center text-slate-400">
                             <span className="text-3xl block mb-2">📭</span>
                             <p className="font-bold text-slate-600">No Invoice Records Found</p>
                             <p className="text-[11px] text-slate-400 mt-1">
@@ -1054,6 +1052,14 @@ const AdminCompliance = () => {
                           const isFullyPaid = r.is_paid || r.due_amount <= 0.01
                           const globalIdx = pageSize === 'all' ? idx + 1 : (currentPage - 1) * pageSize + idx + 1
 
+                          const displayCompany = isPurchase
+                            ? (r.client_name || r.company_name || 'Vendor')
+                            : (r.company_name || r.client_name || 'Valued Client')
+
+                          const displayPerson = isPurchase
+                            ? (r.company_name && r.company_name !== r.client_name ? r.company_name : '')
+                            : (r.client_name && r.client_name !== r.company_name ? r.client_name : '')
+
                           return (
                             <tr
                               key={r.id || idx}
@@ -1066,27 +1072,30 @@ const AdminCompliance = () => {
                             >
                               <td className="px-3 py-3 text-center font-bold text-slate-400">{globalIdx}</td>
 
-                              {/* Clickable Invoice No. */}
-                              <td className="px-4 py-3 font-mono font-bold">
+                              {/* Clickable Invoice No. in single line + Invoice date below */}
+                              <td className="px-4 py-3 whitespace-nowrap font-mono font-bold">
                                 <button
                                   type="button"
                                   onClick={() => handleOpenInvoiceModal(r)}
                                   className={
                                     isPurchase
-                                      ? 'text-sky-800 hover:text-sky-950 hover:underline flex items-center gap-1.5 cursor-pointer text-left font-black'
-                                      : 'text-purple-700 hover:text-purple-900 hover:underline flex items-center gap-1.5 cursor-pointer text-left font-black'
+                                      ? 'text-sky-800 hover:text-sky-950 hover:underline inline-flex items-center gap-1.5 cursor-pointer text-left font-black whitespace-nowrap'
+                                      : 'text-purple-700 hover:text-purple-900 hover:underline inline-flex items-center gap-1.5 cursor-pointer text-left font-black whitespace-nowrap'
                                   }
                                   title="Click to view & print official Tax Invoice"
                                 >
                                   <span>{isPurchase ? '📦' : '🧾'}</span>
-                                  <span>{r.invoice_number}</span>
+                                  <span className="whitespace-nowrap">{r.invoice_number}</span>
                                 </button>
+                                <span className="text-[11px] font-sans font-medium text-slate-500 whitespace-nowrap block mt-0.5">
+                                  {formatDateDisplay(r.invoice_date || r.quotation_date)}
+                                </span>
                                 {isPurchase && r.tds_document_url && (
                                   <a
                                     href={r.tds_document_url}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="text-[10px] text-sky-600 hover:text-sky-900 underline font-semibold flex items-center gap-1 mt-0.5"
+                                    className="text-[10px] text-sky-600 hover:text-sky-900 underline font-semibold inline-flex items-center gap-1 mt-0.5 whitespace-nowrap"
                                     title="View / Download original uploaded file"
                                   >
                                     <span>📎 View File</span>
@@ -1094,58 +1103,53 @@ const AdminCompliance = () => {
                                 )}
                               </td>
 
-                              {/* Quotation / PO No. */}
-                              <td className="px-4 py-3 font-mono font-bold">
+                              {/* Quotation / PO No. in single line + Quotation date below */}
+                              <td className="px-4 py-3 whitespace-nowrap font-mono font-bold">
                                 {isPurchase ? (
                                   <button
                                     type="button"
                                     onClick={() => handleOpenInvoiceModal(r)}
-                                    className="text-sky-700 hover:text-sky-900 hover:underline flex items-center gap-1.5 cursor-pointer text-left font-bold"
+                                    className="text-sky-700 hover:text-sky-900 hover:underline inline-flex items-center gap-1.5 cursor-pointer text-left font-bold whitespace-nowrap"
                                     title="Click to view purchase invoice breakdown"
                                   >
                                     <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-sky-200 text-sky-800 border border-sky-300">
                                       PO
                                     </span>
-                                    <span>{r.quotation_number}</span>
+                                    <span className="whitespace-nowrap">{r.quotation_number}</span>
                                   </button>
                                 ) : (
                                   <button
                                     type="button"
                                     onClick={() => handleOpenQuotationModal(r)}
-                                    className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1.5 cursor-pointer text-left"
+                                    className="text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1.5 cursor-pointer text-left whitespace-nowrap"
                                     title="Click to view & print official Quotation"
                                   >
                                     <span>📋</span>
-                                    <span>{r.quotation_number}</span>
+                                    <span className="whitespace-nowrap">{r.quotation_number}</span>
                                   </button>
                                 )}
-                              </td>
-
-                              {/* Client / Vendor Info */}
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-1.5">
-                                  {isPurchase ? (
-                                    <span className="px-1.5 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider bg-sky-200 text-sky-900 border border-sky-400">
-                                      PURCHASE
-                                    </span>
-                                  ) : (
-                                    <span className="px-1.5 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider bg-emerald-200 text-emerald-900 border border-emerald-400">
-                                      SALES INVOICE
-                                    </span>
-                                  )}
-                                  <p className="font-bold text-slate-900 leading-snug">{r.client_name}</p>
-                                </div>
-                                {r.company_name && r.company_name !== r.client_name && (
-                                  <p className="text-[10.5px] text-slate-500 font-medium pl-1">{r.company_name}</p>
-                                )}
-                                <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9.5px] font-mono font-bold bg-white/80 text-slate-700 border border-slate-300">
-                                  {r.client_id}
+                                <span className="text-[11px] font-sans font-medium text-slate-500 whitespace-nowrap block mt-0.5">
+                                  {formatDateDisplay(r.quotation_date || r.invoice_date)}
                                 </span>
                               </td>
 
-                              {/* Date */}
-                              <td className="px-3 py-3 text-slate-600 whitespace-nowrap font-medium">
-                                {formatDateDisplay(r.invoice_date || r.quotation_date)}
+                              {/* Client Name & ID (Company name top highlighted, Person name below, 1 line each) */}
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <div className="space-y-0.5">
+                                  <p className="font-bold text-slate-900 text-xs whitespace-nowrap leading-snug" title={displayCompany}>
+                                    {displayCompany}
+                                  </p>
+                                  {displayPerson && (
+                                    <p className="text-[11px] text-slate-600 font-medium whitespace-nowrap leading-tight" title={displayPerson}>
+                                      {displayPerson}
+                                    </p>
+                                  )}
+                                  <div>
+                                    <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold bg-white/90 text-slate-700 border border-slate-300 whitespace-nowrap">
+                                      {r.client_id}
+                                    </span>
+                                  </div>
+                                </div>
                               </td>
 
                               {/* Total Amount */}
@@ -1184,46 +1188,37 @@ const AdminCompliance = () => {
                                 ₹{Number(isPurchase ? (r.total_amount || 0) : (r.total_received || 0)).toLocaleString('en-IN')}
                               </td>
 
-                              {/* Status */}
+                              {/* Status (with Sales Invoice / Purchase Tag over the status badge) */}
                               <td className="px-3 py-3 text-center whitespace-nowrap">
-                                {isPurchase ? (
-                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-sky-100 text-sky-800 border border-sky-300 shadow-xs inline-flex items-center gap-1">
-                                    📦 PURCHASE RECORDED
-                                  </span>
-                                ) : isFullyPaid ? (
-                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-xs inline-flex items-center gap-1">
-                                    ✅ FULLY PAID
-                                  </span>
-                                ) : (Number(r.total_settled || r.total_received || 0) > 0) ? (
-                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-800 border border-amber-300 shadow-xs inline-flex items-center gap-1">
-                                    ⏳ PARTIALLY PAID (Due: ₹{Number(r.due_amount || 0).toLocaleString('en-IN')})
-                                  </span>
-                                ) : (
-                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-purple-100 text-purple-800 border border-purple-300 shadow-xs inline-flex items-center gap-1">
-                                    💼 PAYMENT DUE (Due: ₹{Number(r.due_amount || 0).toLocaleString('en-IN')})
-                                  </span>
-                                )}
-                              </td>
-
-                              {/* ATTACHED DOC Column */}
-                              <td className="px-3 py-3 text-center whitespace-nowrap">
-                                {isPurchase ? (
-                                  (r.tds_document_url || r.tds_document) ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenAttachedDocModal(r)}
-                                      className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 inline-flex items-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-95"
-                                      title="View, Print & Download Attached File"
-                                    >
-                                      <span>📎</span>
-                                      <span>File</span>
-                                    </button>
+                                <div className="flex flex-col items-center justify-center gap-1">
+                                  {isPurchase ? (
+                                    <span className="px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider bg-sky-200 text-sky-900 border border-sky-400">
+                                      PURCHASE
+                                    </span>
                                   ) : (
-                                    <span className="text-slate-300 italic text-[11px]">—</span>
-                                  )
-                                ) : (
-                                  <span className="text-slate-300 italic text-[11px]">—</span>
-                                )}
+                                    <span className="px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider bg-emerald-200 text-emerald-900 border border-emerald-400">
+                                      SALES INVOICE
+                                    </span>
+                                  )}
+
+                                  {isPurchase ? (
+                                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-sky-100 text-sky-800 border border-sky-300 shadow-xs inline-flex items-center gap-1">
+                                      📦 PURCHASE RECORDED
+                                    </span>
+                                  ) : isFullyPaid ? (
+                                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-xs inline-flex items-center gap-1">
+                                      ✅ FULLY PAID
+                                    </span>
+                                  ) : (Number(r.total_settled || r.total_received || 0) > 0) ? (
+                                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-800 border border-amber-300 shadow-xs inline-flex items-center gap-1">
+                                      ⏳ PARTIALLY PAID (Due: ₹{Number(r.due_amount || 0).toLocaleString('en-IN')})
+                                    </span>
+                                  ) : (
+                                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-purple-100 text-purple-800 border border-purple-300 shadow-xs inline-flex items-center gap-1">
+                                      💼 PAYMENT DUE (Due: ₹{Number(r.due_amount || 0).toLocaleString('en-IN')})
+                                    </span>
+                                  )}
+                                </div>
                               </td>
 
                               {/* TAX INVOICE Column */}
@@ -2761,10 +2756,12 @@ const AdminCompliance = () => {
               ) : (
                 /* Success & Delivery Info */
                 <div className="space-y-4 py-2">
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center space-y-2">
-                    <div className="text-3xl">🎉</div>
-                    <h4 className="font-bold text-emerald-900 text-sm">{caSendResult.message}</h4>
-                    <p className="text-xs text-emerald-700 font-mono">Dispatched to: +91 {caSendResult.phone}</p>
+                  <div className={`border rounded-xl p-4 text-center space-y-2 ${caSendResult.whatsapp_gateway_sent !== false ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
+                    <div className="text-3xl">{caSendResult.whatsapp_gateway_sent !== false ? '🎉' : '⚠️'}</div>
+                    <h4 className={`font-bold text-sm ${caSendResult.whatsapp_gateway_sent !== false ? 'text-emerald-900' : 'text-amber-900'}`}>{caSendResult.message}</h4>
+                    <p className={`text-xs font-mono ${caSendResult.whatsapp_gateway_sent !== false ? 'text-emerald-700' : 'text-amber-700'}`}>
+                      {caSendResult.whatsapp_gateway_sent !== false ? 'Dispatched via WhatsApp to:' : 'Target Number:'} +91 {caSendResult.phone}
+                    </p>
                   </div>
 
                   {caSendResult.pdf_url && (
