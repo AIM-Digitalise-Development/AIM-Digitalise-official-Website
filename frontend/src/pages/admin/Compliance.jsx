@@ -140,9 +140,17 @@ const AdminCompliance = () => {
     try {
       const res = await getTdsRecords()
       if (res?.data?.success && Array.isArray(res.data.data)) {
-        // Only for compliance: for general client invoice records, show records which are on or after 1 Jan 2026. Hide the ones before that.
+        // Only for compliance: for general client invoice records, show records which are on or after 1 Jan 2026.
+        // Also ensure that only records where an invoice was actually generated are displayed (exclude draft/pursuing quotations).
         const post2026Records = res.data.data.filter(r => {
           if (r.record_type === 'purchase') return true
+
+          const rawStatus = String(r.status || r.raw_quotation?.status || '').toLowerCase()
+          const hasGeneratedInvoice = Boolean(r.raw_quotation?.invoice_number || (r.invoice_number && !String(r.invoice_number).startsWith('INV-'))) ||
+            ['order closed', 'paid', 'partially_paid'].includes(rawStatus)
+
+          if (!hasGeneratedInvoice) return false
+
           const dateStr = String(r.invoice_date || r.quotation_date || r.created_at || '').slice(0, 10)
           return !dateStr || dateStr >= '2026-01-01'
         })
@@ -395,7 +403,8 @@ const AdminCompliance = () => {
       // 3. Status filter
       if (statusFilter !== 'all') {
         if (statusFilter === 'paid' && !r.is_paid) return false
-        if (statusFilter === 'partially_paid' && (r.is_paid || r.total_received <= 0)) return false
+        if (statusFilter === 'partially_paid' && (r.is_paid || Number(r.total_received || 0) <= 0)) return false
+        if (statusFilter === 'unpaid' && (r.is_paid || Number(r.total_received || 0) > 0)) return false
         if (statusFilter === 'purchase' && r.record_type !== 'purchase') return false
       }
 
@@ -957,6 +966,7 @@ const AdminCompliance = () => {
                       <option value="all">All Statuses</option>
                       <option value="paid">Fully Paid</option>
                       <option value="partially_paid">Partially Paid</option>
+                      <option value="unpaid">Payment Due / Unpaid</option>
                     </select>
 
                     {hasActiveFilters && (
@@ -1184,9 +1194,13 @@ const AdminCompliance = () => {
                                   <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-xs inline-flex items-center gap-1">
                                     ✅ FULLY PAID
                                   </span>
-                                ) : (
+                                ) : (Number(r.total_settled || r.total_received || 0) > 0) ? (
                                   <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-800 border border-amber-300 shadow-xs inline-flex items-center gap-1">
                                     ⏳ PARTIALLY PAID (Due: ₹{Number(r.due_amount || 0).toLocaleString('en-IN')})
+                                  </span>
+                                ) : (
+                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-purple-100 text-purple-800 border border-purple-300 shadow-xs inline-flex items-center gap-1">
+                                    💼 PAYMENT DUE (Due: ₹{Number(r.due_amount || 0).toLocaleString('en-IN')})
                                   </span>
                                 )}
                               </td>

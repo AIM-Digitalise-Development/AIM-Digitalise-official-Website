@@ -258,8 +258,30 @@ const Purchase = () => {
   // ── Handle Vendor Submit ──
   const handleVendorSubmit = async (e) => {
     e.preventDefault()
-    if (!vendorForm.vendor_name.trim()) {
-      showToast('error', 'Vendor name is required')
+
+    // Mandatory fields validation (all except email)
+    if (!vendorForm.vendor_name?.trim()) {
+      showToast('error', 'Vendor Name is required')
+      return
+    }
+    if (!vendorForm.address?.trim()) {
+      showToast('error', 'Vendor Address is required')
+      return
+    }
+    if (!vendorForm.contact_person?.trim()) {
+      showToast('error', 'Vendor Contact Person is required')
+      return
+    }
+    if (!vendorForm.phone?.trim()) {
+      showToast('error', 'Vendor Phone Number is required')
+      return
+    }
+    if (!vendorForm.gst_type?.trim()) {
+      showToast('error', 'Please select a GST Type')
+      return
+    }
+    if (!vendorForm.gst_no?.trim()) {
+      showToast('error', 'Vendor GST No. is required')
       return
     }
 
@@ -736,132 +758,153 @@ const Purchase = () => {
                 </p>
               </div>
 
-              <form onSubmit={handleVendorSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Vendor Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. AWS Cloud Services, Dell Technologies India"
-                    value={vendorForm.vendor_name}
-                    onChange={(e) => setVendorForm({ ...vendorForm, vendor_name: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#38b34a] focus:bg-white transition-all"
-                  />
-                </div>
+              {(() => {
+                const isVendorFormValid = Boolean(
+                  vendorForm.vendor_name?.trim() &&
+                  vendorForm.address?.trim() &&
+                  vendorForm.contact_person?.trim() &&
+                  vendorForm.phone?.trim() &&
+                  vendorForm.gst_type?.trim() &&
+                  vendorForm.gst_no?.trim()
+                )
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      Vendor Contact Person
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. John Doe / Account Executive"
-                      value={vendorForm.contact_person}
-                      onChange={(e) => setVendorForm({ ...vendorForm, contact_person: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#38b34a] focus:bg-white transition-all"
-                    />
-                  </div>
+                return (
+                  <form onSubmit={handleVendorSubmit} className="space-y-4">
+                    {/* 1. Vendor Name */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Vendor Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. AWS Cloud Services, Dell Technologies India"
+                        value={vendorForm.vendor_name}
+                        onChange={(e) => setVendorForm({ ...vendorForm, vendor_name: e.target.value })}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#38b34a] focus:bg-white transition-all"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      Vendor Phone No.
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 9876543210"
-                      value={vendorForm.phone}
-                      onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#38b34a] focus:bg-white transition-all"
-                    />
-                  </div>
-                </div>
+                    {/* 2. Vendor Address */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Vendor Address <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        rows={2}
+                        required
+                        placeholder="e.g. 101 Tech Park, Whitefield, Bengaluru, Karnataka - 560066"
+                        value={vendorForm.address}
+                        onChange={(e) => setVendorForm({ ...vendorForm, address: e.target.value })}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#38b34a] focus:bg-white transition-all resize-none"
+                      />
+                    </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      Vendor GST No.
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 27AABCU9603R1ZM"
-                      value={vendorForm.gst_no}
-                      onChange={(e) => setVendorForm({ ...vendorForm, gst_no: e.target.value.toUpperCase() })}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 uppercase focus:outline-none focus:border-[#38b34a] focus:bg-white transition-all font-mono"
-                    />
-                  </div>
+                    {/* 3 & 4. Vendor Contact Person & Vendor Phone Number */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                          Vendor Contact Person <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. John Doe / Account Executive"
+                          value={vendorForm.contact_person}
+                          onChange={(e) => setVendorForm({ ...vendorForm, contact_person: e.target.value })}
+                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#38b34a] focus:bg-white transition-all"
+                        />
+                      </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      GST Type
-                    </label>
-                    <select
-                      value={vendorForm.gst_type}
-                      onChange={(e) => setVendorForm({ ...vendorForm, gst_type: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#38b34a] focus:bg-white transition-all"
-                    >
-                      <option value="">Select GST Type</option>
-                      <option value="igst">1. igst</option>
-                      <option value="cgst+sgst">2. cgst+sgst</option>
-                    </select>
-                  </div>
-                </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                          Vendor Phone Number <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. 9876543210"
+                          value={vendorForm.phone}
+                          onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })}
+                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#38b34a] focus:bg-white transition-all"
+                        />
+                      </div>
+                    </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      Vendor Email
-                    </label>
-                    <input
-                      type="email"
-                      placeholder="e.g. billing@vendor.com"
-                      value={vendorForm.email}
-                      onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#38b34a] focus:bg-white transition-all"
-                    />
-                  </div>
+                    {/* 5. Vendor Email (Optional) */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Vendor Email <span className="text-slate-400 font-normal text-[11px]">(Optional)</span>
+                      </label>
+                      <input
+                        type="email"
+                        placeholder="e.g. billing@vendor.com"
+                        value={vendorForm.email}
+                        onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#38b34a] focus:bg-white transition-all"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      Address
-                    </label>
-                    <textarea
-                      rows={2}
-                      placeholder="e.g. 101 Tech Park, Whitefield, Bengaluru, Karnataka - 560066"
-                      value={vendorForm.address}
-                      onChange={(e) => setVendorForm({ ...vendorForm, address: e.target.value })}
-                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#38b34a] focus:bg-white transition-all resize-none"
-                    />
-                  </div>
-                </div>
+                    {/* 6 & 7. GST Type & Vendor GST No. */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                          GST Type <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          required
+                          value={vendorForm.gst_type}
+                          onChange={(e) => setVendorForm({ ...vendorForm, gst_type: e.target.value })}
+                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#38b34a] focus:bg-white transition-all cursor-pointer"
+                        >
+                          <option value="">Select GST Type</option>
+                          <option value="IGST">IGST</option>
+                          <option value="CGST+SGST">CGST+SGST</option>
+                        </select>
+                      </div>
 
-                <div className="pt-4 flex items-center justify-between border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => setActiveSubtab('show_vendor')}
-                    className="text-xs font-bold text-[#38b34a] hover:underline cursor-pointer"
-                  >
-                    View All Vendors ({vendors.length}) →
-                  </button>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                          Vendor GST No. <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. 27AABCU9603R1ZM"
+                          value={vendorForm.gst_no}
+                          onChange={(e) => setVendorForm({ ...vendorForm, gst_no: e.target.value.toUpperCase() })}
+                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 uppercase focus:outline-none focus:border-[#38b34a] focus:bg-white transition-all font-mono"
+                        />
+                      </div>
+                    </div>
 
-                  <button
-                    type="submit"
-                    disabled={submittingVendor}
-                    className="px-6 py-2.5 rounded-xl bg-[#38b34a] hover:bg-[#2fa03f] text-white text-xs font-bold shadow-md shadow-[#38b34a]/20 cursor-pointer transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
-                  >
-                    {submittingVendor ? (
-                      <span>Saving Vendor...</span>
-                    ) : (
-                      <>
-                        <span>Save Vendor</span>
-                        <span>✓</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
+                    <div className="pt-4 flex items-center justify-between border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => setActiveSubtab('show_vendor')}
+                        className="text-xs font-bold text-[#38b34a] hover:underline cursor-pointer"
+                      >
+                        View All Vendors ({vendors.length}) →
+                      </button>
+
+                      <button
+                        type="submit"
+                        disabled={submittingVendor || !isVendorFormValid}
+                        className="px-6 py-2.5 rounded-xl bg-[#38b34a] hover:bg-[#2fa03f] text-white text-xs font-bold shadow-md shadow-[#38b34a]/20 cursor-pointer transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        {submittingVendor ? (
+                          <span>Saving Vendor...</span>
+                        ) : (
+                          <>
+                            <span>Save Vendor</span>
+                            <span>✓</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                )
+              })()}
             </div>
           )}
 
@@ -940,12 +983,14 @@ const Purchase = () => {
                             {v.gst_type ? (
                               <span
                                 className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase border ${
-                                  v.gst_type === 'igst'
+                                  v.gst_type.toUpperCase().includes('IGST') && !v.gst_type.toUpperCase().includes('CGST')
                                     ? 'bg-blue-50 text-blue-700 border-blue-200'
                                     : 'bg-purple-50 text-purple-700 border-purple-200'
                                 }`}
                               >
-                                {v.gst_type === 'igst' ? 'IGST' : 'CGST + SGST'}
+                                {v.gst_type.toUpperCase() === 'IGST' || v.gst_type === 'igst'
+                                  ? 'IGST'
+                                  : 'CGST+SGST'}
                               </span>
                             ) : (
                               '—'
