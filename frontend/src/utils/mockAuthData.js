@@ -4149,10 +4149,31 @@ export const getMockResponse = (url, method, data = null) => {
         if (data?.items) {
           itemsList = typeof data.items === 'string' ? JSON.parse(data.items) : data.items
         }
-        const totalAmount = itemsList.reduce((acc, i) => acc + (Number(i.quantity || 0) * Number(i.rate || 0)), 0)
+        const subtotal = itemsList.reduce((acc, i) => acc + (Number(i.quantity || 0) * Number(i.rate || 0)), 0)
         const storedVendors = localStorage.getItem('__mock_vendors')
         const vendors = storedVendors ? JSON.parse(storedVendors) : []
         const vendor = vendors.find(v => String(v.id) === String(data?.vendor_id)) || { vendor_name: 'Vendor' }
+        const vGst = (vendor?.gst_type || '').toUpperCase()
+
+        let cgstAmount = 0
+        let sgstAmount = 0
+        let igstAmount = 0
+        let taxAmount = 0
+
+        if (vGst.includes('IGST') && !vGst.includes('CGST')) {
+          igstAmount = (subtotal * 18) / 100
+          taxAmount = igstAmount
+        } else if (vGst.includes('CGST') || vGst.includes('SGST')) {
+          cgstAmount = (subtotal * 9) / 100
+          sgstAmount = (subtotal * 9) / 100
+          taxAmount = cgstAmount + sgstAmount
+        }
+        const finalTotal = subtotal + taxAmount
+        const procAmt = Number(data?.processed_amount || 0)
+        const tdsAmt = Number(data?.tds_amount || 0)
+        const paidAmt = procAmt + tdsAmt
+        const outAmt = Math.max(0, finalTotal - paidAmt)
+        const payStatus = paidAmt >= finalTotal && finalTotal > 0 ? 'paid' : (paidAmt > 0 ? 'partial' : 'unpaid')
 
         const newP = {
           id: Date.now(),
@@ -4163,8 +4184,34 @@ export const getMockResponse = (url, method, data = null) => {
           invoice_file: null,
           invoice_file_url: null,
           purchase_date: data?.purchase_date || new Date().toISOString().split('T')[0],
-          total_amount: totalAmount,
+          subtotal: subtotal,
+          gst_type: vendor?.gst_type || null,
+          cgst_amount: cgstAmount,
+          sgst_amount: sgstAmount,
+          igst_amount: igstAmount,
+          tax_amount: taxAmount,
+          total_amount: finalTotal,
+          processed_amount: procAmt,
+          tds_amount: tdsAmt,
+          paid_amount: paidAmt,
+          outstanding_amount: outAmt,
+          payment_status: payStatus,
           notes: data?.notes || '',
+          payments: paidAmt > 0 ? [
+            {
+              id: Date.now(),
+              purchase_id: newId,
+              payment_date: data?.purchase_date || new Date().toISOString().split('T')[0],
+              processed_amount: procAmt,
+              tds_amount: tdsAmt,
+              paid_amount: paidAmt,
+              remaining_outstanding: outAmt,
+              payment_mode: 'Bank Transfer',
+              reference_no: 'Initial',
+              notes: 'Initial payment recorded during purchase entry',
+              created_at: new Date().toISOString()
+            }
+          ] : [],
           items: itemsList.map((itm, idx) => ({
             id: Date.now() + idx,
             item_name: itm.item_name || 'Item',
@@ -4178,6 +4225,48 @@ export const getMockResponse = (url, method, data = null) => {
         purchases.unshift(newP)
         localStorage.setItem('__mock_purchases', JSON.stringify(purchases))
         return { success: true, message: 'Purchase recorded successfully', data: newP }
+      }
+      const payMatch = url.match(/\/admin\/purchases\/(\d+)\/payments/)
+      if (payMatch && (method === 'post' || method === 'POST')) {
+        const purchaseId = Number(payMatch[1])
+        const pIndex = purchases.findIndex(p => p.id === purchaseId)
+        if (pIndex !== -1) {
+          const targetP = purchases[pIndex]
+          const pProc = Number(data?.processed_amount || 0)
+          const pTds = Number(data?.tds_amount || 0)
+          const thisPaid = pProc + pTds
+          const newProc = Number(targetP.processed_amount || 0) + pProc
+          const newTds = Number(targetP.tds_amount || 0) + pTds
+          const newPaid = Number(targetP.paid_amount || 0) + thisPaid
+          const newOut = Math.max(0, Number(targetP.total_amount || 0) - newPaid)
+          const newStatus = newPaid >= Number(targetP.total_amount || 0) ? 'paid' : (newPaid > 0 ? 'partial' : 'unpaid')
+
+          const newPayRecord = {
+            id: Date.now(),
+            purchase_id: purchaseId,
+            payment_date: data?.payment_date || new Date().toISOString().split('T')[0],
+            processed_amount: pProc,
+            tds_amount: pTds,
+            paid_amount: thisPaid,
+            remaining_outstanding: newOut,
+            payment_mode: data?.payment_mode || 'Bank Transfer',
+            reference_no: data?.reference_no || '',
+            notes: data?.notes || '',
+            created_at: new Date().toISOString()
+          }
+
+          if (!targetP.payments) targetP.payments = []
+          targetP.payments.push(newPayRecord)
+          targetP.processed_amount = newProc
+          targetP.tds_amount = newTds
+          targetP.paid_amount = newPaid
+          targetP.outstanding_amount = newOut
+          targetP.payment_status = newStatus
+
+          purchases[pIndex] = targetP
+          localStorage.setItem('__mock_purchases', JSON.stringify(purchases))
+          return { success: true, message: `Payment of ₹${thisPaid.toLocaleString('en-IN')} recorded successfully`, data: targetP, payment: newPayRecord }
+        }
       }
       if (method === 'delete' || method === 'DELETE') {
         const idMatch = url.match(/\/admin\/purchases\/(\d+)/)

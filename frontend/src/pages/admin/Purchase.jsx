@@ -11,6 +11,7 @@ import {
   getPurchases,
   createPurchase,
   deletePurchase,
+  recordPurchasePayment,
 } from '../../api/admin/purchase'
 
 const ITEM_UNITS = ['unit', 'month', 'account', 'box', 'piece']
@@ -174,13 +175,24 @@ const Purchase = () => {
   // 1. Quick Items Breakdown Modal
   const [viewingPurchase, setViewingPurchase] = useState(null)
 
-  // 2. Attached Document Viewer Modal (for [ 📎 File ])
+  // 2. Attached Document Viewer Modal (for [ 📄 View Invoice ])
   const [showAttachedDocModal, setShowAttachedDocModal] = useState(false)
   const [selectedAttachedDoc, setSelectedAttachedDoc] = useState(null)
 
-  // 3. Official Tax Invoice Viewer Modal (for [ 🧾 Tax Invoice ])
-  const [showTaxInvoiceModal, setShowTaxInvoiceModal] = useState(false)
-  const [selectedTaxInvoice, setSelectedTaxInvoice] = useState(null)
+  // 3. Record Part Payment Modal
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentPurchase, setPaymentPurchase] = useState(null)
+  const [payProcessed, setPayProcessed] = useState('')
+  const [payTds, setPayTds] = useState('')
+  const [payDate, setPayDate] = useState(new Date().toISOString().split('T')[0])
+  const [payMode, setPayMode] = useState('Bank Transfer')
+  const [payRef, setPayRef] = useState('')
+  const [payNotes, setPayNotes] = useState('')
+  const [submittingPayment, setSubmittingPayment] = useState(false)
+
+  // 4. Payment History Modal (All part payment details against a single invoice)
+  const [showHistoryModal, setShowHistoryModal] = useState(false)
+  const [historyPurchase, setHistoryPurchase] = useState(null)
 
   // ── Form States ──
 
@@ -216,6 +228,8 @@ const Purchase = () => {
     { item_id: '', item_name: '', hsn_code: '', unit: '', quantity: 1, rate: 0, amount: 0 },
   ])
   const [invoiceFile, setInvoiceFile] = useState(null)
+  const [processedAmount, setProcessedAmount] = useState('')
+  const [tdsAmount, setTdsAmount] = useState('')
   const [submittingPurchase, setSubmittingPurchase] = useState(false)
   const fileInputRef = useRef(null)
 
@@ -420,9 +434,178 @@ const Purchase = () => {
     setPurchaseItems(purchaseItems.filter((_, idx) => idx !== index))
   }
 
-  const grandPurchaseTotal = useMemo(() => {
+  const selectedPurchaseVendor = useMemo(() => {
+    return vendors.find((v) => String(v.id) === String(purchaseForm.vendor_id))
+  }, [vendors, purchaseForm.vendor_id])
+
+  const selectedVendorGstType = useMemo(() => {
+    return (selectedPurchaseVendor?.gst_type || '').toUpperCase()
+  }, [selectedPurchaseVendor])
+
+  const isIgstVendor = selectedVendorGstType.includes('IGST') && !selectedVendorGstType.includes('CGST')
+  const isCgstSgstVendor = selectedVendorGstType.includes('CGST') || selectedVendorGstType.includes('SGST')
+
+  const purchaseSubtotal = useMemo(() => {
     return purchaseItems.reduce((acc, row) => acc + (Number(row.amount) || 0), 0)
   }, [purchaseItems])
+
+  const purchaseTaxCalculations = useMemo(() => {
+    let cgstAmount = 0
+    let sgstAmount = 0
+    let igstAmount = 0
+    let taxAmount = 0
+
+    if (isIgstVendor) {
+      igstAmount = Math.round(((purchaseSubtotal * 18) / 100) * 100) / 100
+      taxAmount = igstAmount
+    } else if (isCgstSgstVendor) {
+      cgstAmount = Math.round(((purchaseSubtotal * 9) / 100) * 100) / 100
+      sgstAmount = Math.round(((purchaseSubtotal * 9) / 100) * 100) / 100
+      taxAmount = Math.round((cgstAmount + sgstAmount) * 100) / 100
+    }
+
+    const grandTotal = Math.round((purchaseSubtotal + taxAmount) * 100) / 100
+
+    return {
+      subtotal: purchaseSubtotal,
+      cgstAmount,
+      sgstAmount,
+      igstAmount,
+      taxAmount,
+      grandTotal,
+      isIgst: isIgstVendor,
+      isCgstSgst: isCgstSgstVendor,
+    }
+  }, [purchaseSubtotal, isIgstVendor, isCgstSgstVendor])
+
+  const grandPurchaseTotal = purchaseTaxCalculations.grandTotal
+
+  // Part Payment & TDS Deduction Calculations
+  const numProcessed = Number(processedAmount) || 0
+  const numTds = Number(tdsAmount) || 0
+  const totalPaidAccounted = Math.round((numProcessed + numTds) * 100) / 100
+  const currentOutstanding = Math.max(0, Math.round((grandPurchaseTotal - totalPaidAccounted) * 100) / 100)
+
+  const handleProcessedAmountChange = (e) => {
+    setProcessedAmount(e.target.value)
+  }
+
+  const handleTdsAmountChange = (e) => {
+    const val = e.target.value
+    const newTds = Number(val) || 0
+    const currentGross = (Number(processedAmount) || 0) + (Number(tdsAmount) || 0)
+
+    if (currentGross > 0) {
+      // Adjust processed amount so gross payment and outstanding remain the same
+      const adjustedProcessed = Math.max(0, Math.round((currentGross - newTds) * 100) / 100)
+      setProcessedAmount(adjustedProcessed === 0 ? '' : String(adjustedProcessed))
+    }
+    setTdsAmount(val)
+  }
+
+  // ── Part Payment Recording & History Modal Handlers ──
+  const handleOpenPaymentModal = (purchaseRecord) => {
+    setPaymentPurchase(purchaseRecord)
+    setPayProcessed('')
+    setPayTds('')
+    setPayDate(new Date().toISOString().split('T')[0])
+    setPayMode('Bank Transfer')
+    setPayRef('')
+    setPayNotes('')
+    setShowPaymentModal(true)
+  }
+
+  const handleOpenHistoryModal = (purchaseRecord) => {
+    setHistoryPurchase(purchaseRecord)
+    setShowHistoryModal(true)
+  }
+
+  const modalCurrentInvoiceDue = useMemo(() => {
+    if (!paymentPurchase) return 0
+    return paymentPurchase.outstanding_amount !== undefined && paymentPurchase.outstanding_amount !== null
+      ? Number(paymentPurchase.outstanding_amount)
+      : Math.max(0, Number(paymentPurchase.total_amount || 0) - (Number(paymentPurchase.paid_amount) || 0))
+  }, [paymentPurchase])
+
+  const modalInstallmentTotal = useMemo(() => {
+    const p = Number(payProcessed) || 0
+    const t = Number(payTds) || 0
+    return Math.round((p + t) * 100) / 100
+  }, [payProcessed, payTds])
+
+  const modalCalculatedRemaining = useMemo(() => {
+    return Math.max(0, Math.round((modalCurrentInvoiceDue - modalInstallmentTotal) * 100) / 100)
+  }, [modalCurrentInvoiceDue, modalInstallmentTotal])
+
+  const handleModalProcessedChange = (e) => {
+    setPayProcessed(e.target.value)
+  }
+
+  const handleModalTdsChange = (e) => {
+    const val = e.target.value
+    const newTds = Number(val) || 0
+    const currentGross = (Number(payProcessed) || 0) + (Number(payTds) || 0)
+
+    if (currentGross > 0) {
+      const adjustedProc = Math.max(0, Math.round((currentGross - newTds) * 100) / 100)
+      setPayProcessed(adjustedProc === 0 ? '' : String(adjustedProc))
+    }
+    setPayTds(val)
+  }
+
+  const handleRecordPartPaymentSubmit = async (e) => {
+    e.preventDefault()
+    if (!paymentPurchase) return
+
+    const numProc = Number(payProcessed) || 0
+    const numTdsVal = Number(payTds) || 0
+    const totalThisPay = Math.round((numProc + numTdsVal) * 100) / 100
+
+    if (totalThisPay <= 0) {
+      showToast('error', 'Please enter a processed or TDS payment amount greater than 0')
+      return
+    }
+
+    if (totalThisPay > modalCurrentInvoiceDue + 0.01) {
+      showToast('error', `Payment amount (${formatCurrency(totalThisPay)}) cannot exceed current balance due (${formatCurrency(modalCurrentInvoiceDue)})`)
+      return
+    }
+
+    setSubmittingPayment(true)
+    try {
+      const res = await recordPurchasePayment(paymentPurchase.id, {
+        processed_amount: numProc,
+        tds_amount: numTdsVal,
+        payment_date: payDate,
+        payment_mode: payMode,
+        reference_no: payRef,
+        notes: payNotes,
+      })
+
+      if (res?.data?.success) {
+        showToast('success', `Payment of ${formatCurrency(totalThisPay)} recorded successfully against Invoice #${paymentPurchase.invoice_no}!`)
+        setShowPaymentModal(false)
+        setPaymentPurchase(null)
+
+        // Refresh purchases list
+        const freshRes = await getPurchases()
+        if (freshRes?.data?.data) {
+          setPurchases(freshRes.data.data)
+          // If history modal is currently open or was open for this purchase, update it
+          if (historyPurchase && historyPurchase.id === paymentPurchase.id) {
+            const updatedP = freshRes.data.data.find((x) => x.id === paymentPurchase.id)
+            if (updatedP) setHistoryPurchase(updatedP)
+          }
+        }
+      } else {
+        showToast('error', res?.data?.message || 'Failed to record payment')
+      }
+    } catch (err) {
+      showToast('error', err?.response?.data?.message || 'Error recording payment')
+    } finally {
+      setSubmittingPayment(false)
+    }
+  }
 
   // ── Handle Purchase Entry Submit ──
   const handlePurchaseSubmit = async (e) => {
@@ -451,6 +634,17 @@ const Purchase = () => {
       formData.append('purchase_date', purchaseForm.purchase_date)
       if (purchaseForm.notes) formData.append('notes', purchaseForm.notes)
       formData.append('items', JSON.stringify(validItems))
+      formData.append('subtotal', purchaseTaxCalculations.subtotal)
+      formData.append('gst_type', selectedPurchaseVendor?.gst_type || '')
+      formData.append('cgst_amount', purchaseTaxCalculations.cgstAmount)
+      formData.append('sgst_amount', purchaseTaxCalculations.sgstAmount)
+      formData.append('igst_amount', purchaseTaxCalculations.igstAmount)
+      formData.append('tax_amount', purchaseTaxCalculations.taxAmount)
+      formData.append('total_amount', purchaseTaxCalculations.grandTotal)
+      formData.append('processed_amount', numProcessed)
+      formData.append('tds_amount', numTds)
+      formData.append('paid_amount', totalPaidAccounted)
+      formData.append('outstanding_amount', currentOutstanding)
 
       if (invoiceFile) {
         formData.append('invoice_file', invoiceFile)
@@ -469,6 +663,8 @@ const Purchase = () => {
           { item_id: '', item_name: '', hsn_code: '', unit: '', quantity: 1, rate: 0, amount: 0 },
         ])
         setInvoiceFile(null)
+        setProcessedAmount('')
+        setTdsAmount('')
         if (fileInputRef.current) fileInputRef.current.value = ''
 
         loadData()
@@ -507,106 +703,6 @@ const Purchase = () => {
       filename: rawUrl.split('/').pop() || 'invoice_document',
     })
     setShowAttachedDocModal(true)
-  }
-
-  // ── Open Official Tax Invoice Viewer ([ 🧾 Tax Invoice ]) ──
-  const handleOpenTaxInvoice = (purchaseRecord) => {
-    setSelectedTaxInvoice(purchaseRecord)
-    setShowTaxInvoiceModal(true)
-  }
-
-  // ── Headless Iframe Print for Official Tax Invoice ──
-  const handlePrintTaxInvoice = () => {
-    const printElement = document.getElementById('purchase-tax-invoice-paper')
-    if (!printElement) {
-      window.print()
-      return
-    }
-
-    const iframe = document.createElement('iframe')
-    iframe.style.position = 'fixed'
-    iframe.style.right = '0'
-    iframe.style.bottom = '0'
-    iframe.style.width = '0px'
-    iframe.style.height = '0px'
-    iframe.style.border = '0px'
-    iframe.setAttribute('title', 'Tax Invoice Print Preview')
-    document.body.appendChild(iframe)
-
-    const doc = iframe.contentWindow.document
-    const headElements = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
-      .map((node) => node.outerHTML)
-      .join('\n')
-
-    doc.open()
-    doc.write(`
-      <!DOCTYPE html>
-      <html lang="en">
-        <head>
-          <meta charset="utf-8" />
-          <title>${selectedTaxInvoice?.invoice_no ? `Invoice_${selectedTaxInvoice.invoice_no}` : 'Tax_Invoice'}</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          ${headElements}
-          <style>
-            @page {
-              size: A4 portrait;
-              margin: 0 !important;
-            }
-            * {
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-              color-adjust: exact !important;
-              box-sizing: border-box;
-            }
-            html, body {
-              margin: 0 !important;
-              padding: 0 !important;
-              background-color: #ffffff !important;
-              background: #ffffff !important;
-              font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
-              color: #0f172a !important;
-              width: 100% !important;
-            }
-            #purchase-tax-invoice-paper {
-              box-shadow: none !important;
-              border: none !important;
-              padding: 6mm 10mm !important;
-              margin: 0 auto !important;
-              width: 100% !important;
-              max-width: 100% !important;
-            }
-            table {
-              border-collapse: collapse !important;
-              width: 100% !important;
-            }
-            tr {
-              page-break-inside: avoid !important;
-            }
-          </style>
-        </head>
-        <body>
-          <div id="purchase-tax-invoice-paper">
-            ${printElement.innerHTML}
-          </div>
-        </body>
-      </html>
-    `)
-    doc.close()
-
-    setTimeout(() => {
-      try {
-        iframe.contentWindow.focus()
-        iframe.contentWindow.print()
-      } catch (err) {
-        console.error('Print error:', err)
-      } finally {
-        setTimeout(() => {
-          if (document.body.contains(iframe)) {
-            document.body.removeChild(iframe)
-          }
-        }, 1500)
-      }
-    }, 450)
   }
 
   // ── Filtered Data Lists ──
@@ -1254,7 +1350,7 @@ const Purchase = () => {
                         <option value="">-- Choose Vendor --</option>
                         {vendors.map((v) => (
                           <option key={v.id} value={v.id}>
-                            {v.vendor_name} {v.gst_no ? `(${v.gst_no})` : ''}
+                            {v.vendor_name} {v.gst_no ? `(${v.gst_no})` : ''} {v.gst_type ? `• GST: ${v.gst_type}` : ''}
                           </option>
                         ))}
                       </select>
@@ -1435,14 +1531,241 @@ const Purchase = () => {
                     </table>
                   </div>
 
-                  {/* Grand Total Bar */}
-                  <div className="flex items-center justify-between p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl">
-                    <span className="text-xs font-bold text-emerald-900">
-                      Total Purchase Value ({purchaseItems.length} {purchaseItems.length === 1 ? 'item' : 'items'}):
-                    </span>
-                    <span className="text-lg font-black text-emerald-700 font-mono">
-                      {formatCurrency(grandPurchaseTotal)}
-                    </span>
+                  {/* Tax & Total Summary Card */}
+                  <div className="bg-slate-50/80 border border-slate-200/90 rounded-2xl p-4 sm:p-5 space-y-3">
+                    {/* 1. Amount Before Taxes */}
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                      <span>
+                        Amount Before Taxes ({purchaseItems.length} {purchaseItems.length === 1 ? 'item' : 'items'}):
+                      </span>
+                      <span className="text-base font-black text-slate-800 font-mono">
+                        {formatCurrency(purchaseTaxCalculations.subtotal)}
+                      </span>
+                    </div>
+
+                    {/* 2. CGST 9% + SGST 9% */}
+                    {purchaseTaxCalculations.isCgstSgst && (
+                      <div className="pt-2 border-t border-slate-200/70 space-y-2">
+                        <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                          <span className="flex items-center gap-2">
+                            <span>CGST 9%:</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-bold border border-purple-200">
+                              9% of Subtotal
+                            </span>
+                          </span>
+                          <span className="text-sm font-black text-purple-700 font-mono">
+                            {formatCurrency(purchaseTaxCalculations.cgstAmount)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                          <span className="flex items-center gap-2">
+                            <span>SGST 9%:</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-bold border border-purple-200">
+                              9% of Subtotal
+                            </span>
+                          </span>
+                          <span className="text-sm font-black text-purple-700 font-mono">
+                            {formatCurrency(purchaseTaxCalculations.sgstAmount)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 3. IGST 18% */}
+                    {purchaseTaxCalculations.isIgst && (
+                      <div className="pt-2 border-t border-slate-200/70">
+                        <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                          <span className="flex items-center gap-2">
+                            <span>IGST 18%:</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-bold border border-blue-200">
+                              18% of Subtotal
+                            </span>
+                          </span>
+                          <span className="text-sm font-black text-blue-700 font-mono">
+                            {formatCurrency(purchaseTaxCalculations.igstAmount)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {!selectedPurchaseVendor && (
+                      <div className="text-[11px] text-amber-700 bg-amber-50 px-3.5 py-2 rounded-xl border border-amber-200 flex items-center gap-2">
+                        <span>⚠️</span>
+                        <span>Select a vendor above to apply GST calculation (IGST 18% or CGST 9% + SGST 9%).</span>
+                      </div>
+                    )}
+
+                    {selectedPurchaseVendor && !purchaseTaxCalculations.isIgst && !purchaseTaxCalculations.isCgstSgst && (
+                      <div className="text-[11px] text-slate-500 bg-slate-100 px-3.5 py-2 rounded-xl border border-slate-200">
+                        ℹ️ Selected vendor does not have a GST type configured.
+                      </div>
+                    )}
+
+                    {/* 4. Total Amount Summing All */}
+                    <div className="flex items-center justify-between pt-3 border-t-2 border-emerald-300 bg-emerald-50/70 -mx-4 sm:-mx-5 -mb-4 sm:-mb-5 p-4 sm:p-5 rounded-b-2xl">
+                      <div>
+                        <span className="text-xs font-extrabold text-emerald-950 uppercase tracking-wider block">
+                          Total Amount:
+                        </span>
+                        <span className="text-[10px] text-emerald-700 font-semibold">
+                          {purchaseTaxCalculations.isIgst
+                            ? 'Amount Before Taxes + 18% IGST'
+                            : purchaseTaxCalculations.isCgstSgst
+                            ? 'Amount Before Taxes + 9% CGST + 9% SGST'
+                            : 'Sum Total'}
+                        </span>
+                      </div>
+                      <span className="text-xl font-black text-emerald-700 font-mono">
+                        {formatCurrency(purchaseTaxCalculations.grandTotal)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Part Payment & TDS Deduction Section */}
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
+                      <div>
+                        <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                          <span>💳</span>
+                          <span>Part Payment & TDS Deduction</span>
+                        </h4>
+                        <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                          Specify disbursed payment, applicable TDS deduction, and tracked balance.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProcessedAmount(String(grandPurchaseTotal))
+                            setTdsAmount('0')
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-emerald-50 text-[#38b34a] hover:bg-emerald-100 text-[10px] font-bold border border-emerald-200 transition-colors cursor-pointer"
+                        >
+                          Full Payment
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProcessedAmount('0')
+                            setTdsAmount('0')
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold transition-colors cursor-pointer"
+                        >
+                          Zero / Unpaid
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {/* 1. Processed Amount Input */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                          <span>Processed Amount (₹)</span>
+                          <span className="text-[10px] text-slate-400 font-normal">Net Disbursed</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          placeholder="0"
+                          value={processedAmount}
+                          onChange={handleProcessedAmountChange}
+                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 font-mono focus:outline-none focus:border-[#38b34a] focus:bg-white transition-all"
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          Net cash/bank payout to vendor
+                        </p>
+                      </div>
+
+                      {/* 2. TDS Deducted Amount Input */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                          <span>TDS Deducted Amount (₹)</span>
+                          <span className="text-[10px] text-blue-600 font-semibold">TDS (IT Act)</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          placeholder="0"
+                          value={tdsAmount}
+                          onChange={handleTdsAmountChange}
+                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-blue-700 font-mono focus:outline-none focus:border-[#38b34a] focus:bg-white transition-all"
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          Adjusts against processed payout
+                        </p>
+                      </div>
+
+                      {/* 3. Outstanding Input (Strictly Read Only) */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                          <span>Outstanding Amount (₹)</span>
+                          <span className="text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded font-bold">Read Only</span>
+                        </label>
+                        <input
+                          type="number"
+                          readOnly
+                          placeholder="0"
+                          value={currentOutstanding === 0 && processedAmount === '' && grandPurchaseTotal === 0 ? '' : currentOutstanding}
+                          className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-black text-amber-900 font-mono cursor-not-allowed select-none"
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          Auto-calculated balance remaining
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Accounting Summary Strip */}
+                    <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                            Total Paid Accounted:
+                          </span>
+                          <span className="text-sm font-black text-emerald-700 font-mono">
+                            {formatCurrency(totalPaidAccounted)}
+                          </span>
+                          {numTds > 0 && (
+                            <span className="text-[10px] text-slate-500 block">
+                              (Net ₹{numProcessed.toLocaleString('en-IN')} + TDS ₹{numTds.toLocaleString('en-IN')})
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="border-l border-slate-200 pl-4">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                            Payment Settlement:
+                          </span>
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase mt-0.5 ${
+                              currentOutstanding === 0 && grandPurchaseTotal > 0
+                                ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                : totalPaidAccounted > 0
+                                ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                : 'bg-rose-100 text-rose-700 border border-rose-200'
+                            }`}
+                          >
+                            {currentOutstanding === 0 && grandPurchaseTotal > 0
+                              ? 'Fully Settled (100%)'
+                              : totalPaidAccounted > 0
+                              ? `Partially Paid (${Math.min(100, Math.round((totalPaidAccounted / (grandPurchaseTotal || 1)) * 100))}%)`
+                              : 'Unpaid / Pending'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                          Outstanding Balance:
+                        </span>
+                        <span className="text-sm font-black text-amber-700 font-mono">
+                          {formatCurrency(currentOutstanding)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -1514,15 +1837,17 @@ const Purchase = () => {
                       <th className="px-4 py-3.5">Vendor</th>
                       <th className="px-4 py-3.5">Items Summary</th>
                       <th className="px-4 py-3.5 text-right">Total Amount</th>
-                      <th className="px-4 py-3.5 text-center">ATTACHED DOC</th>
-                      <th className="px-4 py-3.5 text-center">TAX INVOICE</th>
+                      <th className="px-4 py-3.5 text-right">Paid & TDS</th>
+                      <th className="px-4 py-3.5 text-right">Outstanding</th>
+                      <th className="px-4 py-3.5 text-center">INVOICE SEE AND DOWNLOAD</th>
+                      <th className="px-4 py-3.5 text-center">PART PAYMENTS</th>
                       <th className="px-4 py-3.5 text-center">ACTION</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
                     {filteredPurchases.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="py-12 text-center text-slate-400 font-semibold">
+                        <td colSpan={10} className="py-12 text-center text-slate-400 font-semibold">
                           {purchaseSearch ? 'No purchases match your search.' : 'No purchases recorded yet.'}
                         </td>
                       </tr>
@@ -1531,6 +1856,11 @@ const Purchase = () => {
                         const itemsCount = p.items?.length || 0
                         const firstItemName = p.items?.[0]?.item_name || 'Item'
                         const hasAttachedDoc = Boolean(p.invoice_file_url || p.invoice_file)
+                        const paidVal = Number(p.paid_amount) || (Number(p.processed_amount || 0) + Number(p.tds_amount || 0))
+                        const outVal = p.outstanding_amount !== undefined && p.outstanding_amount !== null
+                          ? Number(p.outstanding_amount)
+                          : Math.max(0, (Number(p.total_amount) || 0) - paidVal)
+                        const paymentsCount = Math.max(p.payments?.length || 0, paidVal > 0 ? 1 : 0)
 
                         return (
                           <tr key={p.id} className="hover:bg-slate-50/60 transition-colors">
@@ -1577,37 +1907,95 @@ const Purchase = () => {
                               {formatCurrency(p.total_amount)}
                             </td>
 
-                            {/* ATTACHED DOC: [ 📎 File ] */}
+                            {/* Paid & TDS */}
+                            <td className="px-4 py-4 text-right">
+                              <div className="font-mono font-bold text-emerald-700 text-xs">
+                                {formatCurrency(paidVal)}
+                              </div>
+                              {Number(p.tds_amount) > 0 ? (
+                                <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                                  <span>Net: {formatCurrency(p.processed_amount || 0)}</span>
+                                  <span className="text-blue-600 block">+ TDS: {formatCurrency(p.tds_amount)}</span>
+                                </div>
+                              ) : (
+                                <div className="text-[10px] text-slate-400 font-mono">TDS: ₹0.00</div>
+                              )}
+                            </td>
+
+                            {/* Outstanding */}
+                            <td className="px-4 py-4 text-right">
+                              <div className="font-mono font-black text-amber-700 text-xs">
+                                {formatCurrency(outVal)}
+                              </div>
+                              <div className="mt-0.5">
+                                <span
+                                  className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                                    outVal === 0 && Number(p.total_amount) > 0
+                                      ? 'bg-emerald-100 text-emerald-700'
+                                      : paidVal > 0
+                                      ? 'bg-amber-100 text-amber-800'
+                                      : 'bg-rose-100 text-rose-700'
+                                  }`}
+                                >
+                                  {outVal === 0 && Number(p.total_amount) > 0
+                                    ? 'Paid'
+                                    : paidVal > 0
+                                    ? 'Partial'
+                                    : 'Unpaid'}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* INVOICE SEE AND DOWNLOAD: Only shows uploaded document */}
                             <td className="px-4 py-4 text-center whitespace-nowrap">
                               {hasAttachedDoc ? (
                                 <button
                                   type="button"
                                   onClick={() => handleOpenAttachedDoc(p)}
-                                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 inline-flex items-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-95"
-                                  title="View, Print & Download Attached File"
+                                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 inline-flex items-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-95"
+                                  title="View, Print & Download Uploaded Vendor Invoice"
                                 >
-                                  <span>📎</span>
-                                  <span>File</span>
+                                  <span>📄</span>
+                                  <span>See &amp; Download</span>
                                 </button>
                               ) : (
-                                <span className="text-slate-300 italic text-[11px]">—</span>
+                                <span className="text-slate-400 italic text-[11px] font-medium bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200/60 inline-block">
+                                  No invoice found
+                                </span>
                               )}
                             </td>
 
-                            {/* TAX INVOICE: [ 🧾 Tax Invoice ] */}
+                            {/* PART PAYMENTS: Record Payment & History */}
                             <td className="px-4 py-4 text-center whitespace-nowrap">
-                              <button
-                                type="button"
-                                onClick={() => handleOpenTaxInvoice(p)}
-                                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 inline-flex items-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-95"
-                                title="View & Print Official Purchase Tax Invoice"
-                              >
-                                <span>🧾</span>
-                                <span>Tax Invoice</span>
-                              </button>
+                              <div className="flex items-center justify-center gap-1.5">
+                                {outVal > 0 ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenPaymentModal(p)}
+                                    className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white inline-flex items-center gap-1 shadow-sm transition-all cursor-pointer active:scale-95"
+                                    title="Record part payment against this invoice"
+                                  >
+                                    <span>+ Pay</span>
+                                  </button>
+                                ) : (
+                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    ✓ Settled
+                                  </span>
+                                )}
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenHistoryModal(p)}
+                                  className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 inline-flex items-center gap-1 shadow-sm transition-all cursor-pointer active:scale-95"
+                                  title="View All Part Payment Records against this invoice"
+                                >
+                                  <span>📜</span>
+                                  <span>{paymentsCount}</span>
+                                </button>
+                              </div>
                             </td>
 
-                            {/* ACTION */}
+                            {/* ACTION: Items & Delete */}
                             <td className="px-4 py-4 text-center whitespace-nowrap">
                               <div className="flex items-center justify-center gap-1.5">
                                 <button
@@ -1747,232 +2135,394 @@ const Purchase = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* 2. OFFICIAL TAX INVOICE VIEWER MODAL (PRINT & SAVE PDF) */}
+      {/* 2. RECORD PART PAYMENT MODAL */}
       {/* ========================================================================= */}
-      {showTaxInvoiceModal && selectedTaxInvoice && (
-        <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/75 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto animate-fade-in print:p-0 print:bg-white">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col text-slate-800 overflow-hidden print:max-h-none print:shadow-none print:border-none print:rounded-none">
-            {/* Modal Controls Top Bar */}
-            <div className="px-6 py-3.5 bg-slate-900 text-white flex items-center justify-between gap-3 shrink-0 print:hidden">
-              <div className="flex items-center gap-2.5">
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  Official Purchase Tax Invoice
+      {showPaymentModal && paymentPurchase && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/75 backdrop-blur-sm p-3 sm:p-5 overflow-y-auto animate-fade-in">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-xl flex flex-col text-slate-800 overflow-hidden">
+            {/* Modal Top Bar */}
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-3">
+                <span className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-base font-bold">
+                  💳
                 </span>
-                <span className="font-mono text-xs font-bold text-slate-300">
-                  {selectedTaxInvoice.invoice_no || `INV-${selectedTaxInvoice.id}`}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handlePrintTaxInvoice}
-                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
-                >
-                  <span>🖨️</span>
-                  <span>Print / Save PDF</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowTaxInvoiceModal(false)}
-                  className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center transition-colors ml-2 cursor-pointer"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-
-            {/* Document Body (A4 Style Paper) */}
-            <div className="flex-1 overflow-y-auto p-3 sm:p-5 bg-slate-100/60 print:p-0 print:bg-white print:overflow-visible font-sans">
-              <div
-                id="purchase-tax-invoice-paper"
-                className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 sm:p-6 md:p-7 space-y-3 sm:space-y-4 print:border-none print:shadow-none print:p-0 max-w-4xl mx-auto"
-              >
-                {/* Tax Invoice Title */}
-                <div className="text-center -mt-1 sm:-mt-2 pt-0 pb-0.5">
-                  <h1 className="text-xs sm:text-sm font-black text-[#1e3e6b] tracking-[0.25em] uppercase font-sans">
-                    PURCHASE TAX INVOICE
-                  </h1>
-                </div>
-
-                {/* Letterhead & Brand Header */}
-                <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-3 sm:pb-4 border-b-2 border-slate-800">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3.5">
-                      <img
-                        src={companyLogo}
-                        alt="AIM Digitalise Logo"
-                        className="h-12 w-auto object-contain shrink-0"
-                      />
-                      <div>
-                        <h2 className="text-lg sm:text-xl font-black text-[#1e3e6b] tracking-tight uppercase leading-tight">
-                          AIM Digitalise Pvt. Ltd.
-                        </h2>
-                        <p className="text-[11px] font-bold text-slate-500">
-                          Digital Nation तो Developed Nation
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-[10px] text-slate-500 leading-relaxed pt-1">
-                      <p>Corporate Office: #139, 3rd Floor, Rajdanga Main Road, Kolkata - 700107, India</p>
-                      <p>GSTIN: <strong>19ABCCA9672L1Z0</strong> | CIN: <strong>U62013WB2025PTC279684</strong></p>
-                      <p>Email: <span className="text-blue-600">accounts@aimdigitalise.com</span> | Web: <strong>www.aimdigitalise.com</strong></p>
-                    </div>
-                  </div>
-
-                  <div className="text-left sm:text-right space-y-1.5 bg-slate-50 sm:bg-transparent p-4 sm:p-0 rounded-2xl border sm:border-none border-slate-200 w-full sm:w-auto shrink-0">
-                    <div className="text-xs pt-1 space-y-1">
-                      <div>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block font-sans">
-                          BILL / INVOICE NO.
-                        </span>
-                        <p className="font-mono font-black text-[#1e3e6b] text-base">
-                          {selectedTaxInvoice.invoice_no}
-                        </p>
-                      </div>
-                      <p className="text-slate-500 font-medium">
-                        Invoice Date: <strong className="text-slate-800">{selectedTaxInvoice.purchase_date}</strong>
-                      </p>
-                      <p className="text-slate-500 text-[11px]">
-                        PO Reference: <strong className="font-mono text-blue-600">{selectedTaxInvoice.purchase_no || `PO-${selectedTaxInvoice.id}`}</strong>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Vendor / Supplier Information */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50/80 rounded-2xl p-4 sm:p-5 border border-slate-200/80 text-xs">
-                  <div className="space-y-1">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block font-sans">
-                      VENDOR / SUPPLIER:
-                    </span>
-                    <h3 className="font-extrabold text-slate-900 text-sm">
-                      {selectedTaxInvoice.vendor?.vendor_name || 'Vendor'}
-                    </h3>
-                    {selectedTaxInvoice.vendor?.contact_person && (
-                      <p className="text-slate-600 font-medium">
-                        Attn: <strong>{selectedTaxInvoice.vendor.contact_person}</strong>
-                      </p>
-                    )}
-                    {selectedTaxInvoice.vendor?.address && (
-                      <p className="text-slate-600 font-medium">
-                        Address: {selectedTaxInvoice.vendor.address}
-                      </p>
-                    )}
-                    <p className="text-slate-600 font-mono">
-                      Phone: {selectedTaxInvoice.vendor?.phone || '—'}
-                    </p>
-                    <p className="text-slate-600">
-                      Email: {selectedTaxInvoice.vendor?.email || '—'}
-                    </p>
-                    {selectedTaxInvoice.vendor?.gst_no && (
-                      <p className="font-mono text-slate-700 font-bold pt-1">
-                        GSTIN: {selectedTaxInvoice.vendor.gst_no}
-                        {selectedTaxInvoice.vendor?.gst_type && (
-                          <span className="ml-2 uppercase text-[10px] px-1.5 py-0.5 rounded bg-slate-100 border border-slate-300 font-sans">
-                            {selectedTaxInvoice.vendor.gst_type === 'igst' ? 'IGST' : 'CGST + SGST'}
-                          </span>
-                        )}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-1 sm:border-l sm:border-slate-200 sm:pl-6">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block font-sans">
-                      PURCHASE ORDER METADATA:
-                    </span>
-                    <p className="text-slate-700">
-                      Recorded By: <strong>Admin Procurement Team</strong>
-                    </p>
-                    <p className="text-slate-700">
-                      Payment Status: <strong>Cleared / Recorded</strong>
-                    </p>
-                    <p className="text-slate-700">
-                      Tax Treatment: <strong>Input Tax Credit (ITC) Eligible</strong>
-                    </p>
-                    {selectedTaxInvoice.notes && (
-                      <p className="text-slate-500 italic pt-1">
-                        Notes: {selectedTaxInvoice.notes}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Line Items Table */}
-                <div className="border border-slate-200 rounded-xl overflow-hidden mt-2">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="border-b border-slate-200 bg-slate-100/90 text-slate-600 font-bold uppercase tracking-wider text-[10px]">
-                        <th className="px-4 py-3 text-center w-8">#</th>
-                        <th className="px-4 py-3">Item Description</th>
-                        <th className="px-4 py-3">HSN Code</th>
-                        <th className="px-4 py-3 text-center">Unit</th>
-                        <th className="px-4 py-3 text-right">Qty</th>
-                        <th className="px-4 py-3 text-right">Rate (₹)</th>
-                        <th className="px-4 py-3 text-right">Amount (₹)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-                      {selectedTaxInvoice.items?.map((item, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50/50">
-                          <td className="px-4 py-3 text-center text-slate-400 font-bold">{idx + 1}</td>
-                          <td className="px-4 py-3 font-bold text-slate-900">{item.item_name}</td>
-                          <td className="px-4 py-3 font-mono text-slate-600">{item.hsn_code || '—'}</td>
-                          <td className="px-4 py-3 text-center font-bold uppercase text-[10px] text-slate-600">{item.unit || 'unit'}</td>
-                          <td className="px-4 py-3 text-right font-mono font-bold text-slate-800">{item.quantity}</td>
-                          <td className="px-4 py-3 text-right font-mono font-bold text-slate-800">{formatCurrency(item.rate)}</td>
-                          <td className="px-4 py-3 text-right font-mono font-black text-slate-900">{formatCurrency(item.amount)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot>
-                      <tr className="bg-slate-50 border-t-2 border-slate-300 font-bold">
-                        <td colSpan={6} className="px-4 py-3 text-right text-slate-700 uppercase tracking-wider text-xs">
-                          Total Invoice Value:
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono font-black text-sm text-emerald-700">
-                          {formatCurrency(selectedTaxInvoice.total_amount)}
-                        </td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-
-                {/* Amount in Words */}
-                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Amount Chargeable in Words:</span>
-                  <span className="font-extrabold text-slate-800 text-xs font-serif italic">
-                    {numberToIndianWords(selectedTaxInvoice.total_amount)}
-                  </span>
-                </div>
-
-                {/* Authorized Signatory Block */}
-                <div className="pt-6 flex justify-between items-end border-t border-slate-200 text-xs text-slate-600">
-                  <div className="space-y-1">
-                    <p className="font-bold text-slate-800">E. &amp; O.E.</p>
-                    <p className="text-[10px] text-slate-400">Subject to Kolkata Jurisdiction</p>
-                  </div>
-                  <div className="text-right space-y-2">
-                    <p className="font-bold text-slate-800">For AIM Digitalise Pvt. Ltd.</p>
-                    <div className="h-10"></div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 border-t border-slate-300 pt-1">
-                      Authorized Signatory
-                    </p>
-                  </div>
+                <div>
+                  <h3 className="font-bold text-sm text-white leading-tight">
+                    Record Part Payment against Invoice
+                  </h3>
+                  <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                    Invoice #{paymentPurchase.invoice_no} • {paymentPurchase.vendor?.vendor_name || 'Vendor'}
+                  </p>
                 </div>
               </div>
-            </div>
-
-            {/* Modal Bottom Footer */}
-            <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex justify-end shrink-0 print:hidden">
               <button
                 type="button"
-                onClick={() => setShowTaxInvoiceModal(false)}
-                className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs transition-all shadow-sm cursor-pointer"
+                onClick={() => {
+                  setShowPaymentModal(false)
+                  setPaymentPurchase(null)
+                }}
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center transition-colors cursor-pointer"
               >
-                Close Tax Invoice
+                ✕
               </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleRecordPartPaymentSubmit} className="p-6 space-y-5 flex-1 overflow-y-auto">
+              {/* Invoice Summary Banner */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Invoice Total
+                  </span>
+                  <span className="text-sm font-black text-slate-800 font-mono">
+                    {formatCurrency(paymentPurchase.total_amount)}
+                  </span>
+                </div>
+                <div className="border-x border-slate-200">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Previously Paid
+                  </span>
+                  <span className="text-sm font-black text-emerald-700 font-mono">
+                    {formatCurrency(paymentPurchase.paid_amount || 0)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider block">
+                    Current Due
+                  </span>
+                  <span className="text-sm font-black text-amber-700 font-mono">
+                    {formatCurrency(modalCurrentInvoiceDue)}
+                  </span>
+                </div>
+              </div>
+
+              {/* 3 Payment Calculation Inputs (Exact logic as Purchase Entry) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* 1. Processed Amount Input */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                    <span>Processed (₹)</span>
+                    <span className="text-[10px] text-slate-400">Net Payout</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    placeholder="0"
+                    value={payProcessed}
+                    onChange={handleModalProcessedChange}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 font-mono focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Net cash/bank payout
+                  </p>
+                </div>
+
+                {/* 2. TDS Deducted Input */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                    <span>TDS Deducted (₹)</span>
+                    <span className="text-[10px] text-blue-600 font-semibold">TDS</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    placeholder="0"
+                    value={payTds}
+                    onChange={handleModalTdsChange}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-blue-700 font-mono focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Adjusts with processed payout
+                  </p>
+                </div>
+
+                {/* 3. Outstanding Amount Input (Strictly Read Only) */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                    <span>Outstanding (₹)</span>
+                    <span className="text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded font-bold">Read Only</span>
+                  </label>
+                  <input
+                    type="number"
+                    readOnly
+                    value={modalCalculatedRemaining}
+                    className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-black text-amber-900 font-mono cursor-not-allowed select-none"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Balance after this payment
+                  </p>
+                </div>
+              </div>
+
+              {/* Date & Payment Mode */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Payment Date *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={payDate}
+                    onChange={(e) => setPayDate(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Payment Mode *
+                  </label>
+                  <select
+                    value={payMode}
+                    onChange={(e) => setPayMode(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white"
+                  >
+                    <option value="Bank Transfer">Bank Transfer (NEFT / RTGS)</option>
+                    <option value="UPI">UPI / Net Banking</option>
+                    <option value="Cheque">Cheque</option>
+                    <option value="Cash">Cash</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Reference No & Notes */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Reference No. / UTR / Cheque No. (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. UTR-9876543210 / Cheque #004321"
+                  value={payRef}
+                  onChange={(e) => setPayRef(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Notes / Remarks (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Part payment tranche against supply delivery"
+                  value={payNotes}
+                  onChange={(e) => setPayNotes(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPaymentModal(false)
+                    setPaymentPurchase(null)
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={submittingPayment || modalInstallmentTotal <= 0}
+                  className="px-6 py-2.5 rounded-xl bg-[#38b34a] hover:bg-emerald-600 text-white text-xs font-bold shadow-md transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {submittingPayment ? 'Recording...' : `Record Payment of ${formatCurrency(modalInstallmentTotal)} ✓`}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 3. PAYMENT HISTORY MODAL (ALL PART PAYMENTS FOR A SINGLE INVOICE) */}
+      {/* ========================================================================= */}
+      {showHistoryModal && historyPurchase && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/75 backdrop-blur-sm p-3 sm:p-5 overflow-y-auto animate-fade-in">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-4xl flex flex-col text-slate-800 overflow-hidden max-h-[92vh]">
+            {/* Modal Top Bar */}
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-3">
+                <span className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center text-base font-bold">
+                  📜
+                </span>
+                <div>
+                  <h3 className="font-bold text-sm text-white leading-tight">
+                    Payment Records for Invoice #{historyPurchase.invoice_no}
+                  </h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Vendor: <strong className="text-slate-200">{historyPurchase.vendor?.vendor_name}</strong> • PO: {historyPurchase.purchase_no || `PO-${historyPurchase.id}`}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowHistoryModal(false)
+                  setHistoryPurchase(null)
+                }}
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Summary Strip */}
+            <div className="p-4 sm:p-6 bg-slate-50 border-b border-slate-200 shrink-0">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                <div className="p-3 bg-white rounded-xl border border-slate-200">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Invoice</span>
+                  <span className="text-sm font-black text-slate-900 font-mono">{formatCurrency(historyPurchase.total_amount)}</span>
+                </div>
+                <div className="p-3 bg-white rounded-xl border border-slate-200">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Net Disbursed</span>
+                  <span className="text-sm font-black text-slate-800 font-mono">{formatCurrency(historyPurchase.processed_amount || 0)}</span>
+                </div>
+                <div className="p-3 bg-white rounded-xl border border-slate-200">
+                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">TDS Deducted</span>
+                  <span className="text-sm font-black text-blue-700 font-mono">{formatCurrency(historyPurchase.tds_amount || 0)}</span>
+                </div>
+                <div className="p-3 bg-amber-50 rounded-xl border border-amber-200">
+                  <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">Outstanding Due</span>
+                  <span className="text-sm font-black text-amber-800 font-mono">
+                    {formatCurrency(
+                      historyPurchase.outstanding_amount !== undefined && historyPurchase.outstanding_amount !== null
+                        ? historyPurchase.outstanding_amount
+                        : Math.max(0, Number(historyPurchase.total_amount || 0) - (Number(historyPurchase.paid_amount) || 0))
+                    )}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Table of Installments */}
+            <div className="p-4 sm:p-6 flex-1 overflow-y-auto">
+              {(() => {
+                let paymentsList = Array.isArray(historyPurchase.payments) ? [...historyPurchase.payments] : []
+                paymentsList.sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0))
+
+                const totalPaymentsPaid = paymentsList.reduce((acc, pm) => acc + Number(pm.paid_amount || 0), 0)
+                const purchasePaidVal = Number(historyPurchase.paid_amount || 0)
+
+                // If initial payment recorded during purchase entry is missing from payments array:
+                if (purchasePaidVal > totalPaymentsPaid && (purchasePaidVal - totalPaymentsPaid) > 0.01) {
+                  const initialPaid = Math.round((purchasePaidVal - totalPaymentsPaid) * 100) / 100
+                  const initialProc = Math.max(0, Math.round((Number(historyPurchase.processed_amount || 0) - paymentsList.reduce((acc, pm) => acc + Number(pm.processed_amount || 0), 0)) * 100) / 100)
+                  const initialTds = Math.max(0, Math.round((Number(historyPurchase.tds_amount || 0) - paymentsList.reduce((acc, pm) => acc + Number(pm.tds_amount || 0), 0)) * 100) / 100)
+                  const initialRemOut = Math.max(0, Math.round((Number(historyPurchase.total_amount || 0) - initialPaid) * 100) / 100)
+
+                  paymentsList.unshift({
+                    id: 'init_entry',
+                    payment_date: historyPurchase.purchase_date,
+                    processed_amount: initialProc,
+                    tds_amount: initialTds,
+                    paid_amount: initialPaid,
+                    remaining_outstanding: initialRemOut,
+                    payment_mode: 'Bank Transfer',
+                    reference_no: 'Initial',
+                    notes: 'Initial payment recorded during purchase entry'
+                  })
+                }
+
+                if (paymentsList.length === 0) {
+                  return (
+                    <div className="py-12 text-center text-slate-400">
+                      <p className="font-semibold text-sm">No part payments recorded yet for this invoice.</p>
+                      <p className="text-xs text-slate-400 mt-1">Record the first payment installment using the button below.</p>
+                    </div>
+                  )
+                }
+
+                return (
+                  <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                          <th className="px-3.5 py-3">#</th>
+                          <th className="px-3.5 py-3">Payment Date</th>
+                          <th className="px-3.5 py-3 text-right">Net Processed</th>
+                          <th className="px-3.5 py-3 text-right">TDS Deducted</th>
+                          <th className="px-3.5 py-3 text-right">Total Accounted</th>
+                          <th className="px-3.5 py-3 text-right">Remaining Due</th>
+                          <th className="px-3.5 py-3">Mode & Ref</th>
+                          <th className="px-3.5 py-3">Notes</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-medium">
+                        {paymentsList.map((pm, idx) => (
+                          <tr key={pm.id || idx} className="hover:bg-slate-50 transition-colors">
+                            <td className="px-3.5 py-3 font-bold text-slate-400">#{idx + 1}</td>
+                            <td className="px-3.5 py-3 font-mono font-semibold text-slate-700">{pm.payment_date}</td>
+                            <td className="px-3.5 py-3 text-right font-mono font-bold text-slate-800">
+                              {formatCurrency(pm.processed_amount)}
+                            </td>
+                            <td className="px-3.5 py-3 text-right font-mono font-bold text-blue-700">
+                              {formatCurrency(pm.tds_amount)}
+                            </td>
+                            <td className="px-3.5 py-3 text-right font-mono font-black text-emerald-700">
+                              {formatCurrency(pm.paid_amount || (Number(pm.processed_amount || 0) + Number(pm.tds_amount || 0)))}
+                            </td>
+                            <td className="px-3.5 py-3 text-right font-mono font-bold text-amber-700">
+                              {pm.remaining_outstanding !== null && pm.remaining_outstanding !== undefined
+                                ? formatCurrency(pm.remaining_outstanding)
+                                : '—'}
+                            </td>
+                            <td className="px-3.5 py-3">
+                              <span className="font-bold text-slate-800 block">{pm.payment_mode || 'Bank Transfer'}</span>
+                              {pm.reference_no && <span className="font-mono text-[10px] text-slate-400 block">{pm.reference_no}</span>}
+                            </td>
+                            <td className="px-3.5 py-3 text-slate-500 text-[11px] max-w-xs truncate">
+                              {pm.notes || '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              })()}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowHistoryModal(false)
+                  setHistoryPurchase(null)
+                }}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+
+              {Number(
+                historyPurchase.outstanding_amount !== undefined && historyPurchase.outstanding_amount !== null
+                  ? historyPurchase.outstanding_amount
+                  : Math.max(0, Number(historyPurchase.total_amount || 0) - (Number(historyPurchase.paid_amount) || 0))
+              ) > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const p = historyPurchase
+                    setShowHistoryModal(false)
+                    setHistoryPurchase(null)
+                    handleOpenPaymentModal(p)
+                  }}
+                  className="px-5 py-2 bg-[#38b34a] hover:bg-emerald-600 text-white font-bold rounded-xl text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>+</span>
+                  <span>Record Next Part Payment</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -2073,14 +2623,67 @@ const Purchase = () => {
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-slate-50 border-t border-slate-200 font-bold">
-                    <td colSpan={5} className="px-4 py-3 text-right text-slate-700">
-                      Grand Total:
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono font-black text-sm text-emerald-600">
-                      {formatCurrency(viewingPurchase.total_amount)}
-                    </td>
-                  </tr>
+                  {(() => {
+                    const itemsSum = viewingPurchase.items?.reduce((acc, i) => acc + (Number(i.amount) || 0), 0) || 0
+                    const sub = Number(viewingPurchase.subtotal) || itemsSum || 0
+                    const vGst = (viewingPurchase.gst_type || viewingPurchase.vendor?.gst_type || '').toUpperCase()
+                    const isIgst = vGst.includes('IGST') && !vGst.includes('CGST')
+                    const isCgst = vGst.includes('CGST') || vGst.includes('SGST')
+                    const cgst = Number(viewingPurchase.cgst_amount) || (isCgst ? Math.round(((sub * 9) / 100) * 100) / 100 : 0)
+                    const sgst = Number(viewingPurchase.sgst_amount) || (isCgst ? Math.round(((sub * 9) / 100) * 100) / 100 : 0)
+                    const igst = Number(viewingPurchase.igst_amount) || (isIgst ? Math.round(((sub * 18) / 100) * 100) / 100 : 0)
+
+                    return (
+                      <>
+                        <tr className="bg-slate-50 border-t border-slate-200">
+                          <td colSpan={5} className="px-4 py-2 text-right text-slate-600 font-semibold text-xs">
+                            Amount Before Taxes:
+                          </td>
+                          <td className="px-4 py-2 text-right font-mono font-bold text-xs text-slate-800">
+                            {formatCurrency(sub)}
+                          </td>
+                        </tr>
+                        {isCgst && (
+                          <>
+                            <tr className="bg-slate-50">
+                              <td colSpan={5} className="px-4 py-1.5 text-right text-slate-600 font-semibold text-xs">
+                                CGST 9%:
+                              </td>
+                              <td className="px-4 py-1.5 text-right font-mono font-bold text-xs text-purple-700">
+                                {formatCurrency(cgst)}
+                              </td>
+                            </tr>
+                            <tr className="bg-slate-50">
+                              <td colSpan={5} className="px-4 py-1.5 text-right text-slate-600 font-semibold text-xs">
+                                SGST 9%:
+                              </td>
+                              <td className="px-4 py-1.5 text-right font-mono font-bold text-xs text-purple-700">
+                                {formatCurrency(sgst)}
+                              </td>
+                            </tr>
+                          </>
+                        )}
+                        {isIgst && (
+                          <tr className="bg-slate-50">
+                            <td colSpan={5} className="px-4 py-1.5 text-right text-slate-600 font-semibold text-xs">
+                              IGST 18%:
+                            </td>
+                            <td className="px-4 py-1.5 text-right font-mono font-bold text-xs text-blue-700">
+                              {formatCurrency(igst)}
+                            </td>
+                          </tr>
+                        )}
+                        <tr className="bg-emerald-50/70 border-t-2 border-emerald-300 font-bold">
+                          <td colSpan={5} className="px-4 py-3 text-right text-emerald-950 uppercase tracking-wider text-xs">
+                            Total Amount:
+                          </td>
+                          <td className="px-4 py-3 text-right font-mono font-black text-sm text-emerald-600">
+                            {formatCurrency(viewingPurchase.total_amount)}
+                          </td>
+                        </tr>
+                      </>
+                    )
+                  })()}
                 </tfoot>
               </table>
             </div>
@@ -2091,6 +2694,42 @@ const Purchase = () => {
                 {viewingPurchase.notes}
               </p>
             )}
+
+            {/* Part Payment & TDS Settlement Summary */}
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-2 font-sans">
+                Payment Settlement &amp; TDS Record:
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+                <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
+                  <span className="text-[10px] text-slate-400 block font-sans font-semibold">Net Disbursed:</span>
+                  <span className="font-black text-slate-800 text-sm">{formatCurrency(viewingPurchase.processed_amount || 0)}</span>
+                </div>
+                <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
+                  <span className="text-[10px] text-blue-600 block font-sans font-semibold">TDS Deducted:</span>
+                  <span className="font-black text-blue-700 text-sm">{formatCurrency(viewingPurchase.tds_amount || 0)}</span>
+                </div>
+                <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
+                  <span className="text-[10px] text-emerald-600 block font-sans font-semibold">Total Paid Accounted:</span>
+                  <span className="font-black text-emerald-700 text-sm">
+                    {formatCurrency(
+                      viewingPurchase.paid_amount ||
+                      (Number(viewingPurchase.processed_amount || 0) + Number(viewingPurchase.tds_amount || 0))
+                    )}
+                  </span>
+                </div>
+                <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
+                  <span className="text-[10px] text-amber-600 block font-sans font-semibold">Outstanding Balance:</span>
+                  <span className="font-black text-amber-700 text-sm">
+                    {formatCurrency(
+                      viewingPurchase.outstanding_amount !== undefined && viewingPurchase.outstanding_amount !== null
+                        ? viewingPurchase.outstanding_amount
+                        : Math.max(0, Number(viewingPurchase.total_amount || 0) - (Number(viewingPurchase.paid_amount) || 0))
+                    )}
+                  </span>
+                </div>
+              </div>
+            </div>
 
             <div className="flex justify-end gap-2 pt-2">
               <button

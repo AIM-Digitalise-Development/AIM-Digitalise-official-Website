@@ -17,4 +17,5 @@ export const createPurchase = (formData) =>
     headers: { 'Content-Type': 'multipart/form-data' },
   })
 export const deletePurchase = (id) => client.delete(`/admin/purchases/${id}`)
+export const recordPurchasePayment = (id, data) => client.post(`/admin/purchases/${id}/payments`, data)
 
