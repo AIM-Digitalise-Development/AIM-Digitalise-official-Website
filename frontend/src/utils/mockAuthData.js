@@ -4115,7 +4115,7 @@ export const getMockResponse = (url, method, data = null) => {
       let purchases = stored ? JSON.parse(stored) : [
         {
           id: 1,
-          purchase_no: 'PO-2026-081',
+          purchase_no: 'PO-2026-001',
           vendor_id: 1,
           vendor: { id: 1, vendor_name: 'AWS Cloud Services', contact_person: 'John Cloud' },
           invoice_no: 'INV-AWS-882194',
@@ -4130,7 +4130,7 @@ export const getMockResponse = (url, method, data = null) => {
         },
         {
           id: 2,
-          purchase_no: 'PO-2026-082',
+          purchase_no: 'PO-2026-002',
           vendor_id: 2,
           vendor: { id: 2, vendor_name: 'Dell Technologies India', contact_person: 'Amit Sharma' },
           invoice_no: 'INV-DELL-55219',
@@ -4175,9 +4175,14 @@ export const getMockResponse = (url, method, data = null) => {
         const outAmt = Math.max(0, finalTotal - paidAmt)
         const payStatus = paidAmt >= finalTotal && finalTotal > 0 ? 'paid' : (paidAmt > 0 ? 'partial' : 'unpaid')
 
+        const pYear = data?.purchase_date ? new Date(data.purchase_date).getFullYear() : new Date().getFullYear()
+        const pCount = purchases.length + 1
+        const pSeqStr = String(pCount).padStart(3, '0')
+        const pNo = `PO-${pYear}-${pSeqStr}`
+
         const newP = {
           id: Date.now(),
-          purchase_no: `PO-2026-${Math.floor(100 + Math.random() * 900)}`,
+          purchase_no: pNo,
           vendor_id: data?.vendor_id,
           vendor: vendor,
           invoice_no: data?.invoice_no || `INV-${Date.now()}`,
