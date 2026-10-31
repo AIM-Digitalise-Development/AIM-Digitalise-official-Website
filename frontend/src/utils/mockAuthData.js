@@ -4046,8 +4046,10 @@ export const getMockResponse = (url, method, data = null) => {
           vendor_name: data?.vendor_name || 'New Vendor',
           contact_person: data?.contact_person || '',
           gst_no: data?.gst_no || '',
+          gst_type: data?.gst_type || '',
           phone: data?.phone || '',
           email: data?.email || '',
+          address: data?.address || '',
           created_at: new Date().toISOString()
         }
         vendors.unshift(newV)

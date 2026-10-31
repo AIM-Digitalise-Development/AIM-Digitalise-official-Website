@@ -189,8 +189,10 @@ const Purchase = () => {
     vendor_name: '',
     contact_person: '',
     gst_no: '',
+    gst_type: '',
     phone: '',
     email: '',
+    address: '',
   })
   const [submittingVendor, setSubmittingVendor] = useState(false)
 
@@ -270,8 +272,10 @@ const Purchase = () => {
           vendor_name: '',
           contact_person: '',
           gst_no: '',
+          gst_type: '',
           phone: '',
           email: '',
+          address: '',
         })
         loadData()
       } else {
@@ -591,8 +595,10 @@ const Purchase = () => {
         v.vendor_name?.toLowerCase().includes(q) ||
         v.contact_person?.toLowerCase().includes(q) ||
         v.gst_no?.toLowerCase().includes(q) ||
+        v.gst_type?.toLowerCase().includes(q) ||
         v.phone?.toLowerCase().includes(q) ||
-        v.email?.toLowerCase().includes(q)
+        v.email?.toLowerCase().includes(q) ||
+        v.address?.toLowerCase().includes(q)
       )
     })
   }, [vendors, vendorSearch])
@@ -761,21 +767,6 @@ const Purchase = () => {
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      Vendor GST No.
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 27AABCU9603R1ZM"
-                      value={vendorForm.gst_no}
-                      onChange={(e) => setVendorForm({ ...vendorForm, gst_no: e.target.value.toUpperCase() })}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 uppercase focus:outline-none focus:border-[#38b34a] focus:bg-white transition-all font-mono"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
                       Vendor Phone No.
                     </label>
                     <input
@@ -786,7 +777,39 @@ const Purchase = () => {
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#38b34a] focus:bg-white transition-all"
                     />
                   </div>
+                </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Vendor GST No.
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 27AABCU9603R1ZM"
+                      value={vendorForm.gst_no}
+                      onChange={(e) => setVendorForm({ ...vendorForm, gst_no: e.target.value.toUpperCase() })}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 uppercase focus:outline-none focus:border-[#38b34a] focus:bg-white transition-all font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      GST Type
+                    </label>
+                    <select
+                      value={vendorForm.gst_type}
+                      onChange={(e) => setVendorForm({ ...vendorForm, gst_type: e.target.value })}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#38b34a] focus:bg-white transition-all"
+                    >
+                      <option value="">Select GST Type</option>
+                      <option value="igst">1. igst</option>
+                      <option value="cgst+sgst">2. cgst+sgst</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1.5">
                       Vendor Email
@@ -797,6 +820,19 @@ const Purchase = () => {
                       value={vendorForm.email}
                       onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })}
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#38b34a] focus:bg-white transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Address
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="e.g. 101 Tech Park, Whitefield, Bengaluru, Karnataka - 560066"
+                      value={vendorForm.address}
+                      onChange={(e) => setVendorForm({ ...vendorForm, address: e.target.value })}
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#38b34a] focus:bg-white transition-all resize-none"
                     />
                   </div>
                 </div>
@@ -867,15 +903,17 @@ const Purchase = () => {
                       <th className="px-5 py-3.5">Vendor Name</th>
                       <th className="px-5 py-3.5">Contact Person</th>
                       <th className="px-5 py-3.5">GST No.</th>
+                      <th className="px-5 py-3.5">GST Type</th>
                       <th className="px-5 py-3.5">Phone No.</th>
                       <th className="px-5 py-3.5">Email</th>
+                      <th className="px-5 py-3.5">Address</th>
                       <th className="px-5 py-3.5 text-center">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
                     {filteredVendors.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-12 text-center text-slate-400 font-semibold">
+                        <td colSpan={9} className="py-12 text-center text-slate-400 font-semibold">
                           {vendorSearch ? 'No vendors match your search.' : 'No vendors registered yet.'}
                         </td>
                       </tr>
@@ -898,11 +936,31 @@ const Purchase = () => {
                               '—'
                             )}
                           </td>
+                          <td className="px-5 py-4">
+                            {v.gst_type ? (
+                              <span
+                                className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase border ${
+                                  v.gst_type === 'igst'
+                                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                    : 'bg-purple-50 text-purple-700 border-purple-200'
+                                }`}
+                              >
+                                {v.gst_type === 'igst' ? 'IGST' : 'CGST + SGST'}
+                              </span>
+                            ) : (
+                              '—'
+                            )}
+                          </td>
                           <td className="px-5 py-4 text-slate-600 font-mono">
                             {v.phone || '—'}
                           </td>
                           <td className="px-5 py-4 text-slate-600">
                             {v.email || '—'}
+                          </td>
+                          <td className="px-5 py-4 text-slate-600 max-w-xs">
+                            <span className="line-clamp-2" title={v.address}>
+                              {v.address || '—'}
+                            </span>
                           </td>
                           <td className="px-5 py-4 text-center">
                             <button
@@ -1752,6 +1810,11 @@ const Purchase = () => {
                         Attn: <strong>{selectedTaxInvoice.vendor.contact_person}</strong>
                       </p>
                     )}
+                    {selectedTaxInvoice.vendor?.address && (
+                      <p className="text-slate-600 font-medium">
+                        Address: {selectedTaxInvoice.vendor.address}
+                      </p>
+                    )}
                     <p className="text-slate-600 font-mono">
                       Phone: {selectedTaxInvoice.vendor?.phone || '—'}
                     </p>
@@ -1761,6 +1824,11 @@ const Purchase = () => {
                     {selectedTaxInvoice.vendor?.gst_no && (
                       <p className="font-mono text-slate-700 font-bold pt-1">
                         GSTIN: {selectedTaxInvoice.vendor.gst_no}
+                        {selectedTaxInvoice.vendor?.gst_type && (
+                          <span className="ml-2 uppercase text-[10px] px-1.5 py-0.5 rounded bg-slate-100 border border-slate-300 font-sans">
+                            {selectedTaxInvoice.vendor.gst_type === 'igst' ? 'IGST' : 'CGST + SGST'}
+                          </span>
+                        )}
                       </p>
                     )}
                   </div>
