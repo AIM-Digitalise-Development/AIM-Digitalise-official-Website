@@ -140,7 +140,7 @@ const AdminCompliance = () => {
     try {
       const res = await getTdsRecords()
       if (res?.data?.success && Array.isArray(res.data.data)) {
-        // Only for compliance: for general client invoice records, show records which are on or after 1 Jan 2026.
+        // Only for compliance: for general client invoice records, show records where client registration date is on or after 1 Jan 2026.
         // Also ensure that only records where an invoice was actually generated are displayed (exclude draft/pursuing quotations).
         const post2026Records = res.data.data.filter(r => {
           if (r.record_type === 'purchase') return true
@@ -151,8 +151,16 @@ const AdminCompliance = () => {
 
           if (!hasGeneratedInvoice) return false
 
-          const dateStr = String(r.invoice_date || r.quotation_date || r.created_at || '').slice(0, 10)
-          return !dateStr || dateStr >= '2026-01-01'
+          // Filter by general client registration date (from Admin > Users), NOT invoice/quotation date
+          const clientRegDate = String(
+            r.client_reg_date ||
+            r.client?.reg_date ||
+            r.client?.created_at ||
+            r.raw_quotation?.client?.reg_date ||
+            r.raw_quotation?.client?.created_at ||
+            ''
+          ).slice(0, 10)
+          return !clientRegDate || clientRegDate >= '2026-01-01'
         })
         setTdsRecords(post2026Records)
       } else {
@@ -379,10 +387,17 @@ const AdminCompliance = () => {
   // Filter TDS / Invoice Records
   const filteredTdsRecords = useMemo(() => {
     return tdsRecords.filter(r => {
-      // 0. Only show general client invoice records from 1 Jan 2026 onwards
+      // 0. Only show general client invoice records where client registration date is from 1 Jan 2026 onwards
       if (r.record_type !== 'purchase') {
-        const d = String(r.invoice_date || r.quotation_date || r.created_at || '').slice(0, 10)
-        if (d && d < '2026-01-01') return false
+        const clientRegDate = String(
+          r.client_reg_date ||
+          r.client?.reg_date ||
+          r.client?.created_at ||
+          r.raw_quotation?.client?.reg_date ||
+          r.raw_quotation?.client?.created_at ||
+          ''
+        ).slice(0, 10)
+        if (clientRegDate && clientRegDate < '2026-01-01') return false
       }
 
       // 1. Record Type filter (Sales Invoice vs Purchase)
