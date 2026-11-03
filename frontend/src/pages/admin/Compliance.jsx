@@ -435,11 +435,28 @@ const AdminCompliance = () => {
     })
   }, [tdsRecords, searchTerm, statusFilter, recordTypeFilter, dateFrom, dateTo])
 
-  // Summary Metrics
+  // Summary Metrics (Separated into General Client Sales & Purchases/Expenses)
   const totalFilteredCount = filteredTdsRecords.length
-  const totalFilteredInvoiced = filteredTdsRecords.reduce((sum, r) => sum + Number(r.total_amount || 0), 0)
-  const totalFilteredTds = filteredTdsRecords.reduce((sum, r) => sum + Number(r.total_tds || 0), 0)
-  const totalFilteredReceived = filteredTdsRecords.reduce((sum, r) => sum + Number(r.total_received || 0), 0)
+
+  const salesRecords = useMemo(
+    () => filteredTdsRecords.filter(r => r.record_type !== 'purchase'),
+    [filteredTdsRecords]
+  )
+  const purchaseRecords = useMemo(
+    () => filteredTdsRecords.filter(r => r.record_type === 'purchase'),
+    [filteredTdsRecords]
+  )
+
+  // 1. General Clients (Sales)
+  const totalSalesCount = salesRecords.length
+  const totalSalesInvoiced = salesRecords.reduce((sum, r) => sum + Number(r.total_amount || 0), 0)
+  const totalSalesTds = salesRecords.reduce((sum, r) => sum + Number(r.total_tds || 0), 0)
+  const totalSalesReceived = salesRecords.reduce((sum, r) => sum + Number(r.total_received || 0), 0)
+
+  // 2. Purchases (Vendor Expenses - Not Received)
+  const totalPurchaseCount = purchaseRecords.length
+  const totalPurchaseInvoiced = purchaseRecords.reduce((sum, r) => sum + Number(r.total_amount || 0), 0)
+  const totalPurchaseExpensed = purchaseRecords.reduce((sum, r) => sum + Number(r.total_amount || r.total_settled || 0), 0)
 
   // Pagination for Invoice Records
   const [currentPage, setCurrentPage] = useState(1)
@@ -887,43 +904,128 @@ const AdminCompliance = () => {
           {(activePageTab === 'invoice_records' || activePageTab === 'tds_records') && (
             <div className="space-y-6">
               
-              {/* 4 Summary Stats Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Total Invoices</span>
-                    <span className="text-base">📑</span>
-                  </div>
-                  <p className="text-2xl font-black text-slate-900 mt-1">{totalFilteredCount}</p>
-                  <span className="text-[10px] text-slate-400">Across all clients</span>
-                </div>
+              {/* Summary Stats Cards - Unified in One Professional Row */}
+              <div className={`grid gap-3 ${
+                recordTypeFilter === 'client_invoice'
+                  ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
+                  : recordTypeFilter === 'purchase'
+                  ? 'grid-cols-1 sm:grid-cols-3'
+                  : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7'
+              }`}>
+                {/* 1. General Clients (Sales) Cards */}
+                {recordTypeFilter !== 'purchase' && (
+                  <>
+                    {/* Card 1: Total Invoices */}
+                    <div className="bg-slate-50/90 border border-slate-200 rounded-2xl p-3.5 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[9.5px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block shrink-0" />
+                            Total Invoices
+                          </span>
+                          <span className="text-sm">📑</span>
+                        </div>
+                        <p className="text-lg xl:text-xl font-black text-slate-900 mt-1.5 tracking-tight">{totalSalesCount}</p>
+                      </div>
+                      <span className="text-[9.5px] text-slate-400 font-medium block mt-1 truncate">Across general clients</span>
+                    </div>
 
-                <div className="bg-purple-50/60 border border-purple-200 rounded-2xl p-4 shadow-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-purple-700">Total TDS Deducted</span>
-                    <span className="text-base">🏷️</span>
-                  </div>
-                  <p className="text-2xl font-black text-purple-700 mt-1">₹{totalFilteredTds.toLocaleString('en-IN')}</p>
-                  <span className="text-[10px] text-purple-600">Tax deducted by clients</span>
-                </div>
+                    {/* Card 2: Total TDS Deducted */}
+                    <div className="bg-purple-50/60 border border-purple-200 rounded-2xl p-3.5 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[9.5px] font-black uppercase tracking-wider text-purple-700 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 inline-block shrink-0" />
+                            TDS Deducted
+                          </span>
+                          <span className="text-sm">🏷️</span>
+                        </div>
+                        <p className="text-lg xl:text-xl font-black text-purple-700 mt-1.5 tracking-tight">₹{totalSalesTds.toLocaleString('en-IN')}</p>
+                      </div>
+                      <span className="text-[9.5px] text-purple-600 font-medium block mt-1 truncate">Tax deducted by clients</span>
+                    </div>
 
-                <div className="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-4 shadow-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700">Total Received</span>
-                    <span className="text-base">💰</span>
-                  </div>
-                  <p className="text-2xl font-black text-emerald-700 mt-1">₹{totalFilteredReceived.toLocaleString('en-IN')}</p>
-                  <span className="text-[10px] text-emerald-600">Net cash & bank received</span>
-                </div>
+                    {/* Card 3: Total Received */}
+                    <div className="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-3.5 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[9.5px] font-black uppercase tracking-wider text-emerald-700 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block shrink-0" />
+                            Total Received
+                          </span>
+                          <span className="text-sm">💰</span>
+                        </div>
+                        <p className="text-lg xl:text-xl font-black text-emerald-700 mt-1.5 tracking-tight">₹{totalSalesReceived.toLocaleString('en-IN')}</p>
+                      </div>
+                      <span className="text-[9.5px] text-emerald-600 font-medium block mt-1 truncate">Net cash & bank received</span>
+                    </div>
 
-                <div className="bg-blue-50/60 border border-blue-200 rounded-2xl p-4 shadow-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-blue-700">Total Invoiced Amount</span>
-                    <span className="text-base">🧾</span>
-                  </div>
-                  <p className="text-2xl font-black text-blue-900 mt-1">₹{totalFilteredInvoiced.toLocaleString('en-IN')}</p>
-                  <span className="text-[10px] text-blue-600">Gross invoice value</span>
-                </div>
+                    {/* Card 4: Total Invoiced Amount */}
+                    <div className="bg-blue-50/60 border border-blue-200 rounded-2xl p-3.5 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[9.5px] font-black uppercase tracking-wider text-blue-700 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block shrink-0" />
+                            Invoiced Amount
+                          </span>
+                          <span className="text-sm">🧾</span>
+                        </div>
+                        <p className="text-lg xl:text-xl font-black text-blue-900 mt-1.5 tracking-tight">₹{totalSalesInvoiced.toLocaleString('en-IN')}</p>
+                      </div>
+                      <span className="text-[9.5px] text-blue-600 font-medium block mt-1 truncate">Gross client sales value</span>
+                    </div>
+                  </>
+                )}
+
+                {/* 2. Purchases (Vendor Expenses) Cards */}
+                {recordTypeFilter !== 'client_invoice' && (
+                  <>
+                    {/* Card 5: Purchase Bills */}
+                    <div className="bg-slate-50/90 border border-slate-200 rounded-2xl p-3.5 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[9.5px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block shrink-0" />
+                            Purchase Bills
+                          </span>
+                          <span className="text-sm">📦</span>
+                        </div>
+                        <p className="text-lg xl:text-xl font-black text-slate-900 mt-1.5 tracking-tight">{totalPurchaseCount}</p>
+                      </div>
+                      <span className="text-[9.5px] text-slate-400 font-medium block mt-1 truncate">Vendor purchase bills</span>
+                    </div>
+
+                    {/* Card 6: Expense Amount */}
+                    <div className="bg-rose-50/70 border border-rose-200 rounded-2xl p-3.5 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[9.5px] font-black uppercase tracking-wider text-rose-700 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block shrink-0" />
+                            Expense Amount
+                          </span>
+                          <span className="text-sm">💸</span>
+                        </div>
+                        <p className="text-lg xl:text-xl font-black text-rose-700 mt-1.5 tracking-tight">₹{totalPurchaseExpensed.toLocaleString('en-IN')}</p>
+                      </div>
+                      <span className="text-[9.5px] text-rose-600 font-medium block mt-1 truncate">Paid expenses (not received)</span>
+                    </div>
+
+                    {/* Card 7: Expense Invoiced */}
+                    <div className="bg-sky-50/70 border border-sky-200 rounded-2xl p-3.5 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[9.5px] font-black uppercase tracking-wider text-sky-700 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-sky-500 inline-block shrink-0" />
+                            Expense Invoiced
+                          </span>
+                          <span className="text-sm">🧾</span>
+                        </div>
+                        <p className="text-lg xl:text-xl font-black text-sky-900 mt-1.5 tracking-tight">₹{totalPurchaseInvoiced.toLocaleString('en-IN')}</p>
+                      </div>
+                      <span className="text-[9.5px] text-sky-600 font-medium block mt-1 truncate">Gross purchase bill value</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Filters Bar */}
@@ -1035,7 +1137,7 @@ const AdminCompliance = () => {
                         <th className="px-4 py-3 whitespace-nowrap">Client Name & ID</th>
                         <th className="px-3 py-3 text-right whitespace-nowrap">Invoice Amount</th>
                         <th className="px-3 py-3 text-right whitespace-nowrap">TDS Deducted</th>
-                        <th className="px-3 py-3 text-right whitespace-nowrap">Received Amount</th>
+                        <th className="px-3 py-3 text-right whitespace-nowrap">Received / Paid Amount</th>
                         <th className="px-3 py-3 text-center whitespace-nowrap">Status</th>
                         <th className="px-3 py-3 text-center whitespace-nowrap">TAX INVOICE</th>
                         <th className="px-4 py-3 text-center min-w-[260px] whitespace-nowrap">Actions</th>
@@ -1198,9 +1300,22 @@ const AdminCompliance = () => {
                                 )}
                               </td>
 
-                              {/* Received / Cleared Amount */}
-                              <td className="px-3 py-3 text-right font-black text-emerald-800 whitespace-nowrap">
-                                ₹{Number(isPurchase ? (r.total_amount || 0) : (r.total_received || 0)).toLocaleString('en-IN')}
+                              {/* Received / Paid (Expense) Amount */}
+                              <td className="px-3 py-3 text-right font-black whitespace-nowrap">
+                                {isPurchase ? (
+                                  <div>
+                                    <span className="text-rose-700 font-black">
+                                      ₹{Number(r.total_amount || 0).toLocaleString('en-IN')}
+                                    </span>
+                                    <span className="text-[9px] text-rose-600 block font-bold uppercase tracking-wider">
+                                      Expense Paid
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-emerald-800 font-black">
+                                    ₹{Number(r.total_received || 0).toLocaleString('en-IN')}
+                                  </span>
+                                )}
                               </td>
 
                               {/* Status (with Sales Invoice / Purchase Tag over the status badge) */}
