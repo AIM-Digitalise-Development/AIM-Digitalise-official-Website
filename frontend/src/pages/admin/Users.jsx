@@ -14,6 +14,7 @@ import {
   deleteGeneralService,
   createQuotation,
   updateQuotation,
+  deleteQuotation,
   getClientQuotations,
   generateQuotationInvoice,
   recordQuotationPayment,
@@ -1164,6 +1165,54 @@ const AdminUsers = () => {
       discount_percentage: 0,
       description: '',
     }])
+  }
+
+  // Delete Quotation Handler (Locked once invoice is generated)
+  const handleDeleteQuotation = async (quotation) => {
+    const qNum = quotation.quotation_number || `QUO-${quotation.id}`
+    const hasInvoice = Boolean(quotation.invoice_number) ||
+      quotation.status === 'Order Closed' ||
+      quotation.status === 'order closed' ||
+      quotation.status === 'paid' ||
+      quotation.is_paid === true
+
+    if (hasInvoice) {
+      alert(`Quotation "${qNum}" cannot be deleted because an official tax invoice has already been generated.`)
+      return
+    }
+
+    if (!window.confirm(`Are you sure you want to delete quotation "${qNum}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const res = await deleteQuotation(quotation.id)
+      if (res?.data?.success) {
+        setMessage(`🗑️ Quotation "${qNum}" deleted successfully.`)
+        // Refresh client quotations list
+        const targetId = selectedGenClient?.id || selectedGenClient?.rawId
+        if (targetId) {
+          try {
+            const listRes = await getClientQuotations(targetId)
+            if (listRes?.data?.success && Array.isArray(listRes.data.data)) {
+              setSelectedClientQuotations(listRes.data.data)
+            } else {
+              setSelectedClientQuotations((prev) => prev.filter((item) => item.id !== quotation.id))
+            }
+          } catch (_) {
+            setSelectedClientQuotations((prev) => prev.filter((item) => item.id !== quotation.id))
+          }
+        } else {
+          setSelectedClientQuotations((prev) => prev.filter((item) => item.id !== quotation.id))
+        }
+        fetchGeneralClientsList()
+      } else {
+        setErrorMsg(res?.data?.message || 'Failed to delete quotation')
+      }
+    } catch (err) {
+      console.error('Error deleting quotation:', err)
+      setErrorMsg(err.response?.data?.message || 'Error deleting quotation')
+    }
   }
 
   // Add Service from General Services Catalog to Line Items
@@ -4750,7 +4799,7 @@ const AdminUsers = () => {
                         <th className="px-4 py-3 bg-slate-50">STATUS</th>
                         <th className="px-4 py-3 bg-slate-50">PAYMENT TERMS</th>
                         <th className="px-4 py-3 text-right bg-slate-50">GRAND TOTAL</th>
-                        <th className="px-4 py-3 text-center bg-slate-50 min-w-[340px]">ACTIONS &amp; INVOICE</th>
+                        <th className="px-4 py-3 text-center bg-slate-50 min-w-[420px]">ACTIONS &amp; INVOICE</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700 bg-white">
@@ -4820,7 +4869,7 @@ const AdminUsers = () => {
                             <td className="px-4 py-3 text-right font-black text-emerald-700 text-sm">
                               ₹{totalAmt.toLocaleString('en-IN')}
                             </td>
-                            <td className="px-4 py-3 text-center min-w-[340px]">
+                            <td className="px-4 py-3 text-center min-w-[420px]">
                               <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
                                 {/* 1. View Quotation Document */}
                                 <button
@@ -4878,7 +4927,7 @@ const AdminUsers = () => {
                                   </button>
                                 )}
 
-                                {/* 4. Edit Quotation Button (LOCKED / DISABLED WHEN ORDER CLOSED) */}
+                                {/* 4. Edit Quotation Button (LOCKED / DISABLED WHEN ORDER CLOSED / INVOICE GENERATED) */}
                                 {!isOrderClosed ? (
                                   <button
                                     type="button"
@@ -4901,6 +4950,29 @@ const AdminUsers = () => {
                                   >
                                     <span>🔒</span>
                                     <span>Edit</span>
+                                  </button>
+                                )}
+
+                                {/* 5. Delete Quotation Button (LOCKED / DISABLED WHEN ORDER CLOSED / INVOICE GENERATED) */}
+                                {!isOrderClosed ? (
+                                  <button
+                                    type="button"
+                                    title="Delete Quotation"
+                                    onClick={() => handleDeleteQuotation(q)}
+                                    className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-[11px] font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer active:scale-95"
+                                  >
+                                    <span>🗑️</span>
+                                    <span>Delete</span>
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    disabled
+                                    title="Quotation cannot be deleted once invoice is generated"
+                                    className="px-2.5 py-1.5 bg-slate-100 border border-slate-200 text-slate-400 rounded-lg text-[11px] font-bold flex items-center gap-1 cursor-not-allowed opacity-60"
+                                  >
+                                    <span>🔒</span>
+                                    <span>Delete</span>
                                   </button>
                                 )}
                               </div>
@@ -5758,14 +5830,27 @@ const AdminUsers = () => {
                   viewingQuotationDoc.is_paid === true ||
                   Boolean(viewingQuotationDoc.invoice_number)
                 ) && (
-                  <button
-                    type="button"
-                    onClick={() => handleEditQuotation(viewingQuotationDoc, viewingQuotationDoc.client)}
-                    className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
-                  >
-                    <span>✏️</span>
-                    <span>Edit Quotation</span>
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleEditQuotation(viewingQuotationDoc, viewingQuotationDoc.client)}
+                      className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
+                    >
+                      <span>✏️</span>
+                      <span>Edit Quotation</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowQuotationDocModal(false)
+                        handleDeleteQuotation(viewingQuotationDoc)
+                      }}
+                      className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
+                    >
+                      <span>🗑️</span>
+                      <span>Delete</span>
+                    </button>
+                  </>
                 )}
 
                 <button

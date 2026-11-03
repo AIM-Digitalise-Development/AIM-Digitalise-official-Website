@@ -56,6 +56,9 @@ export const createQuotation = (clientId, data) =>
 export const updateQuotation = (quotationId, data) =>
   client.put(`/admin/quotations/${quotationId}`, data)
 
+export const deleteQuotation = (quotationId) =>
+  client.delete(`/admin/quotations/${quotationId}`)
+
 export const getClientQuotations = (clientId) =>
   client.get(`/admin/general-clients/${clientId}/quotations`)
 
