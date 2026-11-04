@@ -317,6 +317,8 @@ const MonthlySubscription = () => {
     let val = value
     if (name === 'contact_number' || name === 'pin_code' || name === 'total_students') {
       val = value.replace(/\D/g, '')
+    } else if (name === 'school_short_name') {
+      val = value.toLowerCase().replace(/[^a-z_]/g, '')
     }
     setCheckoutData(prev => ({ ...prev, [name]: val }))
   }
@@ -1005,16 +1007,16 @@ const MonthlySubscription = () => {
                                       </div>
                                       <div className="space-y-1">
                                         <label className="text-[9px] font-bold text-aim-copy-muted uppercase tracking-widest block">
-                                          Short Name <span className="text-aim-gold">*</span>
+                                          Short Name <span className="text-aim-gold">*</span> <span className="text-aim-copy-muted normal-case font-normal">(lowercase &amp; underscore only, max 50 chars)</span>
                                         </label>
                                         <input
                                           type="text"
                                           name="school_short_name"
-                                          maxLength="8"
+                                          maxLength="50"
                                           value={checkoutData.school_short_name}
                                           onChange={handleCheckoutChange}
                                           required
-                                          placeholder="e.g. STMARY"
+                                          placeholder="e.g. bbs_saptagram"
                                           className="input-brand text-xs py-1.5 px-3 bg-aim-navy-light border-white/10 text-white focus:border-aim-gold"
                                         />
                                       </div>
