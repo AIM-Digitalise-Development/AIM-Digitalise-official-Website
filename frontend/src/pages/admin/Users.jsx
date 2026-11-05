@@ -29,39 +29,130 @@ import {
   getGeneralClientFollowups,
 } from '../../api/admin/generalClients'
 import { createAdminLead } from '../../api/admin/leads'
+import { getAdminPartners } from '../../api/admin/partners'
+import { fetchEmployees } from '../../api/admin/employee'
 import companyLogo from '../../assets/images/logo.png'
 import payQrCode from '../../assets/images/payqr.png'
 
-export const renderCreatorBadge = (creatorCode, personName = '') => {
-  const code = String(creatorCode || 'Admin')
-  const nameStr = String(personName || creatorCode || '').toLowerCase()
+export const resolveClientCreator = (client, partnerMap = null, employeeMap = null) => {
+  if (!client) return { type: 'admin', name: 'Admin Sales Team', id: '', employeeId: '', partnerId: '', rawSoldBy: 'Admin' }
 
-  if (code.startsWith('PIDIN') || code.toLowerCase().includes('partner')) {
+  let creatorType = client.creator_type || ''
+  let creatorName = client.creator_name || client.sold_by_name || ''
+  let employeeId = client.employee_id || ''
+  let partnerId = client.partner_id || ''
+
+  const rawCode = String(client.sold_by || client.sold_by_name || 'Admin').trim()
+  const rawCodeLower = rawCode.toLowerCase()
+
+  // 1. Extract ID patterns
+  const pidMatch = rawCode.match(/PIDIN\d+/i) || rawCode.match(/PID\d+/i)
+  if (pidMatch) {
+    creatorType = 'partner'
+    partnerId = pidMatch[0].toUpperCase()
+  }
+
+  const aimMatch = rawCode.match(/AIM[A-Za-z0-9_-]*/i)
+  if (aimMatch) {
+    creatorType = 'employee'
+    employeeId = aimMatch[0].toUpperCase()
+  }
+
+  // 2. Partner Map Lookup
+  if (partnerMap && (creatorType === 'partner' || partnerId || rawCodeLower.includes('partner') || rawCode.startsWith('PID'))) {
+    creatorType = 'partner'
+    const pObj =
+      (partnerId && partnerMap.get(partnerId)) ||
+      partnerMap.get(rawCodeLower) ||
+      partnerMap.get(rawCode)
+    if (pObj) {
+      if (!partnerId) partnerId = pObj.partner_id || ''
+      if (!creatorName) creatorName = pObj.partner_name || pObj.organization_name || ''
+    }
+  }
+
+  // 3. Employee Map Lookup
+  if (employeeMap && (creatorType === 'employee' || employeeId || rawCodeLower.includes('employee') || rawCode.startsWith('AIM'))) {
+    creatorType = 'employee'
+    const eObj =
+      (employeeId && employeeMap.get(employeeId)) ||
+      employeeMap.get(rawCodeLower) ||
+      employeeMap.get(rawCode)
+    if (eObj) {
+      if (!employeeId) employeeId = eObj.employee_id || ''
+      if (!creatorName) {
+        const full = [eObj.first_name, eObj.last_name].filter(Boolean).join(' ')
+        creatorName = full || eObj.name || ''
+      }
+    }
+  }
+
+  // 4. Fallback name cleaning
+  if (!creatorName) {
+    let clean = rawCode
+      .replace(/^Partner:\s*/i, '')
+      .replace(/\s*\([^)]*\)/g, '')
+      .replace(/\s*\((admin|employee|partner)\)/gi, '')
+      .trim()
+    creatorName = clean || 'Admin Sales Team'
+  }
+
+  // 5. Final type determination
+  if (!creatorType) {
+    if (partnerId || rawCodeLower.includes('partner') || rawCode.startsWith('PID')) {
+      creatorType = 'partner'
+    } else if (employeeId || rawCodeLower.includes('employee') || rawCode.startsWith('AIM')) {
+      creatorType = 'employee'
+    } else {
+      creatorType = 'admin'
+    }
+  }
+
+  return {
+    type: creatorType,
+    name: creatorName,
+    employeeId,
+    partnerId,
+    id: employeeId || partnerId || '',
+    rawSoldBy: rawCode,
+  }
+}
+
+export const renderCreatorBadge = (creatorCode, personName = '', clientObj = null) => {
+  const code = String(creatorCode || clientObj?.sold_by || 'Admin').trim()
+  const codeLower = code.toLowerCase()
+
+  // Extract IDs
+  const pidMatch = code.match(/PIDIN\d+/i) || code.match(/PID\d+/i) || (clientObj?.partner_id ? [clientObj.partner_id] : null)
+  const aimMatch = code.match(/AIM[A-Za-z0-9_-]*/i) || (clientObj?.employee_id ? [clientObj.employee_id] : null)
+
+  const isPartner = Boolean(pidMatch) || codeLower.includes('partner') || clientObj?.creator_type === 'partner'
+  const isEmployee = Boolean(aimMatch) || codeLower.includes('employee') || clientObj?.creator_type === 'employee'
+
+  if (isPartner) {
+    const pId = pidMatch ? pidMatch[0].toUpperCase() : (clientObj?.partner_id || '')
     return (
-      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-300 inline-block">
-        🤝 Partner {code.startsWith('PIDIN') ? `(${code})` : ''}
+      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-300 inline-block shadow-sm">
+        🤝 Partner {pId ? `(${pId})` : ''}
       </span>
     )
   }
-  if (code.startsWith('AIM') || code.toLowerCase().includes('employee')) {
+
+  if (isEmployee) {
+    const empId = aimMatch ? aimMatch[0].toUpperCase() : (clientObj?.employee_id || '')
     return (
-      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-700 border border-sky-300 inline-block">
-        👔 Employee {code.startsWith('AIM') ? `(${code})` : ''}
+      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-700 border border-sky-300 inline-block shadow-sm">
+        👔 Employee {empId ? `(${empId})` : ''}
       </span>
     )
   }
 
-  // 3rd case: Admin / default (only for Sabyasachi Pal & Bapinmoy Ghosh)
-  const isAdminUser = nameStr.includes('sabyasachi') || nameStr.includes('bapinmoy') || code.toLowerCase().includes('sabyasachi') || code.toLowerCase().includes('bapinmoy')
-  if (isAdminUser) {
-    return (
-      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-300 inline-block">
-        🏢 Admin
-      </span>
-    )
-  }
-
-  return null
+  // Admin / Default
+  return (
+    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-300 inline-block shadow-sm">
+      🏢 Admin
+    </span>
+  )
 }
 
 // Rich Text Editor Component for Annexure (with Toolbar & Hide/Collapse Toggle)
@@ -391,6 +482,62 @@ const AdminUsers = () => {
   const [statusFilter, setStatusFilter] = useState('All')
   const [soldByFilter, setSoldByFilter] = useState('all') // 'all' | 'admin' | 'employee' | 'partner'
   const [sortDir, setSortDir] = useState('desc') // 'desc' | 'asc'
+
+  // Partners & Employees for Generated By (Creator) Search and ID Resolution
+  const [partnersList, setPartnersList] = useState([])
+  const [employeesList, setEmployeesList] = useState([])
+
+  useEffect(() => {
+    let isMounted = true
+    const loadPartnersAndEmployees = async () => {
+      try {
+        const [pRes, eRes] = await Promise.allSettled([
+          getAdminPartners(),
+          fetchEmployees({ per_page: 500 })
+        ])
+        if (!isMounted) return
+        if (pRes.status === 'fulfilled') {
+          const raw = pRes.value?.data?.data || pRes.value?.data || []
+          const list = Array.isArray(raw) ? raw : (raw.all_partners || raw.partners || [])
+          if (Array.isArray(list)) setPartnersList(list)
+        }
+        if (eRes.status === 'fulfilled') {
+          const raw = eRes.value?.data || eRes.value?.employees || eRes.value || []
+          const list = Array.isArray(raw) ? raw : (raw.data || [])
+          if (Array.isArray(list)) setEmployeesList(list)
+        }
+      } catch (err) {
+        console.warn('Could not load partners/employees metadata for user search:', err)
+      }
+    }
+    loadPartnersAndEmployees()
+    return () => { isMounted = false }
+  }, [])
+
+  const partnerMap = useMemo(() => {
+    const map = new Map()
+    partnersList.forEach((p) => {
+      if (p.id !== undefined && p.id !== null) map.set(String(p.id), p)
+      if (p.partner_id) map.set(String(p.partner_id).toUpperCase().trim(), p)
+      if (p.partner_name) map.set(String(p.partner_name).toLowerCase().trim(), p)
+      if (p.organization_name) map.set(String(p.organization_name).toLowerCase().trim(), p)
+    })
+    return map
+  }, [partnersList])
+
+  const employeeMap = useMemo(() => {
+    const map = new Map()
+    employeesList.forEach((e) => {
+      if (e.id !== undefined && e.id !== null) map.set(String(e.id), e)
+      if (e.employee_id) map.set(String(e.employee_id).toUpperCase().trim(), e)
+      const fullName = [e.first_name, e.last_name].filter(Boolean).join(' ').trim()
+      if (fullName) map.set(fullName.toLowerCase(), e)
+      if (e.first_name) map.set(String(e.first_name).toLowerCase().trim(), e)
+      if (e.last_name) map.set(String(e.last_name).toLowerCase().trim(), e)
+      if (e.email) map.set(String(e.email).toLowerCase().trim(), e)
+    })
+    return map
+  }, [employeesList])
 
   // Pagination State for Thousands of Clients
   const [currentPage, setCurrentPage] = useState(1)
@@ -2003,8 +2150,16 @@ const AdminUsers = () => {
   const filteredGeneralClients = useMemo(() => {
     const q = genClientSearch.trim().toLowerCase()
     return generalClients.filter((c) => {
+      const creator = resolveClientCreator(c, partnerMap, employeeMap)
+      const creatorName = (creator.name || '').toLowerCase()
+      const employeeId = (creator.employeeId || c.employee_id || '').toLowerCase()
+      const partnerId = (creator.partnerId || c.partner_id || '').toLowerCase()
+      const rawSoldBy = String(c.sold_by || '').toLowerCase()
+      const soldByName = String(c.sold_by_name || '').toLowerCase()
+
       const matchesSearch =
         !q ||
+        // 1. Client basic details
         (c.client_name && c.client_name.toLowerCase().includes(q)) ||
         (c.client_id && c.client_id.toLowerCase().includes(q)) ||
         (c.company_name && c.company_name.toLowerCase().includes(q)) ||
@@ -2012,16 +2167,35 @@ const AdminUsers = () => {
         (c.email && c.email.toLowerCase().includes(q)) ||
         (c.state && c.state.toLowerCase().includes(q)) ||
         (c.district && c.district.toLowerCase().includes(q)) ||
-        (c.sold_by_name && c.sold_by_name.toLowerCase().includes(q)) ||
+        (c.contact_number && c.contact_number.toLowerCase().includes(q)) ||
+        (c.alt_contact_number && c.alt_contact_number.toLowerCase().includes(q)) ||
         (c.branch_name && c.branch_name.toLowerCase().includes(q)) ||
         (c.software_requirements && c.software_requirements.toLowerCase().includes(q)) ||
-        (c.contact_number && c.contact_number.toLowerCase().includes(q))
+        (c.lead_source && c.lead_source.toLowerCase().includes(q)) ||
+        (c.referred_by && c.referred_by.toLowerCase().includes(q)) ||
+
+        // 2. Generated By: Creator Name (Admin name / Partner name / Employee name)
+        creatorName.includes(q) ||
+        soldByName.includes(q) ||
+        rawSoldBy.includes(q) ||
+
+        // 3. Generated By: Employee ID (if employee, e.g. AIM...)
+        (employeeId && employeeId.includes(q)) ||
+
+        // 4. Generated By: Partner ID (if partner, e.g. PIDIN...)
+        (partnerId && partnerId.includes(q)) ||
+
+        // 5. Creator Type match
+        (creator.type && creator.type.toLowerCase() === q) ||
+        (q === 'admin' && (creator.type === 'admin' || !c.sold_by || rawSoldBy.includes('admin') || creatorName.includes('admin') || creatorName.includes('sabyasachi') || creatorName.includes('bapinmoy'))) ||
+        (q === 'employee' && (creator.type === 'employee' || rawSoldBy.includes('aim') || rawSoldBy.includes('employee'))) ||
+        (q === 'partner' && (creator.type === 'partner' || rawSoldBy.includes('pid') || rawSoldBy.includes('partner')))
 
       const matchesStatus = statusFilter === 'All' || c.status === statusFilter
 
       return matchesSearch && matchesStatus
     })
-  }, [generalClients, genClientSearch, statusFilter])
+  }, [generalClients, genClientSearch, statusFilter, partnerMap, employeeMap])
 
   const hasActiveGenClientFilters = Boolean(
     genClientSearch.trim() ||
@@ -2507,20 +2681,35 @@ const AdminUsers = () => {
 
                                   {/* Column 4: Sold By (Executive & Branch Name) */}
                                   <td className="px-5 py-4 align-top min-w-[200px]">
-                                    <div className="mb-1.5">
-                                      {renderCreatorBadge(c.sold_by || 'Admin', c.sold_by_name || c.sold_by)}
-                                    </div>
-                                    <p className="font-bold text-slate-800 text-[12px] flex items-center gap-1">
-                                      <span>👤</span>
-                                      <span>{(c.sold_by_name || c.sold_by || 'Admin Sales Team').replace(/\s*\((admin|employee|partner)\)/gi, '').trim()}</span>
-                                    </p>
-                                    <p className="text-[10px] text-slate-500 font-medium mt-1 flex items-center gap-1">
-                                      <span>🏛️</span>
-                                      <span>{c.branch_name || 'Head Office ( Kolkata)'}</span>
-                                    </p>
-                                    <span className="text-[9px] text-slate-400 block mt-0.5">
-                                      Source: {c.lead_source || 'Website'}
-                                    </span>
+                                    {(() => {
+                                      const creator = resolveClientCreator(c, partnerMap, employeeMap)
+                                      return (
+                                        <>
+                                          <div className="mb-1.5">
+                                            {renderCreatorBadge(c.sold_by || 'Admin', creator.name, { ...c, ...creator })}
+                                          </div>
+                                          <p className="font-bold text-slate-800 text-[12px] flex items-center gap-1">
+                                            <span>👤</span>
+                                            <span>{creator.name}</span>
+                                          </p>
+                                          {(creator.employeeId || creator.partnerId) && (
+                                            <p className="text-[10px] font-mono font-bold text-slate-500 mt-0.5 flex items-center gap-1">
+                                              <span>🆔</span>
+                                              <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200">
+                                                {creator.employeeId ? `Emp: ${creator.employeeId}` : `Partner: ${creator.partnerId}`}
+                                              </span>
+                                            </p>
+                                          )}
+                                          <p className="text-[10px] text-slate-500 font-medium mt-1 flex items-center gap-1">
+                                            <span>🏛️</span>
+                                            <span>{c.branch_name || 'Head Office ( Kolkata)'}</span>
+                                          </p>
+                                          <span className="text-[9px] text-slate-400 block mt-0.5">
+                                            Source: {c.lead_source || 'Website'}
+                                          </span>
+                                        </>
+                                      )
+                                    })()}
                                   </td>
 
                                   {/* Column 5: Next Follow-up & Status */}
@@ -4555,10 +4744,25 @@ const AdminUsers = () => {
                         <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-[11px]">
                           <div>
                             <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Executive (Sold By)</span>
-                            <p className="text-slate-800 font-bold mt-1 flex items-center gap-1">
-                              <span>👤</span>
-                              <span>{viewingClient.sold_by_name || 'Admin Sales Team'}</span>
-                            </p>
+                            {(() => {
+                              const creator = resolveClientCreator(viewingClient, partnerMap, employeeMap)
+                              return (
+                                <>
+                                  <p className="text-slate-800 font-bold mt-1 flex items-center gap-1">
+                                    <span>👤</span>
+                                    <span>{creator.name}</span>
+                                  </p>
+                                  {(creator.employeeId || creator.partnerId) && (
+                                    <p className="text-[10px] font-mono font-bold text-slate-500 mt-0.5 flex items-center gap-1">
+                                      <span>🆔</span>
+                                      <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200">
+                                        {creator.employeeId ? `Emp ID: ${creator.employeeId}` : `Partner ID: ${creator.partnerId}`}
+                                      </span>
+                                    </p>
+                                  )}
+                                </>
+                              )
+                            })()}
                           </div>
                           <div>
                             <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Assigned Branch</span>
