@@ -305,26 +305,25 @@ const AdminSaasClients = () => {
       if (dateStr) {
         const diff = Math.ceil((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24))
         days = diff
-        if (!label) {
-          if (diff > 0) label = `${diff} days left`
-          else if (diff === 0) label = 'Due today'
-          else label = `Overdue by ${Math.abs(diff)} days`
-        }
       } else {
         days = null
-        if (!label) label = 'Not set'
       }
     }
 
-    if (!label) {
-      if (days > 0) label = `${days} days left`
-      else if (days === 0) label = 'Due today'
-      else if (days < 0) label = `Overdue by ${Math.abs(days)} days`
-      else label = 'Not set'
+    if (days !== null && days !== undefined) {
+      if (days < 0) {
+        label = `${days} days` // Signed negative count: e.g. -5 days, -30 days
+      } else if (days === 0) {
+        label = 'Due today'
+      } else {
+        label = `${days} days left`
+      }
+    } else {
+      label = 'Not set'
     }
 
     // Color Highlight Rules:
-    // Subscription ends within 30 days (days <= 30) -> RED
+    // Subscription ends within 30 days or is overdue (days <= 30) -> RED
     // Rest of them (days > 30) -> NORMAL (Green)
     let badgeClass = 'bg-slate-50 text-slate-600 border-slate-200'
     let healthStatus = 'not_set'
@@ -334,7 +333,7 @@ const AdminSaasClients = () => {
         badgeClass = 'bg-rose-50 text-rose-700 border-rose-200 font-black'
         healthStatus = 'expiring'
       } else {
-        badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200'
+        badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200 font-bold'
         healthStatus = 'normal'
       }
     }
@@ -342,8 +341,18 @@ const AdminSaasClients = () => {
     return { label, days, badgeClass, healthStatus }
   }
 
+  const normalizeCycleKey = (raw) => {
+    if (!raw) return 'monthly'
+    const c = String(raw).toLowerCase().trim()
+    if (c === 'yearly' || c === 'year' || c === 'annually' || c === 'annual') return 'annual'
+    if (c === 'half_yearly' || c === 'half-yearly' || c === 'half_year' || c === 'semi_annual' || c === 'biannual') return 'half_yearly'
+    if (c === 'quarterly' || c === 'quarter') return 'quarterly'
+    if (c === 'monthly' || c === 'month') return 'monthly'
+    return 'monthly'
+  }
+
   const getClientCycleData = (client, selectedCycleKey) => {
-    const cycleKey = selectedCycleKey || client.default_next_cycle || 'monthly'
+    const cycleKey = normalizeCycleKey(selectedCycleKey || client.default_next_cycle || 'monthly')
 
     // If API provided subscription_cycle_amounts dictionary:
     if (client.subscription_cycle_amounts && client.subscription_cycle_amounts[cycleKey]) {
@@ -374,21 +383,34 @@ const AdminSaasClients = () => {
     }
   }
 
+  // Helper: Only clients who have already paid at least 1st subscription payment belong in Next Renewal tab
+  const isEligibleForRenewal = (client) => {
+    return Boolean(
+      client.has_sub_payment === true ||
+      (client.latest_payment && (Number(client.latest_payment.amount) > 0 || client.latest_payment.payment_status === 'paid'))
+    )
+  }
+
   const renewalStats = clients.reduce((acc, c) => {
-    const ageInfo = getAgeBadgeInfo(c)
+    if (!isEligibleForRenewal(c)) return acc
+
     acc.total += 1
+    const ageInfo = getAgeBadgeInfo(c)
     if (ageInfo.healthStatus === 'expiring') acc.expiring += 1
     else if (ageInfo.healthStatus === 'normal') acc.normal += 1
 
-    const cycle = renewalSelectedCycles[c.id] || c.default_next_cycle || 'monthly'
+    const cycle = normalizeCycleKey(renewalSelectedCycles[c.id] || c.default_next_cycle || 'monthly')
     const cData = getClientCycleData(c, cycle)
     acc.projected_revenue += Number(cData.total_amount || c.default_next_amount || 0)
     return acc
   }, { total: 0, expiring: 0, normal: 0, projected_revenue: 0 })
 
-  // Filter and sort clients: Lowest remaining days at the top, then second lowest, etc.
+  // Filter and sort clients: Lowest remaining days at the top (-30, -6, 2, 30, 90, 365)
   const filteredRenewalClients = clients
     .filter(c => {
+      // 1. Only show clients who have already paid their subscription
+      if (!isEligibleForRenewal(c)) return false
+
       const ageInfo = getAgeBadgeInfo(c)
       const matchesHealth = renewalHealthFilter === 'All' ||
         (renewalHealthFilter === 'expiring' && ageInfo.healthStatus === 'expiring') ||
@@ -1303,7 +1325,7 @@ const AdminSaasClients = () => {
               {/* Renewal Stats Cards Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="bg-slate-50 border border-slate-200/70 p-4 rounded-2xl text-center shadow-sm">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Total SaaS Clients</span>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Active Renewal Clients</span>
                   <span className="text-2xl font-black text-slate-800 mt-1 block font-mono">{renewalStats.total}</span>
                 </div>
                 <div className="bg-rose-50/60 border border-rose-100 p-4 rounded-2xl text-center shadow-sm">
@@ -1395,7 +1417,7 @@ const AdminSaasClients = () => {
                       <tbody className="divide-y divide-slate-100 text-slate-700">
                         {filteredRenewalClients.map((c) => {
                           const ageInfo = getAgeBadgeInfo(c)
-                          const selectedCycle = renewalSelectedCycles[c.id] || c.default_next_cycle || 'monthly'
+                          const selectedCycle = normalizeCycleKey(renewalSelectedCycles[c.id] || c.default_next_cycle || 'monthly')
                           const cycleData = getClientCycleData(c, selectedCycle)
 
                           return (
@@ -1437,7 +1459,12 @@ const AdminSaasClients = () => {
                                 <div className="font-bold text-slate-800">{c.product_name || '—'}</div>
                                 <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1 font-medium">
                                   <span>Users:</span>
-                                  <span className="font-bold text-slate-600 font-mono">{c.total_students ?? c.student_count ?? '—'}</span>
+                                  <span className="font-bold text-slate-600 font-mono">{c.live_student_count ?? c.total_students ?? c.student_count ?? '—'}</span>
+                                  {(c.transport_count > 0 || c.hostel_count > 0) && (
+                                    <span className="text-[9.5px] text-blue-600 font-bold ml-1">
+                                      (+{c.transport_count > 0 ? `${c.transport_count} Trans.` : ''}{c.transport_count > 0 && c.hostel_count > 0 ? ', ' : ''}{c.hostel_count > 0 ? `${c.hostel_count} Hostel` : ''})
+                                    </span>
+                                  )}
                                 </div>
                               </td>
 
@@ -1487,6 +1514,11 @@ const AdminSaasClients = () => {
                                     </span>
                                   )}
                                 </div>
+                                {cycleData.addon_total > 0 && (
+                                  <div className="text-[9.5px] text-slate-400 font-medium">
+                                    incl. addons ({formatCurrency(cycleData.addon_total)})
+                                  </div>
+                                )}
                               </td>
 
                               {/* Actions */}
@@ -1641,7 +1673,7 @@ const AdminSaasClients = () => {
                 </div>
 
                 {/* Status Pills */}
-                <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200 shrink-0">
+                <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200 shrink-0 flex-wrap">
                   <button
                     onClick={() => setDueStatusFilter('all')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -1650,27 +1682,37 @@ const AdminSaasClients = () => {
                         : 'text-slate-500 hover:bg-slate-50'
                     }`}
                   >
-                    All ({duePaymentsClients.length})
+                    All Dues ({duePaymentsClients.length})
                   </button>
                   <button
-                    onClick={() => setDueStatusFilter('due')}
+                    onClick={() => setDueStatusFilter('first_sub')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      dueStatusFilter === 'due'
+                      dueStatusFilter === 'first_sub'
                         ? 'bg-rose-600 text-white shadow-sm'
                         : 'text-slate-500 hover:bg-slate-50'
                     }`}
                   >
-                    ⚠️ DUE ({duePaymentsClients.filter(c => c.due_stamp === 'DUE').length})
+                    1st Sub Unpaid ({duePaymentsClients.filter(c => c.due_reasons?.some(r => r.key === 'first_subscription_unpaid')).length})
                   </button>
                   <button
-                    onClick={() => setDueStatusFilter('paid')}
+                    onClick={() => setDueStatusFilter('renewal')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      dueStatusFilter === 'paid'
-                        ? 'bg-emerald-600 text-white shadow-sm'
+                      dueStatusFilter === 'renewal'
+                        ? 'bg-amber-600 text-white shadow-sm'
                         : 'text-slate-500 hover:bg-slate-50'
                     }`}
                   >
-                    ✅ PAID ({duePaymentsClients.filter(c => c.due_stamp === 'PAID').length})
+                    Renewals Due ({duePaymentsClients.filter(c => c.due_reasons?.some(r => r.key === 'subscription_renewal_due')).length})
+                  </button>
+                  <button
+                    onClick={() => setDueStatusFilter('addons')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      dueStatusFilter === 'addons'
+                        ? 'bg-purple-600 text-white shadow-sm'
+                        : 'text-slate-500 hover:bg-slate-50'
+                    }`}
+                  >
+                    Addons &amp; Extra ({duePaymentsClients.filter(c => c.due_reasons?.some(r => r.key === 'extra_students' || r.key?.includes('addon'))).length})
                   </button>
                 </div>
               </div>
@@ -1715,10 +1757,14 @@ const AdminSaasClients = () => {
 
                           const matchesFilter = dueStatusFilter === 'all' ||
                             (dueStatusFilter === 'due' && c.due_stamp === 'DUE') ||
-                            (dueStatusFilter === 'paid' && c.due_stamp === 'PAID')
+                            (dueStatusFilter === 'paid' && c.due_stamp === 'PAID') ||
+                            (dueStatusFilter === 'first_sub' && c.due_reasons?.some(r => r.key === 'first_subscription_unpaid')) ||
+                            (dueStatusFilter === 'renewal' && c.due_reasons?.some(r => r.key === 'subscription_renewal_due')) ||
+                            (dueStatusFilter === 'addons' && c.due_reasons?.some(r => r.key === 'extra_students' || r.key?.includes('addon') || r.key === 'customization'))
 
                           return matchesSearch && matchesFilter
                         })
+                        .sort((a, b) => (Number(b.due_days_count) || 0) - (Number(a.due_days_count) || 0))
                         .map((c) => (
                           <tr key={c.id} className="hover:bg-slate-50/60 transition-colors">
                             {/* 1. Client Info & ID */}
@@ -1751,28 +1797,48 @@ const AdminSaasClients = () => {
                             {/* 2. Plan & Status */}
                             <td className="px-6 py-4">
                               <div className="font-bold text-slate-800">{c.product_name || 'Standard Plan'}</div>
-                              <span
-                                className={`inline-flex items-center gap-1 mt-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border tracking-tight ${
-                                  c.is_expired
-                                    ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                }`}
-                              >
-                                {c.is_expired ? '🔴' : '🟢'} {c.age_formatted || (c.is_expired ? 'Expired' : 'Active')}
-                              </span>
+                              <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border tracking-tight ${
+                                    (c.due_days_count || 0) > 0 || c.is_expired
+                                      ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  }`}
+                                >
+                                  {(c.due_days_count || 0) > 0 || c.is_expired ? '🔴' : '🟢'}{' '}
+                                  {(c.due_days_count || 0) > 0 ? `${c.due_days_count} days overdue` : (c.age_formatted || 'Active')}
+                                </span>
+                              </div>
                             </td>
 
-                            {/* 3. Stamp */}
-                            <td className="px-6 py-4 text-center whitespace-nowrap">
-                              <span
-                                className={`inline-flex items-center justify-center px-4 py-1.5 rounded-full font-black text-xs uppercase tracking-wider border shadow-sm ${
-                                  c.due_stamp === 'DUE'
-                                    ? 'bg-rose-50 text-rose-700 border-rose-300'
-                                    : 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                                }`}
-                              >
-                                {c.due_stamp === 'DUE' ? '⚠️ DUE' : '✅ PAID'}
-                              </span>
+                            {/* 3. Stamp & Reasons */}
+                            <td className="px-6 py-4 text-center">
+                              <div className="flex flex-col items-center gap-1.5 min-w-[140px]">
+                                <span
+                                  className={`inline-flex items-center justify-center px-4 py-1.5 rounded-full font-black text-xs uppercase tracking-wider border shadow-sm ${
+                                    c.due_stamp === 'DUE'
+                                      ? 'bg-rose-50 text-rose-700 border-rose-300'
+                                      : 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                                  }`}
+                                >
+                                  {c.due_stamp === 'DUE' ? '⚠️ DUE' : '✅ PAID'}
+                                </span>
+
+                                {/* Under Due Stamp: Reasons for Due */}
+                                {c.due_reasons && c.due_reasons.length > 0 && (
+                                  <div className="flex flex-col gap-1 items-center max-w-[210px] mt-0.5">
+                                    {c.due_reasons.map((r, i) => (
+                                      <span
+                                        key={i}
+                                        className="text-[10px] font-bold text-rose-700 bg-rose-50/90 border border-rose-200/90 rounded-md px-2 py-0.5 leading-tight text-center shadow-xs"
+                                        title={r.details || r.label || r}
+                                      >
+                                        {r.label || r}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                             </td>
 
                             {/* 4. Total Due Amount */}
@@ -2513,6 +2579,28 @@ const AdminSaasClients = () => {
                   </div>
                 </div>
 
+                {/* Reason(s) for Due Dossier Card */}
+                {selectedDueClientModal.due_reasons && selectedDueClientModal.due_reasons.length > 0 && (
+                  <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-4">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-900 flex items-center gap-1.5 mb-2.5 font-sans">
+                      <span>⚠️</span> Identified Due Findings &amp; Reasons:
+                    </span>
+                    <div className="space-y-2">
+                      {selectedDueClientModal.due_reasons.map((r, idx) => (
+                        <div key={idx} className="flex items-start gap-2.5 bg-white p-2.5 rounded-xl border border-amber-200/60 shadow-xs">
+                          <span className="text-rose-500 font-bold text-xs mt-0.5">•</span>
+                          <div className="flex-1">
+                            <p className="text-xs font-bold text-slate-800 leading-tight">{r.label || r}</p>
+                            {r.details && (
+                              <p className="text-[10.5px] text-slate-500 mt-0.5 leading-snug">{r.details}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* 1. Contact & Location Profile */}
                 <div>
                   <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-3.5 block font-sans">
@@ -2566,6 +2654,24 @@ const AdminSaasClients = () => {
                       <p className="text-slate-800 font-bold mt-0.5">{selectedDueClientModal.product_name || 'Standard Plan'}</p>
                     </div>
                     <div>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Delivery Date &amp; Status</span>
+                      <p className="text-slate-800 font-bold mt-0.5">
+                        📦 {selectedDueClientModal.delivery_status_label || (selectedDueClientModal.delivery_date ? formatDate(selectedDueClientModal.delivery_date) : 'Pending Delivery')}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Overdue Duration</span>
+                      <p
+                        className={`font-black mt-0.5 ${
+                          (selectedDueClientModal.due_days_count || 0) > 0 ? 'text-rose-600' : 'text-emerald-600'
+                        }`}
+                      >
+                        {(selectedDueClientModal.due_days_count || 0) > 0
+                          ? `⏱️ ${selectedDueClientModal.due_days_count} days overdue`
+                          : (selectedDueClientModal.age_formatted || 'Current')}
+                      </p>
+                    </div>
+                    <div>
                       <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Validity / Period End</span>
                       <p
                         className={`font-black mt-0.5 ${
@@ -2585,7 +2691,7 @@ const AdminSaasClients = () => {
                       <p className="font-mono font-black text-slate-900 mt-0.5">
                         {selectedDueClientModal.last_subscription_payment?.has_sub_payment
                           ? selectedDueClientModal.last_subscription_payment.amount_formatted
-                          : 'No plan paid for yet'}
+                          : 'No subscription payment made yet'}
                       </p>
                     </div>
                     <div>
@@ -2597,7 +2703,9 @@ const AdminSaasClients = () => {
                     <div>
                       <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block font-sans">Billing Cycle</span>
                       <p className="text-slate-700 font-semibold mt-0.5 capitalize">
-                        {selectedDueClientModal.last_subscription_payment?.cycle || 'Processing fee paid'}
+                        {selectedDueClientModal.subscription_due?.next_cycle
+                          ? `${selectedDueClientModal.subscription_due.next_cycle} (Due)`
+                          : (selectedDueClientModal.last_subscription_payment?.cycle || 'Annual')}
                       </p>
                     </div>
                     <div>
@@ -2609,6 +2717,11 @@ const AdminSaasClients = () => {
                       >
                         {selectedDueClientModal.subscription_due?.amount_formatted || '₹ 0.00'}
                       </p>
+                      {selectedDueClientModal.subscription_due?.has_carryover && (
+                        <span className="text-[10px] font-semibold text-blue-600 block mt-0.5">
+                          🔄 Incl. {selectedDueClientModal.subscription_due.carryover_days} days carryover
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
