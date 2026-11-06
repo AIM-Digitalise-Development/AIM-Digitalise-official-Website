@@ -227,6 +227,10 @@ export const updateProductCountryPrice = (productId, data) =>
 export const getAdminDuePayments = () =>
   adminFetch('GET', '/admin/due-payments')
 
+// POST /api/admin/due-payments/record-offline
+export const recordAdminOfflinePayment = (data) =>
+  adminFetch('POST', '/admin/due-payments/record-offline', data)
+
 // ─── Admin Commissions & Payouts Report ──────────────────────────────────────
 // GET /api/admin/commissions-report
 export const getAdminCommissionsReport = () =>

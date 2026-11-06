@@ -12,6 +12,7 @@ import {
   updateCustomizationStatus,
   getAdminClientById,
   getAdminDuePayments,
+  recordAdminOfflinePayment,
 } from '../../api/admin/partners'
 import { isSaasClient } from '../../utils/subscription'
 import { getInvoiceLogoHtml } from '../../utils/invoiceLogo'
@@ -669,6 +670,120 @@ const AdminSaasClients = () => {
       flashError(err.message || 'Error fetching due payments')
     } finally {
       setLoadingDuePayments(false)
+    }
+  }
+
+  // ── OFFLINE / MANUAL PAYMENT RECORDING ──────────────────────────────────────
+  const [offlinePaymentModalClient, setOfflinePaymentModalClient] = useState(null)
+  const [offlinePaymentForm, setOfflinePaymentForm] = useState({
+    payment_mode: 'cash',
+    reference_no: '',
+    payment_date: new Date().toISOString().split('T')[0],
+    notes: '',
+    pay_subscription: true,
+    subscription_cycle: 'annual',
+    sub_amount: 0,
+    pay_extra_students: true,
+    extra_students_due: 0,
+    pay_addons: true,
+    addons_due: 0,
+    pay_customizations: true,
+    customization_due: 0,
+    total_paid: 0,
+  })
+  const [submittingOfflinePayment, setSubmittingOfflinePayment] = useState(false)
+
+  const openRecordPaymentModal = (client) => {
+    const hasSubDue = Boolean(client.subscription_due?.is_due)
+    const subAmt = Number(client.subscription_due?.amount || 0)
+    const defaultCycle = client.subscription_due?.cycle || 'annual'
+
+    const hasExtraDue = Boolean(client.extra_students_due?.is_due)
+    const extraAmt = Number(client.extra_students_due?.amount || 0)
+
+    const hasAddonDue = Boolean(client.addons_cart_due?.is_due)
+    const addonAmt = Number(client.addons_cart_due?.amount || 0)
+
+    const hasCustDue = Boolean(client.customization_due?.is_due)
+    const custAmt = Number(client.customization_due?.amount || 0)
+
+    const total = (hasSubDue ? subAmt : 0) + (hasExtraDue ? extraAmt : 0) + (hasAddonDue ? addonAmt : 0) + (hasCustDue ? custAmt : 0)
+
+    setOfflinePaymentForm({
+      payment_mode: 'cash',
+      reference_no: '',
+      payment_date: new Date().toISOString().split('T')[0],
+      notes: '',
+      pay_subscription: hasSubDue,
+      subscription_cycle: defaultCycle,
+      sub_amount: subAmt,
+      pay_extra_students: hasExtraDue,
+      extra_students_due: extraAmt,
+      pay_addons: hasAddonDue,
+      addons_due: addonAmt,
+      pay_customizations: hasCustDue,
+      customization_due: custAmt,
+      total_paid: total > 0 ? total : Number(client.total_due_amount || 0),
+    })
+    setOfflinePaymentModalClient(client)
+  }
+
+  const handleToggleOfflineDueItem = (field, checked) => {
+    setOfflinePaymentForm(prev => {
+      const updated = { ...prev, [field]: checked }
+      let total = 0
+      if (updated.pay_subscription) total += Number(updated.sub_amount || 0)
+      if (updated.pay_extra_students) total += Number(updated.extra_students_due || 0)
+      if (updated.pay_addons) total += Number(updated.addons_due || 0)
+      if (updated.pay_customizations) total += Number(updated.customization_due || 0)
+      updated.total_paid = Math.round(total * 100) / 100
+      return updated
+    })
+  }
+
+  const handleRecordOfflinePaymentSubmit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault()
+    if (!offlinePaymentModalClient) return
+    const amt = Number(offlinePaymentForm.total_paid)
+    if (isNaN(amt) || amt <= 0) {
+      flashError('Please enter a valid payment amount greater than zero.')
+      return
+    }
+
+    setSubmittingOfflinePayment(true)
+    try {
+      const payload = {
+        client_id: offlinePaymentModalClient.id,
+        payment_mode: offlinePaymentForm.payment_mode,
+        amount_paid: amt,
+        payment_date: offlinePaymentForm.payment_date,
+        reference_no: offlinePaymentForm.reference_no,
+        notes: offlinePaymentForm.notes,
+        pay_subscription: offlinePaymentForm.pay_subscription,
+        subscription_cycle: offlinePaymentForm.subscription_cycle,
+        sub_amount: offlinePaymentForm.sub_amount,
+        pay_extra_students: offlinePaymentForm.pay_extra_students,
+        extra_students_due: offlinePaymentForm.extra_students_due,
+        pay_addons: offlinePaymentForm.pay_addons,
+        addons_due: offlinePaymentForm.addons_due,
+        pay_customizations: offlinePaymentForm.pay_customizations,
+        customization_due: offlinePaymentForm.customization_due,
+      }
+      const res = await recordAdminOfflinePayment(payload)
+      if (res.data?.success) {
+        flashSuccess(res.data.message || 'Payment recorded successfully!')
+        setOfflinePaymentModalClient(null)
+        if (selectedDueClientModal) setSelectedDueClientModal(null)
+        // Refresh both Due Payments & Renewal Clients
+        fetchDuePayments()
+        fetchClients()
+      } else {
+        flashError(res.data?.message || 'Failed to record offline payment')
+      }
+    } catch (err) {
+      flashError(err.response?.data?.message || err.message || 'Error recording offline payment')
+    } finally {
+      setSubmittingOfflinePayment(false)
     }
   }
 
@@ -1873,6 +1988,16 @@ const AdminSaasClients = () => {
                                 </button>
                                 {c.due_stamp === 'DUE' && (
                                   <button
+                                    onClick={() => openRecordPaymentModal(c)}
+                                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition-all font-bold cursor-pointer text-xs shadow-sm flex items-center gap-1.5"
+                                    title="Record payment received outside software (Cash, Bank, UPI, Cheque)"
+                                  >
+                                    <span>💵</span>
+                                    <span>Record Payment</span>
+                                  </button>
+                                )}
+                                {c.due_stamp === 'DUE' && (
+                                  <button
                                     onClick={() => triggerMockReminder(c)}
                                     className="p-1.5 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-amber-600 transition-all font-bold cursor-pointer text-xs shadow-sm"
                                     title="Send Payment Reminder"
@@ -2862,7 +2987,15 @@ const AdminSaasClients = () => {
 
               {/* Footer */}
               <div className="px-6 py-4 flex items-center justify-between bg-slate-50 border-t border-slate-200 gap-3">
-                <div>
+                <div className="flex items-center gap-2">
+                  {selectedDueClientModal.due_stamp === 'DUE' && (
+                    <button
+                      onClick={() => openRecordPaymentModal(selectedDueClientModal)}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold cursor-pointer text-xs transition-all shadow-sm flex items-center gap-1.5"
+                    >
+                      <span>💵</span> Record Payment
+                    </button>
+                  )}
                   {selectedDueClientModal.due_stamp === 'DUE' && (
                     <button
                       onClick={() => triggerMockReminder(selectedDueClientModal)}
@@ -2879,6 +3012,274 @@ const AdminSaasClients = () => {
                   Close Panel
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── RECORD OFFLINE / MANUAL PAYMENT MODAL ──────────────────────── */}
+      <AnimatePresence>
+        {offlinePaymentModalClient && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !submittingOfflinePayment && setOfflinePaymentModalClient(null)}
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs"
+            />
+
+            {/* Modal Dialog */}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              className="relative bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden z-10 flex flex-col max-h-[92vh]"
+            >
+              {/* Modal Header */}
+              <div className="p-5 sm:p-6 border-b border-slate-100 flex items-start justify-between bg-slate-50/50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-black text-lg shadow-xs">
+                    💵
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-900 leading-tight">
+                      Record Payment (Cash / Offline)
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                      {offlinePaymentModalClient.company_name || offlinePaymentModalClient.school_name || offlinePaymentModalClient.client_name}{' '}
+                      <span className="font-mono font-bold text-blue-600">({offlinePaymentModalClient.client_id})</span>
+                    </p>
+                  </div>
+                </div>
+                <button
+                  disabled={submittingOfflinePayment}
+                  onClick={() => setOfflinePaymentModalClient(null)}
+                  className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Modal Body Form */}
+              <form onSubmit={handleRecordOfflinePaymentSubmit} className="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs flex-1">
+                
+                {/* 1. Dues to Clear (Checkboxes) */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-black uppercase text-slate-400 tracking-wider">
+                      Select Dues Being Paid
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-semibold">
+                      Total Calculated: ₹{Number(offlinePaymentForm.total_paid || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 rounded-2xl border border-slate-200/80 p-3 bg-slate-50/60">
+                    {/* Subscription Checkbox */}
+                    {offlinePaymentModalClient.subscription_due?.is_due && (
+                      <label className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200 hover:border-slate-300 cursor-pointer transition-all">
+                        <div className="flex items-center gap-2.5">
+                          <input
+                            type="checkbox"
+                            checked={offlinePaymentForm.pay_subscription}
+                            onChange={(e) => handleToggleOfflineDueItem('pay_subscription', e.target.checked)}
+                            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                          />
+                          <div>
+                            <span className="font-bold text-slate-800 block text-xs">
+                              Subscription Renewal / 1st Payment
+                            </span>
+                            <span className="text-[10.5px] text-slate-400">
+                              Cycle: <strong className="text-slate-600 capitalize">{offlinePaymentForm.subscription_cycle}</strong>
+                            </span>
+                          </div>
+                        </div>
+                        <span className="font-mono font-black text-rose-600 text-xs">
+                          {offlinePaymentModalClient.subscription_due.amount_formatted}
+                        </span>
+                      </label>
+                    )}
+
+                    {/* Extra Students Checkbox */}
+                    {offlinePaymentModalClient.extra_students_due?.is_due && (
+                      <label className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200 hover:border-slate-300 cursor-pointer transition-all">
+                        <div className="flex items-center gap-2.5">
+                          <input
+                            type="checkbox"
+                            checked={offlinePaymentForm.pay_extra_students}
+                            onChange={(e) => handleToggleOfflineDueItem('pay_extra_students', e.target.checked)}
+                            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                          />
+                          <div>
+                            <span className="font-bold text-slate-800 block text-xs">
+                              Extra Students Dues
+                            </span>
+                            <span className="text-[10.5px] text-slate-400">
+                              +{offlinePaymentModalClient.extra_students_due.extra_student_count} extra students
+                            </span>
+                          </div>
+                        </div>
+                        <span className="font-mono font-black text-amber-600 text-xs">
+                          {offlinePaymentModalClient.extra_students_due.amount_formatted}
+                        </span>
+                      </label>
+                    )}
+
+                    {/* Addons Checkbox */}
+                    {offlinePaymentModalClient.addons_cart_due?.is_due && (
+                      <label className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200 hover:border-slate-300 cursor-pointer transition-all">
+                        <div className="flex items-center gap-2.5">
+                          <input
+                            type="checkbox"
+                            checked={offlinePaymentForm.pay_addons}
+                            onChange={(e) => handleToggleOfflineDueItem('pay_addons', e.target.checked)}
+                            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                          />
+                          <div>
+                            <span className="font-bold text-slate-800 block text-xs">
+                              Add-ons (Transport / Hostel / Cart)
+                            </span>
+                            <span className="text-[10.5px] text-slate-400">
+                              {offlinePaymentModalClient.addons_cart_due.item_count} active item(s)
+                            </span>
+                          </div>
+                        </div>
+                        <span className="font-mono font-black text-purple-600 text-xs">
+                          {offlinePaymentModalClient.addons_cart_due.amount_formatted}
+                        </span>
+                      </label>
+                    )}
+
+                    {/* Customization Checkbox */}
+                    {offlinePaymentModalClient.customization_due?.is_due && (
+                      <label className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200 hover:border-slate-300 cursor-pointer transition-all">
+                        <div className="flex items-center gap-2.5">
+                          <input
+                            type="checkbox"
+                            checked={offlinePaymentForm.pay_customizations}
+                            onChange={(e) => handleToggleOfflineDueItem('pay_customizations', e.target.checked)}
+                            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                          />
+                          <div>
+                            <span className="font-bold text-slate-800 block text-xs">
+                              Customization Fees
+                            </span>
+                            <span className="text-[10.5px] text-slate-400">
+                              {offlinePaymentModalClient.customization_due.item_count} item(s)
+                            </span>
+                          </div>
+                        </div>
+                        <span className="font-mono font-black text-blue-600 text-xs">
+                          {offlinePaymentModalClient.customization_due.amount_formatted}
+                        </span>
+                      </label>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Payment Method & Date */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-black uppercase text-slate-400 tracking-wider">
+                      Payment Mode <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={offlinePaymentForm.payment_mode}
+                      onChange={(e) => setOfflinePaymentForm(prev => ({ ...prev, payment_mode: e.target.value }))}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 cursor-pointer shadow-xs"
+                    >
+                      <option value="cash">💵 Cash Payment</option>
+                      <option value="bank_transfer">🏦 Bank Transfer (NEFT / RTGS / IMPS)</option>
+                      <option value="upi">📱 UPI / QR Code (PhonePe, GPay, Paytm)</option>
+                      <option value="cheque">📜 Cheque / Demand Draft</option>
+                      <option value="pos">💳 Card / POS Machine</option>
+                      <option value="other">📁 Other Offline Method</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-black uppercase text-slate-400 tracking-wider">
+                      Payment Date <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={offlinePaymentForm.payment_date}
+                      onChange={(e) => setOfflinePaymentForm(prev => ({ ...prev, payment_date: e.target.value }))}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 shadow-xs"
+                    />
+                  </div>
+                </div>
+
+                {/* 3. Transaction Reference & Amount */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-black uppercase text-slate-400 tracking-wider">
+                      Reference / UTR / Cheque No.
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. UTR12345678 or Cheque 002341"
+                      value={offlinePaymentForm.reference_no}
+                      onChange={(e) => setOfflinePaymentForm(prev => ({ ...prev, reference_no: e.target.value }))}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 shadow-xs placeholder-slate-400"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-black uppercase text-slate-400 tracking-wider">
+                      Amount Paid (₹) <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-black text-slate-400 text-xs">₹</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        value={offlinePaymentForm.total_paid}
+                        onChange={(e) => setOfflinePaymentForm(prev => ({ ...prev, total_paid: e.target.value }))}
+                        className="w-full bg-white border border-slate-200 rounded-xl pl-8 pr-3 py-2 text-xs font-black text-slate-900 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 shadow-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Notes */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-black uppercase text-slate-400 tracking-wider">
+                    Remarks / Admin Notes
+                  </label>
+                  <textarea
+                    rows="2"
+                    placeholder="Optional details (e.g. Received in cash by Field Officer, Deposited in HDFC Bank, etc.)..."
+                    value={offlinePaymentForm.notes}
+                    onChange={(e) => setOfflinePaymentForm(prev => ({ ...prev, notes: e.target.value }))}
+                    className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-semibold text-slate-700 focus:outline-none focus:border-[#38b34a] focus:ring-2 focus:ring-[#38b34a]/10 shadow-xs placeholder-slate-400"
+                  />
+                </div>
+
+                {/* Modal Footer */}
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                  <button
+                    type="button"
+                    disabled={submittingOfflinePayment}
+                    onClick={() => setOfflinePaymentModalClient(null)}
+                    className="px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold rounded-xl cursor-pointer transition-colors text-xs"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingOfflinePayment}
+                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl cursor-pointer text-xs transition-all shadow-md flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <span>{submittingOfflinePayment ? '⏳' : '✅'}</span>
+                    <span>{submittingOfflinePayment ? 'Recording...' : 'Confirm & Record Payment'}</span>
+                  </button>
+                </div>
+
+              </form>
             </motion.div>
           </div>
         )}
