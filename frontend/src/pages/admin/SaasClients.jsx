@@ -1986,7 +1986,7 @@ const AdminSaasClients = () => {
                                   </svg>
                                   <span>Details</span>
                                 </button>
-                                {c.due_stamp === 'DUE' && (
+                                {/* {c.due_stamp === 'DUE' && (
                                   <button
                                     onClick={() => openRecordPaymentModal(c)}
                                     className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition-all font-bold cursor-pointer text-xs shadow-sm flex items-center gap-1.5"
@@ -1995,7 +1995,7 @@ const AdminSaasClients = () => {
                                     <span>💵</span>
                                     <span>Record Payment</span>
                                   </button>
-                                )}
+                                )} */}
                                 {c.due_stamp === 'DUE' && (
                                   <button
                                     onClick={() => triggerMockReminder(c)}
