@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -68,91 +68,311 @@ const AdminSaasClients = () => {
 
   const [fetchingStudentCount, setFetchingStudentCount] = useState(false)
 
-  const handleDownloadInvoice = (payment, clientDetails) => {
-    const today = new Date(payment.created_at || Date.now())
-    const invoiceDate = today.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-    const invoiceNumber = `INV-${today.getTime()}-${Math.floor(Math.random() * 1000)}`
+  // ── Exact Invoice Modal & Generator (verbatim match with Client Portal Products.jsx) ──
+  const [exactInvoiceModal, setExactInvoiceModal] = useState({ show: false, data: null })
+  const exactInvoiceRef = useRef(null)
 
-    const htmlContent = `
+  const INVOICE_CSS = `
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; padding: 20px; color: #1e293b; margin: 0; }
+    .bill-container { max-width: 850px; margin: 0 auto; padding: 40px; background: white; border: 1px solid #e2e8f0; border-radius: 4px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+    .bill-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+    .logo-circle { width: 85px; height: 85px; background: #c25e17; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 38px; font-weight: 800; }
+    .company-info { text-align: right; font-size: 13px; color: #64748b; line-height: 1.5; }
+    .company-info h2 { font-size: 22px; font-weight: 700; color: #c25e17; margin: 0 0 6px 0; }
+    
+    .invoice-divider-container { display: flex; align-items: center; margin: 24px 0; }
+    .invoice-divider-line { flex: 1; height: 1px; background: #e2e8f0; }
+    .invoice-divider-text { padding: 0 16px; font-size: 18px; font-weight: 700; color: #c25e17; letter-spacing: 0.05em; text-transform: uppercase; }
+
+    .invoice-grid-section { display: flex; justify-content: space-between; margin-bottom: 30px; gap: 30px; }
+    .invoice-left-side { width: 55%; display: flex; flex-direction: column; gap: 20px; }
+    .invoice-right-side { width: 40%; }
+    
+    .address-block h4 { font-size: 14px; font-weight: 700; color: #64748b; margin: 0 0 6px 0; text-transform: uppercase; }
+    .address-block p { font-size: 13px; color: #334155; margin: 0; line-height: 1.5; }
+    .address-block .client-highlight-name { font-size: 16px; font-weight: 700; color: #c25e17; margin-bottom: 4px; }
+    
+    .meta-table { width: 100%; border-collapse: collapse; border: 1px solid #e2e8f0; font-size: 13px; }
+    .meta-table td { padding: 8px 12px; border: 1px solid #e2e8f0; }
+    .meta-table td.meta-label { background: #c25e17; color: white; font-weight: 600; width: 45%; }
+    .meta-table td.meta-value { background: white; color: #475569; }
+
+    .bill-table { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 13px; }
+    .bill-table th { background: #c25e17; color: white; padding: 12px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid #c25e17; }
+    .bill-table th:first-child { text-align: center; width: 5%; }
+    .bill-table th:nth-child(2) { text-align: left; width: 50%; }
+    .bill-table th:nth-child(3), .bill-table th:nth-child(4), .bill-table th:nth-child(5) { text-align: right; width: 15%; }
+    
+    .bill-table td { padding: 16px 12px; border: 1px solid #e2e8f0; color: #334155; vertical-align: top; }
+    .bill-table td.cell-center { text-align: center; }
+    .bill-table td.cell-right { text-align: right; }
+    .bill-table tr:nth-child(even) td { background-color: #fafafa; }
+    
+    .item-title { font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+    .item-desc { font-size: 12px; color: #64748b; line-height: 1.4; }
+
+    .invoice-bottom-section { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 20px; gap: 30px; }
+    .terms-section { width: 50%; font-size: 12px; line-height: 1.6; }
+    .terms-section h5 { font-size: 13px; font-weight: 700; color: #0f172a; margin: 0 0 6px 0; }
+    .terms-section p { color: #64748b; margin: 0 0 8px 0; }
+    .thanks-msg { font-size: 13px; font-style: italic; color: #475569; margin-bottom: 20px; }
+
+    .summary-section { width: 45%; }
+    .summary-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 13px; }
+    .summary-table td { padding: 6px 12px; text-align: right; color: #475569; }
+    .summary-table td:last-child { width: 40%; font-weight: 600; color: #0f172a; }
+    .summary-table tr.total-row td { font-size: 16px; font-weight: 800; color: #0f172a; border-top: 1px solid #e2e8f0; padding-top: 12px; }
+    
+    .balance-due-bar { background: #c25e17; color: white; display: flex; justify-content: space-between; padding: 12px 16px; font-size: 15px; font-weight: 700; border-radius: 2px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+
+    @media print {
+      body { background: white; padding: 0; }
+      .bill-container { border: none; box-shadow: none; padding: 20px; max-width: 100%; }
+    }
+  `
+
+  const buildExactInvoiceData = (payment, clientDetails) => {
+    const p = payment || {}
+    const c = clientDetails || p.client || {}
+
+    const clientName = c.client_name || c.name || c.company_name || '—'
+    const clientId = c.client_id || c.client_display_id || p.client_display_id || '—'
+    const schoolName = c.school_name || c.company_name || '—'
+    const address = c.address || c.registered_address || 'GD-3/1431,Rajdanga main road, Narkelbagan, East Kasba kasba'
+
+    const payDate = p.payment_date || p.created_at || Date.now()
+    const today = new Date(payDate)
+    const invoiceDate = !isNaN(today.getTime())
+      ? today.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+      : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+
+    const invoiceNumber = p.invoice_id || p.payment_id || p.razorpay_payment_id || p.invoice_number || p.invoiceNo || 'INV-001'
+
+    const rawCycle = (p.cycle || 'annual').toLowerCase()
+    const totalAmount = Number(p.amount || 0)
+    const subTotal = p.amount_before_gst ? Number(p.amount_before_gst) : (p.subtotal ? Number(p.subtotal) : Math.round((totalAmount / 1.18) * 100) / 100)
+    const gstAmount = p.gst_amount ? Number(p.gst_amount) : Math.round((totalAmount - subTotal) * 100) / 100
+
+    const periodStart = p.period_covered?.start_date_formatted || (p.period_start ? formatDate(p.period_start) : '—')
+    const periodEnd = p.period_covered?.end_date_formatted || (p.period_end ? formatDate(p.period_end) : '—')
+
+    const isAddon = Boolean(p.isAddon || p.addon_type)
+
+    return {
+      clientName,
+      clientId,
+      schoolName,
+      address,
+      invoiceNumber,
+      invoiceDate,
+      cycle: rawCycle,
+      totalAmount,
+      subTotal,
+      gstAmount,
+      periodStart,
+      periodEnd,
+      isAddon,
+      addonType: p.addon_type,
+      studentCount: p.student_count || p.teacher_count || 1,
+    }
+  }
+
+  const getExactInvoiceHtml = (data) => {
+    if (!data) return ''
+
+    const isAddon = data.isAddon
+
+    let lineItemsHtml = ''
+    if (isAddon) {
+      const count = data.studentCount || 1
+      lineItemsHtml = `
+        <tr>
+          <td class="cell-center">1</td>
+          <td>
+            <div class="item-title">🔌 Add-on: ${data.addonType || 'Add-on Service'}</div>
+            <div class="item-desc">
+              Additional module activation.<br/>
+              Billing Period: ${data.periodStart || '—'} to ${data.periodEnd || '—'}
+            </div>
+          </td>
+          <td class="cell-right">${parseFloat(count).toFixed(2)}</td>
+          <td class="cell-right">₹${(data.subTotal / count).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td class="cell-right" style="font-weight: bold;">₹${data.subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        </tr>
+      `
+    } else {
+      lineItemsHtml = `
+        <tr>
+          <td class="cell-center">1</td>
+          <td>
+            <div class="item-title">📆 Subscription Fee</div>
+            <div class="item-desc">
+              Academic portal system subscription.<br/>
+              Billing Period: ${data.periodStart || '—'} to ${data.periodEnd || '—'} (Cycle: ${data.cycle})
+            </div>
+          </td>
+          <td class="cell-right">1.00</td>
+          <td class="cell-right">₹${data.subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td class="cell-right" style="font-weight: bold;">₹${data.subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        </tr>
+      `
+    }
+
+    return `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Invoice #${invoiceNumber}</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #1e293b; }
-            .bill-container { max-width: 800px; margin: 0 auto; padding: 30px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; }
-            .bill-header { text-align: center; border-bottom: 2px solid #1e3c5e; padding-bottom: 20px; margin-bottom: 20px; }
-            .bill-title { font-size: 24px; font-weight: bold; color: #1e3c5e; }
-            .bill-subtitle { color: #64748b; font-size: 14px; margin-top: 4px; }
-            .bill-info { display: flex; justify-content: space-between; margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; font-size: 13px; }
-            .bill-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-            .bill-table th { background: #1e3c5e; color: white; padding: 12px; text-align: left; font-size: 13px; }
-            .bill-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
-            .bill-total { text-align: right; padding: 20px; background: #f8fafc; border-radius: 8px; margin-top: 20px; font-size: 14px; }
-            .bill-footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #94a3b8; font-size: 11px; }
-          </style>
+          <title>Subscription Invoice ${data.invoiceNumber}</title>
+          <style>${INVOICE_CSS}</style>
         </head>
         <body>
           <div class="bill-container">
-            <div class="bill-header" style="display: flex; justify-content: space-between; align-items: center; text-align: left;">
+            <div class="bill-header">
               ${getInvoiceLogoHtml()}
-              <div style="text-align: right;">
-                <div class="bill-title">AIM Digitalise</div>
-                <div class="bill-subtitle">Payment Receipt / Tax Invoice</div>
+              <div class="company-info">
+                <h2>AIM Digitalise</h2>
+                #139, 3rd Floor, Rajdanga Main Road,<br/>
+                Kolkata, West Bengal - 700107<br/>
+                GSTIN: 19ABCCA9672L1Z0<br/>
+                Email: support@aimdigitalise.com
               </div>
             </div>
-            <div class="bill-info">
-              <div>
-                <strong>Client:</strong> ${clientDetails.client_name || clientDetails.company_name}<br/>
-                <strong>Client ID:</strong> ${clientDetails.client_id}<br/>
-                <strong>School/Org:</strong> ${clientDetails.company_name}
+            
+            <div class="invoice-divider-container">
+              <div class="invoice-divider-line"></div>
+              <div class="invoice-divider-text">PROFORMA INVOICE</div>
+              <div class="invoice-divider-line"></div>
+            </div>
+            
+            <div class="invoice-grid-section">
+              <div class="invoice-left-side">
+                <div class="address-block">
+                  <h4>BILL TO</h4>
+                  <div class="client-highlight-name">${data.clientName}</div>
+                  <p>
+                    <strong>ID:</strong> ${data.clientId}<br/>
+                    <strong>School:</strong> ${data.schoolName}<br/>
+                    Registered Address: ${data.address}
+                  </p>
+                </div>
+                <div class="address-block">
+                  <h4>SHIP TO</h4>
+                  <div class="client-highlight-name">${data.schoolName}</div>
+                  <p>
+                    ${data.address}
+                  </p>
+                </div>
               </div>
-              <div>
-                <strong>Invoice #:</strong> ${invoiceNumber}<br/>
-                <strong>Payment ID:</strong> ${payment.razorpay_payment_id || 'simulated_pay'}<br/>
-                <strong>Date:</strong> ${invoiceDate}
+              
+              <div class="invoice-right-side">
+                <table class="meta-table">
+                  <tr>
+                    <td class="meta-label">Invoice#</td>
+                    <td class="meta-value" style="font-family: monospace; font-weight: bold; color: #c25e17;">${data.invoiceNumber}</td>
+                  </tr>
+                  <tr>
+                    <td class="meta-label">Invoice Date</td>
+                    <td class="meta-value">${data.invoiceDate}</td>
+                  </tr>
+                  <tr>
+                    <td class="meta-label">Terms</td>
+                    <td class="meta-value">Due on Receipt</td>
+                  </tr>
+                  <tr>
+                    <td class="meta-label">Due Date</td>
+                    <td class="meta-value">${data.invoiceDate}</td>
+                  </tr>
+                </table>
               </div>
             </div>
+
             <table class="bill-table">
               <thead>
                 <tr>
-                  <th>Description</th>
-                  <th>Cycle</th>
-                  <th style="text-align: right;">Amount</th>
+                  <th>#</th>
+                  <th>ITEM & DESCRIPTION</th>
+                  <th style="text-align: right;">QTY</th>
+                  <th style="text-align: right;">RATE</th>
+                  <th style="text-align: right;">AMOUNT</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>
-                    <strong>Subscription Service Fees</strong><br/>
-                    <span style="font-size: 11px; color:#64748b;">Period: ${payment.period_start ? formatDate(payment.period_start) : '—'} to ${payment.period_end ? formatDate(payment.period_end) : '—'}</span>
-                  </td>
-                  <td style="text-transform: capitalize;">${payment.cycle}</td>
-                  <td style="text-align: right;">₹ ${parseFloat(payment.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                </tr>
+                ${lineItemsHtml}
               </tbody>
             </table>
-            <div class="bill-total">
-              <strong>Total Paid (incl. GST):</strong> <span style="font-size: 18px; color: #2563eb; font-weight: bold; margin-left: 10px;">₹ ${parseFloat(payment.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-            </div>
-            <div class="bill-footer">
-              <p>This is a system generated transaction invoice copy served for verification.</p>
-              <p>AIM Digitalise Private Limited • support@aimdigitalise.com</p>
+
+            <div class="invoice-bottom-section">
+              <div class="terms-section">
+                <div class="thanks-msg">Thanks for your business.</div>
+                <h5>Terms & Conditions</h5>
+                <p>All payments must be made in full before the activation of any services.</p>
+                <p style="font-size: 10px; color: #cbd5e1; margin-top: 8px;">This is a computer generated invoice and does not require a physical signature.</p>
+              </div>
+              
+              <div class="summary-section">
+                <table class="summary-table">
+                  <tr>
+                    <td>Sub Total</td>
+                    <td>₹${data.subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  </tr>
+                  <tr>
+                    <td>GST Tax (18%)</td>
+                    <td>₹${data.gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  </tr>
+                  <tr class="total-row">
+                    <td>Total</td>
+                    <td>₹${data.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  </tr>
+                </table>
+                
+                <div class="balance-due-bar">
+                  <span>Balance Due</span>
+                  <span>₹0.00</span>
+                </div>
+              </div>
             </div>
           </div>
         </body>
       </html>
     `
+  }
 
-    const blob = new Blob([htmlContent], { type: 'text/html' })
+  const openExactInvoice = (payment, clientDetails) => {
+    const data = buildExactInvoiceData(payment, clientDetails)
+    setExactInvoiceModal({ show: true, data })
+  }
+
+  const downloadExactInvoice = (invoiceData) => {
+    const fullHtml = getExactInvoiceHtml(invoiceData)
+    const blob = new Blob([fullHtml], { type: 'text/html' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `Receipt_${payment.razorpay_payment_id || 'invoice'}.html`
+    a.download = `Invoice_${invoiceData.invoiceNumber || 'bill'}.html`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
+  }
+
+  const printExactInvoice = (invoiceData) => {
+    const html = getExactInvoiceHtml(invoiceData)
+    const printWindow = window.open('', '_blank', 'width=900,height=800')
+    if (printWindow) {
+      printWindow.document.open()
+      printWindow.document.write(html)
+      printWindow.document.close()
+      printWindow.focus()
+      setTimeout(() => {
+        printWindow.print()
+      }, 500)
+    }
+  }
+
+  // Alias for backward compatibility
+  const handleDownloadInvoice = (payment, clientDetails) => {
+    openExactInvoice(payment, clientDetails)
   }
 
   const triggerMockReminder = (client) => {
@@ -771,12 +991,33 @@ const AdminSaasClients = () => {
       }
       const res = await recordAdminOfflinePayment(payload)
       if (res.data?.success) {
+        const clientRef = offlinePaymentModalClient
         flashSuccess(res.data.message || 'Payment recorded successfully!')
         setOfflinePaymentModalClient(null)
         if (selectedDueClientModal) setSelectedDueClientModal(null)
         // Refresh both Due Payments & Renewal Clients
         fetchDuePayments()
         fetchClients()
+
+        // Open the exact invoice modal immediately for this recorded offline payment
+        const offlineData = res.data.data || {}
+        const recordedPayment = {
+          id: 'offline_' + Date.now(),
+          invoice_id: offlineData.invoice_id,
+          payment_id: offlineData.reference_no,
+          amount: offlineData.amount_paid || amt,
+          payment_date: offlineData.payment_date || offlinePaymentForm.payment_date,
+          cycle: offlineData.cycle || offlinePaymentForm.subscription_cycle || 'annual',
+          period_start: offlineData.period_start,
+          period_end: offlineData.period_end,
+          student_count: offlineData.student_count || clientRef.total_students || clientRef.live_student_count,
+          payment_mode: offlineData.payment_mode || offlinePaymentForm.payment_mode,
+          payment_status: 'paid',
+          notes: offlineData.notes || offlinePaymentForm.notes,
+          actions_done: offlineData.actions_done,
+        }
+        const clientInfo = offlineData.client || clientRef
+        openExactInvoice(recordedPayment, clientInfo)
       } else {
         flashError(res.data?.message || 'Failed to record offline payment')
       }
@@ -2033,13 +2274,13 @@ const AdminSaasClients = () => {
                   <tbody className="divide-y divide-slate-100 text-slate-700">
                     {clients.flatMap(c => (c.payments || []).map(p => ({ ...p, client: c }))).map(p => (
                       <tr key={p.id} className="hover:bg-slate-50/50">
-                        <td className="px-5 py-3 font-mono font-bold text-slate-500">{p.razorpay_payment_id || 'simulated_pay'}</td>
-                        <td className="px-5 py-3 font-bold text-slate-800">{p.client?.company_name}</td>
+                        <td className="px-5 py-3 font-mono font-bold text-slate-500">{p.payment_id || p.razorpay_payment_id || 'simulated_pay'}</td>
+                        <td className="px-5 py-3 font-bold text-slate-800">{p.client?.company_name || p.client?.client_name}</td>
                         <td className="px-5 py-3 text-right font-black text-emerald-600">₹{Number(p.amount || 0).toLocaleString('en-IN')}</td>
-                        <td className="px-5 py-3 text-slate-400">{new Date(p.created_at).toLocaleDateString('en-IN')}</td>
+                        <td className="px-5 py-3 text-slate-400">{new Date(p.payment_date || p.created_at).toLocaleDateString('en-IN')}</td>
                         <td className="px-5 py-3 text-slate-600 font-semibold capitalize">{p.cycle}</td>
                         <td className="px-5 py-3 text-center">
-                          <button onClick={() => handleDownloadInvoice(p, p.client)} className="text-blue-600 hover:text-blue-800 font-bold cursor-pointer transition-colors">📥 Download</button>
+                          <button onClick={() => openExactInvoice(p, p.client)} className="text-blue-600 hover:text-blue-800 font-bold cursor-pointer transition-colors">📥 View / Download</button>
                         </td>
                       </tr>
                     ))}
@@ -2531,8 +2772,14 @@ const AdminSaasClients = () => {
                                       <p><strong className="text-slate-700">GST:</strong> +{p.gst_amount_formatted || '—'}</p>
                                       <p className="text-emerald-700 font-bold col-span-2"><strong>Total Paid:</strong> {p.amount_formatted || formatCurrency(p.amount)}</p>
                                     </div>
-                                    <div className="pt-1 border-t border-dashed border-slate-200 text-slate-400">
-                                      Date: {p.payment_date_formatted || '—'} · ID: <span className="font-mono text-blue-600">{p.payment_id || '—'}</span>
+                                    <div className="pt-1.5 border-t border-dashed border-slate-200 text-slate-400 flex justify-between items-center">
+                                      <span>Date: {p.payment_date_formatted || '—'} · ID: <span className="font-mono text-blue-600">{p.payment_id || '—'}</span></span>
+                                      <button
+                                        onClick={() => openExactInvoice({ ...p, isAddon: true }, selectedClientDetails)}
+                                        className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 rounded font-bold cursor-pointer text-[9px] transition-all"
+                                      >
+                                        📥 Receipt
+                                      </button>
                                     </div>
                                   </div>
                                 ))}
@@ -3284,6 +3531,115 @@ const AdminSaasClients = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* ══ EXACT INVOICE MODAL (VERBATIM MATCH WITH CLIENT PORTAL) ══════════════ */}
+      {exactInvoiceModal.show && exactInvoiceModal.data && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(3px)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 99999,
+            padding: '20px',
+            overflow: 'auto',
+          }}
+          onClick={() => setExactInvoiceModal({ show: false, data: null })}
+        >
+          <div
+            style={{
+              backgroundColor: '#f8fafc',
+              borderRadius: '16px',
+              maxWidth: '920px',
+              width: '100%',
+              maxHeight: '95vh',
+              overflow: 'auto',
+              padding: '24px',
+              position: 'relative',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Inject the exact CSS so all styles render perfectly */}
+            <style dangerouslySetInnerHTML={{ __html: INVOICE_CSS }} />
+
+            {/* Bill Preview Container */}
+            <div
+              ref={exactInvoiceRef}
+              dangerouslySetInnerHTML={{
+                __html: getExactInvoiceHtml(exactInvoiceModal.data)
+                  .replace(/^[\s\S]*?<body[^>]*>/i, '')
+                  .replace(/<\/body>[\s\S]*$/i, '')
+              }}
+            />
+
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', gap: '12px', marginTop: '20px', justifyContent: 'flex-end', maxWidth: '850px', margin: '20px auto 0' }}>
+              <button
+                type="button"
+                onClick={() => setExactInvoiceModal({ show: false, data: null })}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  background: 'white',
+                  color: '#475569',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => printExactInvoice(exactInvoiceModal.data)}
+                style={{
+                  padding: '10px 22px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#1e293b',
+                  color: 'white',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                🖨️ Print / Save PDF
+              </button>
+              <button
+                type="button"
+                onClick={() => downloadExactInvoice(exactInvoiceModal.data)}
+                style={{
+                  padding: '10px 22px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#c25e17',
+                  color: 'white',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 4px 6px -1px rgba(194, 94, 23, 0.25)',
+                }}
+              >
+                📥 Download Invoice HTML
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </>
   )
