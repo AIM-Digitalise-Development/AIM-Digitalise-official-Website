@@ -125,10 +125,21 @@ const ClientLayout = () => {
   const displayId = clientUser?.client_id || ''
   const initials = displayName.charAt(0).toUpperCase()
 
+  const activeProduct = Array.isArray(productData) ? productData[0] : (productData || {})
+  const isPerPersonProduct = (() => {
+    const rawVal = activeProduct?.per_person ?? profileData?.per_person ?? null
+    if (rawVal !== null && rawVal !== undefined && rawVal !== '') {
+      return Number(rawVal) === 1 || rawVal === true || rawVal === '1'
+    }
+    const pName = (activeProduct?.product_name || activeProduct?.name || profileData?.product_name || '').toLowerCase()
+    return pName.includes('institute')
+  })()
+
   // Get current page title
   const getCurrentTitle = () => {
     for (const group of navGroups) {
       for (const item of group.items) {
+        if (item.routeKey === 'ADDON_SERVICES' && !isPerPersonProduct) continue
         if (isActive(item.path)) return item.label
       }
     }
@@ -216,33 +227,43 @@ const ClientLayout = () => {
 
         {/* Navigation */}
         <nav className="flex-1 px-4 py-4 overflow-y-auto space-y-5">
-          {navGroups.map((group) => (
-            <div key={group.title}>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400 px-3 mb-2">{group.title}</p>
-              <div className="space-y-0.5">
-                {group.items.map((item) => {
-                  const active = isActive(item.path)
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={() => setIsSidebarOpen(false)}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-150 ${
-                        active
-                          ? 'text-indigo-600 bg-indigo-50/60 font-bold border-r-2 border-indigo-500 rounded-r-none'
-                          : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className={active ? 'text-indigo-600' : 'text-gray-400'}>
-                        {item.icon}
-                      </span>
-                      {item.label}
-                    </Link>
-                  )
-                })}
+          {navGroups.map((group) => {
+            const visibleItems = group.items.filter((item) => {
+              if (item.routeKey === 'ADDON_SERVICES' && !isPerPersonProduct) {
+                return false
+              }
+              return true
+            })
+            if (visibleItems.length === 0) return null
+
+            return (
+              <div key={group.title}>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400 px-3 mb-2">{group.title}</p>
+                <div className="space-y-0.5">
+                  {visibleItems.map((item) => {
+                    const active = isActive(item.path)
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setIsSidebarOpen(false)}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-150 ${
+                          active
+                            ? 'text-indigo-600 bg-indigo-50/60 font-bold border-r-2 border-indigo-500 rounded-r-none'
+                            : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+                        }`}
+                      >
+                        <span className={active ? 'text-indigo-600' : 'text-gray-400'}>
+                          {item.icon}
+                        </span>
+                        {item.label}
+                      </Link>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </nav>
 
         {/* Bottom: Logo + Logout */}

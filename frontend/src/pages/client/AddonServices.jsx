@@ -82,6 +82,30 @@ const ClientAddonServices = () => {
   const activeProduct = productData?.[0] || {}
   const productName = activeProduct?.product_name || activeProduct?.name || 'NEXGN Institute Pro'
 
+  const getOrderField = (obj, field) => {
+    if (!obj || typeof obj !== 'object') return null
+    const orderObj = obj[field] ? obj : obj.order || (Array.isArray(obj.orders) ? obj.orders[0] : obj.orders)
+    if (orderObj && typeof orderObj === 'object' && orderObj[field] !== undefined && orderObj[field] !== null) {
+      return orderObj[field]
+    }
+    return obj[field] ?? null
+  }
+
+  const isPerPersonProduct = (() => {
+    const rawVal = getOrderField(activeProduct, 'per_person') ??
+      getOrderField(profileData, 'per_person') ??
+      activeProduct?.per_person ??
+      profileData?.per_person ??
+      null
+
+    if (rawVal !== null && rawVal !== undefined && rawVal !== '') {
+      return Number(rawVal) === 1 || rawVal === true || rawVal === '1'
+    }
+
+    const pName = (activeProduct?.product_name || activeProduct?.name || profileData?.product_name || '').toLowerCase()
+    return pName.includes('institute')
+  })()
+
   // Helper to update card quantities
   const handleQuantityChange = (key, val) => {
     const parsed = Math.max(1, parseInt(val) || 1)
@@ -195,12 +219,12 @@ const ClientAddonServices = () => {
   }
 
   useEffect(() => {
-    if (isClientAuthenticated && clientToken) {
+    if (isClientAuthenticated && clientToken && isPerPersonProduct) {
       fetchHistory()
       fetchCart()
       fetchCatalogPreviews()
     }
-  }, [clientToken, isClientAuthenticated])
+  }, [clientToken, isClientAuthenticated, isPerPersonProduct])
 
   // Fetch preview when selections change in the drawer
   const fetchPreview = async (addonType, recipientType) => {
@@ -1010,6 +1034,39 @@ const ClientAddonServices = () => {
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
+  if (!isPerPersonProduct) {
+    return (
+      <div className="relative space-y-6 max-w-4xl mx-auto py-10 select-none animate-fade-in text-slate-700 font-sans" style={{ fontFamily: "'Inter', sans-serif" }}>
+        <ClientPageHeader title="Add-on Services" />
+        <div className="bg-white rounded-3xl p-8 sm:p-12 border border-slate-200 shadow-sm text-center">
+          <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-3xl mx-auto mb-4 border border-amber-100">
+            🧩
+          </div>
+          <h2 className="text-xl font-black text-slate-900 tracking-tight mb-2">
+            Add-on Services Not Applicable
+          </h2>
+          <p className="text-sm text-slate-500 max-w-md mx-auto mb-6 leading-relaxed">
+            Add-on services (such as Student Transportation, Hostel Management, ID Cards generation, and Academic Data migrations) are only available for School and Institute products billed per student.
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            <button
+              onClick={() => navigate('/client/portal/products')}
+              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
+            >
+              ← Return to Dashboard
+            </button>
+            <button
+              onClick={() => navigate('/client/portal/customization')}
+              className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer border border-slate-200"
+            >
+              Request Customizations →
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="relative space-y-6 max-w-6xl mx-auto pb-12 select-none animate-fade-in text-slate-700 font-sans" style={{ fontFamily: "'Inter', sans-serif" }}>
 

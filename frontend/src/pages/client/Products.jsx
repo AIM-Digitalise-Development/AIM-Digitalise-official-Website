@@ -522,25 +522,33 @@ const ClientProducts = () => {
       setRechargeHistory(unifiedList)
       setPaidCustomCount(custPayments.length)
 
-      const paidAddonList = addonPayments.filter(p => p.payment_status === 'paid' || p.payment_status === 'success' || !p.payment_status)
-      const cartItems = cartRes?.success ? (cartRes.data?.items || []) : []
+      if (!isPerPersonProduct) {
+        setPaidAddonCount(0)
+        setPendingAddonCount(0)
+        setPendingAddonRequests([])
+        setPendingAddonTotal(0)
+        setAddonServicesCount(0)
+      } else {
+        const paidAddonList = addonPayments.filter(p => p.payment_status === 'paid' || p.payment_status === 'success' || !p.payment_status)
+        const cartItems = cartRes?.success ? (cartRes.data?.items || []) : []
 
-      setPaidAddonCount(paidAddonList.length)
-      setPendingAddonCount(cartItems.length)
-      setPendingAddonRequests(cartItems)
+        setPaidAddonCount(paidAddonList.length)
+        setPendingAddonCount(cartItems.length)
+        setPendingAddonRequests(cartItems)
 
-      const addTotal = cartItems.reduce((sum, req) => {
-        const baseAmt =
-          Number(req.subtotal) ||
-          Number(req.base_amount) ||
-          Number(req.amount) ||
-          Number(req.price) ||
-          0
-        return sum + baseAmt
-      }, 0)
+        const addTotal = cartItems.reduce((sum, req) => {
+          const baseAmt =
+            Number(req.subtotal) ||
+            Number(req.base_amount) ||
+            Number(req.amount) ||
+            Number(req.price) ||
+            0
+          return sum + baseAmt
+        }, 0)
 
-      setPendingAddonTotal(Number(addTotal.toFixed(2)))
-      setAddonServicesCount(paidAddonList.length)
+        setPendingAddonTotal(Number(addTotal.toFixed(2)))
+        setAddonServicesCount(paidAddonList.length)
+      }
     } catch (err) {
       console.error('Error combining histories:', err)
     }
@@ -1271,8 +1279,7 @@ const ClientProducts = () => {
 
   const companyName = displayUser?.company_name || displayUser?.school_name || displayUser?.organization || ''
   const productName = activeProduct?.product_name || activeProduct?.name || displayUser?.product_name || ''
-  const isInstitutePro = productName ? (productName.toLowerCase().includes('institute') || productName.toLowerCase().includes('nexgn')) : false
-
+  
   const getOrderField = (obj, field) => {
     if (!obj || typeof obj !== 'object') return null;
 
@@ -1281,12 +1288,30 @@ const ClientProducts = () => {
       obj.order ||
       (Array.isArray(obj.orders) ? obj.orders[0] : obj.orders);
 
-    if (orderObj && typeof orderObj === 'object' && orderObj[field]) {
+    if (orderObj && typeof orderObj === 'object' && orderObj[field] !== undefined && orderObj[field] !== null) {
       return orderObj[field];
     }
 
-    return obj[field] || null;
+    return obj[field] ?? null;
   };
+
+  // Determine strictly if this product is priced per person / student
+  const isPerPersonProduct = (() => {
+    const rawVal = getOrderField(activeProduct, 'per_person') ??
+      getOrderField(displayUser, 'per_person') ??
+      activeProduct?.per_person ??
+      displayUser?.per_person ??
+      null
+
+    if (rawVal !== null && rawVal !== undefined && rawVal !== '') {
+      return Number(rawVal) === 1 || rawVal === true || rawVal === '1'
+    }
+
+    const pName = productName.toLowerCase()
+    return pName.includes('institute')
+  })()
+
+  const isInstitutePro = isPerPersonProduct
 
   const activationDateStr = (() => {
     let rawDate = getOrderField(activeProduct, 'created_at') ||
@@ -1323,8 +1348,58 @@ const ClientProducts = () => {
     return 'Pending'
   })()
 
-  // Tentative student count provided at onboarding/registration
+  // Delivery check: is current date before delivery date?
+  const isBeforeDelivery = (() => {
+    if (!deliveryDateStr || deliveryDateStr === 'Pending') return false
+    try {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const delDate = new Date(deliveryDateStr)
+      delDate.setHours(0, 0, 0, 0)
+      return today.getTime() < delDate.getTime()
+    } catch {
+      return false
+    }
+  })()
+
+  // Carryover details calculated from delivery date to end of month
+  const carryoverInfo = (() => {
+    const rateCalc = cycleRates[selectedCycle]
+    if (rateCalc?.carryoverDays !== undefined && rateCalc.carryoverDays > 0) {
+      return {
+        days: rateCalc.carryoverDays,
+        amount: rateCalc.carryoverAmount || 0,
+        daysInMonth: 30,
+        fraction: rateCalc.carryoverDays / 30
+      }
+    }
+    if (!paymentStatus?.delivery_info?.last_payment_date && deliveryDateStr && deliveryDateStr !== 'Pending') {
+      try {
+        const delDate = new Date(deliveryDateStr)
+        if (!isNaN(delDate.getTime())) {
+          const year = delDate.getFullYear()
+          const month = delDate.getMonth()
+          const daysInMonth = new Date(year, month + 1, 0).getDate()
+          const dayOfMonth = delDate.getDate()
+          const remainingDays = Math.max(0, daysInMonth - dayOfMonth + 1)
+          const fraction = remainingDays / daysInMonth
+          return {
+            days: remainingDays,
+            daysInMonth,
+            fraction
+          }
+        }
+      } catch (e) {
+        console.error('Error calculating carryover info:', e)
+      }
+    }
+    return { days: 0, daysInMonth: 30, fraction: 0 }
+  })()
+
+  // Tentative student count provided at onboarding/registration - ONLY for per_person products
   const tentativeStudentCount = (() => {
+    if (!isPerPersonProduct) return null
+
     const val = getOrderField(activeProduct, 'tentative_students') ??
       getOrderField(activeProduct, 'tentative_student_count') ??
       getOrderField(displayUser, 'tentative_students') ??
@@ -1347,6 +1422,8 @@ const ClientProducts = () => {
   // ─── Total Effective Students Count for subscription calculation ───
   // Fallback: If live student enrollment is 0 or missing, check cycle rates then Tentative Student Count from onboarding.
   const effectiveTotalStudents = (() => {
+    if (!isPerPersonProduct) return 0
+
     const realTimeCount = Number(studentCountData?.student_count)
     if (!isNaN(realTimeCount) && realTimeCount > 0) {
       return realTimeCount
@@ -1370,10 +1447,10 @@ const ClientProducts = () => {
   })()
 
   useEffect(() => {
-    if (effectiveTotalStudents > 0) {
+    if (isPerPersonProduct && effectiveTotalStudents > 0) {
       setCalcStudents(effectiveTotalStudents)
     }
-  }, [studentCountData?.student_count, tentativeStudentCount])
+  }, [studentCountData?.student_count, tentativeStudentCount, isPerPersonProduct])
 
   // Dynamic sandbox price calculations based on slider student volume
   const estimates = useMemo(() => {
@@ -1494,19 +1571,18 @@ const ClientProducts = () => {
 
   // Calculate student unit rate dynamically (per-person rate for SaaS / Institute Pro)
   const currentStudentRate = (() => {
-    if (isNexgnSaas || isInstitutePro) {
+    if (isPerPersonProduct) {
       if (cycleRates[selectedCycle]?.baseRate) {
         return cycleRates[selectedCycle].baseRate
       }
       const monthlySub = Number(activeProduct?.monthly_subscription ?? displayUser?.monthly_subscription ?? 0)
-      const isPerPerson = activeProduct?.per_person ?? displayUser?.per_person ?? true
-      if (isPerPerson || (monthlySub > 0 && monthlySub <= 100)) {
-        return monthlySub > 0 ? monthlySub : 10
+      if (monthlySub > 0 && monthlySub <= 100) {
+        return monthlySub
       }
       const totalStudents = effectiveTotalStudents
       return (totalStudents > 0 && monthlySub > 0) ? (monthlySub / totalStudents) : (monthlySub || 10)
     }
-    return subscriptionPrice
+    return Number(subscriptionPrice || activeProduct?.monthly_subscription || displayUser?.monthly_subscription || 0)
   })()
 
   const hasMadePayment = !!paymentStatus?.delivery_info?.last_payment_date
@@ -1529,24 +1605,44 @@ const ClientProducts = () => {
     if (latestSub?.raw?.discount_percentage !== undefined && latestSub?.raw?.discount_percentage !== null) {
       return Number(latestSub.raw.discount_percentage)
     }
-    // No fallback — if backend hasn't provided a discount, it's 0
+    // Priority 3: Product discounts object if available
+    const productDiscounts = activeProduct?.discounts || displayUser?.discounts
+    if (productDiscounts && typeof productDiscounts === 'object') {
+      const cycleKey = selectedCycle === 'yearly' ? 'annual' : (selectedCycle === 'half-yearly' ? 'half_yearly' : selectedCycle)
+      if (productDiscounts[cycleKey] !== undefined) {
+        return Number(productDiscounts[cycleKey])
+      }
+    }
     return 0
   })()
 
   const currentDiscount = (rateInfo.discount !== null && rateInfo.discount !== undefined)
     ? Number(rateInfo.discount)
     : sessionDiscount
-  const currentMultiplier = rateInfo.multiplier || 1
+  const currentMultiplier = rateInfo.multiplier || (selectedCycle === 'yearly' ? 12 : selectedCycle === 'half-yearly' ? 6 : selectedCycle === 'quarterly' ? 3 : 1)
   const students = effectiveTotalStudents
+
   const priceForSelectedCycle = (() => {
-    const regularAmount = currentStudentRate * students * currentMultiplier * (1 - (currentDiscount || 0) / 100)
-    const carryDays = cycleRates[selectedCycle]?.carryoverDays || 0
-    const carryAmt = cycleRates[selectedCycle]?.carryoverAmount || (carryDays > 0 ? (currentStudentRate * students * (1 - (currentDiscount || 0) / 100)) * (carryDays / 30) : 0)
+    const carryDays = cycleRates[selectedCycle]?.carryoverDays || carryoverInfo.days || 0
+    const daysInMonth = carryoverInfo.daysInMonth || 30
+
+    if (isPerPersonProduct) {
+      const regularAmount = currentStudentRate * students * currentMultiplier * (1 - (currentDiscount || 0) / 100)
+      const carryAmt = cycleRates[selectedCycle]?.carryoverAmount || (carryDays > 0 ? (currentStudentRate * students * (1 - (currentDiscount || 0) / 100)) * (carryDays / daysInMonth) : 0)
+      return Number((regularAmount + carryAmt).toFixed(2))
+    }
+
+    // Flat-rate product (No students count multiplier!)
+    const baseMonthly = Number(subscriptionPrice || activeProduct?.monthly_subscription || displayUser?.monthly_subscription || 0)
+    const discountedMonthly = baseMonthly * (1 - (currentDiscount || 0) / 100)
+    const regularAmount = discountedMonthly * currentMultiplier
+    const carryAmt = cycleRates[selectedCycle]?.carryoverAmount || (carryDays > 0 ? discountedMonthly * (carryDays / daysInMonth) : 0)
     return Number((regularAmount + carryAmt).toFixed(2))
   })()
 
-  // unpaidStudentsCount — how many new students have unpaid subscription fees.
+  // unpaidStudentsCount — how many new students have unpaid subscription fees (ONLY for per_person products)
   const unpaidStudentsCount = (() => {
+    if (!isPerPersonProduct) return 0
     // If fully paid and no overdue — zero new students pending
     if (hasMadePayment && !isSubscriptionOverdue) return 0
 
@@ -1585,15 +1681,25 @@ const ClientProducts = () => {
 
   // For the 'never paid' fallback, compute using the selected cycle so it updates live when cycle is changed
   const cycleBasedFallback = (() => {
-    if (!isInstitutePro) return subscriptionPrice
-    const sc = effectiveTotalStudents
-    if (sc === 0) return 0
-    const rate = cycleRates[selectedCycle]?.baseRate || currentStudentRate || 10
-    const multiplier = cycleRates[selectedCycle]?.multiplier || 1
+    const carryDays = cycleRates[selectedCycle]?.carryoverDays || carryoverInfo.days || 0
+    const daysInMonth = carryoverInfo.daysInMonth || 30
+    const multiplier = cycleRates[selectedCycle]?.multiplier || currentMultiplier || 1
     const discount = currentDiscount || 0
-    const regularAmount = sc * rate * multiplier * (1 - discount / 100)
-    const carryDays = cycleRates[selectedCycle]?.carryoverDays || 0
-    const carryAmt = cycleRates[selectedCycle]?.carryoverAmount || (carryDays > 0 ? (sc * rate * (1 - discount / 100)) * (carryDays / 30) : 0)
+
+    if (isPerPersonProduct) {
+      const sc = effectiveTotalStudents
+      if (sc === 0) return 0
+      const rate = cycleRates[selectedCycle]?.baseRate || currentStudentRate || 10
+      const regularAmount = sc * rate * multiplier * (1 - discount / 100)
+      const carryAmt = cycleRates[selectedCycle]?.carryoverAmount || (carryDays > 0 ? (sc * rate * (1 - discount / 100)) * (carryDays / daysInMonth) : 0)
+      return Math.round((regularAmount + carryAmt) * 100) / 100
+    }
+
+    // Flat rate product (No student count!)
+    const baseMonthly = Number(subscriptionPrice || activeProduct?.monthly_subscription || displayUser?.monthly_subscription || 0)
+    const discountedMonthly = baseMonthly * (1 - discount / 100)
+    const regularAmount = discountedMonthly * multiplier
+    const carryAmt = cycleRates[selectedCycle]?.carryoverAmount || (carryDays > 0 ? discountedMonthly * (carryDays / daysInMonth) : 0)
     return Math.round((regularAmount + carryAmt) * 100) / 100
   })()
 
@@ -1601,17 +1707,17 @@ const ClientProducts = () => {
   // Formula: new_students × rate × months × (1 - discount / 100)
   const subDueAmount = (() => {
     if (!isSubscriptionOverdue && !isNeverPaid) return 0
-    if (hasMadePayment && unpaidStudentsCount > 0) {
+    if (hasMadePayment && unpaidStudentsCount > 0 && isPerPersonProduct) {
       const rate = currentStudentRate || 10
       const months = extraMonths || 1
       const discountToApply = currentDiscount || 0
       const total = Math.round(unpaidStudentsCount * rate * months * (1 - discountToApply / 100) * 100) / 100
       return total
     }
-    if (cycleRates[selectedCycle]?.totalAmount !== undefined && cycleRates[selectedCycle]?.totalAmount !== null) {
+    if (cycleRates[selectedCycle]?.totalAmount !== undefined && cycleRates[selectedCycle]?.totalAmount !== null && Number(cycleRates[selectedCycle].totalAmount) > 0) {
       return Number(cycleRates[selectedCycle].totalAmount)
     }
-    if (paymentStatus?.delivery_info?.total_due_amount) {
+    if (paymentStatus?.delivery_info?.total_due_amount && Number(paymentStatus.delivery_info.total_due_amount) > 0) {
       return Number(paymentStatus.delivery_info.total_due_amount)
     }
     return cycleBasedFallback
@@ -1691,8 +1797,8 @@ const ClientProducts = () => {
     if (paymentStatus?.delivery_info?.last_payment_amount && Number(paymentStatus.delivery_info.last_payment_amount) > 0) {
       return Number(paymentStatus.delivery_info.last_payment_amount)
     }
-    // 3. Fallback calculation: students × rate × months × (1 - discount/100) × 1.18 GST
-    if (isInstitutePro || isNexgnSaas) {
+    // 3. Fallback calculation
+    if (isPerPersonProduct) {
       const sc = Number(effectiveTotalStudents) || 0
       if (sc > 0) {
         const cycle = activePaidCycle || selectedCycle || 'yearly'
@@ -1704,15 +1810,17 @@ const ClientProducts = () => {
       }
       return 0
     }
-    return Number(subscriptionPrice || 0)
+    const mult = activePaidCycle === 'monthly' ? 1 : activePaidCycle === 'quarterly' ? 3 : activePaidCycle === 'half-yearly' || activePaidCycle === 'half_yearly' ? 6 : 12
+    const baseMonthly = Number(subscriptionPrice || activeProduct?.monthly_subscription || displayUser?.monthly_subscription || 0)
+    return Math.round(baseMonthly * mult * (1 - currentDiscount / 100) * 1.18 * 100) / 100
   })()
 
-  // ─── Next Subscription Amount to Pay According to Total Student Count ───
+  // ─── Next Subscription Amount to Pay ───
   const nextPaymentAmount = (() => {
     const sc = Number(effectiveTotalStudents) || 0
 
-    // If client has not paid for any plan and has 0 students
-    if (!hasPaidSubscription && sc === 0) {
+    // If client has not paid for any plan and has 0 students (per-person product)
+    if (isPerPersonProduct && !hasPaidSubscription && sc === 0) {
       return 0
     }
 
@@ -1721,7 +1829,7 @@ const ClientProducts = () => {
     const multiplier = cycleRates[cycle]?.multiplier || (cycle === 'yearly' ? 12 : cycle === 'half-yearly' ? 6 : cycle === 'quarterly' ? 3 : 1)
     const discount = currentDiscount || 0
 
-    if (isInstitutePro || isNexgnSaas) {
+    if (isPerPersonProduct) {
       if (sc > 0) {
         // If the backend calculateSubscription returned an explicit gross total for the cycle, use it
         if (cycleRates[cycle]?.totalAmountWithGst && Number(cycleRates[cycle].totalAmountWithGst) > 0) {
@@ -1733,17 +1841,21 @@ const ClientProducts = () => {
         }
         // Simple formula: students × rate × months × (1 - discount/100) + carryover
         const grossSubtotal = sc * rate * multiplier * (1 - discount / 100)
-        const carryDays = cycleRates[cycle]?.carryoverDays || 0
-        const carryAmt = cycleRates[cycle]?.carryoverAmount || (carryDays > 0 ? (sc * rate * (1 - discount / 100)) * (carryDays / 30) : 0)
+        const carryDays = cycleRates[cycle]?.carryoverDays || carryoverInfo.days || 0
+        const daysInMonth = carryoverInfo.daysInMonth || 30
+        const carryAmt = cycleRates[cycle]?.carryoverAmount || (carryDays > 0 ? (sc * rate * (1 - discount / 100)) * (carryDays / daysInMonth) : 0)
         return Math.round((grossSubtotal + carryAmt) * 1.18 * 100) / 100
       }
       return 0
     }
 
-    if (!hasPaidSubscription) return 0
+    // Flat rate product (No students)
+    if (!hasPaidSubscription) {
+      return Math.round(subDueAmount * 1.18 * 100) / 100
+    }
 
-    // For fixed non-student products
-    const grossBase = Number(subscriptionPrice || 0) * multiplier * (1 - discount / 100)
+    const baseMonthly = Number(subscriptionPrice || activeProduct?.monthly_subscription || displayUser?.monthly_subscription || 0)
+    const grossBase = baseMonthly * multiplier * (1 - discount / 100)
     return Math.round(grossBase * 1.18 * 100) / 100
   })()
 
@@ -2062,8 +2174,9 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
     const custGST = Math.round(pendingCustomTotal * 0.18 * 100) / 100
     const custPayTotal = Number((pendingCustomTotal + custGST).toFixed(2))
 
-    const addonGST = Math.floor(pendingAddonTotal * 0.18 * 100) / 100
-    const addonPayTotal = Number((pendingAddonTotal + addonGST).toFixed(2))
+    const addonGST = isPerPersonProduct ? (Math.floor(pendingAddonTotal * 0.18 * 100) / 100) : 0
+    const effectiveAddonTotal = isPerPersonProduct ? pendingAddonTotal : 0
+    const addonPayTotal = isPerPersonProduct ? Number((pendingAddonTotal + addonGST).toFixed(2)) : 0
 
     const grandTotal = Number((subPayTotal + custPayTotal + addonPayTotal).toFixed(2))
     const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -2102,11 +2215,11 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
             </div>
           </div>
 
-          {((subDueAmount > 0 ? 1 : 0) + (pendingCustomTotal > 0 ? 1 : 0) + (pendingAddonTotal > 0 ? 1 : 0)) > 1 && (
+          {((subDueAmount > 0 ? 1 : 0) + (pendingCustomTotal > 0 ? 1 : 0) + (effectiveAddonTotal > 0 ? 1 : 0)) > 1 && (
             <div className="mx-7 mt-4 p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-[10px] font-semibold leading-relaxed animate-fade-in flex gap-2">
               <span>ℹ️</span>
               <div>
-                <strong>Unified Checkout:</strong> All selected services (Subscription, Customizations, and Add-ons) will be processed together in a single payment window.
+                <strong>Unified Checkout:</strong> All selected services (Subscription{pendingCustomTotal > 0 ? ', Customizations' : ''}{effectiveAddonTotal > 0 ? ', Add-ons' : ''}) will be processed together in a single payment window.
               </div>
             </div>
           )}
@@ -2125,15 +2238,43 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                   <tr>
                     <td className="py-4">
                       <div className="font-bold text-slate-800">
-                        {unpaidStudentsCount > 0 && hasMadePayment ? '📆 Additional Students Subscription' : '📆 Subscription Renewal'}
+                        {unpaidStudentsCount > 0 && hasMadePayment 
+                          ? '📆 Additional Students Subscription' 
+                          : hasMadePayment 
+                            ? '📆 Subscription Renewal' 
+                            : '📆 First Subscription Activation'}
                       </div>
                       <div className="text-slate-400 mt-0.5">
-                        {cycleName} plan · {subtitleStudentCount} {unpaidStudentsCount > 0 && hasMadePayment ? 'new students' : 'students'}
-                        {currentDiscount > 0 && ` (${currentDiscount}% discount applied)`}
+                        {isPerPersonProduct ? (
+                          <>
+                            {cycleName} plan · {subtitleStudentCount} {unpaidStudentsCount > 0 && hasMadePayment ? 'new students' : 'students'}
+                            {currentDiscount > 0 && ` (${currentDiscount}% discount applied)`}
+                            {(cycleRates[selectedCycle]?.carryoverDays > 0 || carryoverInfo.days > 0) && (
+                              <span className="text-indigo-500 font-semibold ml-1">
+                                + {cycleRates[selectedCycle]?.carryoverDays || carryoverInfo.days} days carryover
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {cycleName} plan ({currentMultiplier} month{currentMultiplier > 1 ? 's' : ''})
+                            {currentDiscount > 0 && ` (${currentDiscount}% discount applied)`}
+                            {(cycleRates[selectedCycle]?.carryoverDays > 0 || carryoverInfo.days > 0) && (
+                              <span className="text-indigo-500 font-semibold ml-1">
+                                + {cycleRates[selectedCycle]?.carryoverDays || carryoverInfo.days} days carryover
+                              </span>
+                            )}
+                          </>
+                        )}
                       </div>
+                      {isBeforeDelivery && !hasMadePayment && (
+                        <div className="mt-1 text-[10px] text-amber-600 font-semibold">
+                          ⏳ Delivery scheduled on {deliveryDateStr}. Subscription activation will be effective on delivery date.
+                        </div>
+                      )}
                     </td>
                     <td className="text-right py-4 font-mono font-bold text-slate-700">
-                      ₹{subDueAmount.toLocaleString('en-IN')}
+                      ₹{subDueAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                   </tr>
                 )}
@@ -2161,7 +2302,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                     </td>
                   </tr>
                 )}
-                {pendingAddonTotal > 0 && (
+                {isPerPersonProduct && pendingAddonTotal > 0 && (
                   <tr>
                     <td className="py-4">
                       <div className="font-bold text-slate-800">🔌 Add-on Services</div>
@@ -2192,7 +2333,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
             <div className="mt-4 pt-4 border-t-2 border-slate-100 space-y-2 text-[11px]">
               <div className="flex justify-between text-slate-500">
                 <span>Sub Total (excl. GST)</span>
-                <span className="font-mono">₹{(subDueAmount + pendingCustomTotal + pendingAddonTotal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                <span className="font-mono">₹{(subDueAmount + pendingCustomTotal + effectiveAddonTotal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between text-slate-500">
                 <span>Total GST (18%)</span>
@@ -2227,7 +2368,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                 className="px-4 py-2.5 text-[11px] font-bold text-slate-500 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors cursor-pointer">
                 Cancel
               </button>
-              {(isSubscriptionOverdue || isNeverPaid || pendingCustomTotal > 0 || pendingAddonTotal > 0) && (
+              {(isSubscriptionOverdue || isNeverPaid || pendingCustomTotal > 0 || (isPerPersonProduct && pendingAddonTotal > 0)) && (
                 <button onClick={handlePayNow} disabled={payProcessing}
                   className="px-6 py-2.5 text-[11px] font-black text-white bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 rounded-xl shadow-lg shadow-rose-200 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1.5">
                   {payProcessing
@@ -2262,18 +2403,18 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
               <span className="text-slate-400">Delivery Date:</span>
               <strong className="text-[#10b981]">{deliveryDateStr}</strong>
             </span>
-            {(isInstitutePro || tentativeStudentCount !== null) && (
+            {isPerPersonProduct && tentativeStudentCount !== null && (
               <span className="flex items-center gap-1.5">
                 <span className="text-slate-400">Tentative Student Count:</span>
                 <strong className="text-[#7c3aed] font-mono">
-                  {tentativeStudentCount !== null ? Number(tentativeStudentCount).toLocaleString('en-IN') : '—'}
+                  {Number(tentativeStudentCount).toLocaleString('en-IN')}
                 </strong>
               </span>
             )}
           </div>
         </div>
 
-        {isInstitutePro ? (
+        {isPerPersonProduct ? (
           <>
             {/* Middle portion: Session */}
             {(displayUser?.academic_session || activeProduct?.academic_session || displayUser?.session) ? (
@@ -2338,111 +2479,118 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
 
           {/* Card 2: Subscription Plan Price */}
           <div className="bg-linear-to-r from-amber-100 via-orange-100 to-red-100 rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center gap-5 relative transition-transform hover:scale-[1.01]">
-            {isNexgnSaas ? (
-              <div className="absolute top-4 right-4 z-30">
-                <button
-                  onClick={() => {
-                    if (!isCycleDropdownDisabled) {
-                      setIsDropdownOpen(!isDropdownOpen)
-                    }
-                  }}
-                  disabled={isCycleDropdownDisabled}
-                  className={`border text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full flex items-center gap-1 transition-colors focus:outline-none ${isCycleDropdownDisabled
-                      ? 'bg-amber-50 border-amber-200 text-amber-800 cursor-not-allowed'
-                      : 'bg-indigo-50 hover:bg-indigo-100 border-indigo-150 text-indigo-600 cursor-pointer'
-                    }`}
-                  title={isCycleDropdownDisabled ? 'Plan cycle locked for active session' : 'Change Plan Cycle'}
-                >
-                  {isCycleDropdownDisabled && <span className="text-[9px]">🔒</span>}
-                  {cycleOptions.find(opt => opt.key === selectedCycle)?.labelShort || 'Annually'}
-                  {isCycleDropdownDisabled && <span className="text-[7.5px] opacity-80 font-bold ml-0.5"></span>}
-                  {!isCycleDropdownDisabled && (
-                    <svg className={`w-2 h-2 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  )}
-                </button>
-                {isDropdownOpen && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setIsDropdownOpen(false)} />
-                    <div className="absolute right-0 mt-1.5 w-32 bg-white border border-slate-150 rounded-xl shadow-lg py-1.5 z-20 animate-fade-in-quick">
-                      {cycleOptions.map((opt) => (
-                        <button
-                          key={opt.key}
-                          onClick={() => {
-                            setSelectedCycle(opt.key)
-                            setIsDropdownOpen(false)
-                          }}
-                          className={`w-full text-left px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${selectedCycle === opt.key
-                            ? 'bg-indigo-50 text-indigo-600'
-                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
-                            }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  </>
+            <div className="absolute top-4 right-4 z-30">
+              <button
+                onClick={() => {
+                  if (!isCycleDropdownDisabled) {
+                    setIsDropdownOpen(!isDropdownOpen)
+                  }
+                }}
+                disabled={isCycleDropdownDisabled}
+                className={`border text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full flex items-center gap-1 transition-colors focus:outline-none ${isCycleDropdownDisabled
+                    ? 'bg-amber-50 border-amber-200 text-amber-800 cursor-not-allowed'
+                    : 'bg-indigo-50 hover:bg-indigo-100 border-indigo-150 text-indigo-600 cursor-pointer shadow-xs'
+                  }`}
+                title={isCycleDropdownDisabled ? 'Plan cycle locked for active session' : 'Change Plan Cycle'}
+              >
+                {isCycleDropdownDisabled && <span className="text-[9px]">🔒</span>}
+                {cycleOptions.find(opt => opt.key === selectedCycle)?.labelShort || 'Annually'}
+                {!isCycleDropdownDisabled && (
+                  <svg className={`w-2 h-2 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
                 )}
-              </div>
-            ) : (
-              <span className="absolute top-4 right-4 bg-slate-55 bg-indigo-50 border border-indigo-100 text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full text-indigo-600">
-                Monthly
-              </span>
-            )}
-
-            <div className="w-14 h-14 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-500 text-2xl font-bold shadow-inner">
-              📝
-            </div>
-            <div className="space-y-1 ">
-              <span className="text-[11px] font-bold text-slate-00 uppercase tracking-wider block">
-                {isInstitutePro ? 'Student Plan Price' : 'Subscription Plan Price'}
-              </span>
-              <span className="text-xl font-black text-slate-800 block">
-                ₹{Number(displayedPlanPrice).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                {displayedPlanPrice > 0 && (
-                  <span className="text-[9px] font-semibold text-slate-00 ml-1">+ GST</span>
-                )}
-              </span>
-              {isNexgnSaas && (
+              </button>
+              {isDropdownOpen && (
                 <>
-                  <span className="text-[9.5px] font-bold text-slate-00 block leading-tight">
-                    {unpaidStudentsCount > 0 && hasMadePayment ? (
-                      <>
-                        ₹{Number(currentStudentRate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} × {unpaidStudentsCount} new students × {extraMonths} mo
-                        {currentDiscount > 0 && (
-                          <span className="text-emerald-600 font-black ml-1">
-                            ({currentDiscount}% discount applied)
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        ₹{Number(currentStudentRate).toLocaleString('en-IN')} × {subtitleStudentCount} students × {currentMultiplier} mo
-                        {currentDiscount > 0 && (
-                          <span className="text-emerald-600 font-bold ml-1">
-                            ({currentDiscount}% plan discount)
-                          </span>
-                        )}
-                        {cycleRates[selectedCycle]?.carryoverDays > 0 && (
-                          <span className="text-indigo-500 font-bold ml-1">
-                            + {cycleRates[selectedCycle].carryoverDays} days carryover
-                          </span>
-                        )}
-                      </>
-                    )}
-                  </span>
-                  <div className="mt-2 pt-2 border-t border-slate-100/70 flex justify-between items-center text-[10px] font-bold">
-                    <span className="text-slate-00 uppercase tracking-wider">Unpaid New Students</span>
-                    <span className={unpaidStudentsCount > 0 ? "text-rose-500 font-black font-mono text-xs" : "text-emerald-600 font-black font-mono text-xs"}>
-                      {unpaidStudentsCount}
-                    </span>
+                  <div className="fixed inset-0 z-10" onClick={() => setIsDropdownOpen(false)} />
+                  <div className="absolute right-0 mt-1.5 w-32 bg-white border border-slate-150 rounded-xl shadow-lg py-1.5 z-20 animate-fade-in-quick">
+                    {cycleOptions.map((opt) => (
+                      <button
+                        key={opt.key}
+                        onClick={() => {
+                          setSelectedCycle(opt.key)
+                          setIsDropdownOpen(false)
+                        }}
+                        className={`w-full text-left px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${selectedCycle === opt.key
+                          ? 'bg-indigo-50 text-indigo-600'
+                          : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                          }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
                   </div>
                 </>
               )}
             </div>
 
-            {isNexgnSaas && currentDiscount > 0 && (
+            <div className="w-14 h-14 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-500 text-2xl font-bold shadow-inner shrink-0">
+              📝
+            </div>
+            <div className="space-y-1 pr-14">
+              <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
+                {isPerPersonProduct ? 'Student Plan Price' : 'Subscription Plan Price'}
+              </span>
+              <span className="text-xl font-black text-slate-800 block">
+                ₹{Number(displayedPlanPrice).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {displayedPlanPrice > 0 && (
+                  <span className="text-[9px] font-semibold text-slate-400 ml-1">+ GST</span>
+                )}
+              </span>
+              <span className="text-[9.5px] font-bold text-slate-500 block leading-tight">
+                {isPerPersonProduct ? (
+                  unpaidStudentsCount > 0 && hasMadePayment ? (
+                    <>
+                      ₹{Number(currentStudentRate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} × {unpaidStudentsCount} new students × {extraMonths} mo
+                      {currentDiscount > 0 && (
+                        <span className="text-emerald-600 font-black ml-1">
+                          ({currentDiscount}% discount applied)
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      ₹{Number(currentStudentRate).toLocaleString('en-IN')} × {subtitleStudentCount} students × {currentMultiplier} mo
+                      {currentDiscount > 0 && (
+                        <span className="text-emerald-600 font-bold ml-1">
+                          ({currentDiscount}% plan discount)
+                        </span>
+                      )}
+                      {(cycleRates[selectedCycle]?.carryoverDays > 0 || carryoverInfo.days > 0) && (
+                        <span className="text-indigo-500 font-bold ml-1">
+                          + {cycleRates[selectedCycle]?.carryoverDays || carryoverInfo.days} days carryover
+                        </span>
+                      )}
+                    </>
+                  )
+                ) : (
+                  <>
+                    ₹{Number(subscriptionPrice || activeProduct?.monthly_subscription || displayUser?.monthly_subscription || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / mo × {currentMultiplier} mo
+                    {currentDiscount > 0 && (
+                      <span className="text-emerald-600 font-bold ml-1">
+                        ({currentDiscount}% plan discount)
+                      </span>
+                    )}
+                    {(cycleRates[selectedCycle]?.carryoverDays > 0 || carryoverInfo.days > 0) && (
+                      <span className="text-indigo-500 font-bold ml-1">
+                        + {cycleRates[selectedCycle]?.carryoverDays || carryoverInfo.days} days carryover
+                      </span>
+                    )}
+                  </>
+                )}
+              </span>
+              {isPerPersonProduct && (
+                <div className="mt-2 pt-2 border-t border-slate-100/70 flex justify-between items-center text-[10px] font-bold">
+                  <span className="text-slate-500 uppercase tracking-wider">Unpaid New Students</span>
+                  <span className={unpaidStudentsCount > 0 ? "text-rose-500 font-black font-mono text-xs" : "text-emerald-600 font-black font-mono text-xs"}>
+                    {unpaidStudentsCount}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {currentDiscount > 0 && (
               <div className="absolute bottom-3 right-3 w-14 h-14 rounded-full border-2 border-dashed border-rose-500/50 bg-rose-50/45 flex items-center justify-center rotate-[-10deg] shadow-sm select-none pointer-events-none transition-all duration-300">
                 <div className="w-[48px] h-[48px] rounded-full border border-dotted border-rose-500/40 flex flex-col items-center justify-center text-rose-500 font-black">
                   <span className="text-[6.5px] tracking-widest leading-none font-black">SAVE</span>
@@ -2454,68 +2602,96 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
           </div>
 
           {/* Card 3: Customization Added */}
-          <div className="bg-linear-to-r from-gray-200 via-rose-50 to-orange-200 rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center gap-5 transition-transform hover:scale-[1.01]">
-            <div className="w-14 h-14 rounded-full bg-violet-50 flex items-center justify-center text-violet-500 text-2xl font-bold shadow-inner">
-              ⚙️
-            </div>
-            <div className="space-y-1">
-              <span className="text-[11px] font-bold text-slate-00 uppercase tracking-wider block">Customization Added</span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-black text-slate-800 block font-mono">
-                  {paidCustomCount}
-                </span>
-                {pendingCustomCount > 0 && (
-                  <span className="text-base font-black text-rose-500 font-mono ml-1">
-                    + {pendingCustomCount} customization{pendingCustomCount > 1 ? 's' : ''}
-                  </span>
-                )}
+          <div 
+            onClick={() => navigate('/client/portal/customization')}
+            className={`bg-linear-to-r from-gray-200 via-rose-50 to-orange-200 rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center justify-between gap-5 transition-all hover:scale-[1.01] hover:shadow-md cursor-pointer group ${!isPerPersonProduct ? 'sm:col-span-2' : ''}`}
+            title="Click to view and request customization features"
+          >
+            <div className="flex items-center gap-5">
+              <div className="w-14 h-14 rounded-full bg-violet-50 flex items-center justify-center text-violet-500 text-2xl font-bold shadow-inner group-hover:scale-110 transition-transform shrink-0">
+                ⚙️
               </div>
-              <span className="text-xs font-bold text-slate-00 block leading-tight">
-                Pending Amount: ₹{pendingCustomTotal.toLocaleString('en-IN')}
-              </span>
+              <div className="space-y-1">
+                <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">Customization Added</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-3xl font-black text-slate-800 block font-mono">
+                    {paidCustomCount}
+                  </span>
+                  {pendingCustomCount > 0 && (
+                    <span className="text-base font-black text-rose-500 font-mono ml-1">
+                      + {pendingCustomCount} customization{pendingCustomCount > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+                <span className="text-xs font-bold text-slate-500 block leading-tight">
+                  Pending Amount: ₹{pendingCustomTotal.toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
+            <div className="hidden sm:flex items-center gap-1 text-[11px] font-bold text-violet-600 group-hover:translate-x-1 transition-transform shrink-0">
+              <span>Manage</span>
+              <span>→</span>
             </div>
           </div>
 
-          {/* Card 5: Total Addon Feature Added */}
-          <div className="bg-linear-to-r from-pink-200 via-purple-400 to-indigo-600 rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center gap-5 transition-transform hover:scale-[1.01]">
-            <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 text-2xl font-bold shadow-inner">
-              🧩
-            </div>
-            <div className="space-y-1">
-              <span className="text-[11px] font-bold text-slate-00 uppercase tracking-wider block">Total Addon Feature Added</span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-black text-slate-800 block font-mono">
-                  {paidAddonCount}
-                </span>
-                {pendingAddonCount > 0 && (
-                  <span className="text-base font-black text-rose-500 font-mono ml-1">
-                    + {pendingAddonCount} add-on{pendingAddonCount > 1 ? 's' : ''}
+          {/* Card 5: Total Addon Feature Added (Only for per_person = 1 products) */}
+          {isPerPersonProduct && (
+            <div 
+              onClick={() => navigate('/client/portal/addon-services')}
+              className="bg-linear-to-r from-pink-200 via-purple-400 to-indigo-600 rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center justify-between gap-5 transition-all hover:scale-[1.01] hover:shadow-md cursor-pointer group"
+              title="Click to explore and purchase add-on services"
+            >
+              <div className="flex items-center gap-5">
+                <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 text-2xl font-bold shadow-inner group-hover:scale-110 transition-transform shrink-0">
+                  🧩
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[11px] font-bold text-white uppercase tracking-wider block">Total Addon Feature Added</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-black text-white block font-mono">
+                      {paidAddonCount}
+                    </span>
+                    {pendingAddonCount > 0 && (
+                      <span className="text-base font-black text-amber-200 font-mono ml-1">
+                        + {pendingAddonCount} add-on{pendingAddonCount > 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs font-bold text-white/90 block leading-tight">
+                    Pending Amount: ₹{pendingAddonTotal.toLocaleString('en-IN')}
                   </span>
-                )}
+                </div>
               </div>
-              <span className="text-xs font-bold text-slate-00 block leading-tight">
-                Pending Amount: ₹{pendingAddonTotal.toLocaleString('en-IN')}
-              </span>
+              <div className="hidden sm:flex items-center gap-1 text-[11px] font-bold text-white group-hover:translate-x-1 transition-transform shrink-0">
+                <span>Explore</span>
+                <span>→</span>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Card 4: Pay Current Monthly Bill (Spans 2 columns) */}
           {(() => {
+            const showDeliveryPending = isBeforeDelivery && !hasMadePayment
+
             return (
               <div className={`rounded-3xl p-6 shadow-sm border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-transform hover:scale-[1.01] sm:col-span-2 ${isPaidAndActive
                 ? 'bg-emerald-50/30 border-emerald-100'
-                : isOverdue
-                  ? 'bg-rose-50/40 border-rose-200'
-                  : 'bg-amber-50/40 border-amber-200'
+                : showDeliveryPending
+                  ? 'bg-blue-50/40 border-blue-200'
+                  : isOverdue
+                    ? 'bg-rose-50/40 border-rose-200'
+                    : 'bg-amber-50/40 border-amber-200'
                 }`}>
                 <div className="flex items-center gap-4">
                   <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold shadow-inner shrink-0 ${isPaidAndActive
                     ? 'bg-emerald-50 text-emerald-600'
-                    : isOverdue
-                      ? 'bg-rose-100 text-rose-500'
-                      : 'bg-amber-100 text-amber-600'
+                    : showDeliveryPending
+                      ? 'bg-blue-100 text-blue-600'
+                      : isOverdue
+                        ? 'bg-rose-100 text-rose-500'
+                        : 'bg-amber-100 text-amber-600'
                     }`}>
-                    {isPaidAndActive ? '💳' : isOverdue ? '⚠️' : '🔔'}
+                    {isPaidAndActive ? '💳' : showDeliveryPending ? '⏳' : isOverdue ? '⚠️' : '🔔'}
                   </div>
 
                   {isPaidAndActive ? (
@@ -2531,6 +2707,21 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                       </span>
                       <span className="text-[11px] font-bold text-slate-400 block mt-1 leading-tight">
                         Breakdown: <span className="font-mono text-slate-500 font-bold">{dueBreakdownStr}</span>
+                      </span>
+                    </div>
+                  ) : showDeliveryPending ? (
+                    <div className="space-y-1">
+                      <span className="bg-blue-100 text-blue-700 text-[9.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md inline-block mb-1 border border-blue-200">
+                        ⏳ Delivery Pending
+                      </span>
+                      <span className="text-2xl font-black text-slate-800 block font-mono">
+                        ₹{payBillAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                      <span className="text-[11px] font-bold text-slate-500 block leading-tight">
+                        Project delivery scheduled on <strong className="text-blue-600">{deliveryDateStr}</strong>. Subscription payment &amp; carryover activates on delivery date.
+                      </span>
+                      <span className="text-[11px] font-bold text-slate-400 block mt-1 leading-tight">
+                        Breakdown: <span className="font-mono text-slate-600 font-bold">{dueBreakdownStr}</span>
                       </span>
                     </div>
                   ) : isOverdue ? (
@@ -2570,25 +2761,51 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                   )}
                 </div>
 
-                <button
-                  onClick={() => {
-                    if (!isPaidAndActive) {
-                      setPayError('')
-                      setPaySuccess('')
-                      setShowPayModal(true)
-                    } else {
-                      navigate('/client/portal/subscription')
-                    }
-                  }}
-                  className={`px-5 py-3 font-extrabold rounded-xl text-xs shadow-md transition-all active:scale-95 whitespace-nowrap cursor-pointer shrink-0 ${isPaidAndActive
-                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 shadow-none border border-slate-200'
-                    : isOverdue
-                      ? 'bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white shadow-rose-200'
-                      : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-amber-200'
-                    }`}
-                >
-                  {isPaidAndActive ? 'View Subscription' : isOverdue ? '⚡ Pay Now' : '🚀 Activate Now'}
-                </button>
+                {showDeliveryPending ? (
+                  pendingCustomTotal > 0 ? (
+                    <button
+                      onClick={() => {
+                        setPayError('')
+                        setPaySuccess('')
+                        setShowPayModal(true)
+                      }}
+                      className="px-5 py-3 font-extrabold rounded-xl text-xs shadow-md transition-all active:scale-95 whitespace-nowrap cursor-pointer shrink-0 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-indigo-200"
+                    >
+                      🎨 Pay Customizations (₹{(pendingCustomTotal * 1.18).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                    </button>
+                  ) : (
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <button
+                        disabled
+                        className="px-5 py-3 font-extrabold rounded-xl text-xs bg-slate-100 text-slate-400 border border-slate-200 shadow-none cursor-not-allowed whitespace-nowrap shrink-0 flex items-center gap-1.5"
+                        title={`Subscription unlocks on delivery date (${deliveryDateStr})`}
+                      >
+                        ⏳ Unlocks on Delivery ({deliveryDateStr})
+                      </button>
+                      <span className="text-[9.5px] text-slate-400 font-semibold">Payment opens on delivery</span>
+                    </div>
+                  )
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (!isPaidAndActive) {
+                        setPayError('')
+                        setPaySuccess('')
+                        setShowPayModal(true)
+                      } else {
+                        navigate('/client/portal/subscription')
+                      }
+                    }}
+                    className={`px-5 py-3 font-extrabold rounded-xl text-xs shadow-md transition-all active:scale-95 whitespace-nowrap cursor-pointer shrink-0 ${isPaidAndActive
+                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 shadow-none border border-slate-200'
+                      : isOverdue
+                        ? 'bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white shadow-rose-200'
+                        : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-amber-200'
+                      }`}
+                  >
+                    {isPaidAndActive ? 'View Subscription' : isOverdue ? '⚡ Pay Now' : '🚀 Activate Now'}
+                  </button>
+                )}
               </div>
             )
           })()}

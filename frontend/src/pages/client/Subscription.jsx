@@ -1081,8 +1081,24 @@ const ClientSubscription = () => {
 
   const schoolName = profileData?.company_name || profileData?.school_name || profileData?.organization || 'Academic Institute'
 
+  const deliveryDateRaw = deliveryInfo?.delivery_date || profileData?.delivery_date || (Array.isArray(productData) ? productData[0]?.delivery_date : productData?.delivery_date)
+  const isBeforeDelivery = (() => {
+    if (!deliveryDateRaw) return false
+    try {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const delDate = new Date(deliveryDateRaw)
+      delDate.setHours(0, 0, 0, 0)
+      return today.getTime() < delDate.getTime()
+    } catch {
+      return false
+    }
+  })()
+
   // Decide which screen structure to render
-  const canPay = (hasZeroStudents && perPerson === 1) ? false : (showPayNow || (paymentStatus && !paymentStatus.has_previous_payments))
+  const canPay = (hasZeroStudents && perPerson === 1) || (isBeforeDelivery && (!paymentStatus || !paymentStatus.has_previous_payments))
+    ? false
+    : (showPayNow || (paymentStatus && !paymentStatus.has_previous_payments))
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-10 select-none" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -1141,6 +1157,17 @@ const ClientSubscription = () => {
             <h3 className="text-sm font-black text-slate-800">Payment Gateway Inactive</h3>
             <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
               Your ERP student registry is completely empty. Subscription pricing is calculated dynamically based on student enrollment. Please populate student records to activate checkout.
+            </p>
+          </div>
+        ) : (isBeforeDelivery && (!paymentStatus || !paymentStatus.has_previous_payments)) ? (
+          <div className="bg-white rounded-2xl p-8 text-center border border-blue-100 shadow-xs space-y-4">
+            <span className="text-4xl block select-none">⏳</span>
+            <span className="bg-blue-50 text-blue-700 text-xs font-black uppercase tracking-wider px-3.5 py-1 rounded-full border border-blue-200 inline-block font-mono">
+              Delivery Pending
+            </span>
+            <h3 className="text-sm font-black text-slate-800">Subscription Activation Opens on Delivery Date</h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+              Project delivery is scheduled on <strong className="text-blue-600 font-bold">{deliveryDateRaw ? new Date(deliveryDateRaw).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Delivery Date'}</strong>. Subscription billing and initial carryover calculation will activate automatically on or after delivery.
             </p>
           </div>
         ) : canPay ? (
