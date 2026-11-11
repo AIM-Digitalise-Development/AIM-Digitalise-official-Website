@@ -385,7 +385,7 @@ const ClientProducts = () => {
       subPayments.forEach(p => {
         unifiedList.push({
           id: p.id,
-          invoiceNo: p.razorpay_payment_id || `pay_sub_${p.id}`,
+          invoiceNo: p.invoice_id || p.razorpay_payment_id || `pay_sub_${p.id}`,
           paymentDate: p.created_at ? new Date(p.created_at).toISOString().split('T')[0] : '—',
           paymentType: 'Subscription',
           validTill: p.period_end ? new Date(p.period_end).toISOString().split('T')[0] : '—',
@@ -399,7 +399,7 @@ const ClientProducts = () => {
         const rawDate = p.created_at || p.payment_date || p.submitted_at || p.date
         unifiedList.push({
           id: p.id,
-          invoiceNo: p.razorpay_payment_id || `pay_cust_${p.id}`,
+          invoiceNo: p.invoice_id || p.razorpay_payment_id || `pay_cust_${p.id}`,
           paymentDate: rawDate ? new Date(rawDate).toISOString().split('T')[0] : '—',
           paymentType: 'Customization',
           validTill: 'One-time',
@@ -442,7 +442,7 @@ const ClientProducts = () => {
 
         unifiedList.push({
           id: p.payment_id || `pay_addon_${p.id || Math.random()}`,
-          invoiceNo: p.payment_id || `pay_addon_${p.id || Math.random()}`,
+          invoiceNo: p.invoice_id || p.payment_id || `pay_addon_${p.id || Math.random()}`,
           paymentDate: pDate,
           paymentType: `Add-on: ${p.addon_type}`,
           validTill: eDate,
@@ -486,7 +486,7 @@ const ClientProducts = () => {
         const finalPf = pfAmount > 0 ? pfAmount : 1000
         const pfDateRaw = clientObj.created_at || clientObj.registration_date || clientObj.payment_date || profileData?.created_at || clientUser?.created_at || paymentStatus?.delivery_info?.created_at
         const pfDate = pfDateRaw ? new Date(pfDateRaw).toISOString().split('T')[0] : (new Date().toISOString().split('T')[0])
-        const pfInvoiceNo = clientObj.razorpay_payment_id || clientObj.order_id || `INV-PF-${clientObj.client_id || profileData?.client_id || clientUser?.client_id || '001'}`
+        const pfInvoiceNo = clientObj.invoice_id || clientObj.razorpay_payment_id || clientObj.order_id || `INV-PF-${clientObj.client_id || profileData?.client_id || clientUser?.client_id || '001'}`
 
         const hasPfInSubs = subPayments.some(p =>
           (p.payment_type && p.payment_type.toLowerCase().includes('processing')) ||
