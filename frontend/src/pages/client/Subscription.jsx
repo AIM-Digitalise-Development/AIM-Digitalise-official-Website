@@ -256,7 +256,8 @@ const ClientSubscription = () => {
     if (amount === undefined || amount === null) return null
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
     if (isNaN(numAmount)) return null
-    return `₹ ${numAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    const sym = profileData?.currency_symbol || (profileData?.country_code === 'NP' || profileData?.client_id?.startsWith('AIMNP') ? 'NPR ' : '₹')
+    return `${sym} ${numAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
   // Generate Bill Data - COMPLETELY FIXED VERSION
@@ -275,6 +276,7 @@ const ClientSubscription = () => {
     const carryoverDays = calc.carryover_days || 0
     const daysInMonth = calc.carryover_days_in_month || 30
     const gstPercentage = calc.gst_percentage || 18
+    const taxName = calc.tax_name || (profileData?.tax_name || (profileData?.country_code === 'NP' || profileData?.client_id?.startsWith('AIMNP') ? 'VAT' : 'GST'))
 
     // IMPORTANT: Calculate discounted monthly amount from base + discount
     // This ensures we use the CORRECT discounted rate
@@ -377,6 +379,7 @@ const ClientSubscription = () => {
       gstPercentage,
       gstAmount,
       totalWithGST,
+      taxName,
       // Per-day for display
       perDayAmount,
       cycleMonths,
@@ -1009,7 +1012,7 @@ const ClientSubscription = () => {
                       <td>{formatAmount(billData.totalAmount)}</td>
                     </tr>
                     <tr>
-                      <td>GST Tax ({billData.gstPercentage}%)</td>
+                      <td>{billData.taxName || 'GST'} Tax ({billData.gstPercentage}%)</td>
                       <td>{formatAmount(billData.gstAmount)}</td>
                     </tr>
                     <tr className="total-row">

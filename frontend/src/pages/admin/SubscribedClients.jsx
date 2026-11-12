@@ -2,7 +2,14 @@ import React, { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { getAdminClients, getAdminClientById, updateClientDelivery } from '../../api/admin/partners'
+import {
+  getAdminClients,
+  getAdminClientById,
+  updateClientDelivery,
+  getAdminClientOrdersTemp,
+  approveAdminClientOrderTemp,
+  rejectAdminClientOrderTemp
+} from '../../api/admin/partners'
 import { isSaasClient } from '../../utils/subscription'
 import { getInvoiceLogoHtml } from '../../utils/invoiceLogo'
 
@@ -209,9 +216,74 @@ const AdminSubscribedClients = () => {
     }
   }
 
+  // ── TEMPORARY OFFLINE ORDERS (NEPAL) ──────────────────────────────────────
+  const [tempOrders, setTempOrders] = useState([])
+  const [loadingTempOrders, setLoadingTempOrders] = useState(false)
+  const [approvingOrderId, setApprovingOrderId] = useState(null)
+  const [showApproveModal, setShowApproveModal] = useState(false)
+  const [selectedTempOrder, setSelectedTempOrder] = useState(null)
+  const [modalDeliveryDays, setModalDeliveryDays] = useState(7)
+
+  const fetchTempOrders = async () => {
+    setLoadingTempOrders(true)
+    try {
+      const res = await getAdminClientOrdersTemp()
+      if (res.data?.success) {
+        setTempOrders(res.data.data || [])
+      }
+    } catch (err) {
+      console.error('Error fetching temp orders:', err)
+    } finally {
+      setLoadingTempOrders(false)
+    }
+  }
+
+  const handleApproveTempOrder = async () => {
+    if (!selectedTempOrder) return
+    setApprovingOrderId(selectedTempOrder.id)
+    try {
+      const res = await approveAdminClientOrderTemp(selectedTempOrder.id, { delivery_after: modalDeliveryDays })
+      if (res.data?.success) {
+        flashSuccess(`Order for "${selectedTempOrder.client_name}" approved! Generated Client ID: ${res.data.data?.client_id}`)
+        fetchTempOrders()
+        fetchClients()
+        setShowApproveModal(false)
+        setSelectedTempOrder(null)
+      } else {
+        flashError(res.data?.message || 'Failed to approve order')
+      }
+    } catch (err) {
+      flashError(err.response?.data?.message || err.message)
+    } finally {
+      setApprovingOrderId(null)
+    }
+  }
+
+  const handleRejectTempOrder = async (id, name) => {
+    if (!window.confirm(`Are you sure you want to delete/reject this offline request from "${name}"?`)) return
+    try {
+      const res = await rejectAdminClientOrderTemp(id)
+      if (res.data?.success) {
+        flashSuccess('Temporary order removed successfully.')
+        fetchTempOrders()
+      } else {
+        flashError(res.data?.message || 'Failed to remove order')
+      }
+    } catch (err) {
+      flashError(err.message)
+    }
+  }
+
   useEffect(() => {
     fetchClients()
+    fetchTempOrders()
   }, [])
+
+  useEffect(() => {
+    if (activeTab === 'nepal_offline') {
+      fetchTempOrders()
+    }
+  }, [activeTab])
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '—'
@@ -315,6 +387,15 @@ const AdminSubscribedClients = () => {
                 {loading ? 'Refreshing...' : 'Refresh Clients'}
               </button>
             )}
+            {activeTab === 'nepal_offline' && (
+              <button
+                onClick={fetchTempOrders}
+                disabled={loadingTempOrders}
+                className="px-4 py-2 border border-slate-200 hover:border-amber-500 hover:text-amber-600 bg-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer text-slate-600 shadow-sm"
+              >
+                {loadingTempOrders ? 'Refreshing...' : 'Refresh Orders'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -331,6 +412,20 @@ const AdminSubscribedClients = () => {
                 }`}
             >
               Client List
+            </button>
+            <button
+              onClick={() => handleTabChange('nepal_offline')}
+              className={`px-5 py-2.5 rounded-t-lg text-sm font-bold transition-all cursor-pointer border-t-2 flex items-center gap-1.5 ${activeTab === 'nepal_offline'
+                ? 'bg-white border-[#ef4444] text-[#ef4444] -mb-[13px] z-10'
+                : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border-transparent'
+                }`}
+            >
+              <span>Offline Requests (Nepal)</span>
+              {tempOrders.length > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white">
+                  {tempOrders.length}
+                </span>
+              )}
             </button>
             <button
               onClick={() => handleTabChange('follow_up')}
@@ -1047,6 +1142,145 @@ const AdminSubscribedClients = () => {
             )}
           </AnimatePresence>
 
+          {/* ── TAB: NEPAL OFFLINE REQUESTS ──────────────────────────────────── */}
+          {activeTab === 'nepal_offline' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-3">
+                <div>
+                  <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                    <span className="text-amber-500">🇳🇵</span> Offline Cash Verification Requests (Nepal)
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Orders submitted from Nepal without online gateway payment. When admin receives cash, click <strong>"Approve &amp; Receive Cash"</strong> to generate credentials and move them to official clients.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl">
+                    Pending Verification: <strong>{tempOrders.length}</strong>
+                  </span>
+                </div>
+              </div>
+
+              {loadingTempOrders ? (
+                <div className="text-center py-16 text-slate-400 font-bold">
+                  <span className="inline-block animate-spin mr-2">🔄</span> Loading offline requests…
+                </div>
+              ) : tempOrders.length === 0 ? (
+                <div className="text-center py-16 text-slate-400 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                  <span className="text-4xl block mb-2">🇳🇵</span>
+                  <p className="font-bold text-slate-600">No Pending Offline Orders</p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    When visitors in Nepal complete checkout with "Pay to Admin", their requests will appear here.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50/80 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                          <th className="px-5 py-4">Submitted Date</th>
+                          <th className="px-5 py-4">Client / Institution</th>
+                          <th className="px-5 py-4">Contact &amp; Location</th>
+                          <th className="px-5 py-4">Product / Package</th>
+                          <th className="px-5 py-4">Relationship Mgr</th>
+                          <th className="px-5 py-4 text-right">Amount to Collect (NPR)</th>
+                          <th className="px-5 py-4 text-center">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700">
+                        {tempOrders.map((order) => {
+                          const dateStr = new Date(order.created_at).toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                          return (
+                            <tr key={order.id} className="hover:bg-amber-50/20 transition-colors">
+                              <td className="px-5 py-4 font-mono text-slate-500 whitespace-nowrap">
+                                <div>{dateStr}</div>
+                                <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                  ⏳ Pending Cash
+                                </span>
+                              </td>
+                              <td className="px-5 py-4 font-semibold text-slate-800">
+                                <div className="text-sm font-extrabold text-[#1e3e6b]">{order.client_name}</div>
+                                <div className="text-xs text-slate-600">{order.school_name || order.company_name || '—'}</div>
+                                {order.vat_pan_number && (
+                                  <div className="text-[10px] text-slate-400 mt-0.5 font-mono">
+                                    PAN/VAT: {order.vat_pan_number}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-5 py-4 text-slate-600">
+                                <div>📞 {order.contact_number}</div>
+                                <div className="text-slate-400">✉️ {order.email}</div>
+                                <div className="text-[10px] text-slate-400 mt-1">
+                                  📍 {[order.district, order.state, order.pin_code].filter(Boolean).join(', ')}
+                                </div>
+                              </td>
+                              <td className="px-5 py-4 font-semibold text-slate-700">
+                                <div>{order.product_name}</div>
+                                <div className="text-[10px] text-slate-400 mt-0.5">
+                                  Category: {order.product_category || 'SaaS'}
+                                </div>
+                                {order.total_students > 1 && (
+                                  <div className="text-[10px] text-indigo-600 font-bold mt-0.5">
+                                    Students: {order.total_students}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-5 py-4 text-slate-500">
+                                <span className="font-semibold text-slate-700">
+                                  {order.partner?.partner_name || order.partner_id || '—'}
+                                </span>
+                                {order.partner?.contact_no && (
+                                  <div className="text-[10px] text-slate-400">{order.partner.contact_no}</div>
+                                )}
+                              </td>
+                              <td className="px-5 py-4 text-right">
+                                <div className="text-base font-black text-amber-600">
+                                  NPR {Number(order.processing_fee || order.paid_amount || 0).toLocaleString()}
+                                </div>
+                                <div className="text-[10px] text-slate-400">
+                                  (incl. {order.tax_rate || 13}% {order.tax_name || 'VAT'})
+                                </div>
+                              </td>
+                              <td className="px-5 py-4 text-center">
+                                <div className="flex items-center justify-center gap-2">
+                                  <button
+                                    onClick={() => {
+                                      setSelectedTempOrder(order)
+                                      setModalDeliveryDays(7)
+                                      setShowApproveModal(true)
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer flex items-center gap-1"
+                                    title="Verify cash received and activate client"
+                                  >
+                                    <span>✓ Approve &amp; Receive Cash</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleRejectTempOrder(order.id, order.client_name)}
+                                    className="px-2.5 py-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 hover:text-red-700 font-bold text-xs transition cursor-pointer"
+                                    title="Reject or remove this offline request"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === 'follow_up' && (
             <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
               <span className="text-4xl">📞</span>
@@ -1058,7 +1292,7 @@ const AdminSubscribedClients = () => {
           )}
 
           {/* Inactive Tab Placeholders */}
-          {activeTab !== 'client_list' && activeTab !== 'follow_up' && (
+          {activeTab !== 'client_list' && activeTab !== 'nepal_offline' && activeTab !== 'follow_up' && (
             <div className="flex flex-col items-center justify-center py-16 text-center space-y-3.5">
               <span className="text-4xl">📄</span>
               <h4 className="text-base font-bold text-slate-800 capitalize">{activeTab.replace('_', ' ')} Tab Content</h4>
@@ -1070,6 +1304,89 @@ const AdminSubscribedClients = () => {
 
         </div>
       </div>
+
+      {/* ── MODAL: APPROVE OFFLINE ORDER (NEPAL) ── */}
+      {showApproveModal && selectedTempOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-5 animate-scale-up">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-base font-black text-slate-800 flex items-center gap-2">
+                <span>🇳🇵</span> Confirm Offline Cash Payment
+              </h3>
+              <button
+                onClick={() => { setShowApproveModal(false); setSelectedTempOrder(null); }}
+                className="text-slate-400 hover:text-slate-600 text-lg cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200/80 space-y-1.5 text-xs text-amber-900">
+              <div className="font-extrabold text-sm text-amber-800">
+                Amount Received: NPR {Number(selectedTempOrder.processing_fee || 0).toLocaleString()}
+              </div>
+              <p className="text-slate-600">
+                Client: <strong>{selectedTempOrder.client_name}</strong> ({selectedTempOrder.school_name || selectedTempOrder.company_name || 'N/A'})
+              </p>
+              <p className="text-slate-600">
+                Product: <strong>{selectedTempOrder.product_name}</strong>
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-600 uppercase tracking-wider block">
+                Estimated Delivery (Days from today):
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="365"
+                value={modalDeliveryDays}
+                onChange={(e) => setModalDeliveryDays(parseInt(e.target.value, 10) || 0)}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 focus:outline-none focus:border-[#ef4444] transition-all"
+              />
+              <p className="text-[11px] text-slate-400">
+                Delivery date will be calculated as today + {modalDeliveryDays} days.
+              </p>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-500 space-y-1">
+              <p className="font-bold text-slate-700">What happens on approval:</p>
+              <ul className="list-disc pl-4 space-y-0.5">
+                <li>Unique Client ID (AIMNPxxxxx) will be generated.</li>
+                <li>Initial password (12345) will be generated.</li>
+                <li>Record will move to <strong>Client List</strong>.</li>
+                <li>Temporary order will be cleared from this list.</li>
+                <li>Welcome email with credentials will be sent to <strong>{selectedTempOrder.email}</strong>.</li>
+              </ul>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => { setShowApproveModal(false); setSelectedTempOrder(null); }}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-500 hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={approvingOrderId === selectedTempOrder.id}
+                onClick={handleApproveTempOrder}
+                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {approvingOrderId === selectedTempOrder.id ? (
+                  <>
+                    <span className="inline-block animate-spin mr-1">🔄</span> Activating…
+                  </>
+                ) : (
+                  <>✓ Confirm &amp; Activate Client</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

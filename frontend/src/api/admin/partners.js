@@ -236,5 +236,18 @@ export const recordAdminOfflinePayment = (data) =>
 export const getAdminCommissionsReport = () =>
   adminFetch('GET', '/admin/commissions-report')
 
+// ─── Temporary Client Orders (e.g. Nepal Offline Cash) ──────────────────────
+// GET /api/admin/client-orders-temp
+export const getAdminClientOrdersTemp = () =>
+  adminFetch('GET', '/admin/client-orders-temp')
+
+// POST /api/admin/client-orders-temp/{id}/approve
+export const approveAdminClientOrderTemp = (id, data = {}) =>
+  adminFetch('POST', `/admin/client-orders-temp/${id}/approve`, data)
+
+// DELETE /api/admin/client-orders-temp/{id}
+export const rejectAdminClientOrderTemp = (id) =>
+  adminFetch('DELETE', `/admin/client-orders-temp/${id}`)
+
 
 

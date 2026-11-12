@@ -238,14 +238,21 @@ const ClientProducts = () => {
             ? Number(calc.extra_students_amount) 
             : (calc.discounted_total !== undefined ? Number(calc.discounted_total) : computedSubtotal)
 
+          const dynamicTaxRate = Number(calc?.tax_rate ?? calc?.gst_percentage ?? cycleObj?.tax_rate ?? cycleObj?.gst_percentage ?? (displayUser?.country_code === 'NP' ? 13 : 18))
+          const dynamicTaxFactor = 1 + (dynamicTaxRate / 100)
+
           newRates[stateKey] = {
             discount: resolvedDiscount,
             baseRate: baseRate || (calc?.monthly_subscription_rate ? Number(calc.monthly_subscription_rate) : null),
             multiplier: calc.multiplier || baseMultiplier,
             cycleMonths: cycleMonths,
             totalAmount: totalPreGst,
-            totalAmountWithGst: calc.total_amount || Number((totalPreGst * 1.18).toFixed(2)),
-            gstAmount: calc.gst_amount || Number((totalPreGst * 0.18).toFixed(2)),
+            totalAmountWithGst: calc.total_amount || Number((totalPreGst * dynamicTaxFactor).toFixed(2)),
+            gstAmount: calc.gst_amount || Number((totalPreGst * (dynamicTaxRate / 100)).toFixed(2)),
+            tax_rate: dynamicTaxRate,
+            tax_name: calc?.tax_name || cycleObj?.tax_name,
+            currency: calc?.currency || cycleObj?.currency,
+            currency_symbol: calc?.currency_symbol || cycleObj?.currency_symbol,
             isExtraStudentsPayment: calc.is_extra_students_payment || false,
             extraStudentsAmount: calc.extra_students_amount || 0,
             carryoverDays: calc.carryover_days || 0,
@@ -253,21 +260,27 @@ const ClientProducts = () => {
             student_count: calc.student_count || undefined
           }
         } else if (cycleObj) {
+          const cycleTaxRate = Number(cycleObj?.tax_rate ?? cycleObj?.gst_percentage ?? (displayUser?.country_code === 'NP' ? 13 : 18))
+          const cycleTaxFactor = 1 + (cycleTaxRate / 100)
           const totalPreGst = cycleObj.discounted_total !== undefined 
             ? Number(cycleObj.discounted_total) 
-            : (cycleObj.total ? Number((cycleObj.total / 1.18).toFixed(2)) : 0)
+            : (cycleObj.total ? Number((cycleObj.total / cycleTaxFactor).toFixed(2)) : 0)
           const cDays = cycleObj.carryover_days || backendCycles.carryover_days || 0
           const cAmt = cycleObj.carryover_amount || (cDays > 0 ? (totalPreGst * (cDays / (12 * 30))) : 0)
 
           newRates[stateKey] = {
             ...newRates[stateKey],
             discount: resolvedDiscount,
-            baseRate: cycleObj.monthly_subscription_rate || currentStudentRate || 10,
+            baseRate: cycleObj.monthly_subscription_rate || currentStudentRate || (displayUser?.country_code === 'NP' ? 20 : 10),
             multiplier: cycleObj.cycle_months || baseMultiplier,
             cycleMonths: cycleObj.cycle_months || baseMultiplier,
             totalAmount: totalPreGst || undefined,
-            totalAmountWithGst: cycleObj.total ? Number(cycleObj.total) : (totalPreGst ? Number((totalPreGst * 1.18).toFixed(2)) : undefined),
-            gstAmount: cycleObj.gst_amount ? Number(cycleObj.gst_amount) : (totalPreGst ? Number((totalPreGst * 0.18).toFixed(2)) : undefined),
+            totalAmountWithGst: cycleObj.total ? Number(cycleObj.total) : (totalPreGst ? Number((totalPreGst * cycleTaxFactor).toFixed(2)) : undefined),
+            gstAmount: cycleObj.gst_amount ? Number(cycleObj.gst_amount) : (totalPreGst ? Number((totalPreGst * (cycleTaxRate / 100)).toFixed(2)) : undefined),
+            tax_rate: cycleTaxRate,
+            tax_name: cycleObj?.tax_name,
+            currency: cycleObj?.currency,
+            currency_symbol: cycleObj?.currency_symbol,
             isExtraStudentsPayment: cycleObj.is_extra_students_payment || false,
             extraStudentsAmount: cycleObj.extra_students_amount || 0,
             carryoverDays: cDays,
@@ -1564,6 +1577,11 @@ const ClientProducts = () => {
     )
   }
 
+  const clientCountry = displayUser?.country_code || activeProduct?.country_code || (displayUser?.client_id?.startsWith('AIMNP') ? 'NP' : 'IN')
+  const currencySymbol = displayUser?.currency_symbol || (clientCountry === 'NP' ? 'NPR ' : '₹')
+  const taxLabel = displayUser?.tax_name || (clientCountry === 'NP' ? 'VAT' : 'GST')
+  const taxRate = Number(cycleRates[selectedCycle]?.tax_rate ?? cycleRates[selectedCycle]?.gst_percentage ?? (clientCountry === 'NP' ? 13 : 18))
+
   const securityDeposit = activeProduct?.processing_fee ?? displayUser?.processing_fee ?? 0
   const subscriptionPrice = activeProduct?.monthly_subscription ?? displayUser?.monthly_subscription ?? 0
 
@@ -1580,7 +1598,7 @@ const ClientProducts = () => {
         return monthlySub
       }
       const totalStudents = effectiveTotalStudents
-      return (totalStudents > 0 && monthlySub > 0) ? (monthlySub / totalStudents) : (monthlySub || 10)
+      return (totalStudents > 0 && monthlySub > 0) ? (monthlySub / totalStudents) : (monthlySub || (clientCountry === 'NP' ? 20 : 10))
     }
     return Number(subscriptionPrice || activeProduct?.monthly_subscription || displayUser?.monthly_subscription || 0)
   })()
@@ -1667,8 +1685,8 @@ const ClientProducts = () => {
     }
 
     // Priority 3: back-calculate from the due amount using per-student rate
-    const baseRate = cycleRates[selectedCycle]?.baseRate || currentStudentRate || 10
-    const gstFactor = 1.18
+    const baseRate = cycleRates[selectedCycle]?.baseRate || currentStudentRate || (clientCountry === 'NP' ? 20 : 10)
+    const gstFactor = 1 + (taxRate / 100)
     const costPerExtraStudent = baseRate * extraMonths * gstFactor
     const rawDue = Number(paymentStatus?.delivery_info?.total_due_amount || 0)
     if (rawDue > 0 && costPerExtraStudent > 0) {
@@ -1689,7 +1707,7 @@ const ClientProducts = () => {
     if (isPerPersonProduct) {
       const sc = effectiveTotalStudents
       if (sc === 0) return 0
-      const rate = cycleRates[selectedCycle]?.baseRate || currentStudentRate || 10
+      const rate = cycleRates[selectedCycle]?.baseRate || currentStudentRate || (clientCountry === 'NP' ? 20 : 10)
       const regularAmount = sc * rate * multiplier * (1 - discount / 100)
       const carryAmt = cycleRates[selectedCycle]?.carryoverAmount || (carryDays > 0 ? (sc * rate * (1 - discount / 100)) * (carryDays / daysInMonth) : 0)
       return Math.round((regularAmount + carryAmt) * 100) / 100
@@ -1708,7 +1726,7 @@ const ClientProducts = () => {
   const subDueAmount = (() => {
     if (!isSubscriptionOverdue && !isNeverPaid) return 0
     if (hasMadePayment && unpaidStudentsCount > 0 && isPerPersonProduct) {
-      const rate = currentStudentRate || 10
+      const rate = currentStudentRate || (clientCountry === 'NP' ? 20 : 10)
       const months = extraMonths || 1
       const discountToApply = currentDiscount || 0
       const total = Math.round(unpaidStudentsCount * rate * months * (1 - discountToApply / 100) * 100) / 100
@@ -1723,11 +1741,14 @@ const ClientProducts = () => {
     return cycleBasedFallback
   })()
 
-  // Total payable with GST for bottom banner and payment modal
+  // Total payable with tax for bottom banner and payment modal
   const totalPayableWithGst = (() => {
-    const subTotalWithGst = Math.round(subDueAmount * 1.18 * 100) / 100
-    const custTotalWithGst = Math.round(pendingCustomTotal * 1.18 * 100) / 100
-    const addonTotalWithGst = Math.round(pendingAddonTotal * 1.18 * 100) / 100
+    const taxFactor = 1 + (taxRate / 100)
+    const subTotalWithGst = (cycleRates[selectedCycle]?.totalAmountWithGst && !hasMadePayment)
+      ? Number(cycleRates[selectedCycle].totalAmountWithGst)
+      : Math.round(subDueAmount * taxFactor * 100) / 100
+    const custTotalWithGst = Math.round(pendingCustomTotal * taxFactor * 100) / 100
+    const addonTotalWithGst = Math.round(pendingAddonTotal * taxFactor * 100) / 100
     return Number((subTotalWithGst + custTotalWithGst + addonTotalWithGst).toFixed(2))
   })()
 
@@ -2472,7 +2493,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
             <div className="space-y-1">
               <span className="text-[11px] font-bold text-slate-00 uppercase tracking-wider block">Processing Fee</span>
               <span className="text-lg font-black text-slate-800 block">
-                ₹ {Number(securityDeposit).toLocaleString('en-IN')}.00 <span className="text-[10px] font-medium text-slate-400 block mt-0.5"></span>
+                {currencySymbol}{Number(securityDeposit).toLocaleString('en-IN')}.00 <span className="text-[10px] font-medium text-slate-400 block mt-0.5"></span>
               </span>
             </div>
           </div>
@@ -2533,16 +2554,16 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                 {isPerPersonProduct ? 'Student Plan Price' : 'Subscription Plan Price'}
               </span>
               <span className="text-xl font-black text-slate-800 block">
-                ₹{Number(displayedPlanPrice).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {currencySymbol}{Number(displayedPlanPrice).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 {displayedPlanPrice > 0 && (
-                  <span className="text-[9px] font-semibold text-slate-400 ml-1">+ GST</span>
+                  <span className="text-[9px] font-semibold text-slate-400 ml-1">+ {taxLabel}</span>
                 )}
               </span>
               <span className="text-[9.5px] font-bold text-slate-500 block leading-tight">
                 {isPerPersonProduct ? (
                   unpaidStudentsCount > 0 && hasMadePayment ? (
                     <>
-                      ₹{Number(currentStudentRate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} × {unpaidStudentsCount} new students × {extraMonths} mo
+                      {currencySymbol}{Number(currentStudentRate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} × {unpaidStudentsCount} new students × {extraMonths} mo
                       {currentDiscount > 0 && (
                         <span className="text-emerald-600 font-black ml-1">
                           ({currentDiscount}% discount applied)
@@ -2551,7 +2572,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                     </>
                   ) : (
                     <>
-                      ₹{Number(currentStudentRate).toLocaleString('en-IN')} × {subtitleStudentCount} students × {currentMultiplier} mo
+                      {currencySymbol}{Number(currentStudentRate).toLocaleString('en-IN')} × {subtitleStudentCount} students × {currentMultiplier} mo
                       {currentDiscount > 0 && (
                         <span className="text-emerald-600 font-bold ml-1">
                           ({currentDiscount}% plan discount)
@@ -2566,7 +2587,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                   )
                 ) : (
                   <>
-                    ₹{Number(subscriptionPrice || activeProduct?.monthly_subscription || displayUser?.monthly_subscription || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / mo × {currentMultiplier} mo
+                    {currencySymbol}{Number(subscriptionPrice || activeProduct?.monthly_subscription || displayUser?.monthly_subscription || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / mo × {currentMultiplier} mo
                     {currentDiscount > 0 && (
                       <span className="text-emerald-600 font-bold ml-1">
                         ({currentDiscount}% plan discount)
@@ -2624,7 +2645,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                   )}
                 </div>
                 <span className="text-xs font-bold text-slate-500 block leading-tight">
-                  Pending Amount: ₹{pendingCustomTotal.toLocaleString('en-IN')}
+                  Pending Amount: {currencySymbol}{pendingCustomTotal.toLocaleString('en-IN')}
                 </span>
               </div>
             </div>
@@ -2658,7 +2679,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                     )}
                   </div>
                   <span className="text-xs font-bold text-white/90 block leading-tight">
-                    Pending Amount: ₹{pendingAddonTotal.toLocaleString('en-IN')}
+                    Pending Amount: {currencySymbol}{pendingAddonTotal.toLocaleString('en-IN')}
                   </span>
                 </div>
               </div>
@@ -2700,7 +2721,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                         {paymentStatus?.delivery_info?.last_payment_cycle || 'Active'}
                       </span>
                       <span className="text-2xl font-black text-emerald-600 block">
-                        Paid &amp; Active (₹0.00)
+                        Paid &amp; Active ({currencySymbol}0.00)
                       </span>
                       <span className="text-[11px] font-bold text-slate-400 block leading-tight">
                         Next Payment: {paymentStatus.next_payment_date ? new Date(paymentStatus.next_payment_date).toLocaleDateString('en-IN') : '—'}
@@ -2715,7 +2736,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                         ⏳ Delivery Pending
                       </span>
                       <span className="text-2xl font-black text-slate-800 block font-mono">
-                        ₹{payBillAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {currencySymbol}{payBillAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                       <span className="text-[11px] font-bold text-slate-500 block leading-tight">
                         Project delivery scheduled on <strong className="text-blue-600">{deliveryDateStr}</strong>. Subscription payment &amp; carryover activates on delivery date.
@@ -2730,7 +2751,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                         Payment Due
                       </span>
                       <span className="text-2xl font-black text-rose-600 block font-mono">
-                        ₹{payBillAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {currencySymbol}{payBillAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                       <span className="text-[11px] font-bold text-rose-450 block leading-tight">
                         {isSubscriptionOverdue && pendingCustomTotal > 0
@@ -2749,7 +2770,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                         Not Activated
                       </span>
                       <span className="text-2xl font-black text-amber-700 block font-mono">
-                        ₹{payBillAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {currencySymbol}{payBillAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                       <span className="text-[11px] font-bold text-slate-400 block leading-tight">
                         Make your first payment to activate your subscription plan
@@ -2771,7 +2792,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                       }}
                       className="px-5 py-3 font-extrabold rounded-xl text-xs shadow-md transition-all active:scale-95 whitespace-nowrap cursor-pointer shrink-0 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-indigo-200"
                     >
-                      🎨 Pay Customizations (₹{(pendingCustomTotal * 1.18).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                      🎨 Pay Customizations ({currencySymbol}{(pendingCustomTotal * (1 + taxRate / 100)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
                     </button>
                   ) : (
                     <div className="flex flex-col items-end gap-1 shrink-0">
@@ -2881,7 +2902,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
             <div className="flex justify-between items-center text-xs">
               <span className="font-bold text-slate-400 uppercase tracking-wider">Last Payment</span>
               <span className="font-black text-slate-800 font-mono text-sm">
-                ₹{Number(lastPaymentAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {currencySymbol}{Number(lastPaymentAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
             <div className="flex justify-between items-center text-xs">
@@ -2898,7 +2919,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                 )}
               </div>
               <span className="font-black text-indigo-600 font-mono text-sm">
-                ₹{Number(nextPaymentAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {currencySymbol}{Number(nextPaymentAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
           </div>
@@ -2971,7 +2992,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
             </div>
 
             <div className="text-[10.5px] text-slate-400 bg-slate-50 p-3 rounded-xl border border-slate-150 leading-relaxed font-semibold">
-              💡 Calculated estimates are inclusive of standard 18% GST as per state software regulations.
+              💡 Calculated estimates are inclusive of standard {taxRate}% {taxLabel} as per state software regulations.
             </div>
           </div>
 
@@ -2999,7 +3020,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                 <div className="my-3 py-2 border-y border-slate-50 text-xs text-slate-450 space-y-1">
                   <div className="flex justify-between">
                     <span>Price per Student</span>
-                    <span className="font-bold text-slate-600 font-mono">₹{plan.pricePerStudent.toFixed(2)}/mo</span>
+                    <span className="font-bold text-slate-600 font-mono">{currencySymbol}{plan.pricePerStudent.toFixed(2)}/mo</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Cycle Discount</span>
@@ -3008,9 +3029,9 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                 </div>
 
                 <div className="flex justify-between items-baseline mt-1">
-                  <span className="text-[10px] text-slate-400 font-bold">Est. Cost (inc. GST)</span>
+                  <span className="text-[10px] text-slate-400 font-bold">Est. Cost (inc. {taxLabel})</span>
                   <span className="text-lg font-black text-slate-900 font-mono">
-                    ₹{plan.total.toLocaleString('en-IN')}
+                    {currencySymbol}{plan.total.toLocaleString('en-IN')}
                   </span>
                 </div>
               </div>
@@ -3037,7 +3058,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                     <th className="px-6 py-4">Payment Date</th>
                     <th className="px-6 py-4">Payment Type</th>
                     <th className="px-6 py-4">Valid Till</th>
-                    <th className="px-6 py-4">Amount (₹)</th>
+                    <th className="px-6 py-4">Amount ({currencySymbol.trim()})</th>
                     <th className="px-6 py-4 text-center">Invoice</th>
                   </tr>
                 </thead>
@@ -3055,7 +3076,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                       </td>
                       <td className="px-6 py-4 font-sans text-slate-500">{item.validTill}</td>
                       <td className="px-6 py-4 font-mono font-black text-slate-800">
-                        ₹{Number(item.amount).toLocaleString('en-IN')}.00
+                        {currencySymbol}{Number(item.amount).toLocaleString('en-IN')}.00
                       </td>
                       <td className="px-6 py-4 text-center">
                         <button

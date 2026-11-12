@@ -23,6 +23,15 @@ export const createOrder = (payload) =>
   client.post('/public/create-order', payload).then((r) => r.data)
 
 /**
+ * Submit offline order for cash payment (e.g. Nepal)
+ * POST /public/submit-offline-order
+ *
+ * @param {Object} payload
+ */
+export const submitOfflineOrder = (payload) =>
+  client.post('/public/submit-offline-order', payload).then((r) => r.data)
+
+/**
  * Verify payment signature after Razorpay callback
  * POST /public/verify-payment
  *

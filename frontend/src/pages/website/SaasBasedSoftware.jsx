@@ -267,6 +267,7 @@ const SaasBasedSoftware = () => {
   const [activePlanId, setActivePlanId] = useState(initialPlan.id)
 
   const [detectedCountry, setDetectedCountry] = useState('IN')
+  const isManualCountryOverride = useRef(false)
 
   const getTaxIdLabel = () => {
     if (detectedCountry === 'IN') return 'GSTIN'
@@ -287,6 +288,7 @@ const SaasBasedSoftware = () => {
     fetch('https://ipapi.co/json/')
       .then(res => res.json())
       .then(data => {
+        if (isManualCountryOverride.current) return
         const code = data.country_code
         if (['IN', 'NP', 'BT'].includes(code)) {
           setDetectedCountry(code)
@@ -296,7 +298,9 @@ const SaasBasedSoftware = () => {
       })
       .catch(err => {
         console.error('GeoIP lookup failed, defaulting to IN:', err)
-        setDetectedCountry('IN')
+        if (!isManualCountryOverride.current) {
+          setDetectedCountry('IN')
+        }
       })
   }, [])
 
@@ -305,6 +309,7 @@ const SaasBasedSoftware = () => {
   const [checkoutData, setCheckoutData] = useState(emptyCheckout())
   const [apiError, setApiError] = useState('')
   const [successData, setSuccessData] = useState(null)
+  const [offlineSuccessData, setOfflineSuccessData] = useState(null)
   const [validationErrors, setValidationErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [customProcessingFee, setCustomProcessingFee] = useState(0)
@@ -408,9 +413,9 @@ const SaasBasedSoftware = () => {
 
   useEffect(() => {
     if (isInstitutePro && activePlan) {
-      setCustomMonthlySubscription((activePlan.monthly_subscription || 10) * (parseInt(checkoutData.total_students, 10) || 0))
+      setCustomMonthlySubscription(activePlan.monthly_subscription || 10)
     }
-  }, [checkoutData.total_students, isInstitutePro, activePlan])
+  }, [isInstitutePro, activePlan])
 
   useEffect(() => {
     purchaseApi.fetchPartners()
@@ -449,6 +454,7 @@ const SaasBasedSoftware = () => {
     setApiError('')
     setValidationErrors({})
     setSuccessData(null)
+    setOfflineSuccessData(null)
   }
 
   const handleActivateClick = () => {
@@ -456,6 +462,7 @@ const SaasBasedSoftware = () => {
     setApiError('')
     setValidationErrors({})
     setSuccessData(null)
+    setOfflineSuccessData(null)
     setTimeout(() => {
       if (nameInputRef.current) nameInputRef.current.focus()
     }, 400)
@@ -529,6 +536,28 @@ const SaasBasedSoftware = () => {
       return
     }
 
+    // ── Nepal Offline Cash Payment ("Pay to Admin") ────────────────────────
+    if (detectedCountry === 'NP') {
+      try {
+        const res = await purchaseApi.submitOfflineOrder(payload)
+        if (res.success) {
+          setOfflineSuccessData(res.data)
+          setPaymentStep('offline_pending')
+          setCheckoutData(emptyCheckout(partners[0]?.partner_id || ''))
+        } else {
+          setApiError(res.message || 'Failed to submit offline request.')
+          setPaymentStep('form')
+        }
+      } catch (err) {
+        setApiError('Submission failed: ' + (err.response?.data?.message || err.message))
+        setPaymentStep('form')
+      } finally {
+        setIsSubmitting(false)
+      }
+      return
+    }
+
+    // ── India / Razorpay Online Payment ────────────────────────────────────
     try {
       const orderResult = await purchaseApi.createOrder(payload)
 
@@ -668,6 +697,51 @@ const SaasBasedSoftware = () => {
             {/* Slogan Banner */}
 
           </div>
+
+          {/* ========================================================================= */}
+          {/* TEST COUNTRY TOGGLE (COMMENT OUT OR DELETE THIS BLOCK WHEN DONE TESTING) */}
+          {/* ========================================================================= */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 p-3 rounded-xl bg-slate-900/90 border border-aim-gold/40 max-w-md mx-auto shadow-lg backdrop-blur">
+            <span className="text-xs font-bold text-aim-gold uppercase tracking-wider flex items-center gap-1.5">
+              <span>🧪 Test Country:</span>
+            </span>
+            <div className="inline-flex rounded-lg border border-slate-700 p-0.5 bg-slate-950">
+              <button
+                type="button"
+                onClick={() => {
+                  isManualCountryOverride.current = true
+                  setDetectedCountry('IN')
+                }}
+                className={`px-3 py-1.5 text-xs font-bold rounded-md transition cursor-pointer ${
+                  detectedCountry === 'IN'
+                    ? 'bg-aim-gold text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                🇮🇳 India (INR)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  isManualCountryOverride.current = true
+                  setDetectedCountry('NP')
+                }}
+                className={`px-3 py-1.5 text-xs font-bold rounded-md transition cursor-pointer ${
+                  detectedCountry === 'NP'
+                    ? 'bg-aim-gold text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                🇳🇵 Nepal (NPR)
+              </button>
+            </div>
+            <span className="text-[11px] text-aim-copy-muted font-mono bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700">
+              Active: <strong className="text-white">{detectedCountry}</strong>
+            </span>
+          </div>
+          {/* ========================================================================= */}
+          {/* END TEST COUNTRY TOGGLE */}
+          {/* ========================================================================= */}
 
           {/* MAIN GRID BLOCK */}
           <div className="space-y-6">
@@ -1048,6 +1122,77 @@ const SaasBasedSoftware = () => {
                         >
                           Purchase another plan →
                         </button>
+                      </motion.div>
+                    )}
+
+                    {/* OFFLINE VERIFICATION SCREEN (NEPAL) */}
+                    {paymentStep === 'offline_pending' && offlineSuccessData && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.96 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="flex flex-col items-center gap-5 py-4 text-center"
+                      >
+                        <div className="w-16 h-16 rounded-full bg-amber-500/10 border-2 border-amber-500/30 flex items-center justify-center text-3xl">
+                          ⏳
+                        </div>
+                        <div className="space-y-1">
+                          <h3 className="text-2xl font-black text-aim-copy">Your Request is Being Verified!</h3>
+                          <p className="text-xs text-aim-copy-muted max-w-md mx-auto">
+                            Online payment gateways are unavailable in Nepal, so your order has been queued for offline cash collection.
+                          </p>
+                        </div>
+
+                        {/* Amount Due Card */}
+                        <div className="w-full p-4 rounded-2xl bg-gradient-to-br from-amber-500/15 to-amber-600/5 border border-amber-500/30 text-center space-y-1">
+                          <span className="text-[11px] font-extrabold text-amber-400 uppercase tracking-widest block">
+                            Kindly Pay Admin The Amount:
+                          </span>
+                          <span className="text-3xl font-black text-amber-300 block tracking-tight">
+                            {offlineSuccessData.total_amount_formatted}
+                          </span>
+                          <span className="text-[11px] text-aim-copy-muted block">
+                            Base: NPR {Number(offlineSuccessData.base_amount).toLocaleString()} + 13% VAT: NPR {Number(offlineSuccessData.tax_amount).toLocaleString()}
+                          </span>
+                        </div>
+
+                        <div className="w-full p-3.5 rounded-xl bg-white/5 border border-white/10 text-left text-xs space-y-1.5 text-aim-copy-muted">
+                          <div className="flex justify-between">
+                            <span>Client Name:</span>
+                            <span className="font-bold text-white">{offlineSuccessData.client_name}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Email:</span>
+                            <span className="font-bold text-white">{offlineSuccessData.email}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Selected Software:</span>
+                            <span className="font-bold text-aim-gold">{offlineSuccessData.product_name}</span>
+                          </div>
+                        </div>
+
+                        <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-200 text-left w-full space-y-1">
+                          <div className="font-bold flex items-center gap-1.5 text-blue-300">
+                            <span>ℹ️ Next Steps:</span>
+                          </div>
+                          <p className="text-[11px] text-blue-200/80 leading-relaxed">
+                            1. Pay the amount of <strong>{offlineSuccessData.total_amount_formatted}</strong> directly to your Relationship Manager or Admin.
+                          </p>
+                          <p className="text-[11px] text-blue-200/80 leading-relaxed">
+                            2. Once the admin receives the cash and approves the request, your official <strong>Client ID</strong>, <strong>Password</strong>, and <strong>Activation Details</strong> will be issued and sent to <strong>{offlineSuccessData.email}</strong>.
+                          </p>
+                        </div>
+
+                        <Button
+                          onClick={() => {
+                            setPaymentStep('idle')
+                            setOfflineSuccessData(null)
+                            setCheckoutData(emptyCheckout(partners[0]?.partner_id || ''))
+                          }}
+                          variant="primary"
+                          className="w-full font-bold py-3 text-xs uppercase tracking-wider cursor-pointer"
+                        >
+                          Understood / Close
+                        </Button>
                       </motion.div>
                     )}
 
@@ -1597,14 +1742,18 @@ const SaasBasedSoftware = () => {
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                                   </svg>
-                                  <span>Opening Payment Gateway…</span>
+                                  <span>{detectedCountry === 'NP' ? 'Submitting Request to Admin…' : 'Opening Payment Gateway…'}</span>
                                 </>
+                              ) : detectedCountry === 'NP' ? (
+                                <span>Pay to Admin ({activePlan.tax?.currency_symbol || 'NPR '}{Math.round(customProcessingFee * (1 + (activePlan.tax?.tax_rate || 13) / 100)).toLocaleString()})</span>
                               ) : (
                                 <span>Pay {activePlan.tax?.currency_symbol || '₹'}{Math.round(customProcessingFee * (1 + (activePlan.tax?.tax_rate || 18) / 100)).toLocaleString()} (incl. {activePlan.tax?.tax_label || '18% GST'}) via Razorpay</span>
                               )}
                             </Button>
                             <p className="text-center text-[11px] text-aim-copy-muted mt-2">
-                              Secured by Razorpay · Your data is encrypted
+                              {detectedCountry === 'NP'
+                                ? 'Offline cash verification for Nepal · Direct Admin Cash Payment'
+                                : 'Secured by Razorpay · Your data is encrypted'}
                             </p>
                           </div>
 
