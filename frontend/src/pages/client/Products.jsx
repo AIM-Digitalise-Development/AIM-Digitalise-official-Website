@@ -486,7 +486,7 @@ const ClientProducts = () => {
         const finalPf = pfAmount > 0 ? pfAmount : 1000
         const pfDateRaw = clientObj.created_at || clientObj.registration_date || clientObj.payment_date || profileData?.created_at || clientUser?.created_at || paymentStatus?.delivery_info?.created_at
         const pfDate = pfDateRaw ? new Date(pfDateRaw).toISOString().split('T')[0] : (new Date().toISOString().split('T')[0])
-        const pfInvoiceNo = clientObj.invoice_id || clientObj.razorpay_payment_id || clientObj.order_id || `INV-PF-${clientObj.client_id || profileData?.client_id || clientUser?.client_id || '001'}`
+        const pfInvoiceNo = clientObj.invoice_id || profileData?.invoice_id || clientUser?.invoice_id || clientObj.payment_id || clientObj.razorpay_payment_id || clientObj.order_id || `INV-PF-${clientObj.client_id || profileData?.client_id || clientUser?.client_id || '001'}`
 
         const hasPfInSubs = subPayments.some(p =>
           (p.payment_type && p.payment_type.toLowerCase().includes('processing')) ||
