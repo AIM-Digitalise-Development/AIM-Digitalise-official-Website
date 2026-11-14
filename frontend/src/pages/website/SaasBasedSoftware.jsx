@@ -420,12 +420,15 @@ const SaasBasedSoftware = () => {
   useEffect(() => {
     purchaseApi.fetchPartners()
       .then(result => {
-        if (result.success && result.data?.length) {
-          setPartners(result.data)
-          setCheckoutData(prev => ({ ...prev, partner_id: result.data[0].partner_id }))
+        const list = Array.isArray(result) ? result : (result?.data || [])
+        if (list.length > 0) {
+          setPartners(list)
+          setCheckoutData(prev => ({ ...prev, partner_id: prev.partner_id || list[0].partner_id }))
         }
       })
-      .catch(err => console.error('Could not load partners:', err))
+      .catch(err => {
+        console.error('Could not load partners:', err)
+      })
   }, [])
 
   useEffect(() => {
@@ -701,7 +704,7 @@ const SaasBasedSoftware = () => {
           {/* ========================================================================= */}
           {/* TEST COUNTRY TOGGLE (COMMENT OUT OR DELETE THIS BLOCK WHEN DONE TESTING) */}
           {/* ========================================================================= */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 p-3 rounded-xl bg-slate-900/90 border border-aim-gold/40 max-w-md mx-auto shadow-lg backdrop-blur">
+          {/* <div className="flex flex-col sm:flex-row items-center justify-center gap-3 p-3 rounded-xl bg-slate-900/90 border border-aim-gold/40 max-w-md mx-auto shadow-lg backdrop-blur">
             <span className="text-xs font-bold text-aim-gold uppercase tracking-wider flex items-center gap-1.5">
               <span>🧪 Test Country:</span>
             </span>
@@ -738,7 +741,7 @@ const SaasBasedSoftware = () => {
             <span className="text-[11px] text-aim-copy-muted font-mono bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700">
               Active: <strong className="text-white">{detectedCountry}</strong>
             </span>
-          </div>
+          </div> */}
           {/* ========================================================================= */}
           {/* END TEST COUNTRY TOGGLE */}
           {/* ========================================================================= */}
