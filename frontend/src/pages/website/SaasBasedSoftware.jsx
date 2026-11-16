@@ -1148,7 +1148,7 @@ const SaasBasedSoftware = () => {
                         {/* Amount Due Card */}
                         <div className="w-full p-4 rounded-2xl bg-gradient-to-br from-amber-500/15 to-amber-600/5 border border-amber-500/30 text-center space-y-1">
                           <span className="text-[11px] font-extrabold text-amber-400 uppercase tracking-widest block">
-                            Kindly Pay Admin The Amount:
+                            Kindly Pay to the Admin & procced:
                           </span>
                           <span className="text-3xl font-black text-amber-300 block tracking-tight">
                             {offlineSuccessData.total_amount_formatted}
