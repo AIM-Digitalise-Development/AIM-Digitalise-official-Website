@@ -839,7 +839,7 @@ const SchoolCollegeSaas = () => {
                     to="/saas-software?plan=15&register=true"
                     className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-aim-gold via-amber-400 to-aim-gold text-aim-navy font-black text-xs sm:text-sm uppercase tracking-wider text-center shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <span>🚀</span><span>Activate School Plan</span><span>→</span>
+                    <span>🚀</span><span>Activate School Plan(NPR 25/student)</span><span>→</span>
                   </Link>
                 </div>
               </div>
