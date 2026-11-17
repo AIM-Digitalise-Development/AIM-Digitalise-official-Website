@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Helmet } from 'react-helmet-async'
 import { Link } from 'react-router-dom'
@@ -8,6 +8,7 @@ import nexgnVideo from '../../assets/videos/craete_a_video_where_kids_tea.mp4'
 
 import { sendProposalOtp, verifyProposalOtp, submitProposal } from '../../api/proposals'
 import { createPublicIdCardOrder, verifyPublicIdCardPayment } from '../../api/publicIdCardService'
+import { fetchSubcategoriesWithProducts } from '../../api/purchase'
 
 // Official Documents
 import officialBrochureImg from '../../assets/doc/OfficialBrochure.jpg'
@@ -335,6 +336,70 @@ const SchoolCollegeSaas = () => {
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
   const [isSubmittingProposal, setIsSubmittingProposal] = useState(false)
   const [proposalSuccess, setProposalSuccess] = useState(false)
+
+  // ── Plan 15 Dynamic Pricing State ──
+  const [schoolPlanPrice, setSchoolPlanPrice] = useState('₹10')
+
+  useEffect(() => {
+    let isMounted = true
+
+    const detectAndFetchPrice = async () => {
+      const params = new URLSearchParams(window.location.search)
+      let countryCode = params.get('country') || localStorage.getItem('user_country') || null
+
+      if (!countryCode) {
+        try {
+          const res = await fetch('https://ipapi.co/json/')
+          const data = await res.json()
+          if (['IN', 'NP', 'BT'].includes(data?.country_code)) {
+            countryCode = data.country_code
+          }
+        } catch (err) {
+          console.warn('GeoIP detection failed, defaulting to IN:', err)
+        }
+      }
+
+      if (!countryCode) {
+        countryCode = 'IN'
+      }
+
+      try {
+        const res = await fetchSubcategoriesWithProducts(countryCode)
+        if (res && res.success && Array.isArray(res.data)) {
+          let plan15 = null
+          for (const sub of res.data) {
+            if (Array.isArray(sub.products)) {
+              const matched = sub.products.find(p => p.id === 15)
+              if (matched) {
+                plan15 = matched
+                break
+              }
+            }
+          }
+
+          if (plan15 && isMounted) {
+            const monthlySub = plan15.monthly_subscription !== undefined ? plan15.monthly_subscription : 10
+            const curr = (plan15.currency || (countryCode === 'NP' ? 'NPR' : 'INR')).toUpperCase()
+            const symbol = (plan15.tax?.currency_symbol || (curr === 'INR' ? '₹' : curr)).trim()
+
+            const formatted = (symbol === '₹' || curr === 'INR')
+              ? `₹${monthlySub}`
+              : `${curr} ${monthlySub}`
+
+            setSchoolPlanPrice(formatted)
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch pricing for plan 15:', err)
+      }
+    }
+
+    detectAndFetchPrice()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   // ── Feature Explorer Modal State ──
   const [featureModal, setFeatureModal] = useState(null) // 'school' | 'college' | null
@@ -839,7 +904,7 @@ const SchoolCollegeSaas = () => {
                     to="/saas-software?plan=15&register=true"
                     className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-aim-gold via-amber-400 to-aim-gold text-aim-navy font-black text-xs sm:text-sm uppercase tracking-wider text-center shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <span>🚀</span><span>Activate School Plan(NPR 25/student)</span><span>→</span>
+                    <span>🚀</span><span>Activate School Plan ({schoolPlanPrice}/student)</span><span>→</span>
                   </Link>
                 </div>
               </div>
