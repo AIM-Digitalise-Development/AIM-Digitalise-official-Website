@@ -20,6 +20,7 @@ import {
   getAdminCountryTaxes,
   updateAdminCountryTax,
   updateProductCountryPrice,
+  getProductCountryPrices,
 } from '../../api/admin/partners'
 
 // ─── Shared style helpers ─────────────────────────────────────────────────────
@@ -279,22 +280,57 @@ const AdminProducts = ({ isEmbedded = false }) => {
   const [countryPriceForm, setCountryPriceForm] = useState(EMPTY_COUNTRY_PRICE)
   const [countryPriceSaving, setCountryPriceSaving] = useState(false)
 
-  const openCountryPriceModal = (product) => {
-    setSelectedProduct(product)
-    setCountryPriceForm({
-      country_code: 'NP',
-      currency: 'NPR',
+  const getExistingPriceForCountry = (product, code) => {
+    let defaultCurr = 'INR'
+    if (code === 'NP') defaultCurr = 'NPR'
+    if (code === 'BT') defaultCurr = 'BTN'
+    
+    const existing = product?.country_prices?.find(cp => cp.country_code === code)
+    if (existing) {
+      return {
+        country_code: code,
+        currency: existing.currency || defaultCurr,
+        processing_fee: existing.processing_fee !== undefined ? Number(existing.processing_fee) : 0,
+        monthly_subscription: existing.monthly_subscription !== undefined ? Number(existing.monthly_subscription) : 0,
+      }
+    }
+    return {
+      country_code: code,
+      currency: defaultCurr,
       processing_fee: 0,
       monthly_subscription: 0,
-    })
+    }
+  }
+
+  const openCountryPriceModal = async (product) => {
+    setSelectedProduct(product)
+    
+    // Set initial values from product in state if available
+    const initialPrice = getExistingPriceForCountry(product, 'NP')
+    setCountryPriceForm(initialPrice)
     setShowCountryPriceModal(true)
+
+    // Also fetch fresh prices directly from API to ensure we have the latest
+    try {
+      const res = await getProductCountryPrices(product.id)
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        const freshPrices = res.data.data
+        const updatedProduct = { ...product, country_prices: freshPrices }
+        setSelectedProduct(updatedProduct)
+        setProducts(prev => prev.map(p => p.id === product.id ? updatedProduct : p))
+        
+        // Re-check for selected country
+        const refreshed = getExistingPriceForCountry(updatedProduct, 'NP')
+        setCountryPriceForm(refreshed)
+      }
+    } catch (err) {
+      console.warn('Could not load fresh country prices:', err)
+    }
   }
 
   const handleCountryChangeInForm = (code) => {
-    let curr = 'INR'
-    if (code === 'NP') curr = 'NPR'
-    if (code === 'BT') curr = 'BTN'
-    setCountryPriceForm(f => ({ ...f, country_code: code, currency: curr }))
+    const existing = getExistingPriceForCountry(selectedProduct, code)
+    setCountryPriceForm(existing)
   }
 
   const handleSaveCountryPrice = async (e) => {
