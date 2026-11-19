@@ -140,27 +140,32 @@ const AdminCompliance = () => {
     try {
       const res = await getTdsRecords()
       if (res?.data?.success && Array.isArray(res.data.data)) {
-        // Only for compliance: for general client invoice records, show records where client registration date is on or after 1 Jan 2026.
-        // Also ensure that only records where an invoice was actually generated are displayed (exclude draft/pursuing quotations).
+        // Filter records for live compliance display:
+        // - Purchases are always included
+        // - General client invoices: require generated invoice and post-2026 client registration
+        // - SaaS, Subscription, Add-on, Customization, and Nepal client records are live sales invoices
         const post2026Records = res.data.data.filter(r => {
           if (r.record_type === 'purchase') return true
 
-          const rawStatus = String(r.status || r.raw_quotation?.status || '').toLowerCase()
-          const hasGeneratedInvoice = Boolean(r.raw_quotation?.invoice_number || (r.invoice_number && !String(r.invoice_number).startsWith('INV-'))) ||
-            ['order closed', 'paid', 'partially_paid'].includes(rawStatus)
+          if (r.record_type === 'client_invoice') {
+            const rawStatus = String(r.status || r.raw_quotation?.status || '').toLowerCase()
+            const hasGeneratedInvoice = Boolean(r.raw_quotation?.invoice_number || (r.invoice_number && !String(r.invoice_number).startsWith('INV-'))) ||
+              ['order closed', 'paid', 'partially_paid'].includes(rawStatus)
 
-          if (!hasGeneratedInvoice) return false
+            if (!hasGeneratedInvoice) return false
 
-          // Filter by general client registration date (from Admin > Users), NOT invoice/quotation date
-          const clientRegDate = String(
-            r.client_reg_date ||
-            r.client?.reg_date ||
-            r.client?.created_at ||
-            r.raw_quotation?.client?.reg_date ||
-            r.raw_quotation?.client?.created_at ||
-            ''
-          ).slice(0, 10)
-          return !clientRegDate || clientRegDate >= '2026-01-01'
+            const clientRegDate = String(
+              r.client_reg_date ||
+              r.client?.reg_date ||
+              r.client?.created_at ||
+              r.raw_quotation?.client?.reg_date ||
+              r.raw_quotation?.client?.created_at ||
+              ''
+            ).slice(0, 10)
+            return !clientRegDate || clientRegDate >= '2026-01-01'
+          }
+
+          return true
         })
         setTdsRecords(post2026Records)
       } else {
@@ -388,7 +393,7 @@ const AdminCompliance = () => {
   const filteredTdsRecords = useMemo(() => {
     return tdsRecords.filter(r => {
       // 0. Only show general client invoice records where client registration date is from 1 Jan 2026 onwards
-      if (r.record_type !== 'purchase') {
+      if (r.record_type === 'client_invoice') {
         const clientRegDate = String(
           r.client_reg_date ||
           r.client?.reg_date ||
@@ -400,9 +405,14 @@ const AdminCompliance = () => {
         if (clientRegDate && clientRegDate < '2026-01-01') return false
       }
 
-      // 1. Record Type filter (Sales Invoice vs Purchase)
+      // 1. Record Type filter (Sales Invoice vs Purchase vs Specific Category)
       if (recordTypeFilter !== 'all') {
-        if ((r.record_type || 'client_invoice') !== recordTypeFilter) return false
+        if (recordTypeFilter === 'all_sales' && r.record_type === 'purchase') return false
+        if (recordTypeFilter === 'purchase' && r.record_type !== 'purchase') return false
+        if (recordTypeFilter === 'general_client' && r.record_type !== 'client_invoice') return false
+        if (recordTypeFilter === 'subscription' && !['saas_subscription', 'saas_processing_fee', 'saas_addon', 'saas_customization'].includes(r.record_type)) return false
+        if (recordTypeFilter === 'nepal' && !['nepal_client_order', 'nepal_subscription'].includes(r.record_type) && r.invoice_category !== 'nepal') return false
+        if (recordTypeFilter === 'client_invoice' && r.record_type === 'purchase') return false
       }
 
       // 2. Search term match
@@ -496,11 +506,12 @@ const AdminCompliance = () => {
   const handleSendInvoiceToCa = async () => {
     if (!selectedInvoiceForCa) return
     const isPurchase = selectedInvoiceForCa.record_type === 'purchase'
+    const recordType = selectedInvoiceForCa.record_type || 'client_invoice'
     const quotationId = selectedInvoiceForCa.raw_quotation?.id || (!isPurchase ? selectedInvoiceForCa.id : null)
     const purchaseId = selectedInvoiceForCa.purchase_id || selectedInvoiceForCa.raw_purchase?.id || (typeof selectedInvoiceForCa.id === 'string' && selectedInvoiceForCa.id.startsWith('PUR-') ? Number(selectedInvoiceForCa.id.replace('PUR-', '')) : (isPurchase ? selectedInvoiceForCa.id : null))
 
     if (!isPurchase && !quotationId) {
-      alert('Quotation ID not found.')
+      alert('Invoice / Quotation ID not found.')
       return
     }
     if (isPurchase && !purchaseId) {
@@ -519,9 +530,14 @@ const AdminCompliance = () => {
     try {
       const payload = {
         phone: cleanPhone,
-        record_type: isPurchase ? 'purchase' : 'client_invoice',
-        quotation_id: !isPurchase ? quotationId : null,
-        purchase_id: isPurchase ? purchaseId : null
+        record_type: recordType,
+        id: selectedInvoiceForCa.id,
+        quotation_id: (recordType === 'client_invoice') ? (typeof quotationId === 'number' ? quotationId : parseInt(quotationId) || null) : null,
+        purchase_id: isPurchase ? purchaseId : null,
+        client_order_id: (recordType === 'saas_processing_fee' || recordType === 'nepal_client_order') ? selectedInvoiceForCa.id : null,
+        subscription_payment_id: (recordType === 'saas_subscription') ? selectedInvoiceForCa.id : null,
+        customization_payment_id: (recordType === 'saas_customization') ? selectedInvoiceForCa.id : null,
+        addon_payment_id: (recordType === 'saas_addon') ? selectedInvoiceForCa.id : null,
       }
 
       const res = await sendInvoiceToCa(payload)
@@ -927,7 +943,7 @@ const AdminCompliance = () => {
                         </div>
                         <p className="text-lg xl:text-xl font-black text-slate-900 mt-1.5 tracking-tight">{totalSalesCount}</p>
                       </div>
-                      <span className="text-[9.5px] text-slate-400 font-medium block mt-1 truncate">Across general clients</span>
+                      <span className="text-[9.5px] text-slate-400 font-medium block mt-1 truncate">Across General, Subscription &amp; Nepal clients</span>
                     </div>
 
                     {/* Card 2: Total TDS Deducted */}
@@ -1071,8 +1087,11 @@ const AdminCompliance = () => {
                       className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#38b34a] shadow-xs cursor-pointer"
                     >
                       <option value="all">All Records (Sales &amp; Purchases)</option>
-                      <option value="client_invoice">🟢 Sales Invoices Only (Green)</option>
-                      <option value="purchase">🔵 Purchase Invoices Only (Blue)</option>
+                      <option value="all_sales">🟢 All Sales Invoices (General, Subscription &amp; Nepal)</option>
+                      <option value="general_client">🟣 General Clients Only</option>
+                      <option value="subscription">🟠 Subscription &amp; SaaS Clients Only</option>
+                      <option value="nepal">🇳🇵 Nepali Clients Only</option>
+                      <option value="purchase">🔵 Purchase Invoices Only (Expenses)</option>
                     </select>
 
                     <select
@@ -1166,6 +1185,8 @@ const AdminCompliance = () => {
                       ) : (
                         paginatedRecords.map((r, idx) => {
                           const isPurchase = r.record_type === 'purchase'
+                          const isNepal = r.record_type === 'nepal_client_order' || r.record_type === 'nepal_subscription' || r.invoice_category === 'nepal'
+                          const isSubscription = ['saas_subscription', 'saas_processing_fee', 'saas_addon', 'saas_customization'].includes(r.record_type)
                           const isFullyPaid = r.is_paid || r.due_amount <= 0.01
                           const globalIdx = pageSize === 'all' ? idx + 1 : (currentPage - 1) * pageSize + idx + 1
 
@@ -1177,15 +1198,27 @@ const AdminCompliance = () => {
                             ? (r.company_name && r.company_name !== r.client_name ? r.company_name : '')
                             : (r.client_name && r.client_name !== r.company_name ? r.client_name : '')
 
+                          const rowBgColor = isPurchase
+                            ? '#eaf4ff'
+                            : isNepal
+                            ? '#fff5f5'
+                            : isSubscription
+                            ? '#fffdf5'
+                            : '#f0fdf4'
+
+                          const rowBorderClass = isPurchase
+                            ? 'border-b border-sky-200 transition-colors border-l-4 !border-l-sky-500 hover:brightness-95'
+                            : isNepal
+                            ? 'border-b border-rose-200 transition-colors border-l-4 !border-l-rose-500 hover:brightness-95'
+                            : isSubscription
+                            ? 'border-b border-amber-200 transition-colors border-l-4 !border-l-amber-500 hover:brightness-95'
+                            : 'border-b border-emerald-200 transition-colors border-l-4 !border-l-emerald-500 hover:brightness-95'
+
                           return (
                             <tr
                               key={r.id || idx}
-                              style={{ backgroundColor: isPurchase ? '#eaf4ff' : '#f0fdf4' }}
-                              className={
-                                isPurchase
-                                  ? 'border-b border-sky-200 transition-colors border-l-4 !border-l-sky-500 hover:brightness-95'
-                                  : 'border-b border-emerald-200 transition-colors border-l-4 !border-l-emerald-500 hover:brightness-95'
-                              }
+                              style={{ backgroundColor: rowBgColor }}
+                              className={rowBorderClass}
                             >
                               <td className="px-3 py-3 text-center font-bold text-slate-400">{globalIdx}</td>
 
@@ -1197,11 +1230,15 @@ const AdminCompliance = () => {
                                   className={
                                     isPurchase
                                       ? 'text-sky-800 hover:text-sky-950 hover:underline inline-flex items-center gap-1.5 cursor-pointer text-left font-black whitespace-nowrap'
+                                      : isNepal
+                                      ? 'text-rose-700 hover:text-rose-950 hover:underline inline-flex items-center gap-1.5 cursor-pointer text-left font-black whitespace-nowrap'
+                                      : isSubscription
+                                      ? 'text-amber-800 hover:text-amber-950 hover:underline inline-flex items-center gap-1.5 cursor-pointer text-left font-black whitespace-nowrap'
                                       : 'text-purple-700 hover:text-purple-900 hover:underline inline-flex items-center gap-1.5 cursor-pointer text-left font-black whitespace-nowrap'
                                   }
                                   title="Click to view & print official Tax Invoice"
                                 >
-                                  <span>{isPurchase ? '📦' : '🧾'}</span>
+                                  <span>{isPurchase ? '📦' : isNepal ? '🇳🇵' : isSubscription ? '🟠' : '🧾'}</span>
                                   <span className="whitespace-nowrap">{r.invoice_number}</span>
                                 </button>
                                 <span className="text-[11px] font-sans font-medium text-slate-500 whitespace-nowrap block mt-0.5">
@@ -1231,6 +1268,30 @@ const AdminCompliance = () => {
                                   >
                                     <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-sky-200 text-sky-800 border border-sky-300">
                                       PO
+                                    </span>
+                                    <span className="whitespace-nowrap">{r.quotation_number}</span>
+                                  </button>
+                                ) : isNepal ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenInvoiceModal(r)}
+                                    className="text-rose-700 hover:text-rose-900 hover:underline inline-flex items-center gap-1.5 cursor-pointer text-left whitespace-nowrap"
+                                    title="Click to view official Tax Invoice"
+                                  >
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                                      🇳🇵 NP-REF
+                                    </span>
+                                    <span className="whitespace-nowrap">{r.quotation_number}</span>
+                                  </button>
+                                ) : isSubscription ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenInvoiceModal(r)}
+                                    className="text-amber-700 hover:text-amber-900 hover:underline inline-flex items-center gap-1.5 cursor-pointer text-left whitespace-nowrap"
+                                    title="Click to view official Tax Invoice"
+                                  >
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                                      🟠 SUB-REF
                                     </span>
                                     <span className="whitespace-nowrap">{r.quotation_number}</span>
                                   </button>
@@ -1318,16 +1379,36 @@ const AdminCompliance = () => {
                                 )}
                               </td>
 
-                              {/* Status (with Sales Invoice / Purchase Tag over the status badge) */}
+                              {/* Status (with Category Tag over the status badge) */}
                               <td className="px-3 py-3 text-center whitespace-nowrap">
                                 <div className="flex flex-col items-center justify-center gap-1">
                                   {isPurchase ? (
                                     <span className="px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider bg-sky-200 text-sky-900 border border-sky-400">
                                       PURCHASE
                                     </span>
+                                  ) : isNepal ? (
+                                    <span className="px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider bg-rose-200 text-rose-900 border border-rose-400">
+                                      🇳🇵 NEPAL CLIENT
+                                    </span>
+                                  ) : r.record_type === 'saas_processing_fee' ? (
+                                    <span className="px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider bg-amber-200 text-amber-900 border border-amber-400">
+                                      🟠 SETUP FEE
+                                    </span>
+                                  ) : r.record_type === 'saas_subscription' ? (
+                                    <span className="px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider bg-amber-200 text-amber-900 border border-amber-400">
+                                      🟠 SUBSCRIPTION
+                                    </span>
+                                  ) : r.record_type === 'saas_addon' ? (
+                                    <span className="px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider bg-purple-200 text-purple-900 border border-purple-400">
+                                      🟣 ADD-ON
+                                    </span>
+                                  ) : r.record_type === 'saas_customization' ? (
+                                    <span className="px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider bg-indigo-200 text-indigo-900 border border-indigo-400">
+                                      🔵 CUSTOMIZATION
+                                    </span>
                                   ) : (
                                     <span className="px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider bg-emerald-200 text-emerald-900 border border-emerald-400">
-                                      SALES INVOICE
+                                      🟢 GENERAL SALES
                                     </span>
                                   )}
 
