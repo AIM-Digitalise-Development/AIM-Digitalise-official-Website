@@ -88,7 +88,7 @@ const PartnerLogin = () => {
           logging: false,
           backgroundColor: '#ffffff'
         })
-        
+
         const imgData = canvas.toDataURL('image/jpeg', 0.95)
         if (i > 0) pdf.addPage()
         pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST')
@@ -152,8 +152,8 @@ const PartnerLogin = () => {
       <div className="min-h-screen bg-aim-navy flex flex-col relative overflow-hidden font-sans">
         {/* Background decorations with image & glows */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div 
-            className="absolute inset-0 opacity-20 bg-cover bg-center" 
+          <div
+            className="absolute inset-0 opacity-20 bg-cover bg-center"
             style={{ backgroundImage: "url('https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&w=1920&q=80')" }}
           />
           <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-aim-gold/10 rounded-full blur-[140px] animate-pulse" style={{ animationDuration: '9s' }} />
@@ -165,10 +165,10 @@ const PartnerLogin = () => {
         <header className="relative z-10 border-b border-white/5 bg-aim-navy/40 backdrop-blur-md">
           <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
             <Link to={ROUTES.HOME} className="flex items-center gap-2.5 group">
-              <img 
-                src={plogo} 
-                alt="AIM Digitalise Logo" 
-                className="h-10 sm:h-12 w-auto object-contain rounded-lg border border-white/10 shadow-lg shadow-black/30 transition-transform duration-300 group-hover:scale-[1.02]" 
+              <img
+                src={plogo}
+                alt="AIM Digitalise Logo"
+                className="h-10 sm:h-12 w-auto object-contain rounded-lg border border-white/10 shadow-lg shadow-black/30 transition-transform duration-300 group-hover:scale-[1.02]"
               />
             </Link>
             <Link
@@ -194,26 +194,26 @@ const PartnerLogin = () => {
               <div className="grid grid-cols-1 md:grid-cols-12 font-sans">
                 {/* Left Column (Login Form) */}
                 <div className="col-span-12 md:col-span-6 p-4 sm:p-7 pt-[0px] sm:pt-[25px] flex flex-col justify-start bg-aim-navy-card/95">
-                              {/* <div style={{color:'white'}} className="grid grid-cols-1 md:grid-cols-12 font-sans p-4">Partner Portal</div> */}
-              {/* Header Title & Description */}
-              <div className="relative z-10 text-center mb-8">
-                <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest mb-2 bg-aim-gold/15 border border-aim-gold/30 text-aim-gold">
-                  <span className="w-1 h-1 rounded-full bg-aim-gold animate-ping " />
-                  PARTNER PORTAL
-                </div>
-                <h1 className="text-xl sm:text-3xl font-black text-white tracking-tight leading-none mb-1.5">
-                  Welcome Back
-                </h1>
-                <p className="text-[11px] text-aim-copy-muted leading-relaxed max-w-[290px] mx-auto">
-                  Sign in to the Partner Portal to manage your earnings, orders, and payouts.
-                </p>
-              </div>
+                  {/* <div style={{color:'white'}} className="grid grid-cols-1 md:grid-cols-12 font-sans p-4">Partner Portal</div> */}
+                  {/* Header Title & Description */}
+                  <div className="relative z-10 text-center mb-8">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest mb-2 bg-aim-gold/15 border border-aim-gold/30 text-aim-gold">
+                      <span className="w-1 h-1 rounded-full bg-aim-gold animate-ping " />
+                      PARTNER PORTAL
+                    </div>
+                    <h1 className="text-xl sm:text-3xl font-black text-white tracking-tight leading-none mb-1.5">
+                      Welcome Back
+                    </h1>
+                    <p className="text-[11px] text-aim-copy-muted leading-relaxed max-w-[290px] mx-auto">
+                      Sign in to the Partner Portal to manage your earnings, orders, and payouts.
+                    </p>
+                  </div>
 
                   <div className="flex justify-center mb-7 shrink-5">
                     <img src={logo} alt="AIM Digitalise" className="h-9 sm:h-11 w-auto object-contain" />
                   </div>
-                  
-                  
+
+
 
                   <PartnerLoginForm />
                 </div>
@@ -247,8 +247,8 @@ const PartnerLogin = () => {
                         <ul className="list-disc pl-4 space-y-0.5 text-[10px] text-slate-300 leading-normal font-medium font-sans">
                           <li>Operate an active business unit.</li>
                           <li>Minimum 3 years of proven B2B sales experience.</li>
-                          <li>Non-Refundable Processing Fee: ₹1,000 (Domestic, previously <s >₹25,000</s>).</li>
-                          <li>Non-Refundable Processing Fee: $500 (International, previously <s >$1,000</s>).</li>
+                          <li>Non-Refundable Processing Fee: ₹5,000 (Domestic, previously <s >₹25,000</s>).</li>
+                          <li>Non-Refundable Processing Fee: NPR 16000 (For Nepal).</li>
                         </ul>
                       </div>
                     </div>
@@ -376,8 +376,8 @@ const PartnerLogin = () => {
                 <h3 className="text-base font-black text-white font-sans">Blank Agreement Document Preview</h3>
                 <p className="text-[10px] text-aim-copy-muted mt-0.5 font-sans">Previewing the empty Partnership Agreement contract template</p>
               </div>
-              <button 
-                onClick={() => setShowPreviewModal(false)} 
+              <button
+                onClick={() => setShowPreviewModal(false)}
                 className="text-aim-copy-muted hover:text-white p-1 text-xl font-bold cursor-pointer transition-colors"
               >
                 ×
