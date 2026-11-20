@@ -1807,7 +1807,7 @@ const AdminSaasClients = () => {
               className="px-4 py-2 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-xl text-xs font-bold shadow-sm hover:shadow transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <span className="text-sm">➕</span>
-              <span>Intake Client (Offline / Direct)</span>
+              {/* <span>Intake Client (Offline / Direct)</span> */}
             </button>
             {activePageTab === 'show_clients' && <button onClick={fetchClients} disabled={clientsLoading} className="px-4 py-2 border border-slate-200 hover:border-[#38b34a] hover:text-[#38b34a] bg-white rounded-xl text-xs font-bold disabled:opacity-50 cursor-pointer shadow-sm">{clientsLoading ? 'Loading...' : '↺ Refresh'}</button>}
             {activePageTab === 'nepal_offline' && <button onClick={fetchTempOrders} disabled={loadingTempOrders} className="px-4 py-2 border border-slate-200 hover:border-amber-500 hover:text-amber-600 bg-white rounded-xl text-xs font-bold disabled:opacity-50 cursor-pointer shadow-sm">{loadingTempOrders ? 'Loading...' : '↺ Refresh Orders'}</button>}
