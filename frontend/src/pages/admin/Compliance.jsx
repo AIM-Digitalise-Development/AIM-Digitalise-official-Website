@@ -1152,7 +1152,8 @@ const AdminCompliance = () => {
                       <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
                         <th className="px-3 py-3 text-center w-8">#</th>
                         <th className="px-4 py-3 whitespace-nowrap">Invoice No.</th>
-                        <th className="px-4 py-3 whitespace-nowrap">Quotation No.</th>
+                        <th className="px-4 py-3 whitespace-nowrap">Quotation / Ref No.</th>
+                        <th className="px-3 py-3 text-center whitespace-nowrap">Type / Category</th>
                         <th className="px-4 py-3 whitespace-nowrap">Client Name & ID</th>
                         <th className="px-3 py-3 text-right whitespace-nowrap">Invoice Amount</th>
                         <th className="px-3 py-3 text-right whitespace-nowrap">TDS Deducted</th>
@@ -1165,7 +1166,7 @@ const AdminCompliance = () => {
                     <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
                       {loadingTds ? (
                         <tr>
-                          <td colSpan={10} className="py-12 text-center text-slate-400">
+                          <td colSpan={11} className="py-12 text-center text-slate-400">
                             <div className="flex items-center justify-center gap-2">
                               <span className="w-4 h-4 border-2 border-purple-600/30 border-t-purple-600 rounded-full animate-spin" />
                               <span>Loading invoice records from database...</span>
@@ -1174,7 +1175,7 @@ const AdminCompliance = () => {
                         </tr>
                       ) : filteredTdsRecords.length === 0 ? (
                         <tr>
-                          <td colSpan={10} className="py-12 text-center text-slate-400">
+                          <td colSpan={11} className="py-12 text-center text-slate-400">
                             <span className="text-3xl block mb-2">📭</span>
                             <p className="font-bold text-slate-600">No Invoice Records Found</p>
                             <p className="text-[11px] text-slate-400 mt-1">
@@ -1311,6 +1312,39 @@ const AdminCompliance = () => {
                                 </span>
                               </td>
 
+                              {/* Type / Category Column */}
+                              <td className="px-3 py-3 text-center whitespace-nowrap">
+                                {isPurchase ? (
+                                  <span className="px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-sky-100 text-sky-800 border border-sky-300 shadow-2xs inline-flex items-center gap-1">
+                                    📦 Purchase
+                                  </span>
+                                ) : isNepal ? (
+                                  <span className="px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs inline-flex items-center gap-1">
+                                    🇳🇵 Nepal {r.record_type === 'nepal_subscription' ? 'Subscription' : 'Processing Fee'}
+                                  </span>
+                                ) : r.record_type === 'saas_processing_fee' ? (
+                                  <span className="px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300 shadow-2xs inline-flex items-center gap-1">
+                                    ⚡ Processing Fee
+                                  </span>
+                                ) : r.record_type === 'saas_subscription' ? (
+                                  <span className="px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-orange-100 text-orange-800 border border-orange-300 shadow-2xs inline-flex items-center gap-1">
+                                    🔄 Subscription
+                                  </span>
+                                ) : r.record_type === 'saas_customization' ? (
+                                  <span className="px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-800 border border-indigo-300 shadow-2xs inline-flex items-center gap-1">
+                                    ⚙️ Customization
+                                  </span>
+                                ) : r.record_type === 'saas_addon' ? (
+                                  <span className="px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-800 border border-purple-300 shadow-2xs inline-flex items-center gap-1">
+                                    🧩 Add-on
+                                  </span>
+                                ) : (
+                                  <span className="px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs inline-flex items-center gap-1">
+                                    💼 General Client
+                                  </span>
+                                )}
+                              </td>
+
                               {/* Client Name & ID (Company name top highlighted, Person name below, 1 line each) */}
                               <td className="px-4 py-3 whitespace-nowrap">
                                 <div className="space-y-0.5">
@@ -1379,39 +1413,9 @@ const AdminCompliance = () => {
                                 )}
                               </td>
 
-                              {/* Status (with Category Tag over the status badge) */}
+                              {/* Status Badge */}
                               <td className="px-3 py-3 text-center whitespace-nowrap">
-                                <div className="flex flex-col items-center justify-center gap-1">
-                                  {isPurchase ? (
-                                    <span className="px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider bg-sky-200 text-sky-900 border border-sky-400">
-                                      PURCHASE
-                                    </span>
-                                  ) : isNepal ? (
-                                    <span className="px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider bg-rose-200 text-rose-900 border border-rose-400">
-                                      🇳🇵 NEPAL CLIENT
-                                    </span>
-                                  ) : r.record_type === 'saas_processing_fee' ? (
-                                    <span className="px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider bg-amber-200 text-amber-900 border border-amber-400">
-                                      🟠 SETUP FEE
-                                    </span>
-                                  ) : r.record_type === 'saas_subscription' ? (
-                                    <span className="px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider bg-amber-200 text-amber-900 border border-amber-400">
-                                      🟠 SUBSCRIPTION
-                                    </span>
-                                  ) : r.record_type === 'saas_addon' ? (
-                                    <span className="px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider bg-purple-200 text-purple-900 border border-purple-400">
-                                      🟣 ADD-ON
-                                    </span>
-                                  ) : r.record_type === 'saas_customization' ? (
-                                    <span className="px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider bg-indigo-200 text-indigo-900 border border-indigo-400">
-                                      🔵 CUSTOMIZATION
-                                    </span>
-                                  ) : (
-                                    <span className="px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider bg-emerald-200 text-emerald-900 border border-emerald-400">
-                                      🟢 GENERAL SALES
-                                    </span>
-                                  )}
-
+                                <div className="flex flex-col items-center justify-center">
                                   {isPurchase ? (
                                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-sky-100 text-sky-800 border border-sky-300 shadow-xs inline-flex items-center gap-1">
                                       📦 PURCHASE RECORDED
