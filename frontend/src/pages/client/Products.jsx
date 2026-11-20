@@ -2456,7 +2456,21 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                 <span className="text-[10px] text-slate-400 font-semibold uppercase">Total</span>
               </div>
               <div className="mt-1 flex gap-1">
-                {unpaidStudentsCount > 0 ? (
+                {!hasMadePayment ? (
+                  isBeforeDelivery ? (
+                    <span className="text-[10px] font-black text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full tracking-wide">
+                      ⏳ Awaiting Delivery
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-black text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full tracking-wide">
+                      ⚠️ Subscription Due ({effectiveTotalStudents || 0} Unpaid)
+                    </span>
+                  )
+                ) : isSubscriptionOverdue ? (
+                  <span className="text-[10px] font-black text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full tracking-wide">
+                    ⚠️ Subscription Overdue
+                  </span>
+                ) : unpaidStudentsCount > 0 ? (
                   <span className="text-[10px] font-black text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full tracking-wide">
                     ⚠️ {unpaidStudentsCount} Unpaid
                   </span>
@@ -2603,9 +2617,11 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
               </span>
               {isPerPersonProduct && (
                 <div className="mt-2 pt-2 border-t border-slate-100/70 flex justify-between items-center text-[10px] font-bold">
-                  <span className="text-slate-500 uppercase tracking-wider">Unpaid New Students</span>
-                  <span className={unpaidStudentsCount > 0 ? "text-rose-500 font-black font-mono text-xs" : "text-emerald-600 font-black font-mono text-xs"}>
-                    {unpaidStudentsCount}
+                  <span className="text-slate-500 uppercase tracking-wider">
+                    {!hasMadePayment ? 'Unpaid Students' : 'Unpaid New Students'}
+                  </span>
+                  <span className={(!hasMadePayment || unpaidStudentsCount > 0) ? "text-rose-500 font-black font-mono text-xs" : "text-emerald-600 font-black font-mono text-xs"}>
+                    {!hasMadePayment ? (effectiveTotalStudents || 0) : unpaidStudentsCount}
                   </span>
                 </div>
               )}
