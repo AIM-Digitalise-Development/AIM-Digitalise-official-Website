@@ -1661,16 +1661,17 @@ const ClientProducts = () => {
   // unpaidStudentsCount — how many new students have unpaid subscription fees (ONLY for per_person products)
   const unpaidStudentsCount = (() => {
     if (!isPerPersonProduct) return 0
-    // If fully paid and no overdue — zero new students pending
-    if (hasMadePayment && !isSubscriptionOverdue) return 0
 
     // Priority 0: Backend directly returns unpaid students count in paymentStatus/deliveryInfo
-    if (paymentStatus?.delivery_info?.unpaid_students_count !== undefined) {
-      return Number(paymentStatus.delivery_info.unpaid_students_count)
-    }
     if (paymentStatus?.delivery_info?.extra_students_count !== undefined) {
       return Number(paymentStatus.delivery_info.extra_students_count)
     }
+    if (paymentStatus?.delivery_info?.unpaid_students_count !== undefined) {
+      return Number(paymentStatus.delivery_info.unpaid_students_count)
+    }
+
+    // If fully paid and no overdue — zero new students pending
+    if (hasMadePayment && !isSubscriptionOverdue) return 0
 
     // Priority 1: backend told us explicitly via calculateSubscription
     if (extraStudentsOverdue > 0) return extraStudentsOverdue
@@ -2472,7 +2473,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                   </span>
                 ) : unpaidStudentsCount > 0 ? (
                   <span className="text-[10px] font-black text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full tracking-wide">
-                    ⚠️ {unpaidStudentsCount} Unpaid
+                    ⚠️ {unpaidStudentsCount} extra (unpaid)
                   </span>
                 ) : (
                   <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full tracking-wide">
@@ -2499,15 +2500,18 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
         {/* Left Columns (Col Span 8) - Cards Grid */}
         <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
 
-          {/* Card 1: Security Deposit */}
-          <div className="bg-linear-to-r from-red-100 via-rose-200 to-pink-300  rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center gap-5 transition-transform hover:scale-[1.01]">
+          {/* Card 1: Processing Fee */}
+          <div className="bg-linear-to-r from-red-100 via-rose-200 to-pink-300 rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center gap-5 transition-transform hover:scale-[1.01]">
             <div className="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center text-[#f97316] text-2xl font-bold shadow-inner">
               💰
             </div>
             <div className="space-y-1">
-              <span className="text-[11px] font-bold text-slate-00 uppercase tracking-wider block">Processing Fee</span>
+              <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">Processing Fee</span>
               <span className="text-lg font-black text-slate-800 block">
-                {currencySymbol}{Number(securityDeposit).toLocaleString('en-IN')}.00 <span className="text-[10px] font-medium text-slate-400 block mt-0.5"></span>
+                {currencySymbol}{Number(securityDeposit).toLocaleString('en-IN')}.00
+              </span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-0.5">
+                One Time Non-refundable fees
               </span>
             </div>
           </div>
