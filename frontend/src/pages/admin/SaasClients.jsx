@@ -16,6 +16,7 @@ import {
   getAdminClientOrdersTemp,
   approveAdminClientOrderTemp,
   rejectAdminClientOrderTemp,
+  intakeAdminOfflineClient,
 } from '../../api/admin/partners'
 import { isSaasClient } from '../../utils/subscription'
 import { getInvoiceLogoHtml } from '../../utils/invoiceLogo'
@@ -761,6 +762,92 @@ const AdminSaasClients = () => {
     fetchTempOrders()
   }, [])
 
+  // ── INTAKE CLIENT (DIRECT / OFFLINE) ────────────────────────────────────────
+  const [showIntakeModal, setShowIntakeModal] = useState(false)
+  const [intakeSubmitting, setIntakeSubmitting] = useState(false)
+  const [intakeSuccessResult, setIntakeSuccessResult] = useState(null)
+
+  const initialIntakeState = {
+    client_name: '',
+    contact_number: '',
+    email: '',
+    school_name: '',
+    company_name: '',
+    school_short_name: '',
+    school_session: '2026-27',
+    total_students: '200',
+    institution_type: 'Higher Secondary School',
+    established_year: '',
+    website: '',
+    country_code: 'IN',
+    district: '',
+    state: 'West Bengal',
+    pin_code: '',
+    address: '',
+    gstin: '',
+    vat_pan_number: '',
+    product_id: 15,
+    processing_fee: 1180,
+    monthly_subscription: 10,
+    partner_id: '',
+    payment_gateway: 'offline_cash',
+    payment_id: 'cash',
+    delivery_after: 7,
+    activated_at: new Date().toISOString().split('T')[0],
+    custom_password: '12345',
+    send_welcome_email: true,
+  }
+
+  const [intakeForm, setIntakeForm] = useState(initialIntakeState)
+
+  const handleCountryChangeInIntake = (code) => {
+    if (code === 'NP') {
+      setIntakeForm(prev => ({
+        ...prev,
+        country_code: 'NP',
+        processing_fee: 2034,
+        monthly_subscription: 20,
+        state: prev.state === 'West Bengal' ? 'Bagmati' : prev.state,
+      }))
+    } else {
+      setIntakeForm(prev => ({
+        ...prev,
+        country_code: 'IN',
+        processing_fee: 1180,
+        monthly_subscription: 10,
+        state: prev.state === 'Bagmati' ? 'West Bengal' : prev.state,
+      }))
+    }
+  }
+
+  const handleSubmitIntake = async (e) => {
+    e.preventDefault()
+    if (!intakeForm.client_name || !intakeForm.contact_number || !intakeForm.email) {
+      flashError('Client name, contact number, and email are required.')
+      return
+    }
+    if (!intakeForm.school_name && !intakeForm.company_name) {
+      flashError('Please enter the school or company name.')
+      return
+    }
+
+    setIntakeSubmitting(true)
+    try {
+      const res = await intakeAdminOfflineClient(intakeForm)
+      if (res.data?.success) {
+        setIntakeSuccessResult(res.data.data)
+        flashSuccess(`Client successfully onboarded! Invoice: ${res.data.data?.invoice_id}`)
+        fetchClients()
+      } else {
+        flashError(res.data?.message || 'Failed to intake client.')
+      }
+    } catch (err) {
+      flashError(err.response?.data?.message || err.message || 'Failed to submit intake form.')
+    } finally {
+      setIntakeSubmitting(false)
+    }
+  }
+
   useEffect(() => {
     if (activePageTab === 'subscriptions') fetchSubscriptions()
     if (activePageTab === 'customization') fetchCustomizationRequestsData(customizationFilters)
@@ -1223,7 +1310,481 @@ const AdminSaasClients = () => {
         </div>
       )}
 
+      {/* ── MODAL: Direct / Offline Client Intake ── */}
+      {showIntakeModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-4xl w-full shadow-2xl border border-slate-100 my-8 max-h-[90vh] overflow-y-auto">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-2xl shadow-inner">
+                  📥
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                    Direct / Offline Client Intake
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 uppercase tracking-wider">
+                      Auto-Sequence
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    Onboard cash, direct, or offline clients. Unified invoice sequence, external DB config, and credentials will auto-execute.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowIntakeModal(false)
+                  setIntakeSuccessResult(null)
+                }}
+                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 text-xl font-bold cursor-pointer transition-colors"
+              >
+                ✕
+              </button>
+            </div>
 
+            {/* If Success Result Available */}
+            {intakeSuccessResult ? (
+              <div className="space-y-6 py-4">
+                <div className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white p-6 rounded-3xl shadow-lg text-center space-y-2">
+                  <span className="text-5xl block mb-2">🎉</span>
+                  <h4 className="text-2xl font-black">Client Successfully Onboarded!</h4>
+                  <p className="text-emerald-100 text-sm max-w-md mx-auto">
+                    Client record has been registered with status <span className="font-bold underline text-white">PAID</span> and all backend automations were triggered.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-bold">
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Generated Credentials</span>
+                    <div className="flex justify-between items-center py-1 border-b border-slate-200">
+                      <span className="text-slate-600 font-medium">Client ID:</span>
+                      <span className="font-mono text-sm font-black text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
+                        {intakeSuccessResult.client_id}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-1 border-b border-slate-200">
+                      <span className="text-slate-600 font-medium">Default Password:</span>
+                      <span className="font-mono text-sm font-bold text-slate-800 bg-white px-2 py-0.5 rounded-md border border-slate-300">
+                        {intakeSuccessResult.default_password}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-1">
+                      <span className="text-slate-600 font-medium">Login Portal:</span>
+                      <span className="text-blue-600 underline text-[11px] font-mono">
+                        aimdigitalise.com/client/login
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Automations & Tax Invoice</span>
+                    <div className="flex justify-between items-center py-1 border-b border-slate-200">
+                      <span className="text-slate-600 font-medium">Unified Tax Invoice:</span>
+                      <span className="font-mono text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                        {intakeSuccessResult.invoice_id}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-1 border-b border-slate-200">
+                      <span className="text-slate-600 font-medium">External DB Registered:</span>
+                      <span>{intakeSuccessResult.db_registered ? '✅ Configured' : 'ℹ️ Not Required / Standalone'}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-1">
+                      <span className="text-slate-600 font-medium">Welcome Email:</span>
+                      <span>{intakeSuccessResult.email_sent ? '✅ Dispatched to Client' : 'ℹ️ Skipped / Offline'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIntakeSuccessResult(null)
+                      setIntakeForm(initialIntakeState)
+                    }}
+                    className="flex-1 py-3 rounded-xl border border-slate-300 text-sm font-bold text-slate-600 hover:bg-slate-50 cursor-pointer transition-all"
+                  >
+                    ➕ Intake Another Client
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowIntakeModal(false)
+                      setIntakeSuccessResult(null)
+                    }}
+                    className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-md cursor-pointer transition-all"
+                  >
+                    Done (View in Client List)
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Intake Form */
+              <form onSubmit={handleSubmitIntake} className="space-y-6">
+                
+                {/* 1. School & Client Profile */}
+                <div>
+                  <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                    <span>🏫</span>
+                    <span>1. Institution & Client Info</span>
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-bold">
+                    <div className="space-y-1">
+                      <label className="text-slate-600 block">Client / Principal Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. PALASH GHOSH"
+                        value={intakeForm.client_name}
+                        onChange={e => setIntakeForm({ ...intakeForm, client_name: e.target.value })}
+                        className={inputCls}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-slate-600 block">Contact Mobile Number *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. 9734074135"
+                        value={intakeForm.contact_number}
+                        onChange={e => setIntakeForm({ ...intakeForm, contact_number: e.target.value })}
+                        className={inputCls}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-slate-600 block">Client Email Address *</label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="e.g. school@gmail.com"
+                        value={intakeForm.email}
+                        onChange={e => setIntakeForm({ ...intakeForm, email: e.target.value })}
+                        className={inputCls}
+                      />
+                    </div>
+
+                    <div className="space-y-1 md:col-span-2">
+                      <label className="text-slate-600 block">School / Institution Full Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Mission Ramkrishna Vidyapith"
+                        value={intakeForm.school_name}
+                        onChange={e => setIntakeForm({ ...intakeForm, school_name: e.target.value, company_name: e.target.value })}
+                        className={inputCls}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-slate-600 block flex items-center justify-between">
+                        <span>School Short Code *</span>
+                        <span className="text-[10px] text-slate-400 font-normal">sub-db name</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. mrv or bbs_saptagram"
+                        value={intakeForm.school_short_name}
+                        onChange={e => setIntakeForm({ ...intakeForm, school_short_name: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })}
+                        className={`${inputCls} font-mono`}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-slate-600 block">Academic Session</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 2026-27"
+                        value={intakeForm.school_session}
+                        onChange={e => setIntakeForm({ ...intakeForm, school_session: e.target.value })}
+                        className={inputCls}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-slate-600 block">Total / Tentative Students</label>
+                      <input
+                        type="number"
+                        min="1"
+                        placeholder="e.g. 200"
+                        value={intakeForm.total_students}
+                        onChange={e => setIntakeForm({ ...intakeForm, total_students: e.target.value })}
+                        className={inputCls}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-slate-600 block">Assigned Partner ID (Optional)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. PIDIN26054 (or leave blank)"
+                        value={intakeForm.partner_id}
+                        onChange={e => setIntakeForm({ ...intakeForm, partner_id: e.target.value.toUpperCase() })}
+                        className={`${inputCls} font-mono`}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Location & Tax */}
+                <div className="pt-2 border-t border-slate-100">
+                  <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                    <span>📍</span>
+                    <span>2. Location & Regional Tax</span>
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs font-bold">
+                    <div className="space-y-1">
+                      <label className="text-slate-600 block">Country</label>
+                      <select
+                        value={intakeForm.country_code}
+                        onChange={e => handleCountryChangeInIntake(e.target.value)}
+                        className={inputCls}
+                      >
+                        <option value="IN">🇮🇳 India (GST 18%)</option>
+                        <option value="NP">🇳🇵 Nepal (VAT 13%)</option>
+                        <option value="BT">🇧🇹 Bhutan</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-slate-600 block">State / Province *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. West Bengal"
+                        value={intakeForm.state}
+                        onChange={e => setIntakeForm({ ...intakeForm, state: e.target.value })}
+                        className={inputCls}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-slate-600 block">District *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Murshidabad"
+                        value={intakeForm.district}
+                        onChange={e => setIntakeForm({ ...intakeForm, district: e.target.value })}
+                        className={inputCls}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-slate-600 block">PIN / Postal Code *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. 742132"
+                        value={intakeForm.pin_code}
+                        onChange={e => setIntakeForm({ ...intakeForm, pin_code: e.target.value })}
+                        className={inputCls}
+                      />
+                    </div>
+
+                    <div className="space-y-1 md:col-span-3">
+                      <label className="text-slate-600 block">Full Street Address *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Vill- Parsalika, Po- Fatepur, PS- Burwan"
+                        value={intakeForm.address}
+                        onChange={e => setIntakeForm({ ...intakeForm, address: e.target.value })}
+                        className={inputCls}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-slate-600 block">
+                        {intakeForm.country_code === 'NP' ? 'PAN / VAT No.' : 'GSTIN (Optional)'}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={intakeForm.country_code === 'NP' ? 'e.g. 601234567' : 'e.g. 19ABCDE1234F1Z5'}
+                        value={intakeForm.country_code === 'NP' ? intakeForm.vat_pan_number : intakeForm.gstin}
+                        onChange={e => setIntakeForm({ ...intakeForm, gstin: e.target.value, vat_pan_number: e.target.value })}
+                        className={inputCls}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Product & Payment Details */}
+                <div className="pt-2 border-t border-slate-100">
+                  <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                    <span>💳</span>
+                    <span>3. Product & Offline Payment</span>
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs font-bold">
+                    <div className="space-y-1 md:col-span-2">
+                      <label className="text-slate-600 block">Selected Product *</label>
+                      <select
+                        value={intakeForm.product_id}
+                        onChange={e => {
+                          const pid = Number(e.target.value)
+                          const isNp = intakeForm.country_code === 'NP'
+                          let fee = isNp ? 2034 : 1180
+                          let sub = isNp ? 20 : 10
+                          if (pid === 11) { fee = 5000; sub = 1999 }
+                          if (pid === 12) { fee = 8000; sub = 3499 }
+                          setIntakeForm({ ...intakeForm, product_id: pid, processing_fee: fee, monthly_subscription: sub })
+                        }}
+                        className={inputCls}
+                      >
+                        <option value={15}>NEXGN Institute Pro (Per Student School ERP)</option>
+                        <option value={18}>NEXGN Institute Plus (Higher Ed College ERP)</option>
+                        <option value={11}>NEXGN ERP Pro (Corporate)</option>
+                        <option value={12}>NEXGN ERP Premium Plus</option>
+                        <option value={9}>NEXGN Accounts & Billing</option>
+                        <option value={10}>NEXGN Payroll</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-slate-600 block">Payment Mode</label>
+                      <select
+                        value={intakeForm.payment_gateway}
+                        onChange={e => setIntakeForm({ ...intakeForm, payment_gateway: e.target.value })}
+                        className={inputCls}
+                      >
+                        <option value="offline_cash">💵 Cash Payment</option>
+                        <option value="bank_transfer">🏛️ Bank Transfer / NEFT</option>
+                        <option value="upi">📱 UPI / QR</option>
+                        <option value="cheque">📝 Cheque</option>
+                        <option value="direct_deal">🤝 Direct Deal</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-slate-600 block">Transaction Ref / Receipt No</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. cash, UTR12345678"
+                        value={intakeForm.payment_id}
+                        onChange={e => setIntakeForm({ ...intakeForm, payment_id: e.target.value })}
+                        className={inputCls}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-slate-600 block">
+                        Processing Fee Paid ({intakeForm.country_code === 'NP' ? 'NPR' : 'INR'}) *
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        required
+                        value={intakeForm.processing_fee}
+                        onChange={e => setIntakeForm({ ...intakeForm, processing_fee: e.target.value })}
+                        className={inputCls}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-slate-600 block">
+                        Monthly Rate ({intakeForm.country_code === 'NP' ? 'NPR' : 'INR'}/student)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={intakeForm.monthly_subscription}
+                        onChange={e => setIntakeForm({ ...intakeForm, monthly_subscription: e.target.value })}
+                        className={inputCls}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-slate-600 block">Payment / Activation Date</label>
+                      <input
+                        type="date"
+                        value={intakeForm.activated_at}
+                        onChange={e => setIntakeForm({ ...intakeForm, activated_at: e.target.value })}
+                        className={inputCls}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-slate-600 block">Delivery After (Days)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="90"
+                        value={intakeForm.delivery_after}
+                        onChange={e => setIntakeForm({ ...intakeForm, delivery_after: e.target.value })}
+                        className={inputCls}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Credentials & Automations */}
+                <div className="pt-2 border-t border-slate-100">
+                  <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                    <span>⚙️</span>
+                    <span>4. Credentials & Automated Triggers</span>
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-bold items-center">
+                    <div className="space-y-1">
+                      <label className="text-slate-600 block">Initial Password</label>
+                      <input
+                        type="text"
+                        value={intakeForm.custom_password}
+                        onChange={e => setIntakeForm({ ...intakeForm, custom_password: e.target.value })}
+                        className={`${inputCls} font-mono`}
+                      />
+                    </div>
+
+                    <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                      <label className="flex items-center gap-2 cursor-pointer text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={intakeForm.send_welcome_email}
+                          onChange={e => setIntakeForm({ ...intakeForm, send_welcome_email: e.target.checked })}
+                          className="w-4 h-4 text-emerald-600 rounded cursor-pointer"
+                        />
+                        <span>Send Official Welcome Email with Credentials to Client</span>
+                      </label>
+                      <p className="text-[10px] text-slate-400 font-normal pl-6">
+                        Dispatches automated welcome email with login portal link, generated Client ID, and password.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer Buttons */}
+                <div className="flex gap-3 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowIntakeModal(false)}
+                    className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-500 hover:bg-slate-50 cursor-pointer transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={intakeSubmitting}
+                    className="flex-2 py-3 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white text-sm font-bold shadow-md hover:shadow-lg disabled:opacity-50 cursor-pointer transition-all flex items-center justify-center gap-2"
+                  >
+                    {intakeSubmitting ? (
+                      <>
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span>Processing Intake & Automations...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>📥</span>
+                        <span>Confirm & Intake Client (Generate Invoice)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ══ PAGE BODY ═════════════════════════════════════════════════════════════ */}
       <div className="space-y-6 select-none text-slate-700 animate-fade-in">
@@ -1235,7 +1796,19 @@ const AdminSaasClients = () => {
             <h2 className="text-lg font-extrabold text-[#1e3e6b]">AIM Digitalise pvt. ltd.</h2>
             <p className="text-xs font-bold text-slate-500">Financial Year: 2026-2027</p>
           </div>
-          <div className="w-40 flex justify-end">
+          <div className="flex items-center gap-2 justify-end flex-wrap">
+            <button
+              type="button"
+              onClick={() => {
+                setIntakeForm(initialIntakeState)
+                setIntakeSuccessResult(null)
+                setShowIntakeModal(true)
+              }}
+              className="px-4 py-2 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-xl text-xs font-bold shadow-sm hover:shadow transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <span className="text-sm">➕</span>
+              <span>Intake Client (Offline / Direct)</span>
+            </button>
             {activePageTab === 'show_clients' && <button onClick={fetchClients} disabled={clientsLoading} className="px-4 py-2 border border-slate-200 hover:border-[#38b34a] hover:text-[#38b34a] bg-white rounded-xl text-xs font-bold disabled:opacity-50 cursor-pointer shadow-sm">{clientsLoading ? 'Loading...' : '↺ Refresh'}</button>}
             {activePageTab === 'nepal_offline' && <button onClick={fetchTempOrders} disabled={loadingTempOrders} className="px-4 py-2 border border-slate-200 hover:border-amber-500 hover:text-amber-600 bg-white rounded-xl text-xs font-bold disabled:opacity-50 cursor-pointer shadow-sm">{loadingTempOrders ? 'Loading...' : '↺ Refresh Orders'}</button>}
             {activePageTab === 'subscriptions' && <button onClick={fetchSubscriptions} disabled={subscriptionsLoading} className="px-4 py-2 border border-slate-200 hover:border-blue-400 hover:text-blue-600 bg-white rounded-xl text-xs font-bold disabled:opacity-50 cursor-pointer shadow-sm">{subscriptionsLoading ? 'Loading...' : '↺ Refresh'}</button>}

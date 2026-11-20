@@ -253,5 +253,10 @@ export const approveAdminClientOrderTemp = (id, data = {}) =>
 export const rejectAdminClientOrderTemp = (id) =>
   adminFetch('DELETE', `/admin/client-orders-temp/${id}`)
 
+// POST /api/admin/clients/offline-intake
+export const intakeAdminOfflineClient = (data) =>
+  adminFetch('POST', '/admin/clients/offline-intake', data)
+
+
 
 
