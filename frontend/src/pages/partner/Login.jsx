@@ -247,7 +247,8 @@ const PartnerLogin = () => {
                         <ul className="list-disc pl-4 space-y-0.5 text-[10px] text-slate-300 leading-normal font-medium font-sans">
                           <li>Operate an active business unit.</li>
                           <li>Minimum 3 years of proven B2B sales experience.</li>
-                          <li>Non-Refundable Processing Fee: ₹5,000 (Domestic, previously <s >₹25,000</s>).</li>
+                          {/* <li>Non-Refundable Processing Fee: ₹5,000 (Domestic, previously <s >₹25,000</s>).</li> */}
+                          <li>Non-Refundable Processing Fee: ₹5,000 (Domestic).</li>
                           <li>Non-Refundable Processing Fee: NPR 16000 (For Nepal).</li>
                         </ul>
                       </div>
