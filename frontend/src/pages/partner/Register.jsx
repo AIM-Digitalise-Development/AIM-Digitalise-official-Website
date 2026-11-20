@@ -41,6 +41,8 @@ const PartnerRegister = () => {
               partner_name: stepData.partner_name,
               organization_name: stepData.organization_name,
               email: stepData.email,
+              country: stepData.country,
+              payment_status: stepData.payment_status || 'pending',
               registration_status: stepData.registration_status || 'pending',
               signed_agreement_path: stepData.signed_agreement_path,
             })
@@ -80,7 +82,11 @@ const PartnerRegister = () => {
   const isSuccess = step === 4
 
   const handleStep1Success = (data, formValues, formFiles) => {
-    setPartnerData(data)
+    setPartnerData({
+      ...data,
+      country: data?.country || formValues?.country || 'India',
+      country_code: data?.country_code || (formValues?.country === 'Nepal' ? 'NP' : 'IN'),
+    })
     setStep1FormValues(formValues)
     setStep1FormFiles(formFiles)
     setFormEmail(data?.email || '')

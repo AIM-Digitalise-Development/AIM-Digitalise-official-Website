@@ -157,6 +157,10 @@ export const createOrder = (data) =>
 export const completePayment = (data) =>
   partnerFetch('POST', '/partner-step/step3/complete-payment', data)
 
+// ─── Step 3c (Offline Cash): Submit offline payment (Nepal / Offline) ─────
+export const submitOfflinePartnerPayment = (data) =>
+  partnerFetch('POST', '/partner-step/step3/submit-offline-payment', data)
+
 // ─── Step 3c (legacy): Verify payment ───────────────────────────────────────
 export const verifyPayment = (data) =>
   partnerFetch('POST', '/partner/verify-payment', data)

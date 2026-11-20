@@ -3281,6 +3281,29 @@ export const getMockResponse = (url, method, data = null) => {
     }
   }
 
+  // POST /partner-step/step3/submit-offline-payment (Nepal / Offline Cash)
+  if (lowercaseUrl.includes('/partner-step/step3/submit-offline-payment') && method === 'POST') {
+    return {
+      success: true,
+      offline: true,
+      message: 'Offline cash payment recorded. All steps completed (simulated).',
+      data: {
+        step_3_completed: true,
+        current_step: 4,
+        payment_status: 'offline_pending',
+        amount: data?.amount || 18080,
+        currency: data?.currency || 'NPR',
+        partner: {
+          id: data?.partner_id || 'PIDNP00000',
+          name: 'Mock Partner',
+          email: 'mock@partner.com',
+          organization: 'Mock Org',
+          country: 'Nepal',
+        }
+      }
+    }
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // 6. Admin Panel Mocks (SaaS Clients, Subscriptions, Payments & Reports)
   // ═══════════════════════════════════════════════════════════════════════════

@@ -204,7 +204,8 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
                   <h4 className="font-bold text-slate-950">Step 4: Registration Fee</h4>
                   <p className="text-slate-600 mt-1">As per the published referral partner program:</p>
                   <ul className="list-disc pl-5 mt-1 space-y-1">
-                    <li>Registration Process Fee: ₹1,000/- for Indian applicants.</li>
+                    <li>Registration Process Fee (India): ₹5,000/- (+ 18% GST = ₹5,900/- total).</li>
+                    <li>Registration Process Fee (Nepal): NPR 16,000/- (+ 13% VAT = NPR 18,080/- total).</li>
                     <li>International applicants: USD 1,000.</li>
                   </ul>
                 </div>

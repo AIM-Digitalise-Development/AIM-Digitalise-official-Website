@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { uploadSignedAgreement, createOrder, completePayment } from '../../../api/partner'
+import { uploadSignedAgreement, createOrder, completePayment, submitOfflinePartnerPayment } from '../../../api/partner'
 
 const CURRENCIES = [
   { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
@@ -26,8 +26,6 @@ const loadRazorpay = () => {
 const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
   const [signedFile, setSignedFile] = useState(null)
   const [fileError, setFileError] = useState('')
-  const [currency, setCurrency] = useState('INR')
-  const [amount, setAmount] = useState(1000)
   const [status, setStatus] = useState('') // progress message
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -38,6 +36,19 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
     !!partnerData?.signed_agreement_path
   )
   const [uploadLoading, setUploadLoading] = useState(false)
+
+  const isNepal = partnerData?.country === 'Nepal' || partnerData?.country_code === 'NP' || partnerData?.country === 'NP'
+
+  // Pricing:
+  // India: Base ₹5,000 + 18% GST (₹900) = ₹5,900
+  // Nepal: Base NPR 16,000 + 13% VAT (NPR 2,080) = NPR 18,080
+  const baseFee = isNepal ? 16000 : 5000
+  const taxRate = isNepal ? 13 : 18
+  const taxLabel = isNepal ? 'Nepal VAT (13%)' : 'GST (18%)'
+  const taxAmount = Math.round(baseFee * (taxRate / 100))
+  const totalAmount = baseFee + taxAmount
+  const currencyCode = isNepal ? 'NPR' : 'INR'
+  const currencySymbol = isNepal ? 'NPR ' : '₹'
 
   const handleFileChange = (e) => {
     const file = e.target.files[0]
@@ -62,10 +73,14 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
       success: true,
       token: `sim_token_${Math.random().toString(36).substring(2)}${Date.now()}`,
       partner: {
-        id: partnerData?.partner_id || 'SIM-1234',
+        id: partnerData?.partner_id || (isNepal ? 'PIDNP26051' : 'PIDIN26051'),
         name: partnerData?.partner_name || 'Simulated Partner',
         email: partnerData?.email || formEmail || 'partner@example.com',
         organization: partnerData?.organization_name || 'Simulated Organization',
+        country: isNepal ? 'Nepal' : 'India',
+        payment_status: isNepal ? 'offline_pending' : 'paid',
+        amount: totalAmount,
+        currency: currencyCode,
       }
     })
   }
@@ -86,7 +101,7 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
       const res = await uploadSignedAgreement(fd)
       if (res.data?.success) {
         setAgreementUploaded(true)
-        setStatus('✅ Signed agreement uploaded successfully! Proceed with payment below.')
+        setStatus('✅ Signed agreement uploaded successfully! Complete your registration below.')
       } else {
         const msg = res.data?.message
         const errors = res.data?.errors
@@ -109,7 +124,49 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
     }
   }
 
-  // ── Step 3b: Payment (create order + Razorpay + verify) ──
+  // ── Step 3b (Nepal): Offline Cash Payment to Admin ──
+  const handleOfflineCashPayment = async () => {
+    if (!agreementUploaded) {
+      setError('Please upload the signed agreement first before submitting registration.')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+    setIsOffline(false)
+    setStatus('Submitting offline cash registration request...')
+
+    try {
+      const res = await submitOfflinePartnerPayment({
+        partner_id: partnerData.partner_id,
+        amount: totalAmount,
+        currency: 'NPR',
+        base_amount: baseFee,
+        tax_amount: taxAmount,
+      })
+
+      if (res.data?.success) {
+        setStatus('')
+        onSuccess(res.data)
+      } else {
+        setError(res.data?.message || 'Failed to submit offline request')
+      }
+    } catch (err) {
+      const isConnectionRefused = !err.response || err.message === 'Failed to fetch' || err.message?.includes('NetworkError')
+      if (isConnectionRefused) {
+        setIsOffline(true)
+        setError('Network Error: Connection Refused. The partner API server appears to be offline.')
+      } else {
+        const msg = err?.response?.data?.message || err?.response?.data?.errors
+        setError(typeof msg === 'object' ? Object.values(msg).flat().join(' ') : (msg || err.message || 'Something went wrong'))
+      }
+    } finally {
+      setLoading(false)
+      setStatus('')
+    }
+  }
+
+  // ── Step 3b (India): Razorpay Online Payment ──
   const handlePayment = async () => {
     if (!agreementUploaded) {
       setError('Please upload the signed agreement first before making payment.')
@@ -120,11 +177,11 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
     setError('')
     setIsOffline(false)
     try {
-      // Create Razorpay order
+      // Create Razorpay order (base 5000 + 18% GST -> 5900)
       setStatus('Creating payment order...')
       const orderRes = await createOrder({
         partner_id: partnerData.partner_id,
-        amount: 1000,
+        amount: 5000,
         currency: 'INR'
       })
       if (!orderRes.data?.success) throw new Error(orderRes.data?.message || 'Order creation failed')
@@ -138,7 +195,7 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
           razorpay_payment_id: `sim_pay_${Date.now()}`,
           razorpay_order_id: orderData.order_id,
           razorpay_signature: `sim_sig_${Date.now()}`,
-          amount: 1000,
+          amount: 5900,
           currency: 'INR',
         })
         if (!verifyRes.data?.success) throw new Error(verifyRes.data?.message || 'Verification failed')
@@ -309,45 +366,66 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
           agreementUploaded ? 'opacity-100' : 'opacity-50 pointer-events-none'
         }`}>
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-aim-copy-muted pb-1.5 border-b border-white/5 mb-3">
-              Payment Details
-            </p>
+            <div className="flex items-center justify-between pb-1.5 border-b border-white/5 mb-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-aim-copy-muted">
+                Payment Details
+              </p>
+              <span className="text-[10px] font-bold text-aim-gold px-2 py-0.5 rounded-full bg-aim-gold/10 border border-aim-gold/20">
+                {isNepal ? '🇳🇵 Nepal Region' : '🇮🇳 India Region'}
+              </span>
+            </div>
             
-            <div className="space-y-3">
-              <div>
-                <label className="block text-[10px] font-semibold text-aim-copy-muted uppercase tracking-wider mb-1">Currency</label>
-                <select
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  className="w-full bg-aim-navy border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-aim-copy-muted focus:outline-none focus:border-aim-gold/60 focus:ring-1 focus:ring-aim-gold/30 transition-all"
-                  disabled={loading}
-                >
-                  {CURRENCIES.map((c) => (
-                    <option key={c.code} value={c.code} className="bg-aim-navy text-xs">
-                      {c.symbol} {c.name} ({c.code})
-                    </option>
-                  ))}
-                </select>
+            <div className="space-y-2.5 text-xs">
+              <div className="flex items-center justify-between py-1 border-b border-white/5">
+                <span className="text-aim-copy-muted">Base Registration Fee</span>
+                <span className="font-semibold text-white">
+                  {currencySymbol}{baseFee.toLocaleString()}
+                </span>
               </div>
-              
-              <div>
-                <label className="block text-[10px] font-semibold text-aim-copy-muted uppercase tracking-wider mb-1">
-                  Amount ({selectedCurrency.symbol})
-                </label>
-                <input
-                  type="number"
-                  value={amount}
-                  readOnly
-                  className="w-full bg-aim-navy border border-white/10 rounded-xl px-3 py-2 text-xs text-white/70 placeholder-aim-copy-muted focus:outline-none focus:border-aim-gold/60 focus:ring-1 focus:ring-aim-gold/30 transition-all opacity-60 cursor-not-allowed"
-                />
+
+              <div className="flex items-center justify-between py-1 border-b border-white/5">
+                <span className="text-aim-copy-muted">{taxLabel}</span>
+                <span className="font-semibold text-aim-gold">
+                  + {currencySymbol}{taxAmount.toLocaleString()}
+                </span>
               </div>
+
+              <div className="flex items-center justify-between py-1.5 border-b border-white/10">
+                <span className="text-white font-bold">Total Amount Payable</span>
+                <span className="text-base font-black text-aim-gold">
+                  {currencySymbol}{totalAmount.toLocaleString()} {currencyCode}
+                </span>
+              </div>
+
+              {/* Offline Cash / Payment Info Box */}
+              {isNepal ? (
+                <div className="mt-3 p-3 rounded-xl border border-aim-gold/30 bg-aim-gold/5 space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-aim-gold font-bold text-[11px]">
+                    <span>🇳🇵</span>
+                    <span>Direct Offline Cash Payment</span>
+                  </div>
+                  <p className="text-[10px] text-aim-copy-muted leading-relaxed">
+                    Please upload your signed agreement and submit your registration. Hand over or deposit <strong className="text-white">NPR {totalAmount.toLocaleString()}</strong> in cash to your designated Relationship Manager / Regional Admin. The Super Admin will verify your cash receipt and activate your partner portal.
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-3 p-3 rounded-xl border border-white/10 bg-aim-navy/40 space-y-1">
+                  <div className="flex items-center gap-1.5 text-white font-bold text-[11px]">
+                    <span>💳</span>
+                    <span>Online Gateway Payment</span>
+                  </div>
+                  <p className="text-[10px] text-aim-copy-muted leading-relaxed">
+                    Secured by Razorpay. Complete payment of <strong className="text-white">₹{totalAmount.toLocaleString()}</strong> via UPI, Netbanking, or Credit/Debit Cards.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center justify-between py-2.5 border-t border-white/10 mt-4 shrink-0">
-            <span className="text-xs text-aim-copy-muted">Registration Fee</span>
-            <span className="text-base font-black text-aim-gold">
-              {selectedCurrency.symbol} {amount.toLocaleString()} {currency}
+          <div className="flex items-center justify-between py-2 border-t border-white/10 mt-3 shrink-0">
+            <span className="text-[11px] text-aim-copy-muted">Payment Mode</span>
+            <span className="text-xs font-bold text-white">
+              {isNepal ? '💵 Direct Cash (Admin Verification)' : '💳 Razorpay Online Gateway'}
             </span>
           </div>
         </div>
@@ -375,12 +453,31 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
               'Upload Signed Agreement'
             )}
           </button>
+        ) : isNepal ? (
+          <button
+            type="button"
+            onClick={handleOfflineCashPayment}
+            disabled={loading}
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-black text-sm tracking-wide shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100 flex items-center justify-center cursor-pointer"
+          >
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="w-4 h-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+                Submitting Offline Request...
+              </span>
+            ) : (
+              `Submit Application & Pay Cash to Admin (NPR ${totalAmount.toLocaleString()})`
+            )}
+          </button>
         ) : (
           <button
             type="button"
             onClick={handlePayment}
             disabled={loading}
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-aim-gold to-aim-gold-light text-aim-navy font-black text-sm tracking-wide shadow-lg shadow-aim-gold/20 hover:shadow-aim-gold/40 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100 flex items-center justify-center"
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-aim-gold to-aim-gold-light text-aim-navy font-black text-sm tracking-wide shadow-lg shadow-aim-gold/20 hover:shadow-aim-gold/40 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100 flex items-center justify-center cursor-pointer"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
@@ -391,7 +488,7 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
                 Processing Fee...
               </span>
             ) : (
-              `Pay ${selectedCurrency.symbol}${amount.toLocaleString()} ${currency} & Complete Registration`
+              `Pay ₹${totalAmount.toLocaleString()} (incl. 18% GST) & Complete Registration`
             )}
           </button>
         )}

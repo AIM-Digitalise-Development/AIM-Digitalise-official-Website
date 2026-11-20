@@ -339,9 +339,9 @@ const AdminPartners = () => {
       const res = await approvePartner(id)
       if (res.data?.success) {
         // Update locally
-        setPartners(prev => prev.map(p => p.id === id ? { ...p, registration_status: 'active', is_active: true } : p))
+        setPartners(prev => prev.map(p => p.id === id ? { ...p, registration_status: 'active', is_active: true, payment_status: 'paid' } : p))
         if (selectedPartner?.id === id) {
-          setSelectedPartner(prev => ({ ...prev, registration_status: 'active', is_active: true }))
+          setSelectedPartner(prev => ({ ...prev, registration_status: 'active', is_active: true, payment_status: 'paid' }))
         }
       } else {
         alert(res.data?.message || 'Approval failed.')
@@ -690,7 +690,12 @@ const AdminPartners = () => {
                           {filteredPartners.length > 0 ? (
                             filteredPartners.map((p) => (
                               <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
-                                <td className="px-6 py-4 font-mono font-bold text-slate-500">{p.partner_id}</td>
+                                <td className="px-6 py-4 font-mono font-bold text-slate-500">
+                                  <span>{p.partner_id}</span>
+                                  <span className="block text-[10px] font-sans font-medium text-slate-400">
+                                    {p.country === 'Nepal' || p.country === 'NP' ? '🇳🇵 Nepal' : '🇮🇳 India'}
+                                  </span>
+                                </td>
                                 <td className="px-6 py-4">
                                   <p className="font-bold text-slate-800 text-sm">{p.partner_name}</p>
                                   <p className="text-[10px] text-slate-400">{p.email}</p>
@@ -702,6 +707,15 @@ const AdminPartners = () => {
                                   <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border tracking-wider ${getStatusBadge(p.registration_status)}`}>
                                     {p.registration_status}
                                   </span>
+                                  {p.payment_status === 'offline_pending' ? (
+                                    <span className="block mt-1 px-2 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200 w-fit">
+                                      💵 Cash Pending
+                                    </span>
+                                  ) : p.payment_status === 'paid' ? (
+                                    <span className="block mt-1 text-[9px] text-emerald-600 font-semibold">
+                                      ✓ Paid
+                                    </span>
+                                  ) : null}
                                 </td>
                                 <td className="px-6 py-4 text-center">
                                   <button
@@ -1095,20 +1109,65 @@ const AdminPartners = () => {
                       <span className="text-[10px] text-[#ff6600] uppercase tracking-wider font-bold block">Address Details</span>
                       <p className="text-slate-700 font-semibold">{selectedPartner.address_line1}</p>
                       {selectedPartner.address_line2 && <p className="text-slate-700">{selectedPartner.address_line2}</p>}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1.5 text-[11px] text-slate-500 font-semibold">
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-1.5 text-[11px] text-slate-500 font-semibold">
+                        <div>
+                          <span className="text-[9px] text-slate-400 uppercase block font-medium">Country</span>
+                          <span className="text-slate-800 font-bold">
+                            {selectedPartner.country === 'Nepal' || selectedPartner.country === 'NP' ? '🇳🇵 Nepal' : '🇮🇳 India'}
+                          </span>
+                        </div>
                         <div>
                           <span className="text-[9px] text-slate-400 uppercase block font-medium">District</span>
                           {selectedPartner.district}
                         </div>
                         <div>
-                          <span className="text-[9px] text-slate-400 uppercase block font-medium">State</span>
+                          <span className="text-[9px] text-slate-400 uppercase block font-medium">State / Province</span>
                           {selectedPartner.state}
                         </div>
                         <div>
-                          <span className="text-[9px] text-slate-400 uppercase block font-medium">Pin Code</span>
+                          <span className="text-[9px] text-slate-400 uppercase block font-medium">Postal / PIN</span>
                           {selectedPartner.pin_code}
                         </div>
                       </div>
+                    </div>
+
+                    {/* Payment & Verification Section */}
+                    <div className="p-4 rounded-xl border border-slate-100 bg-slate-50 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-[#ff6600] uppercase tracking-wider font-bold block">Payment &amp; Fees</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white border border-slate-200">
+                          {selectedPartner.country === 'Nepal' || selectedPartner.country === 'NP' ? '🇳🇵 Nepal Region' : '🇮🇳 India Region'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px]">
+                        <div>
+                          <span className="text-[9px] text-slate-400 uppercase block font-medium">Total Fee</span>
+                          <span className="font-bold text-slate-800">
+                            {selectedPartner.country === 'Nepal' || selectedPartner.country === 'NP' ? 'NPR 18,080 (16,000 + 13% VAT)' : '₹5,900 (5,000 + 18% GST)'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-slate-400 uppercase block font-medium">Payment Mode</span>
+                          <span className="font-bold text-slate-800">
+                            {selectedPartner.country === 'Nepal' || selectedPartner.payment_status === 'offline_pending' ? '💵 Offline Cash' : '💳 Online (Razorpay)'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-slate-400 uppercase block font-medium">Payment Status</span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold inline-block mt-0.5 ${
+                            selectedPartner.payment_status === 'paid'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-amber-50 text-amber-700 border border-amber-200'
+                          }`}>
+                            {selectedPartner.payment_status === 'paid' ? '✅ Paid' : '⏳ Cash Pending'}
+                          </span>
+                        </div>
+                      </div>
+                      {selectedPartner.payment_status === 'offline_pending' && (
+                        <div className="mt-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-medium leading-relaxed">
+                          ⚠️ <strong>Offline Cash Notice:</strong> This partner registered under Nepal terms with Offline Cash payment of <strong>NPR 18,080</strong>. Clicking <em>"Confirm Offline Cash &amp; Activate"</em> will confirm the receipt of cash and immediately activate their portal login.
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -1205,9 +1264,13 @@ const AdminPartners = () => {
                   {selectedPartner.registration_status !== 'active' && (
                     <button
                       onClick={() => handleApprove(selectedPartner.id)}
-                      className="px-4 py-2 rounded-xl bg-[#38b34a] hover:bg-[#2d913c] text-white text-xs font-bold shadow-sm shadow-[#38b34a]/15 hover:shadow-[#38b34a]/30 transition cursor-pointer"
+                      className={`px-4 py-2 rounded-xl text-white text-xs font-bold shadow-sm transition cursor-pointer flex items-center gap-1.5 ${
+                        selectedPartner.payment_status === 'offline_pending' || selectedPartner.country === 'Nepal' || selectedPartner.country === 'NP'
+                          ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
+                          : 'bg-[#38b34a] hover:bg-[#2d913c] shadow-[#38b34a]/15'
+                      }`}
                     >
-                      ✅ Approve &amp; Activate
+                      {selectedPartner.payment_status === 'offline_pending' ? '💵 Confirm Offline Cash & Activate' : '✅ Approve & Activate'}
                     </button>
                   )}
                   {/* Reject button — only if not already rejected */}

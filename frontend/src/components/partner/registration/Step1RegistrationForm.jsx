@@ -9,6 +9,16 @@ const INDIA_STATES = [
   'Uttarakhand', 'West Bengal', 'Delhi', 'Jammu & Kashmir', 'Ladakh',
 ]
 
+const NEPAL_PROVINCES = [
+  'Koshi Province',
+  'Madhesh Province',
+  'Bagmati Province',
+  'Gandaki Province',
+  'Lumbini Province',
+  'Karnali Province',
+  'Sudurpashchim Province',
+]
+
 const FieldGroup = ({ label, required, children }) => (
   <div>
     <label className="block text-[10px] font-semibold text-aim-copy-muted uppercase tracking-wider mb-0.5">
@@ -22,6 +32,7 @@ const inputCls =
   'w-full bg-aim-navy-light border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-aim-copy-muted focus:outline-none focus:border-aim-gold/60 focus:ring-1 focus:ring-aim-gold/30 transition-all'
 
 const Step1RegistrationForm = ({ onSuccess, initialValues, initialFiles, partnerData }) => {
+  const [detectedCountry, setDetectedCountry] = useState('IN')
   const [form, setForm] = useState(
     initialValues || {
       organization_name: '', rm_type: '', rm_id: '', partner_name: '', contact_no: '',
@@ -41,6 +52,27 @@ const Step1RegistrationForm = ({ onSuccess, initialValues, initialFiles, partner
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
+  // Auto-detect visitor country using Geo-IP lookup (similar to /saas-software)
+  useEffect(() => {
+    fetch('https://ipapi.co/json/')
+      .then((res) => res.json())
+      .then((data) => {
+        const code = data?.country_code
+        if (code === 'NP') {
+          setDetectedCountry('NP')
+          setForm((prev) => ({
+            ...prev,
+            country: (!prev.country || prev.country === 'India') ? 'Nepal' : prev.country,
+          }))
+        } else {
+          setDetectedCountry('IN')
+        }
+      })
+      .catch((err) => {
+        console.warn('GeoIP lookup failed, defaulting to India:', err)
+      })
+  }, [])
+
   useEffect(() => {
     const loadRM = async () => {
       setLoadingRmOptions(true)
@@ -58,6 +90,8 @@ const Step1RegistrationForm = ({ onSuccess, initialValues, initialFiles, partner
     loadRM()
   }, [])
 
+  const isNepal = form.country === 'Nepal' || detectedCountry === 'NP'
+
   const handleChange = (e) => {
     const { name, value } = e.target
     if (name === 'rm_selection') {
@@ -67,6 +101,8 @@ const Step1RegistrationForm = ({ onSuccess, initialValues, initialFiles, partner
         const [type, id] = value.split('-')
         setForm((p) => ({ ...p, rm_type: type, rm_id: id }))
       }
+    } else if (name === 'country') {
+      setForm((p) => ({ ...p, country: value, state: '' }))
     } else {
       setForm((p) => ({ ...p, [name]: value }))
     }
@@ -76,10 +112,12 @@ const Step1RegistrationForm = ({ onSuccess, initialValues, initialFiles, partner
 
   const handleSimulateSuccess = () => {
     onSuccess({
-      partner_id: `PIDIN${Math.floor(10000 + Math.random() * 89999)}`,
+      partner_id: `${isNepal ? 'PIDNP' : 'PIDIN'}${Math.floor(10000 + Math.random() * 89999)}`,
       email: form.email || 'partner@example.com',
       partner_name: form.partner_name || 'Simulated Partner',
       organization_name: form.organization_name || 'Simulated Organization',
+      country: form.country || (isNepal ? 'Nepal' : 'India'),
+      country_code: isNepal ? 'NP' : 'IN',
       registration_status: 'pending',
     }, form, files)
   }
@@ -104,7 +142,7 @@ const Step1RegistrationForm = ({ onSuccess, initialValues, initialFiles, partner
 
     // Skip API registration if account was already created with the same email
     if (partnerData && partnerData.partner_id && form.email === initialValues?.email) {
-      onSuccess(partnerData, form, files)
+      onSuccess({ ...partnerData, country: form.country, country_code: isNepal ? 'NP' : 'IN' }, form, files)
       return
     }
 
@@ -117,7 +155,7 @@ const Step1RegistrationForm = ({ onSuccess, initialValues, initialFiles, partner
       Object.entries(files).forEach(([k, v]) => { if (v) fd.append(k, v) })
       const res = await registerPartner(fd)
       if (res.data?.success) {
-        onSuccess(res.data.data, form, files)
+        onSuccess({ ...res.data.data, country: form.country, country_code: isNepal ? 'NP' : 'IN' }, form, files)
       } else {
         setError(res.data?.message || 'Registration failed. Please try again.')
       }
@@ -175,6 +213,19 @@ const Step1RegistrationForm = ({ onSuccess, initialValues, initialFiles, partner
           )}
         </div>
       )}
+
+      {/* Location / Pricing Banner */}
+      <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-aim-gold/10 border border-aim-gold/20 text-xs text-aim-gold">
+        <div className="flex items-center gap-2">
+          <span>{isNepal ? '🇳🇵' : '🇮🇳'}</span>
+          <span className="font-bold">
+            {isNepal ? 'Nepal Partner Registration' : 'India Partner Registration'}
+          </span>
+        </div>
+        <div className="text-[11px] font-mono font-semibold">
+          {isNepal ? 'NPR 16,000 + 13% VAT (NPR 18,080) · Offline Cash' : '₹5,000 + 18% GST (₹5,900) · Razorpay'}
+        </div>
+      </div>
 
       {/* Organization & RM */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -236,18 +287,26 @@ const Step1RegistrationForm = ({ onSuccess, initialValues, initialFiles, partner
         </FieldGroup>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <FieldGroup label="District" required>
-          <input name="district" value={form.district} onChange={handleChange} required placeholder="District" className={inputCls} />
-        </FieldGroup>
-        <FieldGroup label="Pin Code" required>
-          <input name="pin_code" value={form.pin_code} onChange={handleChange} required placeholder="700107" className={inputCls} />
-        </FieldGroup>
-        <FieldGroup label="State" required>
-          <select name="state" value={form.state} onChange={handleChange} required className={inputCls}>
-            <option value="" className="bg-aim-navy text-aim-copy-muted">Select State</option>
-            {INDIA_STATES.map((s) => <option key={s} value={s} className="bg-aim-navy text-white">{s}</option>)}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <FieldGroup label="Country" required>
+          <select name="country" value={form.country} onChange={handleChange} required className={inputCls}>
+            <option value="India" className="bg-aim-navy text-white">🇮🇳 India</option>
+            <option value="Nepal" className="bg-aim-navy text-white">🇳🇵 Nepal</option>
           </select>
+        </FieldGroup>
+        <FieldGroup label={isNepal ? 'Province' : 'State'} required>
+          <select name="state" value={form.state} onChange={handleChange} required className={inputCls}>
+            <option value="" className="bg-aim-navy text-aim-copy-muted">{isNepal ? 'Select Province' : 'Select State'}</option>
+            {(isNepal ? NEPAL_PROVINCES : INDIA_STATES).map((s) => (
+              <option key={s} value={s} className="bg-aim-navy text-white">{s}</option>
+            ))}
+          </select>
+        </FieldGroup>
+        <FieldGroup label="District" required>
+          <input name="district" value={form.district} onChange={handleChange} required placeholder={isNepal ? 'Kathmandu / Pokhara' : 'District'} className={inputCls} />
+        </FieldGroup>
+        <FieldGroup label={isNepal ? 'Postal Code' : 'Pin Code'} required>
+          <input name="pin_code" value={form.pin_code} onChange={handleChange} required placeholder={isNepal ? '44600' : '700107'} className={inputCls} />
         </FieldGroup>
       </div>
 
@@ -318,7 +377,7 @@ const Step1RegistrationForm = ({ onSuccess, initialValues, initialFiles, partner
         <p className="text-[10px] font-bold text-white uppercase tracking-wider mb-2">Required Documents</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <FileUpload name="pan_card" label="PAN Card" />
-          <FileUpload name="id_proof" label="ID Proof" />
+          <FileUpload name="id_proof" label={isNepal ? 'ID Proof (Citizenship/Nagarikta)' : 'ID Proof (Aadhaar/Passport)'} />
           <FileUpload name="organization_proof" label="Org. Proof" />
         </div>
       </div>
