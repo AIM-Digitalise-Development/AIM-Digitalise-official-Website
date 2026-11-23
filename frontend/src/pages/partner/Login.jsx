@@ -295,7 +295,7 @@ const PartnerLogin = () => {
                           <li>Minimum 3 years of proven B2B sales experience.</li>
                           {/* <li>Non-Refundable Processing Fee: ₹5,000 (Domestic, previously <s >₹25,000</s>).</li> */}
                           <li>Non-Refundable Processing Fee: ₹5,000 (Domestic).</li>
-                          <li>Non-Refundable Processing Fee: NPR 16000 (For Nepal).</li>
+                          <li>Non-Refundable Processing Fee: NPR 16,000 (For Nepal, NPR 28,000 is master partner rank is opted).</li>
                         </ul>
                       </div>
                     </div>
