@@ -187,7 +187,7 @@ export const getMockResponse = (url, method, data = null) => {
         if (stored) {
           window.__mockProposals = JSON.parse(stored)
         }
-      } catch (e) {}
+      } catch (e) { }
 
       if (!window.__mockProposals || !window.__mockProposals.length) {
         window.__mockProposals = [
@@ -273,7 +273,7 @@ export const getMockResponse = (url, method, data = null) => {
       window.__mockProposals = [newProposal, ...window.__mockProposals]
       try {
         localStorage.setItem('mock_proposals_data', JSON.stringify(window.__mockProposals))
-      } catch (e) {}
+      } catch (e) { }
     }
     return {
       success: true,
@@ -302,7 +302,7 @@ export const getMockResponse = (url, method, data = null) => {
       })
       try {
         localStorage.setItem('mock_proposals_data', JSON.stringify(window.__mockProposals))
-      } catch (e) {}
+      } catch (e) { }
     }
     return {
       success: true,
@@ -796,7 +796,7 @@ export const getMockResponse = (url, method, data = null) => {
       if (window.__mockLeads) {
         const alreadyInLeads = window.__mockLeads.some(
           l => l.client_name?.toLowerCase() === (newGenClient.client_name || '').toLowerCase() &&
-               l.client_phone === newGenClient.contact_number
+            l.client_phone === newGenClient.contact_number
         )
         if (!alreadyInLeads) {
           const newLeadId = window.__mockLeads.length > 0 ? Math.max(...window.__mockLeads.map(l => l.id)) + 1 : 1
@@ -1527,7 +1527,7 @@ export const getMockResponse = (url, method, data = null) => {
       if (isGeneralClient && window.__mockGeneralClients) {
         const alreadyExists = window.__mockGeneralClients.some(
           c => c.client_name?.toLowerCase() === (data.client_name || '').toLowerCase() &&
-               c.contact_number === data.client_phone
+            c.contact_number === data.client_phone
         )
         if (!alreadyExists) {
           window.__mockGeneralClients.unshift({
@@ -3185,15 +3185,23 @@ export const getMockResponse = (url, method, data = null) => {
 
   // POST /partner-step/register
   if (lowercaseUrl.includes('/partner-step/register') && method === 'POST') {
-    const partnerId = `PIDIN${Math.floor(10000 + Math.random() * 89999)}`
+    const isNepal = (typeof window !== 'undefined' && window.localStorage?.getItem('mimic_location') === 'NP') ||
+      (data instanceof FormData ? (data.get('country') === 'Nepal' || data.get('country_code') === 'NP') : (data?.country === 'Nepal' || data?.country_code === 'NP'))
+    const isMasterPartner = (data instanceof FormData ? data.get('is_master_partner') : data?.is_master_partner) === 'yes'
+    const partnerId = `${isNepal ? 'PIDNP' : 'PIDIN'}${Math.floor(10000 + Math.random() * 89999)}`
     return {
       success: true,
       message: 'Partner registered successfully. Step 1 complete.',
       data: {
         partner_id: partnerId,
-        partner_name: data?.partner_name || 'Simulated Partner',
-        organization_name: data?.organization_name || 'Simulated Organization',
-        email: data?.email || 'partner@example.com',
+        partner_name: (data instanceof FormData ? data.get('partner_name') : data?.partner_name) || 'Simulated Partner',
+        organization_name: (data instanceof FormData ? data.get('organization_name') : data?.organization_name) || 'Simulated Organization',
+        email: (data instanceof FormData ? data.get('email') : data?.email) || 'partner@example.com',
+        country: isNepal ? 'Nepal' : 'India',
+        country_code: isNepal ? 'NP' : 'IN',
+        rank: isMasterPartner ? 'master' : 'associate',
+        partner_type: isMasterPartner ? 'master' : 'associate',
+        is_master_partner: isMasterPartner ? 'yes' : 'no',
         registration_status: 'pending',
         current_step: 2,
       }
@@ -3204,6 +3212,7 @@ export const getMockResponse = (url, method, data = null) => {
   if (lowercaseUrl.includes('/partner-step/status/')) {
     const idMatch = lowercaseUrl.match(/\/partner-step\/status\/([^/?]+)/)
     const partnerId = idMatch ? idMatch[1].toUpperCase() : 'PIDIN00000'
+    const isNepal = partnerId.includes('NP') || (typeof window !== 'undefined' && window.localStorage?.getItem('mimic_location') === 'NP')
     return {
       success: true,
       data: {
@@ -3211,6 +3220,11 @@ export const getMockResponse = (url, method, data = null) => {
         partner_name: 'Mock Partner',
         organization_name: 'Mock Org',
         email: 'mock@partner.com',
+        country: isNepal ? 'Nepal' : 'India',
+        country_code: isNepal ? 'NP' : 'IN',
+        rank: 'associate',
+        partner_type: 'associate',
+        is_master_partner: 'no',
         registration_status: 'pending',
         current_step: 2,
         step_1_completed: true,
@@ -3225,6 +3239,7 @@ export const getMockResponse = (url, method, data = null) => {
   if (lowercaseUrl.includes('/partner-step/step2/') && !lowercaseUrl.includes('/download') && !lowercaseUrl.includes('/preview')) {
     const idMatch = lowercaseUrl.match(/\/partner-step\/step2\/([^/?]+)/)
     const partnerId = idMatch ? idMatch[1].toUpperCase() : 'PIDIN00000'
+    const isNepal = partnerId.includes('NP') || (typeof window !== 'undefined' && window.localStorage?.getItem('mimic_location') === 'NP')
     return {
       success: true,
       data: {
@@ -3233,6 +3248,11 @@ export const getMockResponse = (url, method, data = null) => {
           partner_name: 'Mock Partner',
           organization_name: 'Mock Org',
           email: 'mock@partner.com',
+          country: isNepal ? 'Nepal' : 'India',
+          country_code: isNepal ? 'NP' : 'IN',
+          rank: 'associate',
+          partner_type: 'associate',
+          is_master_partner: 'no',
         },
         agreement_html: '',
         step_2_completed: false,
@@ -3283,6 +3303,8 @@ export const getMockResponse = (url, method, data = null) => {
 
   // POST /partner-step/step3/submit-offline-payment (Nepal / Offline Cash)
   if (lowercaseUrl.includes('/partner-step/step3/submit-offline-payment') && method === 'POST') {
+    const isMaster = data?.is_master_partner === 'yes' || data?.rank === 'master'
+    const defaultAmt = isMaster ? 31640 : 18080
     return {
       success: true,
       offline: true,
@@ -3291,7 +3313,7 @@ export const getMockResponse = (url, method, data = null) => {
         step_3_completed: true,
         current_step: 4,
         payment_status: 'offline_pending',
-        amount: data?.amount || 18080,
+        amount: data?.amount || defaultAmt,
         currency: data?.currency || 'NPR',
         partner: {
           id: data?.partner_id || 'PIDNP00000',
@@ -3299,6 +3321,9 @@ export const getMockResponse = (url, method, data = null) => {
           email: 'mock@partner.com',
           organization: 'Mock Org',
           country: 'Nepal',
+          rank: isMaster ? 'master' : 'associate',
+          partner_type: isMaster ? 'master' : 'associate',
+          is_master_partner: isMaster ? 'yes' : 'no',
         }
       }
     }

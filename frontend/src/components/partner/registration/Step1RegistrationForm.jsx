@@ -31,13 +31,16 @@ const FieldGroup = ({ label, required, children }) => (
 const inputCls =
   'w-full bg-aim-navy-light border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-aim-copy-muted focus:outline-none focus:border-aim-gold/60 focus:ring-1 focus:ring-aim-gold/30 transition-all'
 
-const Step1RegistrationForm = ({ onSuccess, initialValues, initialFiles, partnerData }) => {
-  const [detectedCountry, setDetectedCountry] = useState('IN')
+const Step1RegistrationForm = ({ onSuccess, initialValues, initialFiles, partnerData, mimicCountry, onCountryChange }) => {
+  const [detectedCountry, setDetectedCountry] = useState(
+    mimicCountry || (typeof window !== 'undefined' ? localStorage.getItem('mimic_location') : null) || 'IN'
+  )
   const [form, setForm] = useState(
     initialValues || {
       organization_name: '', rm_type: '', rm_id: '', partner_name: '', contact_no: '',
       email: '', address_line1: '', address_line2: '', district: '',
-      pin_code: '', state: '', country: 'India',
+      pin_code: '', state: '', country: (mimicCountry === 'NP' || (typeof window !== 'undefined' && localStorage.getItem('mimic_location') === 'NP')) ? 'Nepal' : 'India',
+      is_master_partner: 'no',
       password: '', password_confirmation: '',
     }
   )
@@ -52,8 +55,21 @@ const Step1RegistrationForm = ({ onSuccess, initialValues, initialFiles, partner
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
-  // Auto-detect visitor country using Geo-IP lookup (similar to /saas-software)
+  // Auto-detect visitor country using Geo-IP lookup or local test override
   useEffect(() => {
+    const localOverride = localStorage.getItem('mimic_location')
+    if (localOverride === 'NP') {
+      setDetectedCountry('NP')
+      setForm((prev) => ({
+        ...prev,
+        country: 'Nepal',
+      }))
+      return
+    } else if (localOverride === 'IN') {
+      setDetectedCountry('IN')
+      return
+    }
+
     fetch('https://ipapi.co/json/')
       .then((res) => res.json())
       .then((data) => {
@@ -73,6 +89,25 @@ const Step1RegistrationForm = ({ onSuccess, initialValues, initialFiles, partner
       })
   }, [])
 
+  // Sync with mimicCountry prop changes
+  useEffect(() => {
+    if (mimicCountry === 'NP') {
+      setDetectedCountry('NP')
+      setForm((prev) => ({
+        ...prev,
+        country: 'Nepal',
+        state: prev.country === 'Nepal' ? prev.state : '',
+      }))
+    } else if (mimicCountry === 'IN') {
+      setDetectedCountry('IN')
+      setForm((prev) => ({
+        ...prev,
+        country: 'India',
+        state: prev.country === 'India' ? prev.state : '',
+      }))
+    }
+  }, [mimicCountry])
+
   useEffect(() => {
     const loadRM = async () => {
       setLoadingRmOptions(true)
@@ -91,6 +126,7 @@ const Step1RegistrationForm = ({ onSuccess, initialValues, initialFiles, partner
   }, [])
 
   const isNepal = form.country === 'Nepal' || detectedCountry === 'NP'
+  const isMaster = form.is_master_partner === 'yes'
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -102,7 +138,13 @@ const Step1RegistrationForm = ({ onSuccess, initialValues, initialFiles, partner
         setForm((p) => ({ ...p, rm_type: type, rm_id: id }))
       }
     } else if (name === 'country') {
+      const newCode = value === 'Nepal' ? 'NP' : 'IN'
       setForm((p) => ({ ...p, country: value, state: '' }))
+      setDetectedCountry(newCode)
+      localStorage.setItem('mimic_location', newCode)
+      if (onCountryChange) {
+        onCountryChange(newCode)
+      }
     } else {
       setForm((p) => ({ ...p, [name]: value }))
     }
@@ -111,19 +153,29 @@ const Step1RegistrationForm = ({ onSuccess, initialValues, initialFiles, partner
   const handleFile = (e) => setFiles((p) => ({ ...p, [e.target.name]: e.target.files[0] || null }))
 
   const handleSimulateSuccess = () => {
+    const isNep = form.country === 'Nepal' || detectedCountry === 'NP'
+    const isMast = form.is_master_partner === 'yes'
     onSuccess({
-      partner_id: `${isNepal ? 'PIDNP' : 'PIDIN'}${Math.floor(10000 + Math.random() * 89999)}`,
+      partner_id: `${isNep ? 'PIDNP' : 'PIDIN'}${Math.floor(10000 + Math.random() * 89999)}`,
       email: form.email || 'partner@example.com',
       partner_name: form.partner_name || 'Simulated Partner',
       organization_name: form.organization_name || 'Simulated Organization',
-      country: form.country || (isNepal ? 'Nepal' : 'India'),
-      country_code: isNepal ? 'NP' : 'IN',
+      country: form.country || (isNep ? 'Nepal' : 'India'),
+      country_code: isNep ? 'NP' : 'IN',
+      is_master_partner: form.is_master_partner || 'no',
+      rank: isMast ? 'master' : 'associate',
+      partner_type: isMast ? 'master' : 'associate',
       registration_status: 'pending',
     }, form, files)
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!form.is_master_partner) {
+      setError('Please select whether you want to apply as a Master Partner (Yes or No).')
+      setIsOffline(false)
+      return
+    }
     if (!form.rm_id || !form.rm_type) {
       setError('Please select a Relationship Manager.')
       setIsOffline(false)
@@ -142,7 +194,14 @@ const Step1RegistrationForm = ({ onSuccess, initialValues, initialFiles, partner
 
     // Skip API registration if account was already created with the same email
     if (partnerData && partnerData.partner_id && form.email === initialValues?.email) {
-      onSuccess({ ...partnerData, country: form.country, country_code: isNepal ? 'NP' : 'IN' }, form, files)
+      onSuccess({
+        ...partnerData,
+        country: form.country,
+        country_code: isNepal ? 'NP' : 'IN',
+        is_master_partner: form.is_master_partner,
+        rank: isMaster ? 'master' : 'associate',
+        partner_type: isMaster ? 'master' : 'associate',
+      }, form, files)
       return
     }
 
@@ -155,7 +214,14 @@ const Step1RegistrationForm = ({ onSuccess, initialValues, initialFiles, partner
       Object.entries(files).forEach(([k, v]) => { if (v) fd.append(k, v) })
       const res = await registerPartner(fd)
       if (res.data?.success) {
-        onSuccess({ ...res.data.data, country: form.country, country_code: isNepal ? 'NP' : 'IN' }, form, files)
+        onSuccess({
+          ...res.data.data,
+          country: form.country,
+          country_code: isNepal ? 'NP' : 'IN',
+          is_master_partner: form.is_master_partner,
+          rank: isMaster ? 'master' : 'associate',
+          partner_type: isMaster ? 'master' : 'associate',
+        }, form, files)
       } else {
         setError(res.data?.message || 'Registration failed. Please try again.')
       }
@@ -215,16 +281,68 @@ const Step1RegistrationForm = ({ onSuccess, initialValues, initialFiles, partner
       )}
 
       {/* Location / Pricing Banner */}
-      <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-aim-gold/10 border border-aim-gold/20 text-xs text-aim-gold">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 px-3 py-2 rounded-xl bg-aim-gold/10 border border-aim-gold/20 text-xs text-aim-gold">
         <div className="flex items-center gap-2">
           <span>{isNepal ? '🇳🇵' : '🇮🇳'}</span>
           <span className="font-bold">
-            {isNepal ? 'Nepal Partner Registration' : 'India Partner Registration'}
+            {isNepal
+              ? (isMaster ? 'Nepal Master Partner Registration' : 'Nepal Partner Registration')
+              : (isMaster ? 'India Master Partner Registration' : 'India Partner Registration')}
           </span>
+          {isMaster && (
+            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              Rank: Master
+            </span>
+          )}
         </div>
         <div className="text-[11px] font-mono font-semibold">
-          {isNepal ? 'NPR 16,000 + 13% VAT (NPR 18,080) · Offline Cash' : '₹5,000 + 18% GST (₹5,900) · Razorpay'}
+          {isNepal
+            ? (isMaster
+                ? 'NPR 28,000 + 13% VAT (NPR 31,640) · Offline Cash'
+                : 'NPR 16,000 + 13% VAT (NPR 18,080) · Offline Cash')
+            : '₹5,000 + 18% GST (₹5,900) · Razorpay'}
         </div>
+      </div>
+
+      {/* Master Partner Selection (Mandatory Radio Field) */}
+      <div className="p-3 rounded-xl border border-white/10 bg-aim-navy-light/40 space-y-1.5">
+        <FieldGroup label="Master Partner" required>
+          <div className="flex items-center gap-6 mt-1">
+            <label className="flex items-center gap-2 cursor-pointer text-xs text-white group">
+              <input
+                type="radio"
+                name="is_master_partner"
+                value="yes"
+                checked={form.is_master_partner === 'yes'}
+                onChange={handleChange}
+                required
+                className="w-4 h-4 text-aim-gold accent-aim-gold cursor-pointer"
+              />
+              <span className={`font-bold transition-colors ${form.is_master_partner === 'yes' ? 'text-aim-gold' : 'text-slate-300 group-hover:text-white'}`}>
+                Yes (Master Partner {isNepal ? '— NPR 28,000' : ''})
+              </span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer text-xs text-white group">
+              <input
+                type="radio"
+                name="is_master_partner"
+                value="no"
+                checked={form.is_master_partner === 'no'}
+                onChange={handleChange}
+                required
+                className="w-4 h-4 text-aim-gold accent-aim-gold cursor-pointer"
+              />
+              <span className={`font-semibold transition-colors ${form.is_master_partner === 'no' ? 'text-aim-gold' : 'text-slate-300 group-hover:text-white'}`}>
+                No (Associate Partner — Standard)
+              </span>
+            </label>
+          </div>
+          <p className="text-[10px] text-aim-copy-muted leading-tight mt-1">
+            {form.is_master_partner === 'yes'
+              ? 'Rank will be set to Master Partner from the initial registration and reflected across all agreement documents.'
+              : 'Standard Associate Partner registration.'}
+          </p>
+        </FieldGroup>
       </div>
 
       {/* Organization & RM */}

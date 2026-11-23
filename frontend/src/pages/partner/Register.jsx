@@ -24,6 +24,42 @@ const PartnerRegister = () => {
   const [step1FormFiles, setStep1FormFiles] = useState(null)   // from step 1 files
   const [verifyData, setVerifyData] = useState(null)     // from step 3 API
   const [formEmail, setFormEmail] = useState('')
+  const [locationCountry, setLocationCountry] = useState(
+    () => (typeof window !== 'undefined' ? localStorage.getItem('mimic_location') || 'IN' : 'IN')
+  )
+
+  const handleToggleCountry = (newCountry) => {
+    setLocationCountry(newCountry)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('mimic_location', newCountry)
+    }
+    const isNep = newCountry === 'NP'
+
+    // Update partnerData if already on step 2 or 3
+    setPartnerData((prev) => {
+      if (!prev) return prev
+      const currentId = prev.partner_id || ''
+      const updatedId = isNep
+        ? (currentId.startsWith('PIDIN') ? currentId.replace('PIDIN', 'PIDNP') : (currentId || 'PIDNP26051'))
+        : (currentId.startsWith('PIDNP') ? currentId.replace('PIDNP', 'PIDIN') : (currentId || 'PIDIN26051'))
+      return {
+        ...prev,
+        country: isNep ? 'Nepal' : 'India',
+        country_code: newCountry,
+        partner_id: updatedId,
+      }
+    })
+
+    // Update step 1 form values if present
+    setStep1FormValues((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        country: isNep ? 'Nepal' : 'India',
+        state: '',
+      }
+    })
+  }
 
   // ── Auto-resume via status API when arriving from login page ──
   useEffect(() => {
@@ -82,10 +118,14 @@ const PartnerRegister = () => {
   const isSuccess = step === 4
 
   const handleStep1Success = (data, formValues, formFiles) => {
+    const isMaster = data?.rank === 'master' || data?.partner_type === 'master' || formValues?.is_master_partner === 'yes'
     setPartnerData({
       ...data,
       country: data?.country || formValues?.country || 'India',
       country_code: data?.country_code || (formValues?.country === 'Nepal' ? 'NP' : 'IN'),
+      is_master_partner: isMaster ? 'yes' : 'no',
+      rank: isMaster ? 'master' : 'associate',
+      partner_type: isMaster ? 'master' : 'associate',
     })
     setStep1FormValues(formValues)
     setStep1FormFiles(formFiles)
@@ -153,10 +193,46 @@ const PartnerRegister = () => {
 
                 {/* Header */}
                 <div className="relative z-10 mb-3 shrink-0 flex flex-col items-center text-center">
-                  <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-aim-gold/10 border border-aim-gold/20 mb-1.5">
-                    <span className="w-1 h-1 rounded-full bg-aim-gold animate-pulse" />
-                    <span className="text-aim-gold text-[9px] font-black uppercase tracking-widest">Become a Partner</span>
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap justify-center">
+                    <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-aim-gold/10 border border-aim-gold/20">
+                      <span className="w-1 h-1 rounded-full bg-aim-gold animate-pulse" />
+                      <span className="text-aim-gold text-[9px] font-black uppercase tracking-widest">Become a Partner</span>
+                    </div>
+
+                    {/* Location Simulator Toggle for Testing (commented out for production upload) */}
+                    {/*
+                    <div className="inline-flex items-center gap-1 bg-aim-navy-light/90 border border-white/10 rounded-full p-0.5 shadow-md">
+                      <span className="text-[9px] font-mono font-bold text-aim-copy-muted pl-2 pr-1">
+                        Test Region:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleCountry('IN')}
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
+                          locationCountry === 'IN'
+                            ? 'bg-gradient-to-r from-aim-gold to-aim-gold-light text-aim-navy font-black shadow-sm'
+                            : 'text-aim-copy-muted hover:text-white'
+                        }`}
+                        title="Simulate India (Razorpay Online Gateway)"
+                      >
+                        🇮🇳 India
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleCountry('NP')}
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
+                          locationCountry === 'NP'
+                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-black shadow-sm ring-1 ring-emerald-400/40'
+                            : 'text-aim-copy-muted hover:text-white'
+                        }`}
+                        title="Simulate Nepal (Offline Cash Payment to Admin)"
+                      >
+                        🇳🇵 Nepal (Offline Cash)
+                      </button>
+                    </div>
+                    */}
                   </div>
+
                   <h1 className="text-lg sm:text-xl font-black text-white mb-0.5 tracking-tight leading-none">
                     {currentTitle.heading}
                   </h1>
@@ -176,6 +252,8 @@ const PartnerRegister = () => {
                       initialValues={step1FormValues}
                       initialFiles={step1FormFiles}
                       partnerData={partnerData}
+                      mimicCountry={locationCountry}
+                      onCountryChange={handleToggleCountry}
                     />
                   )}
                   {step === 2 && (

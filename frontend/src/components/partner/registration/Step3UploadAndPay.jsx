@@ -1,14 +1,6 @@
 import { useState } from 'react'
 import { uploadSignedAgreement, createOrder, completePayment, submitOfflinePartnerPayment } from '../../../api/partner'
 
-const CURRENCIES = [
-  { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
-  { code: 'USD', symbol: '$', name: 'US Dollar' },
-  { code: 'EUR', symbol: '€', name: 'Euro' },
-  { code: 'GBP', symbol: '£', name: 'British Pound' },
-  { code: 'AED', symbol: 'د.إ', name: 'UAE Dirham' },
-]
-
 const loadRazorpay = () => {
   return new Promise((resolve, reject) => {
     if (window.Razorpay) {
@@ -38,11 +30,14 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
   const [uploadLoading, setUploadLoading] = useState(false)
 
   const isNepal = partnerData?.country === 'Nepal' || partnerData?.country_code === 'NP' || partnerData?.country === 'NP'
+  const isMaster = partnerData?.rank === 'master' || partnerData?.partner_type === 'master' || partnerData?.is_master_partner === 'yes'
 
   // Pricing:
   // India: Base ₹5,000 + 18% GST (₹900) = ₹5,900
-  // Nepal: Base NPR 16,000 + 13% VAT (NPR 2,080) = NPR 18,080
-  const baseFee = isNepal ? 16000 : 5000
+  // Nepal:
+  //   - Associate: Base NPR 16,000 + 13% VAT (NPR 2,080) = NPR 18,080
+  //   - Master: Base NPR 28,000 + 13% VAT (NPR 3,640) = NPR 31,640
+  const baseFee = isNepal ? (isMaster ? 28000 : 16000) : 5000
   const taxRate = isNepal ? 13 : 18
   const taxLabel = isNepal ? 'Nepal VAT (13%)' : 'GST (18%)'
   const taxAmount = Math.round(baseFee * (taxRate / 100))
@@ -143,6 +138,8 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
         currency: 'NPR',
         base_amount: baseFee,
         tax_amount: taxAmount,
+        is_master_partner: isMaster ? 'yes' : 'no',
+        rank: isMaster ? 'master' : 'associate',
       })
 
       if (res.data?.success) {
@@ -265,8 +262,6 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
     }
   }
 
-  const selectedCurrency = CURRENCIES.find((c) => c.code === currency) || CURRENCIES[0]
-
   return (
     <div className="space-y-4">
       {error && (
@@ -371,7 +366,7 @@ const Step3UploadAndPay = ({ partnerData, formEmail, onSuccess, onBack }) => {
                 Payment Details
               </p>
               <span className="text-[10px] font-bold text-aim-gold px-2 py-0.5 rounded-full bg-aim-gold/10 border border-aim-gold/20">
-                {isNepal ? '🇳🇵 Nepal Region' : '🇮🇳 India Region'}
+                {isNepal ? '🇳🇵 Nepal Region' : '🇮🇳 India Region'} {isMaster ? '· 👑 Master' : '· Associate'}
               </span>
             </div>
             

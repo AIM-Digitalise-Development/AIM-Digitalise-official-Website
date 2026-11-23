@@ -34,6 +34,8 @@ const Step2DownloadAgreement = ({ partnerData, step1FormValues, onContinue, onBa
 
   const partnerId = partnerData?.partner_id
 
+  const isMaster = partnerData?.rank === 'master' || partnerData?.partner_type === 'master' || partnerData?.is_master_partner === 'yes' || step1FormValues?.is_master_partner === 'yes'
+
   const combinedData = {
     partner_id: partnerData?.partner_id || 'Draft',
     partner_name: step1FormValues?.partner_name || partnerData?.partner_name || '',
@@ -45,6 +47,10 @@ const Step2DownloadAgreement = ({ partnerData, step1FormValues, onContinue, onBa
     district: step1FormValues?.district || '',
     state: step1FormValues?.state || '',
     pin_code: step1FormValues?.pin_code || '',
+    country: step1FormValues?.country || partnerData?.country || '',
+    rank: isMaster ? 'master' : (partnerData?.rank || 'associate'),
+    partner_type: isMaster ? 'master' : (partnerData?.partner_type || 'associate'),
+    is_master_partner: isMaster ? 'yes' : 'no',
   }
 
   // Fetch Step 2 data from server on mount

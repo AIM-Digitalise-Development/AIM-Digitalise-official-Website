@@ -32,6 +32,11 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
   // Partner details
   const partnerName = partnerData?.partner_name || '_________________________'
   const orgName = partnerData?.organization_name || '_________________________'
+
+  const isMaster = partnerData?.rank === 'master' || partnerData?.partner_type === 'master' || partnerData?.is_master_partner === 'yes'
+  const partnerRole = isMaster ? 'Master Partner' : 'Associate Partner'
+  const partnerRoleUpper = isMaster ? 'MASTER PARTNER' : 'ASSOCIATE PARTNER'
+  const partnerRolePlural = isMaster ? 'Master Partners' : 'Associate Partners'
   
   // Format full address
   const addr1 = partnerData?.address_line1 || ''
@@ -91,7 +96,7 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
             <div className="space-y-4 text-justify">
               <h2 className="text-center text-sm font-black text-slate-900 uppercase tracking-wider mb-6">
                 PARTNERSHIP AGREEMENT<br />
-                <span className="underline decoration-slate-900 decoration-1 underline-offset-4">(ASSOCIATE PARTNER)</span>
+                <span className="underline decoration-slate-900 decoration-1 underline-offset-4">({partnerRoleUpper})</span>
               </h2>
               
               <p className="font-bold">
@@ -107,18 +112,18 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
               <h3 className="font-black text-slate-900 tracking-wide text-xs pt-1">AND</h3>
               
               <p>
-                <strong>Partner' Organization</strong> <span className="underline font-black text-blue-900 px-1">{orgName}</span> in the name of Mr./Ms./M/s <span className="underline font-black text-blue-900 px-1">{partnerName}</span>, having its office at <span className="underline font-black text-blue-900 px-1">{fullAddress}</span>, hereinafter referred to as the <strong>"Associate Partner"</strong>
+                <strong>Partner' Organization</strong> <span className="underline font-black text-blue-900 px-1">{orgName}</span> in the name of Mr./Ms./M/s <span className="underline font-black text-blue-900 px-1">{partnerName}</span>, having its office at <span className="underline font-black text-blue-900 px-1">{fullAddress}</span>, hereinafter referred to as the <strong>"{partnerRole}"</strong>
               </p>
               
               <p>The Company and the Partner are collectively referred to as the <strong>"Parties"</strong>.</p>
               
               <h3 className="font-black text-slate-900 text-xs pt-2">1. PURPOSE OF AGREEMENT</h3>
               <p>
-                The Company appoints the Associate Partner as a Non-Exclusive Business Partner for promoting, marketing, generating leads, onboarding to various client, and facilitating sales and implementation of <strong>NEXGN Institute Pro and other products and services</strong>, whereas the SAAS based product and service developed and marketed by AIM Digitalise Pvt. Ltd.
+                The Company appoints the {partnerRole} as a Non-Exclusive Business Partner for promoting, marketing, generating leads, onboarding to various client, and facilitating sales and implementation of <strong>NEXGN Institute Pro and other products and services</strong>, whereas the SAAS based product and service developed and marketed by AIM Digitalise Pvt. Ltd.
               </p>
               
               <h3 className="font-black text-slate-900 text-xs pt-2">2. SCOPE OF WORK</h3>
-              <p>The Associate Partner shall:</p>
+              <p>The {partnerRole} shall:</p>
               <ul className="list-disc pl-5 space-y-1.5">
                 <li>Promote NEXGN Institute Pro among schools, colleges, coaching centers, training institutes, and educational organizations along with other products.</li>
                 <li>Generate prospective leads and arrange product demonstrations.</li>
@@ -148,7 +153,7 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
               </ul>
               
               <h3 className="font-black text-slate-900 text-xs pt-2">4. REGISTRATION PROCESS</h3>
-              <p>Based on the partner registration information published by AIM Digitalise and NEXGN Institute Pro, the Associate Partner registration process can be structured as follows:</p>
+              <p>Based on the partner registration information published by AIM Digitalise and NEXGN Institute Pro, the {partnerRole} registration process can be structured as follows:</p>
               
               <div className="space-y-3.5 pl-3">
                 <div>
@@ -205,7 +210,7 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
                   <p className="text-slate-600 mt-1">As per the published referral partner program:</p>
                   <ul className="list-disc pl-5 mt-1 space-y-1">
                     <li>Registration Process Fee (India): ₹5,000/- (+ 18% GST = ₹5,900/- total).</li>
-                    <li>Registration Process Fee (Nepal): NPR 16,000/- (+ 13% VAT = NPR 18,080/- total).</li>
+                    <li>Registration Process Fee (Nepal): {isMaster ? 'NPR 28,000/- (+ 13% VAT = NPR 31,640/- total)' : 'NPR 16,000/- (+ 13% VAT = NPR 18,080/- total)'}.</li>
                     <li>International applicants: USD 1,000.</li>
                   </ul>
                 </div>
@@ -233,7 +238,7 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
                 
                 <div>
                   <h4 className="font-bold text-slate-950">Step 7: Start Business Development</h4>
-                  <p className="text-slate-600 mt-1">Associate Partners Does:</p>
+                  <p className="text-slate-600 mt-1">{partnerRolePlural} Does:</p>
                   <ul className="list-disc pl-5 mt-1 space-y-1">
                     <li>Generate leads.</li>
                     <li>Arrange product demonstrations.</li>
@@ -312,11 +317,11 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
               
               <h3 className="font-black text-slate-900 text-xs pt-2">6. Support by the Company</h3>
               <ul className="list-disc pl-5 space-y-1.5">
-                <li>The Company shall provide product training and orientation to the Associate Partner as required.</li>
+                <li>The Company shall provide product training and orientation to the {partnerRole} as required.</li>
                 <li>Marketing materials, brochures, presentations, and other promotional resources may be provided by the Company from time to time.</li>
                 <li>The Company shall extend reasonable pre-sales and post-sales support for customer onboarding and implementation if required.</li>
                 <li>Technical support related to the Company's products and services shall be provided through the designated support channels.</li>
-                <li>The Company may conduct periodic meetings, webinars, workshops, or training sessions to enhance the Associate Partner's product knowledge and business development capabilities.</li>
+                <li>The Company may conduct periodic meetings, webinars, workshops, or training sessions to enhance the {partnerRole}'s product knowledge and business development capabilities.</li>
                 <li>The Company shall provide commission statements and business performance reports through the designated partner portal or communication channels.</li>
                 <li>Any additional support shall be provided at the sole discretion of the Company and may be modified, suspended, or withdrawn without prior notice.</li>
               </ul>
@@ -331,13 +336,13 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
                 <li>
                   <strong>Initial Commission</strong>
                   <ul className="list-disc pl-4 mt-0.5">
-                    <li>The Associate Partner shall be entitled to a <strong>10% commission</strong> on the <strong>total amount collected</strong> from the client for the first <strong>12 months</strong> from the date of onboarding.</li>
+                    <li>The {partnerRole} shall be entitled to a <strong>10% commission</strong> on the <strong>total amount collected</strong> from the client for the first <strong>12 months</strong> from the date of onboarding.</li>
                   </ul>
                 </li>
                 <li>
                   <strong>Recurring Commission</strong>
                   <ul className="list-disc pl-4 mt-0.5 space-y-0.5">
-                    <li>From the <strong>13th month onwards</strong>, the Associate Partner shall be entitled to a <strong>5% commission</strong> payable <strong>monthly at proportion rate on the relevant total collection amount</strong>.</li>
+                    <li>From the <strong>13th month onwards</strong>, the {partnerRole} shall be entitled to a <strong>5% commission</strong> payable <strong>monthly at proportion rate on the relevant total collection amount</strong>.</li>
                     <li>Such commission shall be calculated and paid on a <strong>monthly prorated basis</strong>, subject to the continuation of the client agreement and receipt of payment from the client.</li>
                   </ul>
                 </li>
@@ -371,7 +376,7 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
                 <li>
                   <strong>International Tour</strong>
                   <ul className="list-disc pl-4 mt-0.5">
-                    <li>Eligible Associate Partners who achieve predefined performance milestones may also qualify for special rewards, including domestic or international tour packages, recognition programs, and other non-monetary benefits, subject to the terms and conditions announced by the Company from time to time.</li>
+                    <li>Eligible {partnerRolePlural} who achieve predefined performance milestones may also qualify for special rewards, including domestic or international tour packages, recognition programs, and other non-monetary benefits, subject to the terms and conditions announced by the Company from time to time.</li>
                   </ul>
                 </li>
               </ol>
@@ -386,7 +391,7 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
               
               <h3 className="font-black text-slate-900 text-xs pt-2">8. PAYMENT TERMS</h3>
               <ul className="list-disc pl-5 space-y-1.5">
-                <li>Commission payments shall be processed after receipt of customer payment and payment request raised by Associate partner from respective Partner portal.</li>
+                <li>Commission payments shall be processed after receipt of customer payment and payment request raised by {partnerRole} from respective Partner portal.</li>
                 <li>Applicable TDS and statutory deductions shall be deducted as per law.</li>
                 <li>The Partner shall provide valid bank account details and tax information along with KYC details.</li>
                 <li>The renewal of KYC must be done once in every year.</li>
@@ -432,7 +437,7 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
               <h3 className="font-black text-slate-900 text-xs pt-2">11. TERM OF AGREEMENT</h3>
               <ul className="list-disc pl-5 space-y-2">
                 <li>This Agreement shall remain valid until and unless the termination by eighter party.</li>
-                <li>To maintain an active partnership status, the Associate Partner must onboard a minimum of three (3) products within every consecutive six (6) month period. Non-compliance may lead to deactivation or termination of the partnership agreement by the Company.</li>
+                <li>To maintain an active partnership status, the {partnerRole} must onboard a minimum of three (3) products within every consecutive six (6) month period. Non-compliance may lead to deactivation or termination of the partnership agreement by the Company.</li>
               </ul>
               
               <h3 className="font-black text-slate-900 text-xs pt-2">12. TERMINATION</h3>
@@ -449,8 +454,8 @@ const AgreementDoc = ({ partnerData, forPdf = false }) => {
               <ul className="list-disc pl-5 space-y-1.5">
                 <li>All Company materials shall be returned.</li>
                 <li>Pending commissions, if any, shall be settled as per Company policy.</li>
-                <li>The Associate Partner shall have no claim, right, or interest over the Company's brand name, products, intellectual property, customer database, business information, or any proprietary assets after termination.</li>
-                <li>The Associate Partner shall not be entitled to claim any compensation, damages, goodwill value, future commissions, employment benefits, or any other financial or non-financial benefits arising from the termination of this Agreement.</li>
+                <li>The {partnerRole} shall have no claim, right, or interest over the Company's brand name, products, intellectual property, customer database, business information, or any proprietary assets after termination.</li>
+                <li>The {partnerRole} shall not be entitled to claim any compensation, damages, goodwill value, future commissions, employment benefits, or any other financial or non-financial benefits arising from the termination of this Agreement.</li>
               </ul>
             </div>
           </div>

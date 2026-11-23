@@ -17,6 +17,16 @@ const PartnerLogin = () => {
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [pdfError, setPdfError] = useState('')
   const [showPreviewModal, setShowPreviewModal] = useState(false)
+  const [locationCountry, setLocationCountry] = useState(
+    () => (typeof window !== 'undefined' ? localStorage.getItem('mimic_location') || 'IN' : 'IN')
+  )
+
+  const handleToggleCountry = (newCountry) => {
+    setLocationCountry(newCountry)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('mimic_location', newCountry)
+    }
+  }
 
   const loadPdfLibraries = () => {
     return new Promise((resolve, reject) => {
@@ -171,12 +181,48 @@ const PartnerLogin = () => {
                 className="h-10 sm:h-12 w-auto object-contain rounded-lg border border-white/10 shadow-lg shadow-black/30 transition-transform duration-300 group-hover:scale-[1.02]"
               />
             </Link>
-            <Link
-              to={ROUTES.PARTNER.REGISTER}
-              className="text-xs font-semibold text-aim-copy-muted hover:text-aim-gold transition-colors"
-            >
-              Not a partner? Register →
-            </Link>
+
+            <div className="flex items-center gap-4">
+              {/* Region Simulator Pill for Local Testing (commented out for production upload) */}
+              {/*
+              <div className="inline-flex items-center gap-1 bg-aim-navy-light/90 border border-white/10 rounded-full p-0.5 shadow-md">
+                <span className="text-[9px] font-mono font-bold text-aim-copy-muted pl-2 pr-1 hidden sm:inline">
+                  Test Location:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleToggleCountry('IN')}
+                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
+                    locationCountry === 'IN'
+                      ? 'bg-gradient-to-r from-aim-gold to-aim-gold-light text-aim-navy font-black shadow-sm'
+                      : 'text-aim-copy-muted hover:text-white'
+                  }`}
+                  title="Simulate India"
+                >
+                  🇮🇳 India
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleToggleCountry('NP')}
+                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
+                    locationCountry === 'NP'
+                      ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-black shadow-sm ring-1 ring-emerald-400/40'
+                      : 'text-aim-copy-muted hover:text-white'
+                  }`}
+                  title="Simulate Nepal"
+                >
+                  🇳🇵 Nepal
+                </button>
+              </div>
+              */}
+
+              <Link
+                to={ROUTES.PARTNER.REGISTER}
+                className="text-xs font-semibold text-aim-copy-muted hover:text-aim-gold transition-colors"
+              >
+                Not a partner? Register →
+              </Link>
+            </div>
           </div>
         </header>
 
