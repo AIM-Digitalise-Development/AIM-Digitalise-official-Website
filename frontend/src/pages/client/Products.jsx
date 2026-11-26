@@ -188,23 +188,22 @@ const ClientProducts = () => {
         // Simple discount resolution: backend is the ONLY source of truth
         // Priority 1: discount_percentage from calculateSubscription API
         // Priority 2: discount from getClientPaymentCycles API
-        // No hardcoded fallbacks — if backend says 0%, it's 0%
+        // Priority 3: product discounts from database (activeProd.discounts / displayUser.discounts)
+        const cycleObj = backendCycles[cycle] || backendCycles[stateKey] || (cycle === 'annual' ? backendCycles['yearly'] : (cycle === 'half_yearly' ? backendCycles['half-yearly'] : null))
+
         let resolvedDiscount = 0
         if (calc && calc.discount_percentage !== undefined && calc.discount_percentage !== null && Number(calc.discount_percentage) > 0) {
           resolvedDiscount = Number(calc.discount_percentage)
         }
         if (resolvedDiscount === 0) {
-          const cycleObj = backendCycles[cycle] || backendCycles[stateKey] || (cycle === 'annual' ? backendCycles['yearly'] : (cycle === 'half_yearly' ? backendCycles['half-yearly'] : null))
           if (cycleObj && (Number(cycleObj.discount) > 0 || Number(cycleObj.discount_percentage) > 0)) {
             resolvedDiscount = Number(cycleObj.discount ?? cycleObj.discount_percentage)
           }
         }
         if (resolvedDiscount === 0) {
-          const prodName = activeProd?.product_name || activeProd?.name || displayUser?.product_name || ''
-          const isInstPro = prodName ? (prodName.toLowerCase().includes('institute') || prodName.toLowerCase().includes('nexgn')) : false
-          if (isInstPro || isSaasClient(displayUser) || isSaasClient(activeProd)) {
-            if (stateKey === 'yearly') resolvedDiscount = 40
-            if (stateKey === 'half-yearly') resolvedDiscount = 5
+          const prodDiscounts = activeProd?.discounts || displayUser?.discounts
+          if (prodDiscounts && typeof prodDiscounts === 'object' && prodDiscounts[cycle] !== undefined) {
+            resolvedDiscount = Number(prodDiscounts[cycle]) || 0
           }
         }
 
@@ -1506,9 +1505,10 @@ const ClientProducts = () => {
       if (rateDiscount !== null && rateDiscount !== undefined && Number(rateDiscount) > 0) {
         return Number(rateDiscount)
       }
-      if (localIsNexgnSaas || localIsInstitutePro) {
-        if (cycleKey === 'yearly' || cycleKey === 'annual') return 40
-        if (cycleKey === 'half-yearly' || cycleKey === 'half_yearly') return 5
+      const apiCycle = (cycleKey === 'yearly' || cycleKey === 'annual') ? 'annual' : ((cycleKey === 'half-yearly' || cycleKey === 'half_yearly') ? 'half_yearly' : cycleKey)
+      const prodDiscounts = localActiveProduct?.discounts || localDisplayUser?.discounts
+      if (prodDiscounts && typeof prodDiscounts === 'object' && prodDiscounts[apiCycle] !== undefined) {
+        return Number(prodDiscounts[apiCycle]) || 0
       }
       return (rateDiscount !== null && rateDiscount !== undefined) ? Number(rateDiscount) : 0
     }
