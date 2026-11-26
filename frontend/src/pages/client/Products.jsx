@@ -233,8 +233,8 @@ const ClientProducts = () => {
           const regularAmt = discountedMonthly * cycleMonths
 
           const computedSubtotal = Number((carryoverAmt + regularAmt).toFixed(2))
-          const totalPreGst = calc.is_extra_students_payment && calc.extra_students_amount 
-            ? Number(calc.extra_students_amount) 
+          const totalPreGst = calc.is_extra_students_payment && calc.extra_students_amount
+            ? Number(calc.extra_students_amount)
             : (calc.discounted_total !== undefined ? Number(calc.discounted_total) : computedSubtotal)
 
           const dynamicTaxRate = Number(calc?.tax_rate ?? calc?.gst_percentage ?? cycleObj?.tax_rate ?? cycleObj?.gst_percentage ?? (displayUser?.country_code === 'NP' ? 13 : 18))
@@ -261,8 +261,8 @@ const ClientProducts = () => {
         } else if (cycleObj) {
           const cycleTaxRate = Number(cycleObj?.tax_rate ?? cycleObj?.gst_percentage ?? (displayUser?.country_code === 'NP' ? 13 : 18))
           const cycleTaxFactor = 1 + (cycleTaxRate / 100)
-          const totalPreGst = cycleObj.discounted_total !== undefined 
-            ? Number(cycleObj.discounted_total) 
+          const totalPreGst = cycleObj.discounted_total !== undefined
+            ? Number(cycleObj.discounted_total)
             : (cycleObj.total ? Number((cycleObj.total / cycleTaxFactor).toFixed(2)) : 0)
           const cDays = cycleObj.carryover_days || backendCycles.carryover_days || 0
           const cAmt = cycleObj.carryover_amount || (cDays > 0 ? (totalPreGst * (cDays / (12 * 30))) : 0)
@@ -1037,6 +1037,20 @@ const ClientProducts = () => {
       const baseAmount = Math.round((totalAmount / 1.18) * 100) / 100
       const gstAmount = Math.round((totalAmount - baseAmount) * 100) / 100
       const pName = raw?.product_name || productName || 'NEXGN Institute Pro ERP Suite'
+      const rawGateway = (raw?.payment_gateway || displayUser?.payment_gateway || '').toLowerCase()
+      const rawPaymentId = (raw?.payment_id || displayUser?.payment_id || '').toLowerCase()
+      let paymentModeLabel = 'Online (Payment Gateway)'
+      if (rawGateway === 'offline_cash' || rawGateway === 'cash' || rawPaymentId === 'cash' || rawPaymentId.startsWith('offline_cash')) {
+        paymentModeLabel = 'Cash'
+      } else if (rawGateway === 'bank_transfer') {
+        paymentModeLabel = 'Bank Transfer / NEFT'
+      } else if (rawGateway === 'upi') {
+        paymentModeLabel = 'UPI / QR'
+      } else if (rawGateway === 'cheque') {
+        paymentModeLabel = 'Cheque'
+      } else if (rawGateway === 'direct_deal') {
+        paymentModeLabel = 'Direct Deal'
+      }
 
       billContent = `
         <div class="bill-container">
@@ -1061,10 +1075,10 @@ const ClientProducts = () => {
             <div class="invoice-left-side">
               <div class="address-block">
                 <h4>Bill To</h4>
-                <div class="client-highlight-name">${clientName}</div>
+                <div class="client-highlight-name">${schoolName}</div>
                 <p>
                   <strong>ID:</strong> ${clientId}<br/>
-                  <strong>School/Company:</strong> ${schoolName}<br/>
+                  <strong>Contact Person:</strong> ${clientName}<br/>
                   Registered Address: ${displayUser?.address || 'Noida, Uttar Pradesh, India'}
                 </p>
               </div>
@@ -1089,7 +1103,7 @@ const ClientProducts = () => {
                 </tr>
                 <tr>
                   <td class="meta-label">Payment Mode</td>
-                  <td class="meta-value">Online (Payment Gateway)</td>
+                  <td class="meta-value">${paymentModeLabel}</td>
                 </tr>
                 <tr>
                   <td class="meta-label">Payment Status</td>
@@ -1238,8 +1252,8 @@ const ClientProducts = () => {
               const regularAmt = discountedMonthly * cycleMonths
 
               const computedSubtotal = Number((carryoverAmt + regularAmt).toFixed(2))
-              const totalPreGst = calc.is_extra_students_payment && calc.extra_students_amount 
-                ? Number(calc.extra_students_amount) 
+              const totalPreGst = calc.is_extra_students_payment && calc.extra_students_amount
+                ? Number(calc.extra_students_amount)
                 : (calc.discounted_total !== undefined ? Number(calc.discounted_total) : computedSubtotal)
 
               return {
@@ -1291,7 +1305,7 @@ const ClientProducts = () => {
 
   const companyName = displayUser?.company_name || displayUser?.school_name || displayUser?.organization || ''
   const productName = activeProduct?.product_name || activeProduct?.name || displayUser?.product_name || ''
-  
+
   const getOrderField = (obj, field) => {
     if (!obj || typeof obj !== 'object') return null;
 
@@ -1441,7 +1455,7 @@ const ClientProducts = () => {
       return realTimeCount
     }
     const cycleStudentCount = Number(
-      cycleRates[selectedCycle]?.student_count || 
+      cycleRates[selectedCycle]?.student_count ||
       Object.values(cycleRates).find(r => r?.student_count > 0)?.student_count
     )
     if (!isNaN(cycleStudentCount) && cycleStudentCount > 0) {
@@ -1777,7 +1791,7 @@ const ClientProducts = () => {
 
   // ─── Determine if client has paid for any subscription plan ───
   const latestSubPayment = rechargeHistory.find(p => p.rawType === 'subscription' && Number(p.amount) > 0)
-  
+
   const hasValidSubDate = Boolean(
     paymentStatus?.delivery_info?.last_payment_date &&
     paymentStatus.delivery_info.last_payment_date !== 'null' &&
@@ -2260,10 +2274,10 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                   <tr>
                     <td className="py-4">
                       <div className="font-bold text-slate-800">
-                        {unpaidStudentsCount > 0 && hasMadePayment 
-                          ? '📆 Additional Students Subscription' 
-                          : hasMadePayment 
-                            ? '📆 Subscription Renewal' 
+                        {unpaidStudentsCount > 0 && hasMadePayment
+                          ? '📆 Additional Students Subscription'
+                          : hasMadePayment
+                            ? '📆 Subscription Renewal'
                             : '📆 First Subscription Activation'}
                       </div>
                       <div className="text-slate-400 mt-0.5">
@@ -2510,7 +2524,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
               <span className="text-lg font-black text-slate-800 block">
                 {currencySymbol}{Number(securityDeposit).toLocaleString('en-IN')}.00
               </span>
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-0.5">
+              <span className="text-[10px] font-bold text-slate-500 tracking-wider block mt-0.5">
                 One Time Non-refundable fees
               </span>
             </div>
@@ -2527,8 +2541,8 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
                 }}
                 disabled={isCycleDropdownDisabled}
                 className={`border text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full flex items-center gap-1 transition-colors focus:outline-none ${isCycleDropdownDisabled
-                    ? 'bg-amber-50 border-amber-200 text-amber-800 cursor-not-allowed'
-                    : 'bg-indigo-50 hover:bg-indigo-100 border-indigo-150 text-indigo-600 cursor-pointer shadow-xs'
+                  ? 'bg-amber-50 border-amber-200 text-amber-800 cursor-not-allowed'
+                  : 'bg-indigo-50 hover:bg-indigo-100 border-indigo-150 text-indigo-600 cursor-pointer shadow-xs'
                   }`}
                 title={isCycleDropdownDisabled ? 'Plan cycle locked for active session' : 'Change Plan Cycle'}
               >
@@ -2643,7 +2657,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
           </div>
 
           {/* Card 3: Customization Added */}
-          <div 
+          <div
             onClick={() => navigate('/client/portal/customization')}
             className={`bg-linear-to-r from-gray-200 via-rose-50 to-orange-200 rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center justify-between gap-5 transition-all hover:scale-[1.01] hover:shadow-md cursor-pointer group ${!isPerPersonProduct ? 'sm:col-span-2' : ''}`}
             title="Click to view and request customization features"
@@ -2677,7 +2691,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
 
           {/* Card 5: Total Addon Feature Added (Only for per_person = 1 products) */}
           {isPerPersonProduct && (
-            <div 
+            <div
               onClick={() => navigate('/client/portal/addon-services')}
               className="bg-linear-to-r from-pink-200 via-purple-400 to-indigo-600 rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center justify-between gap-5 transition-all hover:scale-[1.01] hover:shadow-md cursor-pointer group"
               title="Click to explore and purchase add-on services"
@@ -2891,7 +2905,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f8fafc;padding:20px;color:#1e
             </div>
           </div>
 
-         {/* <div className="pt-2 border-t border-slate-100 text-center space-y-3">
+          {/* <div className="pt-2 border-t border-slate-100 text-center space-y-3">
             <p className="text-xs font-bold text-slate-400">If not completed yet complete your profile</p>
            <button
               onClick={() => navigate('/client/portal/profile')}
