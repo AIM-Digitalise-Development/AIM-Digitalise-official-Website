@@ -1132,43 +1132,57 @@ const AdminPartners = () => {
                     </div>
 
                     {/* Payment & Verification Section */}
-                    <div className="p-4 rounded-xl border border-slate-100 bg-slate-50 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-[#ff6600] uppercase tracking-wider font-bold block">Payment &amp; Fees</span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white border border-slate-200">
-                          {selectedPartner.country === 'Nepal' || selectedPartner.country === 'NP' ? '🇳🇵 Nepal Region' : '🇮🇳 India Region'}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px]">
-                        <div>
-                          <span className="text-[9px] text-slate-400 uppercase block font-medium">Total Fee</span>
-                          <span className="font-bold text-slate-800">
-                            {selectedPartner.country === 'Nepal' || selectedPartner.country === 'NP' ? 'NPR 18,080 (16,000 + 13% VAT)' : '₹5,900 (5,000 + 18% GST)'}
-                          </span>
+                    {(() => {
+                      const isNepal = selectedPartner.country === 'Nepal' || selectedPartner.country === 'NP'
+                      const isMaster = selectedPartner.rank === 'master' || selectedPartner.partner_type === 'master'
+                      const hasDbAmount = selectedPartner.payment_amount !== null && selectedPartner.payment_amount !== undefined
+                      const currency = selectedPartner.payment_currency || (isNepal ? 'NPR' : 'INR')
+                      const symbol = currency === 'NPR' ? 'NPR ' : currency === 'INR' ? '₹' : `${currency} `
+                      const feeAmount = hasDbAmount
+                        ? Number(selectedPartner.payment_amount)
+                        : (isNepal ? (isMaster ? 31640 : 18080) : 5900)
+                      const formattedFee = `${symbol}${feeAmount.toLocaleString()}`
+
+                      return (
+                        <div className="p-4 rounded-xl border border-slate-100 bg-slate-50 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-[#ff6600] uppercase tracking-wider font-bold block">Payment &amp; Fees</span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white border border-slate-200">
+                              {isNepal ? '🇳🇵 Nepal Region' : '🇮🇳 India Region'}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px]">
+                            <div>
+                              <span className="text-[9px] text-slate-400 uppercase block font-medium">Total Fee</span>
+                              <span className="font-bold text-slate-800">
+                                {formattedFee}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-[9px] text-slate-400 uppercase block font-medium">Payment Mode</span>
+                              <span className="font-bold text-slate-800">
+                                {isNepal || selectedPartner.payment_status === 'offline_pending' ? '💵 Offline Cash' : '💳 Online (Razorpay)'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-[9px] text-slate-400 uppercase block font-medium">Payment Status</span>
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold inline-block mt-0.5 ${
+                                selectedPartner.payment_status === 'paid'
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : 'bg-amber-50 text-amber-700 border border-amber-200'
+                              }`}>
+                                {selectedPartner.payment_status === 'paid' ? '✅ Paid' : '⏳ Cash Pending'}
+                              </span>
+                            </div>
+                          </div>
+                          {selectedPartner.payment_status === 'offline_pending' && (
+                            <div className="mt-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-medium leading-relaxed">
+                              ⚠️ <strong>Offline Cash Notice:</strong> This partner registered under {isNepal ? 'Nepal' : 'Offline'} terms with Offline Cash payment of <strong>{formattedFee}</strong>. Clicking <em>"Confirm Offline Cash &amp; Activate"</em> will confirm the receipt of cash and immediately activate their portal login.
+                            </div>
+                          )}
                         </div>
-                        <div>
-                          <span className="text-[9px] text-slate-400 uppercase block font-medium">Payment Mode</span>
-                          <span className="font-bold text-slate-800">
-                            {selectedPartner.country === 'Nepal' || selectedPartner.payment_status === 'offline_pending' ? '💵 Offline Cash' : '💳 Online (Razorpay)'}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-[9px] text-slate-400 uppercase block font-medium">Payment Status</span>
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold inline-block mt-0.5 ${
-                            selectedPartner.payment_status === 'paid'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-amber-50 text-amber-700 border border-amber-200'
-                          }`}>
-                            {selectedPartner.payment_status === 'paid' ? '✅ Paid' : '⏳ Cash Pending'}
-                          </span>
-                        </div>
-                      </div>
-                      {selectedPartner.payment_status === 'offline_pending' && (
-                        <div className="mt-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-medium leading-relaxed">
-                          ⚠️ <strong>Offline Cash Notice:</strong> This partner registered under Nepal terms with Offline Cash payment of <strong>NPR 18,080</strong>. Clicking <em>"Confirm Offline Cash &amp; Activate"</em> will confirm the receipt of cash and immediately activate their portal login.
-                        </div>
-                      )}
-                    </div>
+                      )
+                    })()}
                   </div>
                 ) : (
                   <div className="space-y-4">

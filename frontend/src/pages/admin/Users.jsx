@@ -123,7 +123,7 @@ export const renderCreatorBadge = (creatorCode, personName = '', clientObj = nul
   const codeLower = code.toLowerCase()
 
   // Extract IDs
-  const pidMatch = code.match(/PIDIN\d+/i) || code.match(/PID\d+/i) || (clientObj?.partner_id ? [clientObj.partner_id] : null)
+  const pidMatch = code.match(/PID(?:IN|NP)\d+/i) || code.match(/PID\d+/i) || (clientObj?.partner_id ? [clientObj.partner_id] : null)
   const aimMatch = code.match(/AIM[A-Za-z0-9_-]*/i) || (clientObj?.employee_id ? [clientObj.employee_id] : null)
 
   const isPartner = Boolean(pidMatch) || codeLower.includes('partner') || clientObj?.creator_type === 'partner'
