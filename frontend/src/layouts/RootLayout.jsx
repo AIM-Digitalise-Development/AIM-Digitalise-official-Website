@@ -81,9 +81,40 @@ const RootLayout = () => {
   const [isFooterLoginMenuOpen, setIsFooterLoginMenuOpen] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [loginModalRole, setLoginModalRole] = useState('employee')
+  const [geoIsNepal, setGeoIsNepal] = useState(false)
   const footerLoginMenuRef = useRef(null)
   const location = useLocation()
   const { theme, setTheme } = useUIStore()
+
+  const overrideCountry =
+    typeof window !== 'undefined'
+      ? new URLSearchParams(location.search).get('country') ||
+        localStorage.getItem('mimic_location') ||
+        localStorage.getItem('user_country')
+      : null
+  const isNepal = overrideCountry ? overrideCountry === 'NP' : geoIsNepal
+
+  useEffect(() => {
+    if (overrideCountry) return
+
+    let isMounted = true
+    fetch('https://ipapi.co/json/')
+      .then((res) => res.json())
+      .then((data) => {
+        if (isMounted) {
+          setGeoIsNepal(data?.country_code === 'NP')
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setGeoIsNepal(false)
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [overrideCountry])
 
   useEffect(() => {
     const root = window.document.documentElement
@@ -525,74 +556,65 @@ const RootLayout = () => {
                 ADDRESS
               </h3>
               <div className="space-y-4 text-[13px]">
-                <div className={`p-3 rounded-xl border shadow-sm ${theme === 'dark'
-                  ? 'border-white/10 bg-aim-navy-light/50'
-                  : 'border-slate-200 bg-white'
-                  }`}>
-                  <div className={`flex items-center justify-between text-xs font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-slate-800'
-                    }`}>
-                    <span>Corporate Office</span>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded border ${theme === 'dark'
-                      ? 'bg-aim-gold/15 text-aim-gold border-aim-gold/30'
-                      : 'bg-amber-50 text-amber-600 border-amber-200'
-                      }`}>India</span>
-                  </div>
-                  <p className={`mt-2 leading-relaxed flex gap-2 ${theme === 'dark' ? 'text-on-navy-muted' : 'text-slate-500'
-                    }`}>
-                    <svg className={`w-4 h-4 shrink-0 mt-0.5 ${theme === 'dark' ? 'text-aim-gold/80' : 'text-amber-500'
-                      }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span>#139, 3rd Floor, Rajdanga Main Road, Kolkata - 700107</span>
-                  </p>
-                </div>
+                {(() => {
+                  const indiaOffices = [
+                    {
+                      title: 'Corporate Office',
+                      country: 'India',
+                      address: '#139, 3rd Floor, Rajdanga Main Road, Kolkata - 700107',
+                      isNepalOffice: false,
+                    },
+                    {
+                      title: 'Branch Office',
+                      country: 'India',
+                      address: '1st Floor MI Store, Thakurganj Road, Paschimpalli, Kishanganj, Bihar 855107',
+                      isNepalOffice: false,
+                    },
+                  ]
+                  const nepalOffice = {
+                    title: 'Corporate Office Nepal',
+                    country: 'Nepal',
+                    address: 'ward 5, Dhangadhi Submetropolitan city Kailali,Sudurpaschim Pradesh Nepal',
+                    isNepalOffice: true,
+                  }
+                  const orderedOffices = isNepal
+                    ? [nepalOffice, ...indiaOffices]
+                    : [...indiaOffices, nepalOffice]
 
-                <div className={`p-3 rounded-xl border shadow-sm ${theme === 'dark'
-                  ? 'border-white/10 bg-aim-navy-light/50'
-                  : 'border-slate-200 bg-white'
-                  }`}>
-                  <div className={`flex items-center justify-between text-xs font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-slate-800'
-                    }`}>
-                    <span>Branch Office</span>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded border ${theme === 'dark'
-                      ? 'bg-aim-gold/15 text-aim-gold border-aim-gold/30'
-                      : 'bg-amber-50 text-amber-600 border-amber-200'
-                      }`}>India</span>
-                  </div>
-                  <p className={`mt-2 leading-relaxed flex gap-2 ${theme === 'dark' ? 'text-on-navy-muted' : 'text-slate-500'
-                    }`}>
-                    <svg className={`w-4 h-4 shrink-0 mt-0.5 ${theme === 'dark' ? 'text-aim-gold/80' : 'text-amber-500'
-                      }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span>1st Floor MI Store, Thakurganj Road, Paschimpalli, Kishanganj, Bihar 855107</span>
-                  </p>
-                </div>
-
-                <div className={`p-3 rounded-xl border shadow-sm ${theme === 'dark'
-                  ? 'border-white/10 bg-aim-navy-light/50'
-                  : 'border-slate-200 bg-white'
-                  }`}>
-                  <div className={`flex items-center justify-between text-xs font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-slate-800'
-                    }`}>
-                    <span>Corporate Office Nepal</span>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded border ${theme === 'dark'
-                      ? 'bg-aim-purple/15 text-aim-purple-light border-aim-purple/30'
-                      : 'bg-purple-50 text-purple-600 border-purple-200'
-                      }`}>Nepal</span>
-                  </div>
-                  <p className={`mt-2 leading-relaxed flex gap-2 ${theme === 'dark' ? 'text-on-navy-muted' : 'text-slate-500'
-                    }`}>
-                    <svg className={`w-4 h-4 shrink-0 mt-0.5 ${theme === 'dark' ? 'text-aim-purple-light/80' : 'text-purple-500'
-                      }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span>ward 5, Dhangadhi Submetropolitan city Kailali,Sudurpaschim Pradesh Nepal</span>
-                  </p>
-                </div>
+                  return orderedOffices.map((office) => (
+                    <div
+                      key={office.title}
+                      className={`p-3 rounded-xl border shadow-sm ${theme === 'dark'
+                        ? 'border-white/10 bg-aim-navy-light/50'
+                        : 'border-slate-200 bg-white'
+                        }`}
+                    >
+                      <div className={`flex items-center justify-between text-xs font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-slate-800'
+                        }`}>
+                        <span>{office.title}</span>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded border ${office.isNepalOffice
+                          ? (theme === 'dark'
+                            ? 'bg-aim-purple/15 text-aim-purple-light border-aim-purple/30'
+                            : 'bg-purple-50 text-purple-600 border-purple-200')
+                          : (theme === 'dark'
+                            ? 'bg-aim-gold/15 text-aim-gold border-aim-gold/30'
+                            : 'bg-amber-50 text-amber-600 border-amber-200')
+                          }`}>{office.country}</span>
+                      </div>
+                      <p className={`mt-2 leading-relaxed flex gap-2 ${theme === 'dark' ? 'text-on-navy-muted' : 'text-slate-500'
+                        }`}>
+                        <svg className={`w-4 h-4 shrink-0 mt-0.5 ${office.isNepalOffice
+                          ? (theme === 'dark' ? 'text-aim-purple-light/80' : 'text-purple-500')
+                          : (theme === 'dark' ? 'text-aim-gold/80' : 'text-amber-500')
+                          }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span>{office.address}</span>
+                      </p>
+                    </div>
+                  ))
+                })()}
 
                 {/* <div className={`flex items-center gap-2 py-2 px-3 rounded-lg border shadow-sm ${
                   theme === 'dark'
